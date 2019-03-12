@@ -1,0 +1,29 @@
+cmake_minimum_required(VERSION 2.8)
+add_compile_options(-std=gnu++11)
+add_compile_options(-Wdeprecated-declarations)
+project(vsports)
+
+SET(CMAKE_BUILD_TYPE Release CACHE STRING
+	"Choose the type of build, options are: None Debug Release."
+	)
+
+find_package(Eigen3 REQUIRED)
+find_package(OpenGL REQUIRED)
+find_package(GLUT REQUIRED)
+find_package(DART REQUIRED COMPONENTS gui optimizer-ipopt CONFIG)
+
+include_directories(${EIGEN3_INCLUDE_DIR})
+include_directories(${OPENGL_INCLUDE_DIR})
+include_directories(${GLUT_INCLUDE_DIR})
+include_directories(${CMAKE_SOURCE_DIR})
+
+
+file(GLOB srcs
+		"./*.cpp"
+		"render/*.h" "render/*.cpp"
+		"sim/*.h" "sim/*.cpp"
+		"model/*.h" "model/*.cpp"
+		"vsports/*.h" "vsports/*.cpp")
+
+add_executable(vsports ${srcs})
+target_link_libraries(vsports ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${DART_LIBRARIES} ${Boost_LIBRARIES})

@@ -1,0 +1,3 @@
+/home/minseok/Project/VSports/build/CMakeFiles/edit_cache.dir
+/home/minseok/Project/VSports/build/CMakeFiles/rebuild_cache.dir
+/home/minseok/Project/VSports/build/CMakeFiles/vsports.dir
