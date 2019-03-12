@@ -34,3 +34,8 @@ cmake-build-release/*
 CMakeFiles/*
 .idea/*
 log/*
+
+# Sublime files #
+######################
+*.sublime-project
+*.sublime-workspace
