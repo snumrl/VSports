@@ -16,9 +16,14 @@ public:
 
 	void initFloor();
 	void initCharacters();
+	void initBall();
 	void initCustomView();
+
 	dart::dynamics::SkeletonPtr makeFloor();
+	dart::dynamics::SkeletonPtr makeBall();
+
 	dart::dynamics::SkeletonPtr floorSkel;
+	dart::dynamics::SkeletonPtr ballSkel;
 
 	std::vector<Character2D*> charsRed;
 	std::vector<Character2D*> charsBlue;

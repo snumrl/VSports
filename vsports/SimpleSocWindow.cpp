@@ -14,6 +14,7 @@ SimpleSocWindow()
 	initCustomView();
 	initCharacters();
 	initFloor();
+	initBall();
 }
 
 void
@@ -31,6 +32,14 @@ initFloor()
 {
 	floorSkel = makeFloor();
 	mWorld->addSkeleton(floorSkel);
+}
+
+void 
+SimpleSocWindow::
+initBall()
+{
+	ballSkel = makeBall();
+	mWorld->addSkeleton(ballSkel);
 }
 
 void
@@ -83,6 +92,22 @@ makeFloor()
 	return floor;
 }
 
+SkeletonPtr 
+SimpleSocWindow::
+makeBall()
+{
+	SkeletonPtr ball = Skeleton::create("ball");
+	Eigen::Vector3d position = Eigen::Vector3d(0.0, 0.0, floorDepth + 0.08);
+	Eigen::Isometry3d cb2j;
+	cb2j.setIdentity();
+	cb2j.translation() += -position;
+	SkelMaker::makeFree2DJointBody(
+	"ball", ball, nullptr,
+	SHAPE_TYPE::BALL,
+	Eigen::Vector3d::UnitX()*0.08,
+	Eigen::Isometry3d::Identity(), cb2j);
+	return ball;
+}
 
 void
 SimpleSocWindow::
@@ -127,6 +152,7 @@ display()
 		GUI::drawSkeleton(charsBlue[i]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));
 	}
 	GUI::drawSkeleton(floorSkel, Eigen::Vector3d(0.5, 1.0, 0.5));
+	GUI::drawSkeleton(ballSkel, Eigen::Vector3d(0.1, 0.1, 0.1));
 
 	glutSwapBuffers();
 }
