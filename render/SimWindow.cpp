@@ -13,11 +13,8 @@ SimWindow()
 :GLUTWindow()
 {
 	mWorld = std::make_shared<World>();
-
-	SkeletonPtr skel;
-
-	mWorld->addSkeleton(skel);
 	mDisplayTimeout = 33;
+	mPlay = false;
 }
 
 void
@@ -41,6 +38,7 @@ keyboard(unsigned char key, int x, int y)
 	switch(key)
 	{
 		case ' ':
+		mPlay = !mPlay;
 		break;
 		case 27: exit(0); break;
 		default: break;
@@ -109,6 +107,10 @@ void
 SimWindow::
 timer(int value)
 {
+	if(mPlay)
+	{
+		mWorld->step();
+	}
 	glutTimerFunc(mDisplayTimeout, timerEvent, 1);
 	glutPostRedisplay();
 }

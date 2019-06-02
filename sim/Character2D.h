@@ -12,6 +12,7 @@ public:
 
 	void setDefaultShape(const Eigen::Vector3d& color = Eigen::Vector3d(1.0, 0.0, 0.0));
 	void setVelocity(const Eigen::Vector3d& vel);
+	std::string getName() {return mName;}
 
 protected:
 	dart::dynamics::SkeletonPtr mSkeleton;

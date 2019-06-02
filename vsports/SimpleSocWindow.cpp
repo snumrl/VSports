@@ -1,6 +1,7 @@
 #include "SimpleSocWindow.h"
 #include "../render/GLfunctionsDART.h"
 #include "../model/SkelMaker.h"
+#include "../model/SkelHelper.h"
 #include <GL/glut.h>
 #include <iostream>
 using namespace dart::dynamics;
@@ -11,10 +12,12 @@ SimpleSocWindow::
 SimpleSocWindow()
 :SimWindow()
 {
+	mEnv = new Environment(30, 600, 4);
 	initCustomView();
-	initCharacters();
-	initFloor();
-	initBall();
+	// initCharacters();
+	// initFloor();
+	// initBall();
+	initGoalpost();
 }
 
 void
@@ -26,88 +29,65 @@ initCustomView()
 	mCamera->up = Eigen::Vector3d(-0.132372, 0.231252, 0.963847);
 }
 
-void 
-SimpleSocWindow::
-initFloor()
-{
-	floorSkel = makeFloor();
-	mWorld->addSkeleton(floorSkel);
-}
+// void 
+// SimpleSocWindow::
+// initFloor()
+// {
+// 	floorSkel = SkelHelper::makeFloor();
+// 	mWorld->addSkeleton(floorSkel);
+// }
 
-void 
-SimpleSocWindow::
-initBall()
-{
-	ballSkel = makeBall();
-	mWorld->addSkeleton(ballSkel);
-}
+// void 
+// SimpleSocWindow::
+// initBall()
+// {
+// 	ballSkel = SkelHelper::makeBall();
+// 	mWorld->addSkeleton(ballSkel);
+// }
 
 void
 SimpleSocWindow::
-initCharacters()
+initGoalpost()
 {
-	std::vector<Eigen::Vector2d> charPositions;
-	charPositions.push_back(Eigen::Vector2d(-1.0, 0.5));
-	charPositions.push_back(Eigen::Vector2d(-1.0, -0.5));
-	charPositions.push_back(Eigen::Vector2d(1.0, 0.5));
-	charPositions.push_back(Eigen::Vector2d(1.0, -0.5));
-	// std::vector<Eigen::Vector3d> charPositions;
-	// charPositions.push_back(Eigen::Vector3d(-1.0, floorDepth + 0.1, 0.5));
-	// charPositions.push_back(Eigen::Vector3d(-1.0, floorDepth + 0.1, -0.5));
-	// charPositions.push_back(Eigen::Vector3d(1.0, floorDepth + 0.1, 0.5));
-	// charPositions.push_back(Eigen::Vector3d(1.0, floorDepth + 0.1, -0.5));
-
-
-	for(int i=0;i<2;i++)
-	{
-		Character2D* character = new Character2D("red"+to_string(i));
-		character->getSkeleton()->setPositions(charPositions[i]);
-		charsRed.push_back(character);
-		mWorld->addSkeleton(charsRed[i]->getSkeleton());
-	}
-	for(int i=0;i<2;i++)
-	{
-		Character2D* character = new Character2D("blue"+to_string(i));
-		character->getSkeleton()->setPositions(charPositions[i+2]);
-		charsBlue.push_back(character);
-		mWorld->addSkeleton(charsBlue[i]->getSkeleton());
-	}
+	redGoalpostSkel = SkelHelper::makeGoalpost(Eigen::Vector3d(-4.0, 0.0, 0.25 + floorDepth), "red");
+	blueGoalpostSkel = SkelHelper::makeGoalpost(Eigen::Vector3d(4.0, 0.0, 0.25 + floorDepth), "blue");
+	mWorld->addSkeleton(redGoalpostSkel);
+	mWorld->addSkeleton(blueGoalpostSkel);
+	// wallSkel = SkelHelper::makeWall(floorDepth);
 }
 
+// void
+// SimpleSocWindow::
+// initCharacters()
+// {
+// 	std::vector<Eigen::Vector2d> charPositions;
+// 	charPositions.push_back(Eigen::Vector2d(-1.0, 0.5));
+// 	charPositions.push_back(Eigen::Vector2d(-1.0, -0.5));
+// 	charPositions.push_back(Eigen::Vector2d(1.0, 0.5));
+// 	charPositions.push_back(Eigen::Vector2d(1.0, -0.5));
+// 	// std::vector<Eigen::Vector3d> charPositions;
+// 	// charPositions.push_back(Eigen::Vector3d(-1.0, floorDepth + 0.1, 0.5));
+// 	// charPositions.push_back(Eigen::Vector3d(-1.0, floorDepth + 0.1, -0.5));
+// 	// charPositions.push_back(Eigen::Vector3d(1.0, floorDepth + 0.1, 0.5));
+// 	// charPositions.push_back(Eigen::Vector3d(1.0, floorDepth + 0.1, -0.5));
 
-SkeletonPtr 
-SimpleSocWindow::
-makeFloor()
-{
-	SkeletonPtr floor = Skeleton::create("floor");
-	Eigen::Vector3d position = Eigen::Vector3d(0.0, 0.0, floorDepth);
-	Eigen::Isometry3d cb2j;
-	cb2j.setIdentity();
-	cb2j.translation() += -position;
-	SkelMaker::makeWeldJointBody(
-	"floor", floor, nullptr,
-	SHAPE_TYPE::BOX,
-	Eigen::Vector3d(8.0, 6.0, 0.01),
-	Eigen::Isometry3d::Identity(), cb2j);
-	return floor;
-}
 
-SkeletonPtr 
-SimpleSocWindow::
-makeBall()
-{
-	SkeletonPtr ball = Skeleton::create("ball");
-	Eigen::Vector3d position = Eigen::Vector3d(0.0, 0.0, floorDepth + 0.08);
-	Eigen::Isometry3d cb2j;
-	cb2j.setIdentity();
-	cb2j.translation() += -position;
-	SkelMaker::makeFree2DJointBody(
-	"ball", ball, nullptr,
-	SHAPE_TYPE::BALL,
-	Eigen::Vector3d::UnitX()*0.08,
-	Eigen::Isometry3d::Identity(), cb2j);
-	return ball;
-}
+// 	for(int i=0;i<2;i++)
+// 	{
+// 		Character2D* character = new Character2D("red"+to_string(i));
+// 		character->getSkeleton()->setPositions(charPositions[i]);
+// 		charsRed.push_back(character);
+// 		mWorld->addSkeleton(charsRed[i]->getSkeleton());
+// 	}
+// 	for(int i=0;i<2;i++)
+// 	{
+// 		Character2D* character = new Character2D("blue"+to_string(i));
+// 		character->getSkeleton()->setPositions(charPositions[i+2]);
+// 		charsBlue.push_back(character);
+// 		mWorld->addSkeleton(charsBlue[i]->getSkeleton());
+// 	}
+// }
+
 
 void
 SimpleSocWindow::
@@ -143,16 +123,43 @@ display()
 	initLights();
 	mCamera->apply();
 
-	for(int i=0;i<charsRed.size();i++)
+	std::vector<Character2D*> chars = mEnv->getCharacters();
+
+
+	for(int i=0;i<2;i++)
 	{
-		GUI::drawSkeleton(charsRed[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
+		GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
 	}
-	for(int i=0;i<charsBlue.size();i++)
+	for(int i=2;i<4;i++)
 	{
-		GUI::drawSkeleton(charsBlue[i]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));
+		GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));
 	}
-	GUI::drawSkeleton(floorSkel, Eigen::Vector3d(0.5, 1.0, 0.5));
-	GUI::drawSkeleton(ballSkel, Eigen::Vector3d(0.1, 0.1, 0.1));
+
+	GUI::drawSkeleton(mEnv->floorSkel, Eigen::Vector3d(0.5, 1.0, 0.5));
+	GUI::drawSkeleton(mEnv->ballSkel, Eigen::Vector3d(0.1, 0.1, 0.1));
+	GUI::drawSkeleton(mEnv->wallSkel, Eigen::Vector3d(0.5,0.5,0.5));
+
+
+
+
+	// for(int i=0;i<charsRed.size();i++)
+	// {
+	// 	GUI::drawSkeleton(charsRed[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
+	// }
+	// for(int i=0;i<charsBlue.size();i++)
+	// {
+	// 	GUI::drawSkeleton(charsBlue[i]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));
+	// }
+	// GUI::drawSkeleton(floorSkel, Eigen::Vector3d(0.5, 1.0, 0.5));
+	// GUI::drawSkeleton(ballSkel, Eigen::Vector3d(0.1, 0.1, 0.1));
+
+	// Not simulated just for see
+	GUI::drawSkeleton(redGoalpostSkel, Eigen::Vector3d(1.0, 1.0, 1.0));
+	GUI::drawSkeleton(blueGoalpostSkel, Eigen::Vector3d(1.0, 1.0, 1.0));
+
+	// // We will not draw wall
+	// GUI::drawSkeleton(wallSkel, Eigen::Vector3d(0.5,0.5,0.5));
+
 
 	glutSwapBuffers();
 }

@@ -48,6 +48,7 @@ protected:
 	double mTimeStep;
 	bool mIsDrag;
 	int mMouseType;
+	bool mPlay;
 };
 
 #endif

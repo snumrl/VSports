@@ -98,7 +98,7 @@ void
 GLUTWindow::
 initLights()
 {
-	static float ambient[]             = {0.2, 0.2, 0.2, 1.0};
+	static float ambient[]             = {0.3, 0.3, 0.3, 1.0};
 	static float diffuse[]             = {0.2, 0.2, 0.2, 1.0};
 	static float front_mat_shininess[] = {60.0};
 	static float front_mat_specular[]  = {0.2, 0.2,  0.2,  1.0};

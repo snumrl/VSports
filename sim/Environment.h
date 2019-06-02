@@ -2,15 +2,24 @@
 #define __VS_ENVIRONMENT_H__
 #include "Character2D.h"
 
+typedef std::pair<std::string, Eigen::Vector3d> GoalpostInfo;
+
 class Environment
 {
 public:
-	Environment(int control_Hz=30, int simulation_Hz=900, int numChars = 2);
+	Environment(int control_Hz=30, int simulation_Hz=900, int numChars = 4);
+	void initCharacters();
+	void resetCharacterPositions();
+	void initGoalposts();
+	void initFloor();
+	void initBall();
+
 	void step();
 
-	void reset(bool random = true);
+	void reset();
 	bool isTerminalState();
-	void initializeMotions();
+
+
 
 	// For DeepRL
 	Eigen::VectorXd getState(int index);
@@ -23,10 +32,7 @@ public:
 	std::vector<Eigen::VectorXd> getActions(){return mActions;}
 
 	void setAction(int index, const Eigen::VectorXd& a);
-	void setActions(std::vector<Eigen::VectorXd> as);
-	// void setGoal(int index, const Eigen::VectorXd& goal);
-	// Eigen::VectorXd getGoal(int index);
-	// Eigen::VectorXd getGoal(int index);
+	// void setActions(std::vector<Eigen::VectorXd> as);
 
 	int getNumState(int index = 0){return getState(index).rows();}
 	int getNumAction(int index = 0){return getAction(index).rows();}
@@ -41,6 +47,8 @@ public:
 
 	double getElapsedTime(){return mTimeElapsed;}
 
+	int getDribblerIndex();
+
 public:
 	dart::simulation::WorldPtr mWorld;
 	int mNumChars;
@@ -50,10 +58,17 @@ public:
 	int mSimulationHz;
 
 	std::vector<Character2D*> mCharacters;
+
+	dart::dynamics::SkeletonPtr floorSkel;
+	dart::dynamics::SkeletonPtr ballSkel;
+	dart::dynamics::SkeletonPtr wallSkel;
+
+	std::vector<GoalpostInfo> mGoalposts;
 	std::vector<Eigen::VectorXd> mActions;
 
+	double floorDepth = -0.1;
 
-
+	int curDribblerIndex;
 
 
 };

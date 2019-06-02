@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
+
+add_compile_options(-fPIC)
 add_compile_options(-std=gnu++11)
 add_compile_options(-Wdeprecated-declarations)
 project(vsports)
@@ -18,12 +20,15 @@ include_directories(${GLUT_INCLUDE_DIR})
 include_directories(${CMAKE_SOURCE_DIR})
 
 
+add_subdirectory( sim )
+add_subdirectory( model )
+add_subdirectory( pyvs )
+
+
 file(GLOB srcs
 		"./*.cpp"
 		"render/*.h" "render/*.cpp"
-		"sim/*.h" "sim/*.cpp"
-		"model/*.h" "model/*.cpp"
 		"vsports/*.h" "vsports/*.cpp")
 
 add_executable(vsports ${srcs})
-target_link_libraries(vsports ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${DART_LIBRARIES} ${Boost_LIBRARIES})
+target_link_libraries(vsports ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${DART_LIBRARIES} ${Boost_LIBRARIES} sim pyvs model)

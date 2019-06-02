@@ -22,11 +22,13 @@ void
 Character2D::
 setDefaultShape(const Eigen::Vector3d& color)
 {
+	Eigen::Isometry3d pb2jT;
+	pb2jT.setIdentity();
+	pb2jT.translation() += Eigen::Vector3d(0.0, 0.0, 0.05);
 	SkelMaker::makeFree2DJointBody(mName + "_bodyJoint", mSkeleton, nullptr, 
 		SHAPE_TYPE::BOX, Eigen::Vector3d(0.15, 0.15, 0.2), 
-		Eigen::Isometry3d::Identity(), Eigen::Isometry3d::Identity());
+		pb2jT, Eigen::Isometry3d::Identity());
 
-	Eigen::Isometry3d pb2jT;
 	pb2jT.setIdentity();
 	pb2jT.translation() += Eigen::Vector3d(0.0, 0.0, 0.2);
 	SkelMaker::makeWeldJointBody(mName + "_headJoint", mSkeleton, mSkeleton->getRootBodyNode(), 

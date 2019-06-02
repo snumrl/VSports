@@ -2,6 +2,7 @@
 #define __SIMPLE_SOC_WINDOW_H__
 #include "../render/SimWindow.h"
 #include "../sim/Character2D.h"
+#include "../sim/Environment.h"
 
 class SimpleSocWindow : public SimWindow{
 public:
@@ -17,16 +18,23 @@ public:
 	void initFloor();
 	void initCharacters();
 	void initBall();
+	void initGoalpost();
 	void initCustomView();
 
-	dart::dynamics::SkeletonPtr makeFloor();
-	dart::dynamics::SkeletonPtr makeBall();
+	dart::dynamics::SkeletonPtr makeGoalpost(Eigen::Vector3d position, std::string label);
 
 	dart::dynamics::SkeletonPtr floorSkel;
 	dart::dynamics::SkeletonPtr ballSkel;
 
+	dart::dynamics::SkeletonPtr redGoalpostSkel;
+	dart::dynamics::SkeletonPtr blueGoalpostSkel;
+
+	dart::dynamics::SkeletonPtr wallSkel;
+
 	std::vector<Character2D*> charsRed;
 	std::vector<Character2D*> charsBlue;
+
+	Environment* mEnv;
 };
 
 #endif
