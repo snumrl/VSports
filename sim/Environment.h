@@ -56,7 +56,7 @@ public:
 
 	void boundBallVelocitiy(double maxVel);
 
-	Eigen::VectorXd getScoreBoard(std::string teamName);
+	Eigen::VectorXd updateScoreBoard(std::string teamName = "");
 
 public:
 	dart::simulation::WorldPtr mWorld;
@@ -83,7 +83,6 @@ public:
 
 	Eigen::VectorXd mKicked;
 	Eigen::VectorXd mScoreBoard;
-
 
 };
 

@@ -57,7 +57,7 @@ initCharacters()
 	mKicked.resize(4);
 	mKicked.setZero();
 	mScoreBoard.resize(1);
-	mScoreBoard.setZero();
+	mScoreBoard[0] = 0.5;
 
 
 }
@@ -219,8 +219,10 @@ step()
 	
 
 	// check the reward for debug
-	getRewards();
+	updateScoreBoard();
 
+
+	getRewards();
 	mWorld->step();
 	
 	// std::cout<<mCharacters[0]->getSkeleton()->getVelocities().transpose()<<std::endl;
@@ -272,6 +274,17 @@ getState(int index)
 		}
 	}
 	count = 0;
+
+
+	Eigen::VectorXd ballPossession(1);
+	if(index == 0)
+	{
+		ballPossession[0] = mScoreBoard[0];
+	}
+	else
+	{
+		ballPossession[0] = 1-mScoreBoard[0];
+	}
 	// Selection Sort
 	// double min = DBL_MAX;
 	// int minIndex = 0;
@@ -332,6 +345,7 @@ getState(int index)
 			count++;
 		}
 	}
+	// otherS.resize(0);
 	
 	// Fill in the goal basket's relational position
 	Eigen::VectorXd goalpostPositions(4);
@@ -365,22 +379,25 @@ getState(int index)
 
 Eigen::VectorXd
 Environment::
-getScoreBoard(std::string teamName)
+updateScoreBoard(std::string teamName)
 {
-	if(teamName == "A")
-	{
-		if(mKicked[0] == 1)
-			mScoreBoard[0] = 1;
-		if(mKicked[1] == 1)
-			mScoreBoard[0] = 0;
-	}
-	else if (teamName == "B")
-	{
-		if(mKicked[1] == 1)
-			mScoreBoard[0] = 1;
-		if(mKicked[0] == 1)
-			mScoreBoard[0] = 0;
-	}
+	if(mKicked[0] == 1)
+		mScoreBoard[0] = 1;
+	if(mKicked[1] == 1)
+		mScoreBoard[0] = 0;
+
+
+	// if(teamName == "A")
+	// {
+		
+	// }
+	// else if (teamName == "B")
+	// {
+	// 	if(mKicked[1] == 1)
+	// 		mScoreBoard[0] = 1;
+	// 	if(mKicked[0] == 1)
+	// 		mScoreBoard[0] = 0;
+	// }
 
 	return mScoreBoard;
 }
@@ -407,8 +424,8 @@ getReward(int index)
 
 
 
-	reward += 10.0 * mKicked[index];
-	// reward += getScoreBoard(mCharacters[index]->getTeamName())[0];
+	// reward += 1.0 * mKicked[index];
+	reward += 0.1 * mScoreBoard[0];
 
 	mKicked[index] = 0;
 
@@ -553,7 +570,7 @@ bool
 Environment::
 isTerminalState()
 {
-	if(mTimeElapsed>20.0)
+	if(mTimeElapsed>15.0)
 		mIsTerminalState = true;
 	return mIsTerminalState;
 }
@@ -587,6 +604,8 @@ reset()
 
 	mIsTerminalState = false;
 	mTimeElapsed = 0;
+
+	mScoreBoard[0] = 0.5;
 
 	// resetCharacterPositions();
 }
