@@ -9,6 +9,7 @@ Character2D(const std::string& name)
 {
 	this->mSkeleton = dart::dynamics::Skeleton::create(mName);
 	setDefaultShape(Eigen::Vector3d(1.0, 0.0, 0.0));
+	setCollision(false);
 }
 
 const dart::dynamics::SkeletonPtr&
@@ -24,9 +25,9 @@ setDefaultShape(const Eigen::Vector3d& color)
 {
 	Eigen::Isometry3d pb2jT;
 	pb2jT.setIdentity();
-	pb2jT.translation() += Eigen::Vector3d(0.0, 0.0, 0.05);
+	pb2jT.translation() += Eigen::Vector3d(0.0, 0.0, 0.0);
 	SkelMaker::makeFree2DJointBody(mName + "_bodyJoint", mSkeleton, nullptr, 
-		SHAPE_TYPE::BOX, Eigen::Vector3d(0.15, 0.15, 0.2), 
+		SHAPE_TYPE::BOX, Eigen::Vector3d(0.05, 0.05, 0.2), 
 		pb2jT, Eigen::Isometry3d::Identity());
 
 	pb2jT.setIdentity();
@@ -41,4 +42,14 @@ Character2D::
 setVelocity(const Eigen::Vector3d& vel)
 {
 	mSkeleton->setVelocities(vel);
+}
+
+void
+Character2D::
+setCollision(bool enable)
+{
+	for(int i=0;i<mSkeleton->getNumBodyNodes();i++)
+	{
+		mSkeleton->getSkeleton()->getBodyNode(i)->setCollidable(enable);
+	}
 }

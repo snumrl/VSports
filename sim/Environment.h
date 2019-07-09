@@ -49,6 +49,15 @@ public:
 
 	int getDribblerIndex();
 
+	int getCollidingWall(dart::dynamics::SkeletonPtr skel, double radius);
+
+	void handleWallContact(dart::dynamics::SkeletonPtr skel, double radius, double me = 1.0);
+	void handleBallContact(int index, double radius, double me = 0.5);
+
+	void boundBallVelocitiy(double maxVel);
+
+	Eigen::VectorXd getScoreBoard();
+
 public:
 	dart::simulation::WorldPtr mWorld;
 	int mNumChars;
@@ -69,6 +78,10 @@ public:
 	double floorDepth = -0.1;
 
 	int curDribblerIndex;
+
+	bool mIsTerminalState;
+
+	Eigen::VectorXd mKicked;
 
 
 };

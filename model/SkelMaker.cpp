@@ -56,7 +56,9 @@ makeFree2DJointBody(
 		shape = std::shared_ptr<BoxShape>(new BoxShape(size));
 	else if(shapeType == SHAPE_TYPE::BALL)
 		shape = std::shared_ptr<SphereShape>(new SphereShape(size[0]));
-
+	else if(shapeType == SHAPE_TYPE::CYLINDER)
+		shape = std::shared_ptr<CylinderShape>(new CylinderShape(size[0], size[1]));
+	
 	BodyNode* bn;
 	TranslationalJoint2D::Properties props;
 	props.mName = body_name;

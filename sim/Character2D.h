@@ -14,6 +14,8 @@ public:
 	void setVelocity(const Eigen::Vector3d& vel);
 	std::string getName() {return mName;}
 
+	void setCollision(bool enabl = true);
+
 protected:
 	dart::dynamics::SkeletonPtr mSkeleton;
 	std::string mName;

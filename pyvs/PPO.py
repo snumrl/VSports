@@ -54,7 +54,7 @@ class PPO(object):
 		np.random.seed(seed = int(time.time()))
 		self.env = Env(600)
 		self.num_slaves = 16
-		self.num_agents = 4
+		self.num_agents = 1
 		self.num_state = self.env.getNumState()
 		self.num_action = self.env.getNumAction()
 
@@ -71,13 +71,12 @@ class PPO(object):
 		self.gamma = 0.95
 		self.lb = 0.95
 
-		self.buffer_size = 2048
+		self.buffer_size = 1*2048
 		self.batch_size = 128
 		self.muscle_batch_size = 128
 		self.replay_buffer = ReplayBuffer(30000)
 
 		self.model = SimulationNN(self.num_state, self.num_action)
-
 		if use_cuda:
 			self.model.cuda()
 
@@ -122,8 +121,8 @@ class PPO(object):
 			size = len(data)
 			if size == 0:
 				continue
+			print("Size : ",size)
 			states, actions, rewards, values, logprobs = zip(*data)
-
 			values = np.concatenate((values, np.zeros(1)), axis=0)
 			advantages = np.zeros(size)
 			ad_t = 0
@@ -162,6 +161,12 @@ class PPO(object):
 			if counter%10 == 0:
 				print('SIM : {}'.format(local_step),end='\r')
 			a_dist,v = self.model(Tensor(states))
+			# print(self.model)
+			# print(self)
+			# print(a_dist)
+			# print()
+			# print(v)
+			# exit()
 			actions = a_dist.sample().cpu().detach().numpy()
 
 			logprobs = a_dist.log_prob(Tensor(actions)).cpu().detach().numpy().reshape(-1)
@@ -188,14 +193,26 @@ class PPO(object):
 							rewards[j*self.num_agents+k], values[j*self.num_agents+k], logprobs[j*self.num_agents+k])
 						local_step += 1
 
-				if terminated_state or (nan_occur is True):
+				if nan_occur is True:
 					for k in range(self.num_agents):
 						self.total_episodes.append(self.episodes[j*self.num_agents+k])
 						self.episodes[j*self.num_agents+k] = EpisodeBuffer()
-						self.env.reset(j)
-			if local_step >= self.buffer_size:
-				break
+					self.env.reset(j)
 
+				elif terminated_state :
+					for k in range(self.num_agents):
+						self.total_episodes.append(self.episodes[j*self.num_agents+k])
+						self.episodes[j*self.num_agents+k] = EpisodeBuffer()
+					self.env.reset(j)
+
+
+
+			if local_step >= self.buffer_size:
+				for k in range(self.num_agents):
+					self.total_episodes.append(self.episodes[j*self.num_agents+k])
+					self.episodes[j*self.num_agents+k] = EpisodeBuffer()
+				self.env.reset(j)
+				break
 			for i in range(self.num_slaves):
 				for j in range(self.num_agents):
 					states[i*self.num_agents+j] = self.env.getState(i,j)

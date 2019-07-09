@@ -5,7 +5,11 @@
 #include <GL/glut.h>
 #include <iostream>
 using namespace dart::dynamics;
+using namespace dart::simulation;
 using namespace std;
+
+namespace p = boost::python;
+namespace np = boost::python::numpy;
 double floorDepth = -0.1;
 
 SimpleSocWindow::
@@ -14,10 +18,41 @@ SimpleSocWindow()
 {
 	mEnv = new Environment(30, 600, 4);
 	initCustomView();
-	// initCharacters();
-	// initFloor();
-	// initBall();
 	initGoalpost();
+	mActions = mEnv->mActions;
+
+
+	mm = p::import("__main__");
+	mns = mm.attr("__dict__");
+	sys_module = p::import("sys");
+
+	boost::python::str module_dir = "../pyvs";
+	sys_module.attr("path").attr("insert")(1, module_dir);
+
+	p::exec("import torch",mns);
+	p::exec("import torch.nn as nn",mns);
+	p::exec("import torch.optim as optim",mns);
+	p::exec("import torch.nn.functional as F",mns);
+	p::exec("import torchvision.transforms as T",mns);
+	p::exec("import numpy as np",mns);
+	p::exec("from Model import *", mns);
+}
+
+SimpleSocWindow::
+SimpleSocWindow(const std::string& nn_path)
+:SimpleSocWindow()
+{
+	mIsNNLoaded = true;
+
+	p::str str = ("num_state = "+std::to_string(mEnv->getNumState())).c_str();
+	p::exec(str,mns);
+	str = ("num_action = "+std::to_string(mEnv->getNumAction())).c_str();
+	p::exec(str, mns);
+
+	nn_module = p::eval("SimulationNN(num_state, num_action)", mns);
+
+	p::object load = nn_module.attr("load");
+	load(nn_path);
 }
 
 void
@@ -29,77 +64,49 @@ initCustomView()
 	mCamera->up = Eigen::Vector3d(-0.132372, 0.231252, 0.963847);
 }
 
-// void 
-// SimpleSocWindow::
-// initFloor()
-// {
-// 	floorSkel = SkelHelper::makeFloor();
-// 	mWorld->addSkeleton(floorSkel);
-// }
-
-// void 
-// SimpleSocWindow::
-// initBall()
-// {
-// 	ballSkel = SkelHelper::makeBall();
-// 	mWorld->addSkeleton(ballSkel);
-// }
-
 void
 SimpleSocWindow::
 initGoalpost()
 {
 	redGoalpostSkel = SkelHelper::makeGoalpost(Eigen::Vector3d(-4.0, 0.0, 0.25 + floorDepth), "red");
 	blueGoalpostSkel = SkelHelper::makeGoalpost(Eigen::Vector3d(4.0, 0.0, 0.25 + floorDepth), "blue");
+
 	mWorld->addSkeleton(redGoalpostSkel);
 	mWorld->addSkeleton(blueGoalpostSkel);
-	// wallSkel = SkelHelper::makeWall(floorDepth);
 }
 
-// void
-// SimpleSocWindow::
-// initCharacters()
-// {
-// 	std::vector<Eigen::Vector2d> charPositions;
-// 	charPositions.push_back(Eigen::Vector2d(-1.0, 0.5));
-// 	charPositions.push_back(Eigen::Vector2d(-1.0, -0.5));
-// 	charPositions.push_back(Eigen::Vector2d(1.0, 0.5));
-// 	charPositions.push_back(Eigen::Vector2d(1.0, -0.5));
-// 	// std::vector<Eigen::Vector3d> charPositions;
-// 	// charPositions.push_back(Eigen::Vector3d(-1.0, floorDepth + 0.1, 0.5));
-// 	// charPositions.push_back(Eigen::Vector3d(-1.0, floorDepth + 0.1, -0.5));
-// 	// charPositions.push_back(Eigen::Vector3d(1.0, floorDepth + 0.1, 0.5));
-// 	// charPositions.push_back(Eigen::Vector3d(1.0, floorDepth + 0.1, -0.5));
-
-
-// 	for(int i=0;i<2;i++)
-// 	{
-// 		Character2D* character = new Character2D("red"+to_string(i));
-// 		character->getSkeleton()->setPositions(charPositions[i]);
-// 		charsRed.push_back(character);
-// 		mWorld->addSkeleton(charsRed[i]->getSkeleton());
-// 	}
-// 	for(int i=0;i<2;i++)
-// 	{
-// 		Character2D* character = new Character2D("blue"+to_string(i));
-// 		character->getSkeleton()->setPositions(charPositions[i+2]);
-// 		charsBlue.push_back(character);
-// 		mWorld->addSkeleton(charsBlue[i]->getSkeleton());
-// 	}
-// }
 
 
 void
 SimpleSocWindow::
 keyboard(unsigned char key, int x, int y)
 {
+	bool controlOn = false;
+	SkeletonPtr manualSkel = mEnv->getCharacter(0)->getSkeleton();
+
 	switch(key)
 	{
-		case 'c':
-			cout<<mCamera->eye.transpose()<<endl;
-			cout<<mCamera->lookAt.transpose()<<endl;
-			cout<<mCamera->up.transpose()<<endl;
-		break;
+		// case 'c':
+		// 	cout<<mCamera->eye.transpose()<<endl;
+		// 	cout<<mCamera->lookAt.transpose()<<endl;
+		// 	cout<<mCamera->up.transpose()<<endl;
+		// 	break;
+		case 'w':
+			if(controlOn)
+				manualSkel->setVelocities(Eigen::Vector2d(-3.0, 0.0));
+			break;
+		case 's':
+			if(controlOn)
+				manualSkel->setVelocities(Eigen::Vector2d(3.0, 0.0));
+			break;
+		case 'a':
+			if(controlOn)
+				manualSkel->setVelocities(Eigen::Vector2d(0.0, -3.0));
+			break;
+		case 'd':
+			if(controlOn)
+				manualSkel->setVelocities(Eigen::Vector2d(0.0, 3.0));
+			break;
 		
 		default: SimWindow::keyboard(key, x, y);
 	}
@@ -109,7 +116,73 @@ void
 SimpleSocWindow::
 timer(int value)
 {
+	if(mPlay)
+		step();
 	SimWindow::timer(value);
+}
+
+void
+SimpleSocWindow::
+step()
+{
+	getActionFromNN();
+	// std::cout<<"step!"<<std::endl;
+	for(int i=0;i<1;i++)
+	{
+		// cout<<mActions[i].transpose()<<endl;
+		// dart::collision::CollisionDetectorPtr detector = mEnv->mWorld->getConstraintSolver()->getCollisionDetector();
+		// auto wall_char_collisionGroup = detector->createCollisionGroup(mEnv->wallSkel->getBodyNodes(), 
+		// 	mEnv->getCharacter(i)->getSkeleton()->getRootBodyNode());
+		// bool collision = wall_char_collisionGroup->collide();
+		// if(collision)
+		// {
+		// 	mEnv->setAction(i, Eigen::VectorXd::Zero(mActions[i].size()));
+		// 	cout<<"collide!"<<endl;
+		// }
+		// else
+			mEnv->setAction(i, mActions[i]);
+	}
+
+	int sim_per_control = mEnv->getSimulationHz()/mEnv->getControlHz();
+	for(int i=0;i<sim_per_control;i++)
+	{
+		mEnv->step();
+	}
+
+}
+
+void
+SimpleSocWindow::
+getActionFromNN()
+{
+	p::object get_action;
+	mActions.clear();
+	get_action = nn_module.attr("get_action");
+	for(int i=0;i<4;i++)
+	{
+		Eigen::VectorXd mAction(mEnv->getNumAction());
+		Eigen::VectorXd state = mEnv->getState(i);
+		p::tuple shape = p::make_tuple(state.rows());
+		np::dtype dtype = np::dtype::get_builtin<float>();
+		np::ndarray state_np = np::empty(shape, dtype);
+
+		float* dest = reinterpret_cast<float*>(state_np.get_data());
+		for(int j=0;j<state.rows();j++)
+		{
+			dest[j] = state[j];
+		}
+
+		p::object temp = get_action(state_np);
+		np::ndarray action_np = np::from_object(temp);
+
+		float* srcs = reinterpret_cast<float*>(action_np.get_data());
+		for(int j=0;j<mAction.rows();j++)
+		{
+			mAction[j] = srcs[j];
+		}
+
+		mActions.push_back(mAction);
+	}
 }
 
 
@@ -126,42 +199,34 @@ display()
 	std::vector<Character2D*> chars = mEnv->getCharacters();
 
 
-	for(int i=0;i<2;i++)
-	{
-		GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
-	}
-	for(int i=2;i<4;i++)
-	{
-		GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));
-	}
+
+	GUI::drawSkeleton(chars[0]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
+
+
+	// for(int i=0;i<2;i++)
+	// {
+	// 	GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
+	// }
+	// for(int i=2;i<4;i++)
+	// {
+	// 	GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));
+	// }
 
 	GUI::drawSkeleton(mEnv->floorSkel, Eigen::Vector3d(0.5, 1.0, 0.5));
 	GUI::drawSkeleton(mEnv->ballSkel, Eigen::Vector3d(0.1, 0.1, 0.1));
 	GUI::drawSkeleton(mEnv->wallSkel, Eigen::Vector3d(0.5,0.5,0.5));
 
-
-
-
-	// for(int i=0;i<charsRed.size();i++)
-	// {
-	// 	GUI::drawSkeleton(charsRed[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
-	// }
-	// for(int i=0;i<charsBlue.size();i++)
-	// {
-	// 	GUI::drawSkeleton(charsBlue[i]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));
-	// }
-	// GUI::drawSkeleton(floorSkel, Eigen::Vector3d(0.5, 1.0, 0.5));
-	// GUI::drawSkeleton(ballSkel, Eigen::Vector3d(0.1, 0.1, 0.1));
-
 	// Not simulated just for see
 	GUI::drawSkeleton(redGoalpostSkel, Eigen::Vector3d(1.0, 1.0, 1.0));
 	GUI::drawSkeleton(blueGoalpostSkel, Eigen::Vector3d(1.0, 1.0, 1.0));
 
-	// // We will not draw wall
-	// GUI::drawSkeleton(wallSkel, Eigen::Vector3d(0.5,0.5,0.5));
-
 
 	glutSwapBuffers();
+	if(mTakeScreenShot)
+	{
+		screenshot();
+	}
+	glutPostRedisplay();
 }
 
 void

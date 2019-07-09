@@ -4,10 +4,20 @@
 #include <stdio.h>
 using namespace std;
 
+namespace p = boost::python;
+namespace np = boost::python::numpy;
+
 int main(int argc, char** argv)
 {
+	Py_Initialize();
+	np::initialize();
 
-	SimpleSocWindow* simwindow = new SimpleSocWindow();
+
+	SimpleSocWindow* simwindow;
+	if(argc == 1)
+		simwindow = new SimpleSocWindow();
+	else if(argc==2)
+		simwindow = new SimpleSocWindow(argv[1]);
 
 
 	glutInit(&argc, argv);

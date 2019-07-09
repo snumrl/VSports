@@ -47,7 +47,6 @@ np::ndarray toNumPyArray(const std::vector<Eigen::VectorXd>& val)
 			dest[index++] = val[i][j];
 		}
 	}
-
 	return array;	
 }
 np::ndarray toNumPyArray(const std::vector<Eigen::MatrixXd>& val)

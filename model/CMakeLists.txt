@@ -4,16 +4,9 @@ project(model)
 add_compile_options(-fPIC)
 add_compile_options(-std=gnu++11)
 add_compile_options(-Wdeprecated-declarations)
-
-find_package(Boost 1.66.0 COMPONENTS filesystem python3 numpy3)
 find_package(DART REQUIRED COMPONENTS gui optimizer-ipopt CONFIG)
-find_package(PythonLibs REQUIRED)
 
 file(GLOB srcs "*.h" "*.cpp")
-
-include_directories(${PYTHON_INCLUDE_DIR})
-include_directories(${Boost_INCLUDE_DIRS})
-include_directories(${DART_INCLUDE_DIRS})
 
 include(FindOpenMP)
 if(OPENMP_FOUND)

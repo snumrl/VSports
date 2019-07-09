@@ -10,7 +10,7 @@ using namespace dart::dynamics;
 
 SimWindow::
 SimWindow()
-:GLUTWindow()
+:GLUTWindow(), mTakeScreenShot(false)
 {
 	mWorld = std::make_shared<World>();
 	mDisplayTimeout = 33;
@@ -39,6 +39,9 @@ keyboard(unsigned char key, int x, int y)
 	{
 		case ' ':
 		mPlay = !mPlay;
+		break;
+		case 'c':
+		mTakeScreenShot ^= true;
 		break;
 		case 27: exit(0); break;
 		default: break;
@@ -125,7 +128,7 @@ screenshot() {
 
 	boost::filesystem::create_directories(directory);
 	std::snprintf(fileName, sizeof(fileName), "%s%s%s%.4d.png",
-                directory, "/", fileBase, count++);
+	            directory, "/", fileBase, count++);
 	int tw = glutGet(GLUT_WINDOW_WIDTH);
 	int th = glutGet(GLUT_WINDOW_HEIGHT);
 
@@ -134,7 +137,7 @@ screenshot() {
 	// reverse temp2 temp1
 	for (int row = 0; row < th; row++) {
 		memcpy(&mScreenshotTemp2[row * tw * 4],
-           &mScreenshotTemp[(th - row - 1) * tw * 4], tw * 4);
+		&mScreenshotTemp[(th - row - 1) * tw * 4], tw * 4);
 	}
 
 	unsigned result = lodepng::encode(fileName, mScreenshotTemp2, tw, th);

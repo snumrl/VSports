@@ -35,6 +35,8 @@ initWindow(int _w, int _h, char* _name)
 	glutMouseFunc(mouseEvent);
 	glutMotionFunc(motionEvent);
 	glutTimerFunc(mDisplayTimeout, timerEvent, 0);
+	mScreenshotTemp.resize(4*_w*_h);
+	mScreenshotTemp2.resize(4*_w*_h);
 }
 inline GLUTWindow*
 GLUTWindow::

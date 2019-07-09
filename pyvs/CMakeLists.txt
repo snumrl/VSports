@@ -4,16 +4,15 @@ project(pyvs)
 add_compile_options(-fPIC)
 add_compile_options(-std=gnu++11)
 add_compile_options(-Wdeprecated-declarations)
+add_compile_options(-DHAVE_CSTDDEF)
 
-find_package(Boost 1.66.0 COMPONENTS filesystem python3 numpy3)
-find_package(DART REQUIRED COMPONENTS gui optimizer-ipopt CONFIG)
 find_package(PythonLibs REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 file(GLOB srcs "*.h" "*.cpp")
 
 include_directories(${PYTHON_INCLUDE_DIR})
-include_directories(${Boost_INCLUDE_DIRS})
-include_directories(${DART_INCLUDE_DIRS})
+include_directories(${EIGEN3_INCLUDE_DIR})
 
 include(FindOpenMP)
 if(OPENMP_FOUND)
@@ -25,5 +24,5 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR})
 
 add_library(pyvs SHARED ${srcs})
 
-target_link_libraries(pyvs ${DART_LIBRARIES} ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} sim model)
+target_link_libraries(pyvs ${DART_LIBRARIES} ${Boost_LIBRARIES} ${EIGEN_LIBRARIES} ${PYTHON_LIBRARIES} sim model)
 set_target_properties(pyvs PROPERTIES PREFIX "" )
