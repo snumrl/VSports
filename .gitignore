@@ -29,6 +29,7 @@ Thumbs.db
 # Folders #
 ######################
 build/*
+Videos/*
 cmake-build-debug/*
 cmake-build-release/*
 CMakeFiles/*
