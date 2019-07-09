@@ -13,6 +13,7 @@ int main(int argc, char** argv)
 	np::initialize();
 
 
+
 	SimpleSocWindow* simwindow;
 	if(argc == 1)
 		simwindow = new SimpleSocWindow();

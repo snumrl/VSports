@@ -11,7 +11,7 @@ EnvironmentPython(int simulationHz)
 	omp_set_num_threads(mNumSlaves);
 	for(int i=0;i<mNumSlaves;i++)
 	{
-		mSlaves.push_back(new Environment(30, simulationHz, 1));
+		mSlaves.push_back(new Environment(30, simulationHz, 2));
 	}
 	mNumState = mSlaves[0]->getNumState();
 	mNumAction = mSlaves[0]->getNumAction();

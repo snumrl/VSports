@@ -3,6 +3,8 @@
 #include "../model/SkelHelper.h"
 #include <iostream>
 #include <chrono>
+#include <random>
+#include <ctime>
 
 using namespace std;
 using namespace dart;
@@ -13,6 +15,7 @@ Environment(int control_Hz, int simulation_Hz, int numChars)
 :mControlHz(control_Hz), mSimulationHz(simulation_Hz), mNumChars(numChars), mWorld(std::make_shared<dart::simulation::World>()),
 mIsTerminalState(false), mTimeElapsed(0)
 {
+	srand((unsigned int)time(0));
 	initCharacters();
 	initGoalposts();
 	initFloor();
@@ -24,11 +27,11 @@ void
 Environment::
 initCharacters()
 {
-	for(int i=0;i<2;i++)
+	for(int i=0;i<1;i++)
 	{
 		mCharacters.push_back(new Character2D("A_" + to_string(i)));
 	}
-	for(int i=0;i<2;i++)
+	for(int i=0;i<1;i++)
 	{
 		mCharacters.push_back(new Character2D("B_" + to_string(i)));
 	}
@@ -53,6 +56,8 @@ initCharacters()
 
 	mKicked.resize(4);
 	mKicked.setZero();
+	mScoreBoard.resize(1);
+	mScoreBoard.setZero();
 
 
 }
@@ -63,11 +68,11 @@ resetCharacterPositions()
 {
 	std::vector<Eigen::Vector2d> charPositions;
 	charPositions.push_back(Eigen::Vector2d(-1.0, 0.5));
-	charPositions.push_back(Eigen::Vector2d(-1.0, -0.5));
+	// charPositions.push_back(Eigen::Vector2d(-1.0, -0.5));
 	charPositions.push_back(Eigen::Vector2d(1.0, 0.5));
-	charPositions.push_back(Eigen::Vector2d(1.0, -0.5));
+	// charPositions.push_back(Eigen::Vector2d(1.0, -0.5));
 
-	for(int i=0;i<4;i++)
+	for(int i=0;i<2;i++)
 	{
 		mCharacters[i]->getSkeleton()->setPositions(charPositions[i]);
 		mCharacters[i]->getSkeleton()->setVelocities(Eigen::Vector2d(0.0, 0.0));
@@ -204,7 +209,7 @@ step()
 	// cout<<ballForce.transpose()<<endl;
 	// cout<<ballSkel->getVelocities().transpose()<<endl;
 	// cout<<endl;
-	ballForce -= 3*ballSkel->getVelocities();
+	ballForce -= 2*ballSkel->getVelocities();
 	ballSkel->setForces(ballForce);
 	// for(int i=0;i<mCharacters.size();i++)
 	// {
@@ -304,7 +309,7 @@ getState(int index)
 	// Fill in the other agent's relational state in team+distance order
 	// 5 = positionDof(2) + velocityDof(2)
 	Eigen::VectorXd otherS((numCurTeam-1)*4 + numOppTeam*4);
-/*
+
 	for(int i=0;i<mCharacters.size()-1;i++)
 	{
 		if(mCharacters[distanceIndex[i]]->getName() == teamName)
@@ -327,9 +332,7 @@ getState(int index)
 			count++;
 		}
 	}
-*/	
-	otherS.resize(0);
-
+	
 	// Fill in the goal basket's relational position
 	Eigen::VectorXd goalpostPositions(4);
 	if(teamName == mGoalposts[0].first)
@@ -362,15 +365,24 @@ getState(int index)
 
 Eigen::VectorXd
 Environment::
-getScoreBoard()
+getScoreBoard(std::string teamName)
 {
-	// for()	
+	if(teamName == "A")
+	{
+		if(mKicked[0] == 1)
+			mScoreBoard[0] = 1;
+		if(mKicked[1] == 1)
+			mScoreBoard[0] = 0;
+	}
+	else if (teamName == "B")
+	{
+		if(mKicked[1] == 1)
+			mScoreBoard[0] = 1;
+		if(mKicked[0] == 1)
+			mScoreBoard[0] = 0;
+	}
 
-
-
-	Eigen::VectorXd scoreBoard;
-
-	return scoreBoard;
+	return mScoreBoard;
 }
 
 double
@@ -383,6 +395,7 @@ getReward(int index)
 	double ballRadius = 0.1;
 	double goalpostSize = 1.5;
 
+
 	Eigen::Vector2d ballPosition = ballSkel->getPositions();
 	Eigen::Vector2d widthVector = Eigen::Vector2d::UnitX();
 	Eigen::Vector2d heightVector = Eigen::Vector2d::UnitY();
@@ -391,10 +404,18 @@ getReward(int index)
 
 	// }
 
-	reward += 50*mKicked[index];
+
+
+
+	reward += 10.0 * mKicked[index];
+	// reward += getScoreBoard(mCharacters[index]->getTeamName())[0];
 
 	mKicked[index] = 0;
 
+	reward += 0.1 * exp(-pow((mCharacters[index]->getSkeleton()->getPositions() - ballPosition).norm(),2.0));
+
+
+	/*
 	if(index<2)
 	{
 
@@ -448,6 +469,7 @@ getReward(int index)
 			}
 		}
 	}
+	*/
 	return reward;
 }
 
@@ -541,12 +563,32 @@ Environment::
 reset()
 {
 	Eigen::VectorXd ballPosition = ballSkel->getPositions();
-	ballPosition.setZero();
+	ballPosition[0] = 6.0 * (rand()/(double)RAND_MAX ) - 6.0/2.0;
+	ballPosition[1] = 4.5 * (rand()/(double)RAND_MAX ) - 4.5/2.0;
 	ballSkel->setPositions(ballPosition);
+	Eigen::VectorXd ballVel = ballSkel->getVelocities();
+	ballVel[0] = 10.0 * (rand()/(double)RAND_MAX ) - 5.0;
+	ballVel[1] = 10.0 * (rand()/(double)RAND_MAX ) - 5.0;
+	ballSkel->setVelocities(ballVel);
+
+	for(int i=0;i<mNumChars;i++)
+	{
+		SkeletonPtr skel = mCharacters[i]->getSkeleton();
+		Eigen::VectorXd skelPosition = skel->getPositions();
+		skelPosition[0] = 6.0 * (rand()/(double)RAND_MAX ) - 6.0/2.0;
+		skelPosition[1] = 4.5 * (rand()/(double)RAND_MAX ) - 4.5/2.0;
+		skel->setPositions(ballPosition);
+		Eigen::VectorXd skelVel = skel->getVelocities();
+		skelVel[0] = 3.0 * (rand()/(double)RAND_MAX ) - 1.5;
+		skelVel[1] = 3.0 * (rand()/(double)RAND_MAX ) - 1.5;
+		skel->setVelocities(skelVel);
+	}
+
+
 	mIsTerminalState = false;
 	mTimeElapsed = 0;
 
-	resetCharacterPositions();
+	// resetCharacterPositions();
 }
 
 

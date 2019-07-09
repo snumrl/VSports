@@ -13,6 +13,7 @@ public:
 	void setDefaultShape(const Eigen::Vector3d& color = Eigen::Vector3d(1.0, 0.0, 0.0));
 	void setVelocity(const Eigen::Vector3d& vel);
 	std::string getName() {return mName;}
+	std::string getTeamName() {return mName.substr(0,1);}
 
 	void setCollision(bool enabl = true);
 

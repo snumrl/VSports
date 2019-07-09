@@ -54,7 +54,7 @@ class PPO(object):
 		np.random.seed(seed = int(time.time()))
 		self.env = Env(600)
 		self.num_slaves = 16
-		self.num_agents = 1
+		self.num_agents = 2
 		self.num_state = self.env.getNumState()
 		self.num_action = self.env.getNumAction()
 
@@ -71,7 +71,7 @@ class PPO(object):
 		self.gamma = 0.95
 		self.lb = 0.95
 
-		self.buffer_size = 1*2048
+		self.buffer_size = 2*2048
 		self.batch_size = 128
 		self.muscle_batch_size = 128
 		self.replay_buffer = ReplayBuffer(30000)
@@ -121,7 +121,7 @@ class PPO(object):
 			size = len(data)
 			if size == 0:
 				continue
-			print("Size : ",size)
+			# print("Size : ",size)
 			states, actions, rewards, values, logprobs = zip(*data)
 			values = np.concatenate((values, np.zeros(1)), axis=0)
 			advantages = np.zeros(size)

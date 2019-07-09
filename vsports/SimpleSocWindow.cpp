@@ -16,7 +16,7 @@ SimpleSocWindow::
 SimpleSocWindow()
 :SimWindow()
 {
-	mEnv = new Environment(30, 600, 4);
+	mEnv = new Environment(30, 600, 2);
 	initCustomView();
 	initGoalpost();
 	mActions = mEnv->mActions;
@@ -107,6 +107,8 @@ keyboard(unsigned char key, int x, int y)
 			if(controlOn)
 				manualSkel->setVelocities(Eigen::Vector2d(0.0, 3.0));
 			break;
+		case 'r':
+			mEnv->reset();
 		
 		default: SimWindow::keyboard(key, x, y);
 	}
@@ -127,7 +129,7 @@ step()
 {
 	getActionFromNN();
 	// std::cout<<"step!"<<std::endl;
-	for(int i=0;i<1;i++)
+	for(int i=0;i<mEnv->mNumChars;i++)
 	{
 		// cout<<mActions[i].transpose()<<endl;
 		// dart::collision::CollisionDetectorPtr detector = mEnv->mWorld->getConstraintSolver()->getCollisionDetector();
@@ -158,7 +160,7 @@ getActionFromNN()
 	p::object get_action;
 	mActions.clear();
 	get_action = nn_module.attr("get_action");
-	for(int i=0;i<4;i++)
+	for(int i=0;i<mEnv->mNumChars;i++)
 	{
 		Eigen::VectorXd mAction(mEnv->getNumAction());
 		Eigen::VectorXd state = mEnv->getState(i);
@@ -201,6 +203,7 @@ display()
 
 
 	GUI::drawSkeleton(chars[0]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
+	GUI::drawSkeleton(chars[1]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));
 
 
 	// for(int i=0;i<2;i++)
