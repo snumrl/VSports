@@ -1,4 +1,4 @@
-#include "SimpleSocWindow.h"
+#include "MultiSocWindow.h"
 #include "../render/GLfunctionsDART.h"
 #include "../model/SkelMaker.h"
 #include "../model/SkelHelper.h"
@@ -10,10 +10,9 @@ using namespace std;
 
 namespace p = boost::python;
 namespace np = boost::python::numpy;
-double floorDepth = -0.1;
 
-SimpleSocWindow::
-SimpleSocWindow()
+MultiSocWindow::
+MultiSocWindow()
 :SimWindow()
 {
 	mEnv = new Environment(30, 600, 2);
@@ -38,9 +37,9 @@ SimpleSocWindow()
 	p::exec("from Model import *", mns);
 }
 
-SimpleSocWindow::
-SimpleSocWindow(const std::string& nn_path)
-:SimpleSocWindow()
+MultiSocWindow::
+MultiSocWindow(char** paths)
+:MultiSocWindow()
 {
 	mIsNNLoaded = true;
 
@@ -49,14 +48,24 @@ SimpleSocWindow(const std::string& nn_path)
 	str = ("num_action = "+std::to_string(mEnv->getNumAction())).c_str();
 	p::exec(str, mns);
 
-	nn_module = p::eval("SimulationNN(num_state, num_action)", mns);
 
-	p::object load = nn_module.attr("load");
-	load(nn_path);
+	vector<p::object> loads;
+	// cout<<"11111"<<endl;
+	for(int i=0;i<2;i++)
+	{
+	// cout<<"2222"<<endl;
+		nn_modules.push_back(p::eval("SimulationNN(num_state, num_action)", mns));
+
+	// cout<<"3333"<<endl;
+		loads.push_back(nn_modules[i].attr("load"));
+	// cout<<"4444"<<endl;
+		loads[i](string(paths[i+1]));
+	}
+
 }
 
 void
-SimpleSocWindow::
+MultiSocWindow::
 initCustomView()
 {
 	mCamera->eye = Eigen::Vector3d(3.60468, -4.29576, 1.87037);
@@ -65,7 +74,7 @@ initCustomView()
 }
 
 void
-SimpleSocWindow::
+MultiSocWindow::
 initGoalpost()
 {
 	redGoalpostSkel = SkelHelper::makeGoalpost(Eigen::Vector3d(-4.0, 0.0, 0.25 + floorDepth), "red");
@@ -78,7 +87,7 @@ initGoalpost()
 
 
 void
-SimpleSocWindow::
+MultiSocWindow::
 keyboard(unsigned char key, int x, int y)
 {
 	bool controlOn = false;
@@ -115,7 +124,7 @@ keyboard(unsigned char key, int x, int y)
 }
 
 void
-SimpleSocWindow::
+MultiSocWindow::
 timer(int value)
 {
 	if(mPlay)
@@ -124,7 +133,7 @@ timer(int value)
 }
 
 void
-SimpleSocWindow::
+MultiSocWindow::
 step()
 {
 	getActionFromNN();
@@ -154,14 +163,14 @@ step()
 }
 
 void
-SimpleSocWindow::
+MultiSocWindow::
 getActionFromNN()
 {
 	p::object get_action;
 	mActions.clear();
-	get_action = nn_module.attr("get_action");
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
+		get_action = nn_modules[i].attr("get_action");
 		Eigen::VectorXd mAction(mEnv->getNumAction());
 		Eigen::VectorXd state = mEnv->getState(i);
 		p::tuple shape = p::make_tuple(state.rows());
@@ -189,7 +198,7 @@ getActionFromNN()
 
 
 void
-SimpleSocWindow::
+MultiSocWindow::
 display()
 {
 	glClearColor(0.85, 0.85, 1.0, 1.0);
@@ -246,7 +255,7 @@ display()
 }
 
 void
-SimpleSocWindow::
+MultiSocWindow::
 mouse(int button, int state, int x, int y) 
 {
 	SimWindow::mouse(button, state, x, y);
@@ -254,7 +263,7 @@ mouse(int button, int state, int x, int y)
 
 
 void
-SimpleSocWindow::
+MultiSocWindow::
 motion(int x, int y)
 {
 	SimWindow::motion(x, y);

@@ -1,15 +1,16 @@
-#ifndef __SIMPLE_SOC_WINDOW_H__
-#define __SIMPLE_SOC_WINDOW_H__
+#ifndef __MULTI_SOC_WINDOW_H__
+#define __MULTI_SOC_WINDOW_H__
 #include "../render/SimWindow.h"
 #include "../sim/Character2D.h"
 #include "../sim/Environment.h"
 #include <boost/python.hpp>
 #include <boost/python/numpy.hpp>
 
-class SimpleSocWindow : public SimWindow{
+class MultiSocWindow : public SimWindow{
 public:
-	SimpleSocWindow();
-	SimpleSocWindow(const std::string& nn_path);
+	MultiSocWindow();
+	// MultiSocWindow(const std::string& nn_path0, const std::string& nn_path1);
+	MultiSocWindow(char** paths);
 
 	void keyboard(unsigned char key, int x, int y) override;
 	void timer(int value) override;
@@ -44,8 +45,10 @@ public:
 
 	std::vector<Eigen::VectorXd> mActions;
 
-	boost::python::object mm,mns,sys_module,nn_module,muscle_nn_module;
+	boost::python::object mm,mns,sys_module;
+	std::vector<boost::python::object> nn_modules;
 	bool mIsNNLoaded;
+	double floorDepth = -0.1;
 };
 
 #endif

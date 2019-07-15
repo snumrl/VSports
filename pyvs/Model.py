@@ -63,7 +63,7 @@ class SimulationNN(nn.Module):
 		return MultiVariateNormal(self.policy(x),self.log_std.exp()),self.value(x);
 
 	def load(self,path):
-		print('load simulatioin nn {}'.format(path))
+		print('load simulation nn {}'.format(path))
 		self.load_state_dict(torch.load(path))
 
 	def save(self,path):

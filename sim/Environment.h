@@ -84,6 +84,8 @@ public:
 	Eigen::VectorXd mKicked;
 	Eigen::VectorXd mScoreBoard;
 
+	Eigen::VectorXd mAccScore;
+
 };
 
 #endif

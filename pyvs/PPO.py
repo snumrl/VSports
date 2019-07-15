@@ -71,20 +71,22 @@ class PPO(object):
 		self.gamma = 0.95
 		self.lb = 0.95
 
-		self.buffer_size = 2*2048
+		self.buffer_size = 1*2048
 		self.batch_size = 128
 		self.muscle_batch_size = 128
 		self.replay_buffer = ReplayBuffer(30000)
 
-		self.model = SimulationNN(self.num_state, self.num_action)
-		if use_cuda:
-			self.model.cuda()
+		self.model = [None]*self.num_slaves*self.num_agents
+		for i in range(self.num_slaves*self.num_agents):
+			self.model[i] = SimulationNN(self.num_state, self.num_action)
+			if use_cuda:
+				self.model[i].cuda()
 
 		self.default_learning_rate = 1E-4
 		self.default_clip_ratio = 0.2
 		self.learning_rate = self.default_learning_rate
 		self.clip_ratio = self.default_clip_ratio
-		self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
+		self.optimizer = optim.Adam(self.model[0].parameters(), lr=self.learning_rate)
 		self.max_iteration = 50000
 
 		self.w_entropy = 0.0001
@@ -97,21 +99,21 @@ class PPO(object):
 		self.max_return_epoch = 1
 		self.tic = time.time()
 
-		self.episodes = [None]*self.num_slaves*self.num_agents
-		for j in range(self.num_slaves*self.num_agents):
+		self.episodes = [None]*self.num_slaves
+		for j in range(self.num_slaves):
 			self.episodes[j] = EpisodeBuffer()
 		self.env.resets()
 
 	def saveModel(self):
-		self.model.save('../nn/current.pt')
+		self.model[0].save('../nn/current.pt')
 
 		if self.max_return_epoch == self.num_evaluation:
-			self.model.save('../nn/max.pt')
-		if self.num_evaluation%100 == 0:
-			self.model.save('../nn/'+str(self.num_evaluation//100)+'.pt')
+			self.model[0].save('../nn/max.pt')
+		if self.num_evaluation%10 == 0:
+			self.model[0].save('../nn/'+str(self.num_evaluation//10)+'.pt')
 
-	def loadModel(self,path):
-		self.model.load('../nn/'+path+'.pt')
+	def loadModel(self,path,index):
+		self.model[index].load('../nn/'+path+'.pt')
 
 	def computeTDandGAE(self):
 		self.replay_buffer.clear();
@@ -149,31 +151,102 @@ class PPO(object):
 		states = [None]*self.num_slaves*self.num_agents
 		actions = [None]*self.num_slaves*self.num_agents
 		rewards = [None]*self.num_slaves*self.num_agents
-		states_next = [None]*self.num_slaves*self.num_agents
+		logprobs = [None]*self.num_slaves*self.num_agents
+		values = [None]*self.num_slaves*self.num_agents
+		# states_next = [None]*self.num_slaves*self.num_agents
 		for i in range(self.num_slaves):
 			for j in range(self.num_agents):
 				states[i*self.num_agents+j] = self.env.getState(i,j)
 		local_step = 0
 		terminated = [False]*self.num_slaves*self.num_agents
 		counter = 0
+
+
+		if self.num_evaluation > 1:
+
+			for i in range(self.num_slaves):
+				curEvalNum = self.num_evaluation//10
+
+				clipedRandomNormal = -1
+				while clipedRandomNormal < 0:
+					clipedRandomNormal = np.random.normal(curEvalNum, curEvalNum/2,1)[0]
+					if clipedRandomNormal > curEvalNum :
+						clipedRandomNormal = 2*curEvalNum - clipedRandomNormal;
+
+
+				# prevPath = "../nn/"+clipedRandomNormal+".pt";
+
+				self.loadModel(str(int(clipedRandomNormal+0.5)), i*self.num_agents+1)
+				# self.loadModel("current", i*self.num_agents+1)
+		else :
+			for i in range(self.num_slaves):
+				self.loadModel("current",i*self.num_agents+1)
+
 		while True:
 			counter += 1
 			if counter%10 == 0:
 				print('SIM : {}'.format(local_step),end='\r')
-			a_dist,v = self.model(Tensor(states))
-			# print(self.model)
-			# print(self)
-			# print(a_dist)
-			# print()
-			# print(v)
-			# exit()
-			actions = a_dist.sample().cpu().detach().numpy()
 
-			logprobs = a_dist.log_prob(Tensor(actions)).cpu().detach().numpy().reshape(-1)
-			values = v.cpu().detach().numpy().reshape(-1)
+			# per_agent_state = [[None]*self.num_agents]*self.num_slaves;
+			# for i in range(self.num_slaves):
+			# 	for j in range(self.num_agents):
+			# 		per_agent_state[i][j] = self.env.getState(i,j);
+
+				# a_dist,v = self.model(Tensor(per_agent_state[i]))
+
+				# actions = a_dist.sample().cpu().detach().numpy()
+
+				# logprobs = a_dist.log_prob(Tensor(actions)).cpu().detach().numpy().reshape(-1)
+				# values = v.cpu().detach().numpy().reshape(-1)
+
+			# logprobs = []
+			# values = []
+
+			for i in range(self.num_slaves):
+				a_dist_slave = []
+				v_slave = []
+				actions_slave = []
+				logprobs_slave = []
+				values_slave = []
+				for j in range(self.num_agents):
+					if j == 0:
+						a_dist_slave_agent,v_slave_agent = self.model[0](Tensor([states[i*self.num_agents+j]]))
+					else :
+						a_dist_slave_agent,v_slave_agent = self.model[i*self.num_agents+j](Tensor([states[i*self.num_agents+j]]))
+					# print(a_dist_slave_agent)
+					a_dist_slave.append(a_dist_slave_agent)
+					v_slave.append(v_slave_agent)
+					# print(actions_slave,a_dist_slave[j].sample().cpu().detach().numpy())
+					# exit()
+					# print(a_dist_slave[j].sample().cpu().detach().numpy())
+					actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy()[0];
+
+				for j in range(self.num_agents):
+					# logprob = np.concatenate((\
+					# 	logprob,a_dist_slave[j].log_prob(Tensor(actions[j])).cpu().detach().numpy().reshape(-1)), axis=0)
+					logprobs[i*self.num_agents+j] = a_dist_slave[j].log_prob(Tensor(actions[i*self.num_agents+j]))\
+						.cpu().detach().numpy().reshape(-1)[0];
+					values[i*self.num_agents+j] = v_slave[j].cpu().detach().numpy().reshape(-1)[0];
+
+
+				# logprobs_slave = a_dist_slave.log_prob(Tensor(actions)).cpu().detach().numpy().reshape(-1)
+				# values_slave = v_slave.cpu().detach().numpy().reshape(-1)
+
+				# for action in actions_slave:
+				# 	print(action)
+				# 	actions = np.concatenate((actions, action), axis=0)
+				# for logprob in logprobs_slave:
+				# 	logprobs = np.concatenate((logprobs, logprob), axis=0)
+				# for value in values_slave:
+				# 	values = np.concatenate((values, value), axis=0)
+
 			for i in range(self.num_slaves):
 				for j in range(self.num_agents):
 					self.env.setAction(actions[i*self.num_agents+j], i, j);
+
+
+			# print(values[0])
+			# print(rewards[0])
 
 			self.env.stepsAtOnce()
 			# self.env.step(0)
@@ -181,36 +254,38 @@ class PPO(object):
 			for j in range(self.num_slaves):
 				nan_occur = False
 				terminated_state = True
+				# if np.any(np.isnan(states[j])) or np.any(np.isnan(actions[j])):
+				# 	nan_occur = True
 
-				if np.any(np.isnan(states[j])) or np.any(np.isnan(actions[j])) or np.any(np.isnan(values[j])) or np.any(np.isnan(logprobs[j])):
-					nan_occur = True
-
-				elif self.env.isTerminalState(j) is False:
+				if self.env.isTerminalState(j) is False:
 					terminated_state = False
 					for k in range(self.num_agents):
-						rewards[j*self.num_agents+k] = self.env.getReward(j, k)
-						self.episodes[j*self.num_agents+k].push(states[j*self.num_agents+k], actions[j*self.num_agents+k],\
-							rewards[j*self.num_agents+k], values[j*self.num_agents+k], logprobs[j*self.num_agents+k])
-						local_step += 1
+						if k == 0:
+							rewards[j*self.num_agents+k] = self.env.getReward(j, k)
+							self.episodes[j].push(states[j*self.num_agents+k], actions[j*self.num_agents+k],\
+								rewards[j*self.num_agents+k], values[j*self.num_agents+k], logprobs[j*self.num_agents+k])
+							local_step += 1
 
 				if nan_occur is True:
 					for k in range(self.num_agents):
-						self.total_episodes.append(self.episodes[j*self.num_agents+k])
-						self.episodes[j*self.num_agents+k] = EpisodeBuffer()
+						if k == 0:
+							self.total_episodes.append(self.episodes[j])
+							self.episodes[j] = EpisodeBuffer()
 					self.env.reset(j)
 
 				elif terminated_state :
 					for k in range(self.num_agents):
-						self.total_episodes.append(self.episodes[j*self.num_agents+k])
-						self.episodes[j*self.num_agents+k] = EpisodeBuffer()
+						if k == 0:
+							self.total_episodes.append(self.episodes[j])
+							self.episodes[j] = EpisodeBuffer()
 					self.env.reset(j)
-
 
 
 			if local_step >= self.buffer_size:
 				for k in range(self.num_agents):
-					self.total_episodes.append(self.episodes[j*self.num_agents+k])
-					self.episodes[j*self.num_agents+k] = EpisodeBuffer()
+					if k == 0:
+						self.total_episodes.append(self.episodes[j])
+						self.episodes[j] = EpisodeBuffer()
 				self.env.reset(j)
 				break
 			for i in range(self.num_slaves):
@@ -232,7 +307,7 @@ class PPO(object):
 				stack_td = np.vstack(batch.TD).astype(np.float32)
 				stack_gae = np.vstack(batch.GAE).astype(np.float32)
 
-				a_dist,v = self.model(Tensor(stack_s))
+				a_dist,v = self.model[0](Tensor(stack_s))
 
 				'''Critic Loss'''
 				loss_critic = ((v-Tensor(stack_td)).pow(2)).mean()
@@ -255,7 +330,7 @@ class PPO(object):
 
 				self.optimizer.zero_grad()
 				loss.backward(retain_graph=True)
-				for param in self.model.parameters():
+				for param in self.model[0].parameters():
 					if param.grad is not None:
 						param.grad.data.clamp_(-0.5, 0.5)
 				self.optimizer.step()
@@ -297,7 +372,7 @@ class PPO(object):
 		print('# {} === {}h:{}m:{}s ==='.format(self.num_evaluation,h,m,s))
 		print('||Loss Actor               : {:.4f}'.format(self.loss_actor))
 		print('||Loss Critic              : {:.4f}'.format(self.loss_critic))
-		print('||Noise                    : {:.3f}'.format(self.model.log_std.exp().mean()))		
+		print('||Noise                    : {:.3f}'.format(self.model[0].log_std.exp().mean()))		
 		print('||Num Transition So far    : {}'.format(self.num_tuple_so_far))
 		print('||Num Transition           : {}'.format(self.num_tuple))
 		print('||Num Episode              : {}'.format(self.num_episode))
@@ -350,7 +425,7 @@ if __name__=="__main__":
 	
 	
 	if args.model is not None:
-		ppo.loadModel(args.model)
+		ppo.loadModel(args.model, 0)
 	else:
 		ppo.saveModel()
 	print('num states: {}, num actions: {}'.format(ppo.env.getNumState(),ppo.env.getNumAction()))

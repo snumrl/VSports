@@ -58,6 +58,8 @@ initCharacters()
 	mKicked.setZero();
 	mScoreBoard.resize(1);
 	mScoreBoard[0] = 0.5;
+	mAccScore.resize(mNumChars);
+	mAccScore.setZero();
 
 
 }
@@ -275,7 +277,6 @@ getState(int index)
 	}
 	count = 0;
 
-
 	Eigen::VectorXd ballPossession(1);
 	if(index == 0)
 	{
@@ -362,7 +363,8 @@ getState(int index)
 
 	// Put these arguments in a single vector
 
-	Eigen::VectorXd s(p.rows() + v.rows() + ballP.rows() + ballV.rows() + otherS.rows() + goalpostPositions.rows());
+	Eigen::VectorXd s(p.rows() + v.rows() + ballP.rows() + ballV.rows() +
+	ballPossession.rows() + otherS.rows() + goalpostPositions.rows());
 
 
 	// Eigen::VectorXd s(p.rows() + v.rows() + ballP.rows() + ballV.rows() + 1);
@@ -372,8 +374,7 @@ getState(int index)
 	// s.segment(p.rows() + v.rows(), 1)[0] = isDribbler;
 	// s.segment(p.rows() + v.rows() + 1, otherS.size()) = otherS;
 	// s.segment(p.rows() + v.rows() + 1 + otherS.size(), 4) = goalpostPositions;
-	s<<p,v,ballP,ballV, otherS,goalpostPositions;
-
+	s<<p,v,ballP,ballV,ballPossession,otherS,goalpostPositions;
 	return s;
 }
 
@@ -382,9 +383,15 @@ Environment::
 updateScoreBoard(std::string teamName)
 {
 	if(mKicked[0] == 1)
+	{
 		mScoreBoard[0] = 1;
+		mKicked[0] = 0;
+	}
 	if(mKicked[1] == 1)
+	{
 		mScoreBoard[0] = 0;
+		mKicked[1] = 0;
+	}
 
 
 	// if(teamName == "A")
@@ -421,15 +428,21 @@ getReward(int index)
 
 	// }
 
-
+	if(index == 0)
+	{
+		reward += 0.1 * mScoreBoard[0];
+	}
+	else
+	{
+		reward += 0.1 * (1-mScoreBoard[0]);
+	}
 
 
 	// reward += 1.0 * mKicked[index];
-	reward += 0.1 * mScoreBoard[0];
+	
 
-	mKicked[index] = 0;
 
-	reward += 0.1 * exp(-pow((mCharacters[index]->getSkeleton()->getPositions() - ballPosition).norm(),2.0));
+	// reward += 0.1 * exp(-pow((mCharacters[index]->getSkeleton()->getPositions() - ballPosition).norm(),2.0));
 
 
 	/*
@@ -496,11 +509,16 @@ getRewards()
 {
 	std::vector<double> rewards;
 	// for(int i=0;i<mCharacters.size();i++)
-	for(int i=0;i<1;i++)
+	for(int i=0;i<mNumChars;i++)
 	{
 		rewards.push_back(getReward(i));
+		mAccScore[i] += rewards[i];
 	}
 
+	// cout.setf(ios::fixed);
+	// cout.precision(3);
+	// cout<<"\r"<<rewards[0]<<" "<<rewards[1];
+	// cout.unsetf(ios::fixed);
 	return rewards;
 }
 
@@ -594,7 +612,7 @@ reset()
 		Eigen::VectorXd skelPosition = skel->getPositions();
 		skelPosition[0] = 6.0 * (rand()/(double)RAND_MAX ) - 6.0/2.0;
 		skelPosition[1] = 4.5 * (rand()/(double)RAND_MAX ) - 4.5/2.0;
-		skel->setPositions(ballPosition);
+		skel->setPositions(skelPosition);
 		Eigen::VectorXd skelVel = skel->getVelocities();
 		skelVel[0] = 3.0 * (rand()/(double)RAND_MAX ) - 1.5;
 		skelVel[1] = 3.0 * (rand()/(double)RAND_MAX ) - 1.5;
@@ -606,6 +624,8 @@ reset()
 	mTimeElapsed = 0;
 
 	mScoreBoard[0] = 0.5;
+
+	mAccScore.setZero();
 
 	// resetCharacterPositions();
 }
