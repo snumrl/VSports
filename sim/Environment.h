@@ -25,6 +25,8 @@ public:
 	Eigen::VectorXd getState(int index);
 	std::vector<Eigen::VectorXd> getStates();
 
+	Eigen::MatrixXd getState_map(int index);
+
 	double getReward(int index);
 	std::vector<double> getRewards();
 
@@ -74,6 +76,7 @@ public:
 
 	std::vector<GoalpostInfo> mGoalposts;
 	std::vector<Eigen::VectorXd> mActions;
+	std::vector<Eigen::VectorXd> mStates;
 
 	double floorDepth = -0.1;
 
@@ -86,6 +89,9 @@ public:
 
 	Eigen::VectorXd mAccScore;
 
+	Eigen::VectorXd mTouch;
+
+	int mNumIterations;
 };
 
 #endif

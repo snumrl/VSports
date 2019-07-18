@@ -109,8 +109,8 @@ class PPO(object):
 
 		if self.max_return_epoch == self.num_evaluation:
 			self.model[0].save('../nn/max.pt')
-		if self.num_evaluation%10 == 0:
-			self.model[0].save('../nn/'+str(self.num_evaluation//10)+'.pt')
+		if self.num_evaluation%50 == 0:
+			self.model[0].save('../nn/'+str(self.num_evaluation//50)+'.pt')
 
 	def loadModel(self,path,index):
 		self.model[index].load('../nn/'+path+'.pt')
@@ -146,6 +146,21 @@ class PPO(object):
 		print('SIM : {}'.format(self.num_tuple))
 		self.num_tuple_so_far += self.num_tuple
 
+	def getHardcodedAction(self, slave_index, agent_index):
+		state = self.env.getState(slave_index, agent_index)
+		action = []
+		direction = state[8:10]
+		direction_norm = 0
+		for i in direction:
+			direction_norm = i*i
+
+		direction_norm = math.sqrt(direction_norm)
+
+		action = (2.5*direction/direction_norm - state[2:4])*0.3
+		action = np.append(action, [random.randrange(0,2)])
+
+		return action
+
 	def generateTransitions(self):
 		self.total_episodes = []
 		states = [None]*self.num_slaves*self.num_agents
@@ -161,26 +176,32 @@ class PPO(object):
 		terminated = [False]*self.num_slaves*self.num_agents
 		counter = 0
 
+		useHardCoded = True
 
-		if self.num_evaluation > 1:
 
-			for i in range(self.num_slaves):
-				curEvalNum = self.num_evaluation//10
 
-				clipedRandomNormal = -1
-				while clipedRandomNormal < 0:
+		if not useHardCoded:
+			if self.num_evaluation > 50:
+				curEvalNum = self.num_evaluation//50
+
+				clipedRandomNormal = 0
+				while clipedRandomNormal <= 0.5:
 					clipedRandomNormal = np.random.normal(curEvalNum, curEvalNum/2,1)[0]
 					if clipedRandomNormal > curEvalNum :
 						clipedRandomNormal = 2*curEvalNum - clipedRandomNormal;
 
+				for i in range(self.num_slaves):
+					# prevPath = "../nn/"+clipedRandomNormal+".pt";
 
-				# prevPath = "../nn/"+clipedRandomNormal+".pt";
+					self.loadModel(str(int(clipedRandomNormal+0.5)), i*self.num_agents+1)
+					# self.loadModel("current", i*self.num_agents+1)
+			else :
+				for i in range(self.num_slaves):
+					self.loadModel("0",i*self.num_agents+1)
 
-				self.loadModel(str(int(clipedRandomNormal+0.5)), i*self.num_agents+1)
-				# self.loadModel("current", i*self.num_agents+1)
-		else :
-			for i in range(self.num_slaves):
-				self.loadModel("current",i*self.num_agents+1)
+
+		# 0 or 1
+		cur_team = random.randrange(0,2)
 
 		while True:
 			counter += 1
@@ -202,6 +223,7 @@ class PPO(object):
 			# logprobs = []
 			# values = []
 
+
 			for i in range(self.num_slaves):
 				a_dist_slave = []
 				v_slave = []
@@ -209,24 +231,42 @@ class PPO(object):
 				logprobs_slave = []
 				values_slave = []
 				for j in range(self.num_agents):
-					if j == 0:
-						a_dist_slave_agent,v_slave_agent = self.model[0](Tensor([states[i*self.num_agents+j]]))
+					if not useHardCoded:
+						if j == cur_team:
+							a_dist_slave_agent,v_slave_agent = self.model[0](Tensor([states[i*self.num_agents+j]]))
+						else :
+							a_dist_slave_agent,v_slave_agent = self.model[i*self.num_agents+j](Tensor([states[i*self.num_agents+j]]))
+						# print(a_dist_slave_agent)
+						a_dist_slave.append(a_dist_slave_agent)
+						v_slave.append(v_slave_agent)
+						# print(actions_slave,a_dist_slave[j].sample().cpu().detach().numpy())
+						# exit()
+						# print(a_dist_slave[j].sample().cpu().detach().numpy())
+						actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy()[0];
+
 					else :
-						a_dist_slave_agent,v_slave_agent = self.model[i*self.num_agents+j](Tensor([states[i*self.num_agents+j]]))
-					# print(a_dist_slave_agent)
-					a_dist_slave.append(a_dist_slave_agent)
-					v_slave.append(v_slave_agent)
-					# print(actions_slave,a_dist_slave[j].sample().cpu().detach().numpy())
-					# exit()
-					# print(a_dist_slave[j].sample().cpu().detach().numpy())
-					actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy()[0];
+						if j == cur_team:
+							a_dist_slave_agent,v_slave_agent = self.model[0](Tensor([states[i*self.num_agents+j]]))
+							a_dist_slave.append(a_dist_slave_agent)
+							v_slave.append(v_slave_agent)
+							actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy()[0];		
+						else :
+							# dummy
+							a_dist_slave_agent,v_slave_agent = self.model[0](Tensor([states[i*self.num_agents+j]]))
+							a_dist_slave.append(a_dist_slave_agent)
+							v_slave.append(v_slave_agent)
+
+
+							actions[i*self.num_agents+j] = self.getHardcodedAction(i, j);
+
 
 				for j in range(self.num_agents):
 					# logprob = np.concatenate((\
 					# 	logprob,a_dist_slave[j].log_prob(Tensor(actions[j])).cpu().detach().numpy().reshape(-1)), axis=0)
-					logprobs[i*self.num_agents+j] = a_dist_slave[j].log_prob(Tensor(actions[i*self.num_agents+j]))\
-						.cpu().detach().numpy().reshape(-1)[0];
-					values[i*self.num_agents+j] = v_slave[j].cpu().detach().numpy().reshape(-1)[0];
+					if j == cur_team:
+						logprobs[i*self.num_agents+j] = a_dist_slave[j].log_prob(Tensor(actions[i*self.num_agents+j]))\
+							.cpu().detach().numpy().reshape(-1)[0];
+						values[i*self.num_agents+j] = v_slave[j].cpu().detach().numpy().reshape(-1)[0];
 
 
 				# logprobs_slave = a_dist_slave.log_prob(Tensor(actions)).cpu().detach().numpy().reshape(-1)
@@ -260,7 +300,7 @@ class PPO(object):
 				if self.env.isTerminalState(j) is False:
 					terminated_state = False
 					for k in range(self.num_agents):
-						if k == 0:
+						if k == cur_team:
 							rewards[j*self.num_agents+k] = self.env.getReward(j, k)
 							self.episodes[j].push(states[j*self.num_agents+k], actions[j*self.num_agents+k],\
 								rewards[j*self.num_agents+k], values[j*self.num_agents+k], logprobs[j*self.num_agents+k])
@@ -268,14 +308,14 @@ class PPO(object):
 
 				if nan_occur is True:
 					for k in range(self.num_agents):
-						if k == 0:
+						if k == cur_team:
 							self.total_episodes.append(self.episodes[j])
 							self.episodes[j] = EpisodeBuffer()
 					self.env.reset(j)
 
 				elif terminated_state :
 					for k in range(self.num_agents):
-						if k == 0:
+						if k == cur_team:
 							self.total_episodes.append(self.episodes[j])
 							self.episodes[j] = EpisodeBuffer()
 					self.env.reset(j)
@@ -283,7 +323,7 @@ class PPO(object):
 
 			if local_step >= self.buffer_size:
 				for k in range(self.num_agents):
-					if k == 0:
+					if k == cur_team:
 						self.total_episodes.append(self.episodes[j])
 						self.episodes[j] = EpisodeBuffer()
 				self.env.reset(j)
@@ -291,6 +331,8 @@ class PPO(object):
 			for i in range(self.num_slaves):
 				for j in range(self.num_agents):
 					states[i*self.num_agents+j] = self.env.getState(i,j)
+
+		self.env.endOfIteration()
 
 
 	def optimizeSimulationNN(self):

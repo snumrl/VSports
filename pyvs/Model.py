@@ -79,3 +79,67 @@ class SimulationNN(nn.Module):
 		ts = torch.tensor(s)
 		p,_ = self.forward(ts)
 		return p.sample().cpu().detach().numpy()
+
+
+# class CNN(nn.Moudle):
+# 	def __init__(self):
+# 		super(CNNClassifier, self).__init__()
+# 		#image 80 * 80
+# 		conv1 = nn.Conv2d(1, 6, 9, 4)
+# 		# 18 * 18
+
+# 		conv2 = nn.Conv2d(1, 16, 3, 1)
+# 		# 16 * 16
+
+# 		pool1 = nn.MaxPool2d(2)
+# 		# 8 * 8
+
+# 		conv3 = nn.Conv2d(1, 16, 5, 1)
+# 		# 4 * 4
+
+# 		self.conv_module = nn.Sequential(
+# 			conv1,
+# 			nn.ReLU(),
+# 			conv2,
+# 			nn.ReLU(),
+# 			pool1,
+# 			conv3,
+# 			nn.ReLU()
+# 		)
+
+# 		fc1 = nn.Linear(16*4*4, 120)
+
+# 		fc2 = nn.Linear(120, 84)
+
+# 		fc3 = nn.Linear(84, 20)
+
+# 		self.fc_module = nn.Sequential(
+# 			fc1,
+# 			nn.ReLU(),
+# 			fc2,
+# 			nn.ReLU(),
+# 			fc3
+# 		)
+
+# 		if use_cuda:
+# 			self.conv_moudle = self.conv_module.cuda()
+# 			self.fc_module = self.fc_module.cuda()
+
+
+# 	def forward(self, x):
+# 		out = self.conv_module(x)
+
+# 		dim = 1
+# 		# out.size() -> Torch.size([batch_size, layers, width, height])
+# 		for d in out.size()[1:]:
+# 			dim = dim * d
+
+# 		out = out.view(-1, dim)
+
+# 		out = self.fc_module(out)
+# 		return out
+
+
+# class LSTM(nn.Module):
+# 	def __init__(self):
+# 		super(LSTM, self).__init__()

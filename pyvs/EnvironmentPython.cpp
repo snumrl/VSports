@@ -45,6 +45,7 @@ reset(int id)
 {
 	mSlaves[id]->reset();
 }
+
 void
 EnvironmentPython::
 resets()
@@ -73,6 +74,7 @@ setAction(np::ndarray np_array, int id, int index)
 {
 	mSlaves[id]->setAction(index, toEigenVector(np_array));
 }
+
 
 // void
 // EnvironmentPython::
@@ -119,6 +121,18 @@ steps(int num)
 	}
 }
 
+void
+EnvironmentPython::
+endOfIteration()
+{
+	for(int i=0;i<mNumSlaves;i++)
+	{
+		mSlaves[i]->mNumIterations++;
+		if(mSlaves[i]->mNumIterations >= 300)
+			mSlaves[i]->mNumIterations = 300;
+	}
+}
+
 using namespace boost::python;
 
 BOOST_PYTHON_MODULE(pyvs)
@@ -139,5 +153,6 @@ BOOST_PYTHON_MODULE(pyvs)
 		.def("stepsAtOnce",&EnvironmentPython::stepsAtOnce)
 		.def("steps",&EnvironmentPython::steps)
 		.def("step",&EnvironmentPython::step)
-		.def("resets",&EnvironmentPython::resets);
+		.def("resets",&EnvironmentPython::resets)
+		.def("endOfIteration",&EnvironmentPython::endOfIteration);
 }

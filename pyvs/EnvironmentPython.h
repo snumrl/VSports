@@ -29,6 +29,8 @@ public:
 	void setActions(np::ndarray np_array);
 	double getReward(int id, int index);
 
+	void endOfIteration();
+
 	// For all slaves
 	void stepsAtOnce();
 

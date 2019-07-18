@@ -25,7 +25,8 @@ public:
 	void initGoalpost();
 	void initCustomView();
 
-	void getActionFromNN();
+	void getActionFromNN(bool vsHardcodedAI = false);
+	double vsHardcodedAI_difficulty;
 
 	dart::dynamics::SkeletonPtr makeGoalpost(Eigen::Vector3d position, std::string label);
 

@@ -14,12 +14,13 @@ double floorDepth = -0.1;
 
 SimpleSocWindow::
 SimpleSocWindow()
-:SimWindow()
+:SimWindow(),vsHardcodedAI_difficulty(2.5)
 {
 	mEnv = new Environment(30, 600, 2);
 	initCustomView();
 	initGoalpost();
 	mActions = mEnv->mActions;
+
 
 
 	mm = p::import("__main__");
@@ -109,7 +110,21 @@ keyboard(unsigned char key, int x, int y)
 			break;
 		case 'r':
 			mEnv->reset();
-		
+			break;
+		case ']':
+			vsHardcodedAI_difficulty += 0.1;
+
+			if(vsHardcodedAI_difficulty>5.0)
+				vsHardcodedAI_difficulty = 5.0;
+			cout<<vsHardcodedAI_difficulty<<endl;
+			break;
+		case '[':
+			vsHardcodedAI_difficulty += -0.1;
+			if(vsHardcodedAI_difficulty<0.0)
+				vsHardcodedAI_difficulty = 0.0;
+			cout<<vsHardcodedAI_difficulty<<endl;
+			break;
+
 		default: SimWindow::keyboard(key, x, y);
 	}
 }
@@ -127,7 +142,7 @@ void
 SimpleSocWindow::
 step()
 {
-	getActionFromNN();
+	getActionFromNN(true);
 	// std::cout<<"step!"<<std::endl;
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
@@ -142,7 +157,7 @@ step()
 		// 	cout<<"collide!"<<endl;
 		// }
 		// else
-			mEnv->setAction(i, mActions[i]);
+		mEnv->setAction(i, mActions[i]);
 	}
 
 	int sim_per_control = mEnv->getSimulationHz()/mEnv->getControlHz();
@@ -155,18 +170,41 @@ step()
 
 void
 SimpleSocWindow::
-getActionFromNN()
+getActionFromNN(bool vsHardcodedAI)
 {
 	p::object get_action;
 	mActions.clear();
 	get_action = nn_module.attr("get_action");
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
+
 		Eigen::VectorXd mAction(mEnv->getNumAction());
 		Eigen::VectorXd state = mEnv->getState(i);
+		//change the i=1 agent
+		if(vsHardcodedAI)
+		{
+			if(i==1)
+			{
+				Eigen::VectorXd curBallRelaltionalP = state.segment(8,2);
+
+				Eigen::VectorXd direction = curBallRelaltionalP.normalized();
+				Eigen::VectorXd curVel = state.segment(2,2);
+
+				mAction.segment(0, curVel.rows()) = 0.3*(direction*vsHardcodedAI_difficulty - curVel);
+				mAction[curVel.rows()] = rand()%2;
+				// cout<<mAction.transpose()<<endl;
+				mActions.push_back(mAction);
+				break;
+			}
+		}
+		// cout<<state[13]<<endl;
+
+
 		p::tuple shape = p::make_tuple(state.rows());
 		np::dtype dtype = np::dtype::get_builtin<float>();
 		np::ndarray state_np = np::empty(shape, dtype);
+
+		// cout<<state.segment(8,6).transpose()<<endl;
 
 		float* dest = reinterpret_cast<float*>(state_np.get_data());
 		for(int j=0;j<state.rows();j++)
@@ -182,9 +220,10 @@ getActionFromNN()
 		{
 			mAction[j] = srcs[j];
 		}
-
+		// cout<<mAction[mAction.rows()-1]<<endl;
 		mActions.push_back(mAction);
 	}
+	// cout<<endl;
 }
 
 

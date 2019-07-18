@@ -13,7 +13,7 @@ using namespace dart::dynamics;
 Environment::
 Environment(int control_Hz, int simulation_Hz, int numChars)
 :mControlHz(control_Hz), mSimulationHz(simulation_Hz), mNumChars(numChars), mWorld(std::make_shared<dart::simulation::World>()),
-mIsTerminalState(false), mTimeElapsed(0)
+mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0)
 {
 	srand((unsigned int)time(0));
 	initCharacters();
@@ -46,13 +46,21 @@ initCharacters()
 
 	for(int i=0;i<mNumChars;i++)
 	{
+		Eigen::VectorXd mAction;
 		Eigen::VectorXd zeroVel(mCharacters[i]->getSkeleton()->getNumDofs());
 		zeroVel.setZero();
 		// Eigen::VectorXd controlBall(2);
 		// Eigen::VectorXd mAction(zeroVel.size()+controlBall.size());
 		// mAction << zeroVel, controlBall;
-		mActions.push_back(zeroVel);
+
+		Eigen::VectorXd touch(1);
+		touch.setZero();
+
+		mAction.resize(zeroVel.rows()+touch.rows());
+		mAction << zeroVel, touch;
+		mActions.push_back(mAction);
 	}
+	mTouch.resize(2);
 
 	mKicked.resize(4);
 	mKicked.setZero();
@@ -60,6 +68,7 @@ initCharacters()
 	mScoreBoard[0] = 0.5;
 	mAccScore.resize(mNumChars);
 	mAccScore.setZero();
+	mStates.resize(2);
 
 
 }
@@ -157,15 +166,15 @@ handleBallContact(int index, double radius, double me)
 	// Eigen::VectorXd ballVel = ballSkel->getVelocities();
 	double ballDistance = (ballSkel->getPositions() - skel->getPositions()).norm();
 
-	if(ballDistance<0.15+radius)
+	if(mStates[index][13] == 1)
 	{
-		for(int i=0;i<mNumChars;i++)
-		{
-			if(ballDistance > (ballSkel->getPositions() - mCharacters[i]->getSkeleton()->getPositions()).norm())
-				return;
-		}
-		Eigen::VectorXd relativeVel = skel->getVelocities() - ballSkel->getVelocities();
-		ballSkel->setVelocities(skel->getVelocities() + me * relativeVel);
+		// for(int i=0;i<mNumChars;i++)
+		// {
+		// 	if(ballDistance > (ballSkel->getPositions() - mCharacters[i]->getSkeleton()->getPositions()).norm())
+		// 		return;
+		// }
+		// Eigen::VectorXd relativeVel = skel->getVelocities() - ballSkel->getVelocities();
+		ballSkel->setVelocities(skel->getVelocities()*(1.0+me*2.0));
 		mKicked[index] = 1;
 	}
 
@@ -197,7 +206,8 @@ step()
 	{
 		handleWallContact(mCharacters[i]->getSkeleton(), 0.08, 0.5);
 		// handleBallContact(mCharacters[i]->getSkeleton(), 0.08, 1.3);
-		handleBallContact(i, 0.08, 1.3);
+		if(mActions[i][2] > 0.0)
+			handleBallContact(i, 0.08, 1.3);
 		// handleContact(mCharacters[i]->getSkeleton(), 0.08, 0.5);
 	}
 	// handleContact(ballSkel, 0.08);
@@ -250,6 +260,14 @@ getState(int index)
 	v = character->getSkeleton()->getVelocities();
 	// int isDribbler = (getDribblerIndex()==index) ? 1 : 0;
 
+	Eigen::VectorXd distanceWall(4);
+
+	distanceWall << 4-p[0], -4-p[0], 3-p[1], -3-p[1];
+
+	// if(index == 0)
+	// {
+	// 	cout<<distanceWall.transpose()<<endl;
+	// }
 
 	// Ball's state
 	Eigen::Vector2d ballP, ballV;
@@ -286,6 +304,17 @@ getState(int index)
 	{
 		ballPossession[0] = 1-mScoreBoard[0];
 	}
+
+	Eigen::VectorXd kickable(1);
+	if(ballP.norm()<0.15+0.08)
+	{
+		kickable[0] = 1;
+	}
+	else
+	{
+		kickable[0] = 0;
+	}
+
 	// Selection Sort
 	// double min = DBL_MAX;
 	// int minIndex = 0;
@@ -332,6 +361,7 @@ getState(int index)
 			otherS.segment(count*4,2) = skel->getPositions() - p;
 			otherS.segment(count*4+2,2) = skel->getVelocities() - v;
 			// otherS.segment(count*5+4,1)[0] = (getDribblerIndex()==index) ? 1 : 0;
+			exit(0);
 			count++;
 		}
 	}
@@ -363,8 +393,8 @@ getState(int index)
 
 	// Put these arguments in a single vector
 
-	Eigen::VectorXd s(p.rows() + v.rows() + ballP.rows() + ballV.rows() +
-	ballPossession.rows() + otherS.rows() + goalpostPositions.rows());
+	Eigen::VectorXd s(p.rows() + v.rows() + distanceWall.rows() + ballP.rows() + ballV.rows() +
+	ballPossession.rows() + kickable.rows() + otherS.rows() + goalpostPositions.rows());
 
 
 	// Eigen::VectorXd s(p.rows() + v.rows() + ballP.rows() + ballV.rows() + 1);
@@ -374,8 +404,20 @@ getState(int index)
 	// s.segment(p.rows() + v.rows(), 1)[0] = isDribbler;
 	// s.segment(p.rows() + v.rows() + 1, otherS.size()) = otherS;
 	// s.segment(p.rows() + v.rows() + 1 + otherS.size(), 4) = goalpostPositions;
-	s<<p,v,ballP,ballV,ballPossession,otherS,goalpostPositions;
+	s<<p,v,distanceWall,ballP,ballV,ballPossession,kickable,otherS,goalpostPositions;
+	mStates[index] = s;
 	return s;
+}
+
+Eigen::MatrixXd
+Environment::
+getState_map(int index)
+{
+	Eigen::MatrixXd minimap(60, 80);
+	minimap.setZero();
+
+
+	return minimap;
 }
 
 Eigen::VectorXd
@@ -430,21 +472,33 @@ getReward(int index)
 
 	if(index == 0)
 	{
-		reward += 0.1 * mScoreBoard[0];
+		reward += (mNumIterations/400.0) * 0.1 * (2*mScoreBoard[0] -1);
 	}
 	else
 	{
-		reward += 0.1 * (1-mScoreBoard[0]);
+		reward += (mNumIterations/400.0) * 0.1 * (1-2*mScoreBoard[0]);
 	}
 
 
 	// reward += 1.0 * mKicked[index];
 	
+/*
+	double myDistanceBall = (mCharacters[index]->getSkeleton()->getPositions() - ballPosition).norm();
+	double oppDistanceBall = (mCharacters[1-index]->getSkeleton()->getPositions() - ballPosition).norm();
+
+	reward += (1-mNumIterations/400.0) * 0.1 * exp(-pow(myDistanceBall,2.0));
+
+	if(abs(oppDistanceBall - myDistanceBall)>0.01)
+		reward += (mNumIterations/400.0) * 0.05 * (oppDistanceBall - myDistanceBall)/abs(oppDistanceBall - myDistanceBall);
+*/
 
 
-	// reward += 0.1 * exp(-pow((mCharacters[index]->getSkeleton()->getPositions() - ballPosition).norm(),2.0));
+
+	// reward += -(1-mNumIterations/300.0) * 0.1 * exp(-pow((mCharacters[1-index]->getSkeleton()->getPositions() - ballPosition).norm(),2.0));
 
 
+
+	// cout<<mNumIterations<<endl;
 	/*
 	if(index<2)
 	{
@@ -503,10 +557,12 @@ getReward(int index)
 	return reward;
 }
 
+// used only in test window
 std::vector<double> 
 Environment::
 getRewards()
 {
+	mNumIterations = 400.0;
 	std::vector<double> rewards;
 	// for(int i=0;i<mCharacters.size();i++)
 	for(int i=0;i<mNumChars;i++)
@@ -526,13 +582,11 @@ void
 Environment::
 setAction(int index, const Eigen::VectorXd& a)
 {
+	mActions[index] = a;
 	mTimeElapsed += 1.0 / (double)mControlHz;
 	double maxVel = 3.0;
 	SkeletonPtr skel = mCharacters[index]->getSkeleton();
 	Eigen::VectorXd vel = skel->getVelocities();
-
-	// controll the ball if the char is close to ball.
-	Eigen::VectorXd controlForceToBall(2);
 
 	vel += a.segment(0, vel.size());
 	// cout<<vel.transpose()<<endl;
@@ -547,6 +601,7 @@ setAction(int index, const Eigen::VectorXd& a)
 	}
 	skel->setVelocities(vel);
 
+	mTouch[index] = a.segment(vel.size(), 1)[0];
 	// double controlPower;
 	// double relativeBallPosition 
 	// = (skel->getCOM().segment(0,2) - ballSkel->getCOM().segment(0,2)).norm();
