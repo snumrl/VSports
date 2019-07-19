@@ -16,7 +16,7 @@ SimpleSocWindow::
 SimpleSocWindow()
 :SimWindow(),vsHardcodedAI_difficulty(2.5)
 {
-	mEnv = new Environment(30, 600, 2);
+	mEnv = new Environment(30, 600, 4);
 	initCustomView();
 	initGoalpost();
 	mActions = mEnv->mActions;
@@ -142,6 +142,7 @@ void
 SimpleSocWindow::
 step()
 {
+
 	getActionFromNN(true);
 	// std::cout<<"step!"<<std::endl;
 	for(int i=0;i<mEnv->mNumChars;i++)
@@ -179,49 +180,44 @@ getActionFromNN(bool vsHardcodedAI)
 	{
 
 		Eigen::VectorXd mAction(mEnv->getNumAction());
-		Eigen::VectorXd state = mEnv->getState(i);
+		std::vector<double> state = mEnv->getState(i);
+		// mEnv->getState(i);
+		// Eigen::VectorXd state = mEnv->mStates[i];
 		//change the i=1 agent
-		if(vsHardcodedAI)
+		if(vsHardcodedAI && (i==2 || i == 3))
 		{
-			if(i==1)
+			Eigen::VectorXd curBallRelaltionalP = mEnv->mStates[i].segment(ID_BALL_P,2);
+			Eigen::VectorXd direction = curBallRelaltionalP.normalized();
+			Eigen::VectorXd curVel = mEnv->mStates[i].segment(ID_V,2);
+			mAction.segment(0, 2) = 0.3*(direction*vsHardcodedAI_difficulty - curVel);
+			mAction[2] = rand()%2;
+			mActions.push_back(mAction);
+		}
+		else
+		{
+			p::tuple shape = p::make_tuple(state.size());
+			np::dtype dtype = np::dtype::get_builtin<float>();
+			np::ndarray state_np = np::empty(shape, dtype);
+
+			// cout<<state.segment(8,6).transpose()<<endl;
+
+			float* dest = reinterpret_cast<float*>(state_np.get_data());
+			for(int j=0;j<state.size();j++)
 			{
-				Eigen::VectorXd curBallRelaltionalP = state.segment(8,2);
-
-				Eigen::VectorXd direction = curBallRelaltionalP.normalized();
-				Eigen::VectorXd curVel = state.segment(2,2);
-
-				mAction.segment(0, curVel.rows()) = 0.3*(direction*vsHardcodedAI_difficulty - curVel);
-				mAction[curVel.rows()] = rand()%2;
-				// cout<<mAction.transpose()<<endl;
-				mActions.push_back(mAction);
-				break;
+				dest[j] = state[j];
 			}
+
+			p::object temp = get_action(state_np);
+			np::ndarray action_np = np::from_object(temp);
+
+			float* srcs = reinterpret_cast<float*>(action_np.get_data());
+			for(int j=0;j<mAction.rows();j++)
+			{
+				mAction[j] = srcs[j];
+			}
+			// cout<<mAction[mAction.rows()-1]<<endl;
+			mActions.push_back(mAction);
 		}
-		// cout<<state[13]<<endl;
-
-
-		p::tuple shape = p::make_tuple(state.rows());
-		np::dtype dtype = np::dtype::get_builtin<float>();
-		np::ndarray state_np = np::empty(shape, dtype);
-
-		// cout<<state.segment(8,6).transpose()<<endl;
-
-		float* dest = reinterpret_cast<float*>(state_np.get_data());
-		for(int j=0;j<state.rows();j++)
-		{
-			dest[j] = state[j];
-		}
-
-		p::object temp = get_action(state_np);
-		np::ndarray action_np = np::from_object(temp);
-
-		float* srcs = reinterpret_cast<float*>(action_np.get_data());
-		for(int j=0;j<mAction.rows();j++)
-		{
-			mAction[j] = srcs[j];
-		}
-		// cout<<mAction[mAction.rows()-1]<<endl;
-		mActions.push_back(mAction);
 	}
 	// cout<<endl;
 }
@@ -239,10 +235,21 @@ display()
 
 	std::vector<Character2D*> chars = mEnv->getCharacters();
 
+	// exit(0);
+	// mEnv->getState_map(0);
+	// exit(0);
+
+	for(int i=0;i<chars.size();i++)
+	{
+		if(chars[i]->getTeamName() == "A")
+			GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
+		else
+			GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));
 
 
-	GUI::drawSkeleton(chars[0]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
-	GUI::drawSkeleton(chars[1]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));
+	}
+	// GUI::drawSkeleton(chars[0]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
+	// GUI::drawSkeleton(chars[1]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));
 
 
 	// for(int i=0;i<2;i++)

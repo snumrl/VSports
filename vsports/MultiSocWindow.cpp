@@ -172,13 +172,15 @@ getActionFromNN()
 	{
 		get_action = nn_modules[i].attr("get_action");
 		Eigen::VectorXd mAction(mEnv->getNumAction());
-		Eigen::VectorXd state = mEnv->getState(i);
-		p::tuple shape = p::make_tuple(state.rows());
+		std::vector<double> state = mEnv->getState(i);
+		// mEnv->getState(i);
+		// Eigen::VectorXd state = mEnv->mStates[i];
+		p::tuple shape = p::make_tuple(state.size());
 		np::dtype dtype = np::dtype::get_builtin<float>();
 		np::ndarray state_np = np::empty(shape, dtype);
 
 		float* dest = reinterpret_cast<float*>(state_np.get_data());
-		for(int j=0;j<state.rows();j++)
+		for(int j=0;j<state.size();j++)
 		{
 			dest[j] = state[j];
 		}

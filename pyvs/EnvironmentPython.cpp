@@ -11,7 +11,7 @@ EnvironmentPython(int simulationHz)
 	omp_set_num_threads(mNumSlaves);
 	for(int i=0;i<mNumSlaves;i++)
 	{
-		mSlaves.push_back(new Environment(30, simulationHz, 2));
+		mSlaves.push_back(new Environment(30, simulationHz, 4));
 	}
 	mNumState = mSlaves[0]->getNumState();
 	mNumAction = mSlaves[0]->getNumAction();
@@ -65,6 +65,9 @@ np::ndarray
 EnvironmentPython::
 getState(int id, int index)
 {
+	// std::cout<<"getState in wrapper"<<std::endl;
+	// std::cout<< toNumPyArray(mSlaves[id]->getState(index)).shape(0)<<std::endl;
+	// exit(0);
 	return toNumPyArray(mSlaves[id]->getState(index));
 }
 

@@ -2,6 +2,14 @@
 #define __VS_ENVIRONMENT_H__
 #include "Character2D.h"
 
+#define ID_P 0
+#define ID_V 2
+#define ID_BALL_P 4
+#define ID_BALL_V 6
+#define ID_POSSESSION 8
+#define ID_KICKABLE 9
+// #define ID_GOALPOST 10
+
 typedef std::pair<std::string, Eigen::Vector3d> GoalpostInfo;
 
 class Environment
@@ -22,10 +30,12 @@ public:
 
 
 	// For DeepRL
-	Eigen::VectorXd getState(int index);
-	std::vector<Eigen::VectorXd> getStates();
+	// Eigen::VectorXd getState(int index);
+	std::vector<double> getState(int index);
 
-	Eigen::MatrixXd getState_map(int index);
+	// std::vector<Eigen::MatrixXd> getStateMinimap(int index);
+	// Eigen::VectorXd getStateMinimap(int index);
+	std::vector<double> getStateMinimap(int index);
 
 	double getReward(int index);
 	std::vector<double> getRewards();
@@ -36,7 +46,7 @@ public:
 	void setAction(int index, const Eigen::VectorXd& a);
 	// void setActions(std::vector<Eigen::VectorXd> as);
 
-	int getNumState(int index = 0){return getState(index).rows();}
+	int getNumState(int index = 0){return getState(index).size();}
 	int getNumAction(int index = 0){return getAction(index).rows();}
 
 	const dart::simulation::WorldPtr& getWorld(){return mWorld;}
