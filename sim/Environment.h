@@ -10,6 +10,7 @@
 #define ID_KICKABLE 9
 // #define ID_GOALPOST 10
 
+
 typedef std::pair<std::string, Eigen::Vector3d> GoalpostInfo;
 
 class Environment

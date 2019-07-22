@@ -10,6 +10,21 @@ using namespace std;
 
 namespace p = boost::python;
 namespace np = boost::python::numpy;
+
+std::chrono::time_point<std::chrono::system_clock> time_check_s = std::chrono::system_clock::now();
+
+void time_check_start()
+{
+	time_check_s = std::chrono::system_clock::now();
+}
+
+void time_check_end()
+{
+	std::chrono::duration<double> elapsed_seconds;
+	elapsed_seconds = std::chrono::system_clock::now()-time_check_s;
+	std::cout<<elapsed_seconds.count()<<std::endl;
+}
+
 double floorDepth = -0.1;
 
 SimpleSocWindow::
@@ -29,6 +44,10 @@ SimpleSocWindow()
 
 	boost::python::str module_dir = "../pyvs";
 	sys_module.attr("path").attr("insert")(1, module_dir);
+	// p::exec("import os",mns);
+	// p::exec("import sys",mns);
+	// p::exec("import math",mns);
+	// p::exec("import sys",mns);
 
 	p::exec("import torch",mns);
 	p::exec("import torch.nn as nn",mns);
@@ -36,7 +55,7 @@ SimpleSocWindow()
 	p::exec("import torch.nn.functional as F",mns);
 	p::exec("import torchvision.transforms as T",mns);
 	p::exec("import numpy as np",mns);
-	p::exec("from Model import *", mns);
+	p::exec("from Model import *",mns);
 }
 
 SimpleSocWindow::
@@ -45,12 +64,16 @@ SimpleSocWindow(const std::string& nn_path)
 {
 	mIsNNLoaded = true;
 
+
 	p::str str = ("num_state = "+std::to_string(mEnv->getNumState())).c_str();
 	p::exec(str,mns);
 	str = ("num_action = "+std::to_string(mEnv->getNumAction())).c_str();
 	p::exec(str, mns);
+	// str = "use_cuda = torch.cuda.is_available()";
+	// p::exec(str, mns);
 
-	nn_module = p::eval("SimulationNN(num_state, num_action)", mns);
+
+	nn_module = p::eval("CombinedSimulationNN(num_state, num_action).cuda()", mns);
 
 	p::object load = nn_module.attr("load");
 	load(nn_path);
@@ -142,7 +165,7 @@ void
 SimpleSocWindow::
 step()
 {
-
+	// cout<<"????????"<<endl;
 	getActionFromNN(true);
 	// std::cout<<"step!"<<std::endl;
 	for(int i=0;i<mEnv->mNumChars;i++)
@@ -173,6 +196,7 @@ void
 SimpleSocWindow::
 getActionFromNN(bool vsHardcodedAI)
 {
+	// cout<<"getActionFromNN"<<endl;
 	p::object get_action;
 	mActions.clear();
 	get_action = nn_module.attr("get_action");
@@ -186,6 +210,7 @@ getActionFromNN(bool vsHardcodedAI)
 		//change the i=1 agent
 		if(vsHardcodedAI && (i==2 || i == 3))
 		{
+			// cout<<"i : "<<i<<endl;
 			Eigen::VectorXd curBallRelaltionalP = mEnv->mStates[i].segment(ID_BALL_P,2);
 			Eigen::VectorXd direction = curBallRelaltionalP.normalized();
 			Eigen::VectorXd curVel = mEnv->mStates[i].segment(ID_V,2);
@@ -195,21 +220,29 @@ getActionFromNN(bool vsHardcodedAI)
 		}
 		else
 		{
+			// cout<<"i : "<<i<<endl;
 			p::tuple shape = p::make_tuple(state.size());
 			np::dtype dtype = np::dtype::get_builtin<float>();
 			np::ndarray state_np = np::empty(shape, dtype);
 
-			// cout<<state.segment(8,6).transpose()<<endl;
-
+			// cout<<state.segment(0,6).transpose()<<endl;
+			// cout<<shape<<endl;
+			// cout<<"11111"<<endl;
 			float* dest = reinterpret_cast<float*>(state_np.get_data());
+			// cout<<"22222"<<endl;
 			for(int j=0;j<state.size();j++)
 			{
 				dest[j] = state[j];
 			}
 
+			// cout<<"33333"<<endl;
+	// time_check_start();
 			p::object temp = get_action(state_np);
-			np::ndarray action_np = np::from_object(temp);
+	// time_check_end();
+			// cout<<"33344"<<endl;
 
+			np::ndarray action_np = np::from_object(temp);
+			// cout<<"44444"<<endl;
 			float* srcs = reinterpret_cast<float*>(action_np.get_data());
 			for(int j=0;j<mAction.rows();j++)
 			{
