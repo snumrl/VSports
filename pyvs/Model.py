@@ -83,18 +83,18 @@ class SimulationNN(nn.Module):
 class CombinedSimulationNN(nn.Module):
 	def __init__(self,num_states,num_actions):
 		super(CombinedSimulationNN, self).__init__()
-
+		# exit()
 		# image 40 * 40
-		conv1 = nn.Conv2d(4, 4, 5, 2)
+		conv1 = nn.Conv2d(5, 5, 5, 2)
 		# 18 * 18
 
-		conv2 = nn.Conv2d(4, 6, 3, 1)
+		conv2 = nn.Conv2d(5, 8, 3, 1)
 		# 16 * 16
 
 		pool1 = nn.MaxPool2d(2)
 		# 8 * 8
 
-		conv3 = nn.Conv2d(6, 8, 5, 1)
+		conv3 = nn.Conv2d(8, 8, 5, 1)
 		# 4 * 4
 
 		self.conv_module = nn.Sequential(
@@ -131,9 +131,17 @@ class CombinedSimulationNN(nn.Module):
 
 		num_policyInput = 30
 
-		num_h1 = 256
-		num_h2 = 256
-		num_h3 = 256
+		hidden_size = 60
+		num_layers = 3
+
+		# self.rnn = nn.LSTM(num_policyInput, hidden_size, num_layers=num_layers,bias=True,batch_first=True,bidirectional=Trues)
+
+
+
+
+		num_h1 = 128
+		num_h2 = 128
+		num_h3 = 128
 
 
 		self.policy = nn.Sequential(
@@ -155,59 +163,72 @@ class CombinedSimulationNN(nn.Module):
 			nn.Linear(num_h3,1)
 		)
 
+
+
+
+
+
+
 		# if use_cuda:
 		# 	self.policy = self.policy.cuda()
 		# 	self.value = self.value.cuda()
 		self.log_std = nn.Parameter(torch.zeros(num_actions))
-		self.conv_module.apply(weights_init)
-		self.fc_module.apply(weights_init)
+		# self.conv_module.apply(weights_init)
+		# self.fc_module.apply(weights_init)
 		self.policy.apply(weights_init)
 		self.value.apply(weights_init)
 
 	def forward(self,x):
 		# print(x.size())
 		# exit(0)
-		x = x.cuda()
+
+
+		# x = x.cuda()
 		mapRow = 40
 		mapCol = 40
-		numLayer = 4
+		numLayer = 5
 
-		# mapX = Tensor([x[0][:numLayer*mapCol*mapRow].cpu().detach().numpy()])
-		# mapX = mapX.view(numLayer, mapCol, mapRow);
+		x = x.cuda()
+		mapX = x.narrow(1, 10, numLayer*mapCol*mapRow).view(-1, numLayer, mapCol, mapRow)
 
-		# vecX = Tensor([x[0][numLayer*mapCol*mapRow:].cpu().detach().numpy()])
+		# .view(1, numLayer, mapCol, mapRow)
 
-		# mapX = torch.split(x, numLayer*mapCol*mapRow, dim=1)
-		# mapX = Tensor([]*1);
-		mapX = x[0][10:numLayer*mapCol*mapRow+10].view(1, numLayer, mapCol, mapRow)
-		vecX = x[0][:10].view(1, -1)
-		# print(mapX.size())
+		# print(x.size(), end=' ')
+		# vecX = x.view(1, 10)
+		
+		# vecX = x[0][:10].view(1, -1)
+		vecX = x.narrow(1,0,10)
+		
 		# print(vecX.size())
-		# print(mapX)
-		# start = time.process_time()
+		# exit()
+		# print(vecX.requires_grad)
+		# exit()
 		mapX_ = self.conv_module(mapX)
-		# print(time.process_time()-start)
-		# print(mapX_.size())
-		# print(mapX_.size())
-		# start = time.process_time()
 
-		# vecX = torch.cat()
 		dim = 1
-		# out.size() -> Torch.size([batch_size, layers, width, height])
 		for d in mapX_.size()[1:]:
 			dim = dim * d
 		mapX_ = mapX_.view(-1, dim)
 		mapX_ = self.fc_module(mapX_)
-		# exit()
-		# return out
-		# print(time.process_time()-start)
 
-		concatVecX = torch.cat((vecX[0],mapX_[0]),0).view(1,-1)
+
+		# print(vecX.size(), end=" ")
+		# print(mapX_.size())
+		concatVecX = torch.cat((vecX,mapX_),1)
+		# print(concatVecX.size(), end = " ")
+		concatVecX = concatVecX.view(-1, 30)
+
+
+		# rnnOutput = self.rnn(concatVecX)
+		# print(rnnOutput.size())
+		# exit()
 
 		# print(concatVecX.size())
-		# exit()
-		# return MultiVariateNormal(self.policy(concatVecX),self.log_std.exp()),self.value(concatVecX);
+		# concatVecX = torch.cat((vecX[0],mapX_[0]),0).view(1,-1)
+
 		return MultiVariateNormal(self.policy(concatVecX),self.log_std.exp()),self.value(concatVecX);
+		# return MultiVariateNormal(self.policy(vecX),self.log_std.exp()),self.value(vecX);
+		# return MultiVariateNormal(self.policy(x),self.log_std.exp()),self.value(x);
 
 	def load(self,path):
 		print('load simulation nn {}'.format(path))

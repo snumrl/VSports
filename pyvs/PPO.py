@@ -78,6 +78,7 @@ class PPO(object):
 
 		self.model = [None]*self.num_slaves*self.num_agents
 		for i in range(self.num_slaves*self.num_agents):
+			# exit()
 			self.model[i] = CombinedSimulationNN(self.num_state, self.num_action)
 			if use_cuda:
 				self.model[i].cuda()
@@ -96,7 +97,7 @@ class PPO(object):
 		self.loss_critic = 0.0
 		self.rewards = []
 		self.sum_return = 0.0
-		self.max_return = 1.0
+		self.max_return = 0.0
 		self.max_return_epoch = 1
 		self.tic = time.time()
 
@@ -141,11 +142,13 @@ class PPO(object):
 				delta = rewards[i] + values[i+1] * self.gamma - values[i]
 				ad_t = delta + self.gamma * self.lb * ad_t
 				advantages[i] = ad_t
-			self.sum_return += epi_return
-			TD = values[:size] + advantages
 
-			for i in range(size):
-				self.replay_buffer.push(states[i], actions[i], logprobs[i], TD[i], advantages[i])
+			if not np.isnan(epi_return):
+				self.sum_return += epi_return
+				TD = values[:size] + advantages
+
+				for i in range(size):
+					self.replay_buffer.push(states[i], actions[i], logprobs[i], TD[i], advantages[i])
 
 		self.num_episode = len(self.total_episodes)
 		self.num_tuple = len(self.replay_buffer.buffer)
@@ -164,8 +167,14 @@ class PPO(object):
 
 		direction_norm = math.sqrt(direction_norm)
 
-		action = (2.5*direction/direction_norm - state[2:4])*0.3
+		maxvel = 3.0
+
+		action = (maxvel*direction/direction_norm - state[2:4])
+		# for i in range(action.size()):
+		# 	if action[i] > 0.3:
+		# 		action[i] = 0.3
 		action = np.append(action, [random.randrange(0,2)])
+		# action = np.append(action, [0])
 
 		return action
 
@@ -209,6 +218,7 @@ class PPO(object):
 
 		# 0 or 1
 		learningTeam = random.randrange(0,2)
+		learningTeam = 0
 		teamDic = {0: 0, 1: 0, 2: 1, 3:1}
 
 		while True:
@@ -261,9 +271,9 @@ class PPO(object):
 							actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy()[0];		
 						else :
 							# dummy
-							a_dist_slave_agent,v_slave_agent = self.model[0](Tensor([states[i*self.num_agents+j]]))
-							a_dist_slave.append(a_dist_slave_agent)
-							v_slave.append(v_slave_agent)
+							# a_dist_slave_agent,v_slave_agent = self.model[0](Tensor([states[i*self.num_agents+j]]))
+							# a_dist_slave.append(a_dist_slave_agent)
+							# v_slave.append(v_slave_agent)
 
 
 							actions[i*self.num_agents+j] = self.getHardcodedAction(i, j);
@@ -304,17 +314,16 @@ class PPO(object):
 				nan_occur = False
 				terminated_state = True
 				for k in range(self.num_agents):
+					if teamDic[k] == learningTeam:
+						rewards[j*self.num_agents+k] = self.env.getReward(j, k)
+						if np.any(np.isnan(rewards[j*self.num_agents+k])):
+							nan_occur = True
 					if np.any(np.isnan(states[j*self.num_agents+k])) or np.any(np.isnan(actions[j*self.num_agents+k])):
 						nan_occur = True
-
-				if self.env.isTerminalState(j) is False:
-					terminated_state = False
-					for k in range(self.num_agents):
-						if teamDic[k] == learningTeam:
-							rewards[j*self.num_agents+k] = self.env.getReward(j, k)
-							self.episodes[j].push(states[j*self.num_agents+k], actions[j*self.num_agents+k],\
-								rewards[j*self.num_agents+k], values[j*self.num_agents+k], logprobs[j*self.num_agents+k])
-							local_step += 1
+										 
+					# if j == 2:
+					# 	print(states[j*self.num_agents+k][0:10])
+					# 	print(actions[j*self.num_agents+k])
 
 				if nan_occur is True:
 					for k in range(self.num_agents):
@@ -322,6 +331,16 @@ class PPO(object):
 							self.total_episodes.append(self.episodes[j])
 							self.episodes[j] = EpisodeBuffer()
 					self.env.reset(j)
+
+				if self.env.isTerminalState(j) is False:
+					terminated_state = False
+					for k in range(self.num_agents):
+						if teamDic[k] == learningTeam:
+							# rewards[j*self.num_agents+k] = self.env.getReward(j, k)
+							self.episodes[j].push(states[j*self.num_agents+k], actions[j*self.num_agents+k],\
+								rewards[j*self.num_agents+k], values[j*self.num_agents+k], logprobs[j*self.num_agents+k])
+							local_step += 1
+
 
 				elif terminated_state :
 					for k in range(self.num_agents):
@@ -380,8 +399,9 @@ class PPO(object):
 
 				loss = loss_actor + loss_entropy + loss_critic
 				
-				if np.any(np.isnan(loss.cpu().detach().numpy().tolist())):
-					continue;
+				# print(loss.cpu().detach().numpy().tolist())
+				# if np.any(np.isnan(loss.cpu().detach().numpy().tolist())):
+				# 	continue;
 
 				self.optimizer.zero_grad()
 				loss.backward(retain_graph=True)

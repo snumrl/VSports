@@ -34,7 +34,7 @@ makeFreeJointBody(
 	bn = target_skel->createJointAndBodyNodePair<FreeJoint>(
 		parent, props, BodyNode::AspectProperties(body_name)).second;
 
-	bn->createShapeNodeWith<VisualAspect, CollisionAspect, DynamicsAspect>(shape);
+	bn->createShapeNodeWith<VisualAspect, DynamicsAspect>(shape);
 
 	return bn;
 }
@@ -69,7 +69,7 @@ makeFree2DJointBody(
 	bn = target_skel->createJointAndBodyNodePair<TranslationalJoint2D>(
 		parent, props, BodyNode::AspectProperties(body_name)).second;
 
-	bn->createShapeNodeWith<VisualAspect, CollisionAspect, DynamicsAspect>(shape);
+	bn->createShapeNodeWith<VisualAspect, DynamicsAspect>(shape);
 
 	return bn;
 }
@@ -102,7 +102,7 @@ makeWeldJointBody(
 	bn = target_skel->createJointAndBodyNodePair<WeldJoint>(
 		parent, props, BodyNode::AspectProperties(body_name)).second;
 
-	bn->createShapeNodeWith<VisualAspect, CollisionAspect, DynamicsAspect>(shape);
+	bn->createShapeNodeWith<VisualAspect, DynamicsAspect>(shape);
 
 	return bn;
 }
@@ -136,7 +136,7 @@ makeRevoluteJointBody(
 	bn = target_skel->createJointAndBodyNodePair<RevoluteJoint>(
 		parent, props, BodyNode::AspectProperties(body_name)).second;
 
-	bn->createShapeNodeWith<VisualAspect, CollisionAspect, DynamicsAspect>(shape);
+	bn->createShapeNodeWith<VisualAspect,  DynamicsAspect>(shape);
 
 	return bn;
 }
@@ -170,7 +170,7 @@ makeBallJointBody(
 	bn = target_skel->createJointAndBodyNodePair<BallJoint>(
 		parent, props, BodyNode::AspectProperties(body_name)).second;
 
-	bn->createShapeNodeWith<VisualAspect, CollisionAspect, DynamicsAspect>(shape);
+	bn->createShapeNodeWith<VisualAspect, DynamicsAspect>(shape);
 
 	return bn;
 }

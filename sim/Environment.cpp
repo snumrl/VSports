@@ -1,14 +1,18 @@
 #include "Environment.h"
 #include "../model/SkelMaker.h"
 #include "../model/SkelHelper.h"
+#include "dart/external/lodepng/lodepng.h"
 #include <iostream>
 #include <chrono>
 #include <random>
 #include <ctime>
+#include <signal.h>
 
 using namespace std;
 using namespace dart;
 using namespace dart::dynamics;
+using namespace dart::collision;
+using namespace dart::constraint;
 
 // p.rows() + v.rows() + ballP.rows() + ballV.rows() +
 // 	ballPossession.rows() + kickable.rows() + goalpostPositions.rows()
@@ -23,6 +27,7 @@ mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0)
 	initGoalposts();
 	initFloor();
 	initBall();
+	mWorld->getConstraintSolver()->removeAllConstraints();
 }
 
 	// Create A team, B team players.
@@ -113,7 +118,7 @@ initGoalposts()
 	mGoalposts.push_back(teamB);
 
 	wallSkel = SkelHelper::makeWall(floorDepth);
-	// setSkelCollidable(wallSkel);
+	// setSkelCollidable(wallSkel, false);
 	mWorld->addSkeleton(wallSkel);
 }
 
@@ -123,6 +128,7 @@ initFloor()
 {
 	floorSkel = SkelHelper::makeFloor();
 	mWorld->addSkeleton(floorSkel);
+	// setSkelCollidable(floorSkel, false);
 }
 
 void 
@@ -211,6 +217,9 @@ step()
 	// std::cout<<ballSkel->getCOM().transpose()<<std::endl;
 	// std::cout<<mCharacters[0]->getSkeleton()->getVelocities().transpose()<<std::endl;
 		// cout<<"!!!!!!!!!!!!!!!!!!!"<<endl;
+
+	// std::cout<<mWorld->getConstraintSolver()->getCollisionDetector()-> <<std::endl;
+
 	for(int i=0;i<mCharacters.size();i++)
 	{
 		// cout<<"aaaaaaaaaaaaa"<<endl;
@@ -470,6 +479,8 @@ getState(int index)
 	vecState<<p,v,ballP,ballV,ballPossession,kickable;
 	mStates[index] = vecState;
 	// time_check_end();
+	// if(index == 1)
+	// 	cout<<vecState.segment(ID_BALL_P, 2).transpose()<<endl;
 
 
 	std::vector<double> state;
@@ -504,6 +515,13 @@ getState(int index)
 	{
 		state[count++] = mapState[i];
 	}
+	// 
+	// if(index == 0)
+	// {
+	// 	std::cout<<mStates[index].segment(ID_BALL_P,2).norm()<<endl;
+	// }
+
+
 	// cout<<count<<endl;
 	// exit(0);
 
@@ -550,6 +568,27 @@ std::pair<int, int> getPixelFromPosition(double x, double y, double maxX = 4.0, 
 	return std::make_pair(pixelX-1, pixelY-1);
 }
 
+void visualizeMinimap(std::vector<double> minimaps)
+{
+	for(int i=0;i<5;i++)
+	{
+		std::vector<unsigned char> image;
+		image.resize(40*40*4);
+		for(int col=0;col<40;col++)
+		{
+			for(int row=0;row<40;row++)
+			{
+				image[(col*40+row)*4+0] = minimaps[40*40*i + col*40+row] * 255;
+				image[(col*40+row)*4+1] = minimaps[40*40*i + col*40+row] * 255;
+				image[(col*40+row)*4+2] = minimaps[40*40*i + col*40+row] * 255;
+				image[(col*40+row)*4+3] = 255;
+			}
+		}
+
+		lodepng::encode(("./minimap_Image"+to_string(i)+".png").c_str(), image, 40, 40);
+	}
+}
+
 std::vector<double>
 Environment::
 getStateMinimap(int index)
@@ -557,7 +596,7 @@ getStateMinimap(int index)
 	// std::vector<Eigen::MatrixXd> minimaps;
 
 	std::vector<double> minimaps;
-	minimaps.resize(40*40*4);
+	minimaps.resize(40*40*5);
 	int count =0;
 	int numRows = 40;
 	int numCols = 40; 
@@ -569,29 +608,46 @@ getStateMinimap(int index)
 		std::vector<double> minimap;
 		minimap.resize(numRows*numCols);
 
+		for(int i=0;i<numCols;i++)
+		{
+			for(int j=0;j<numRows;j++)
+			{
+				minimap[i*numRows+j] = 1.0;
+			}	
+			
+		}
 		for(double i = -4;i<4;i+= 0.1)
 		{
-			double j;
-			j = -3;
-			std::pair<int, int> pixel = getPixelFromPosition(i, j);
-			minimap[pixel.second*numRows+pixel.first] = 1.0;
-
-			j = 3;
-			pixel = getPixelFromPosition(i, j);
-			minimap[pixel.second*numRows+pixel.first] = 1.0;
+			for(double j=-3;j<3;j+=0.1)
+			{
+				std::pair<int, int> pixel = getPixelFromPosition(i, j);
+				minimap[pixel.second*numRows+pixel.first] = 0.0;
+			}
 		}
 
-		for(double j = -3;j<3;j+= 0.1)
-		{
-			double i;
-			i = -4;
-			std::pair<int, int> pixel = getPixelFromPosition(i, j);
-			minimap[pixel.second*numRows+pixel.first] = 1.0;
+		// for(double i = -4;i<4;i+= 0.1)
+		// {
+		// 	double j;
+		// 	j = -3;
+		// 	std::pair<int, int> pixel = getPixelFromPosition(i, j);
+		// 	minimap[pixel.second*numRows+pixel.first] = 1.0;
 
-			i = 4;
-			pixel = getPixelFromPosition(i, j);
-			minimap[pixel.second*numRows+pixel.first] = 1.0;
-		}
+		// 	j = 3;
+		// 	pixel = getPixelFromPosition(i, j);
+		// 	minimap[pixel.second*numRows+pixel.first] = 1.0;
+		// }
+
+		// for(double j = -3;j<3;j+= 0.1)
+		// {
+		// 	double i;
+		// 	i = -4;
+		// 	std::pair<int, int> pixel = getPixelFromPosition(i, j);
+		// 	minimap[pixel.second*numRows+pixel.first] = 1.0;
+
+		// 	i = 4;
+		// 	pixel = getPixelFromPosition(i, j);
+		// 	minimap[pixel.second*numRows+pixel.first] = 1.0;
+		// }
 
 		// for(int i=0;i<numCols;i++)
 		// {
@@ -609,7 +665,14 @@ getStateMinimap(int index)
 		// minimaps.push_back(minimap);
 
 	}
-
+	// try
+	// {
+	//     *(int*) 0 = 0;
+	// }
+	// catch (std::exception& e)
+	// {
+	//     std::cerr << "Exception caught : " << e.what() << std::endl;
+	// }
 	/// map for me
 	{
 		std::vector<double> minimap;
@@ -655,6 +718,23 @@ getStateMinimap(int index)
 		}
 	}
 
+	/// map for ball
+	{
+		std::vector<double> minimap;
+		minimap.resize(numRows*numCols);
+
+		Eigen::VectorXd position = ballSkel->getPositions();
+
+		std::pair<int, int> pixel = getPixelFromPosition(position[0], position[1]);
+		minimap[pixel.second*numRows+pixel.first] = 1.0;
+		// std::string teamName = mCharacters[index]->getTeamName();
+		for(int i=0;i<minimap.size();i++)
+		{
+			minimaps[count++] = minimap[i];
+		}
+	}
+
+
 	/// map for Opponent Team
 	{
 		std::vector<double> minimap;
@@ -691,6 +771,9 @@ getStateMinimap(int index)
 	// 	}
 	// 	cout<<"#################################################"<<endl;
 	// }
+
+	visualizeMinimap(minimaps);
+	exit(0);
 
 
 	return minimaps;
@@ -745,9 +828,11 @@ getReward(int index)
 	// {
 
 	// }
+	// cout<<mNumIterations<<endl;
 
 	if(mCharacters[index]->getTeamName()=="A")
 	{
+		// cout<<index<<endl;
 		reward += (mNumIterations/400.0) * 0.1 * (2*mScoreBoard[0] -1);
 	}
 	else
@@ -783,6 +868,12 @@ getReward(int index)
 	double myDistanceBall = mStates[index].segment(ID_BALL_P, 2).norm();
 
 	reward += (1-mNumIterations/400.0) * 0.1 * exp(-pow(myDistanceBall,2.0));
+	// reward += 0.1 * exp(-pow(myDistanceBall,2.0));
+	// if(index == 0)
+	// {
+	// 	cout<<reward<<endl;
+	// }
+	// reward += 0.1 * exp(-pow(myDistanceBall,2.0));
 
 	if(abs(oppMinDistance - myTeamMinDistance)>0.01)
 		reward += (mNumIterations/400.0) * 0.05 * (oppMinDistance - myTeamMinDistance)/abs(oppMinDistance - myTeamMinDistance);
@@ -888,14 +979,22 @@ setAction(int index, const Eigen::VectorXd& a)
 	vel += a.segment(0, vel.size());
 	// cout<<vel.transpose()<<endl;
 
-	for(int i=0;i<vel.size();i++)
-	{
-		if(abs(vel[i])>maxVel)
-		{
-			vel[i] /= abs(vel[i]);
-			vel[i] *= maxVel;
-		}
-	}
+	// for(int i=0;i<vel.size();i++)
+	// {
+	// 	if(abs(vel[i])>maxVel)
+	// 	{
+	// 		vel[i] /= abs(vel[i]);
+	// 		vel[i] *= maxVel;
+	// 	}
+	// }
+
+	if (vel.norm() > maxVel)
+		vel = vel/vel.norm() * maxVel;
+
+	// if(index == 1)
+	// {
+	// 	cout<<a.segment(0, vel.size()).transpose()<<endl;
+	// }
 	skel->setVelocities(vel);
 
 }

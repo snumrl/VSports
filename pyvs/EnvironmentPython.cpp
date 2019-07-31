@@ -15,6 +15,8 @@ EnvironmentPython(int simulationHz)
 	}
 	mNumState = mSlaves[0]->getNumState();
 	mNumAction = mSlaves[0]->getNumAction();
+	// std::cout<<mNumState<<std::endl;
+	// exit()
 }
 // For general properties
 int
@@ -131,8 +133,8 @@ endOfIteration()
 	for(int i=0;i<mNumSlaves;i++)
 	{
 		mSlaves[i]->mNumIterations++;
-		if(mSlaves[i]->mNumIterations >= 300)
-			mSlaves[i]->mNumIterations = 300;
+		if(mSlaves[i]->mNumIterations >= 400)
+			mSlaves[i]->mNumIterations = 400;
 	}
 }
 

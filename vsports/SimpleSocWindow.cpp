@@ -29,7 +29,7 @@ double floorDepth = -0.1;
 
 SimpleSocWindow::
 SimpleSocWindow()
-:SimWindow(),vsHardcodedAI_difficulty(2.5)
+:SimWindow(),vsHardcodedAI_difficulty(3.0)
 {
 	mEnv = new Environment(30, 600, 4);
 	initCustomView();
@@ -184,6 +184,7 @@ step()
 		mEnv->setAction(i, mActions[i]);
 	}
 
+	mEnv->mNumIterations = 400;
 	int sim_per_control = mEnv->getSimulationHz()/mEnv->getControlHz();
 	for(int i=0;i<sim_per_control;i++)
 	{
@@ -214,8 +215,9 @@ getActionFromNN(bool vsHardcodedAI)
 			Eigen::VectorXd curBallRelaltionalP = mEnv->mStates[i].segment(ID_BALL_P,2);
 			Eigen::VectorXd direction = curBallRelaltionalP.normalized();
 			Eigen::VectorXd curVel = mEnv->mStates[i].segment(ID_V,2);
-			mAction.segment(0, 2) = 0.3*(direction*vsHardcodedAI_difficulty - curVel);
+			mAction.segment(0, 2) = (direction*vsHardcodedAI_difficulty - curVel);
 			mAction[2] = rand()%2;
+			// mAction[2] = 0;
 			mActions.push_back(mAction);
 		}
 		else
@@ -309,7 +311,7 @@ display()
 	GUI::drawSkeleton(blueGoalpostSkel, Eigen::Vector3d(1.0, 1.0, 1.0));
 
 	std::string scoreString
-	= "Red : "+to_string((int)mEnv->mAccScore[0])+" |Blue : "+to_string((int)mEnv->mAccScore[1]);
+	= "Red : "+to_string((int)mEnv->mAccScore[0])+" |Blue : "+to_string((int)mEnv->mAccScore[2]);
 
 
 
