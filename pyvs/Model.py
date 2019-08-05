@@ -131,10 +131,14 @@ class CombinedSimulationNN(nn.Module):
 
 		num_policyInput = 30
 
-		hidden_size = 60
-		num_layers = 3
+		self.hidden_size = 60
+		self.num_layers = 3
 
-		# self.rnn = nn.LSTM(num_policyInput, hidden_size, num_layers=num_layers,bias=True,batch_first=True,bidirectional=Trues)
+		# self.prev_hidden = self.init_hidden(1)
+		# self.prev_cell = self.init_hidden(1)
+
+		# self.rnn = nn.LSTM(num_policyInput, self.hidden_size, num_layers=self.num_layers,bias=True,batch_first=True,bidirectional=True)
+		self.rnn = nn.LSTM(num_policyInput, self.hidden_size, num_layers=self.num_layers)#,bias=True,batch_first=True,bidirectional=True)
 
 
 
@@ -219,9 +223,26 @@ class CombinedSimulationNN(nn.Module):
 		concatVecX = concatVecX.view(-1, 30)
 
 
-		# rnnOutput = self.rnn(concatVecX)
-		# print(rnnOutput.size())
-		# exit()
+		batch_size = x.size(0)
+
+		# Initializing hidden state for first input using method defined below
+		hidden = self.init_hidden(batch_size)
+		cell = self.init_hidden(batch_size)
+
+
+		concatVecX = torch.cat((concatVecX, concatVecX), 1)
+
+		# we will see infinite timesteps. Hmm.. or just 5 timestep?
+		concatVecX = concatVecX.view(1, batch_size, -1)
+		# print(concatVecX.size())
+		# rnnOutput, (hidden, cell) = self.rnn(concatVecX, (hidden, cell) )
+		# print(hidden.size())
+		rnnOutput, (a,b) = self.rnn(concatVecX)
+
+		print(a.size())
+
+		print(rnnOutput.size())
+		exit()
 
 		# print(concatVecX.size())
 		# concatVecX = torch.cat((vecX[0],mapX_[0]),0).view(1,-1)
@@ -249,6 +270,12 @@ class CombinedSimulationNN(nn.Module):
 		ts = torch.tensor(s)
 		p,_ = self.forward(ts.view(1,-1))
 		return p.sample().cpu().detach().numpy()
+	
+	def init_hidden(self, batch_size):
+        # This method generates the first hidden state of zeros which we'll use in the forward pass
+        # We'll send the tensor holding the hidden state to the device we specified earlier as well
+		hidden = torch.zeros(self.num_layers, batch_size, self.hidden_size)
+		return hidden
 
 # class StateCNN(nn.Module):
 # 	def __init__(self):

@@ -772,8 +772,8 @@ getStateMinimap(int index)
 	// 	cout<<"#################################################"<<endl;
 	// }
 
-	visualizeMinimap(minimaps);
-	exit(0);
+	// visualizeMinimap(minimaps);
+	// exit(0);
 
 
 	return minimaps;
