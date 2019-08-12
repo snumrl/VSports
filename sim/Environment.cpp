@@ -219,6 +219,8 @@ step()
 		// cout<<"!!!!!!!!!!!!!!!!!!!"<<endl;
 
 	// std::cout<<mWorld->getConstraintSolver()->getCollisionDetector()-> <<std::endl;
+	mTimeElapsed += 1.0 / (double)mSimulationHz;
+	// cout<<mTimeElapsed<<endl;
 
 	for(int i=0;i<mCharacters.size();i++)
 	{
@@ -277,113 +279,7 @@ getDribblerIndex()
 {
 	return curDribblerIndex;
 }
-/*
-Eigen::VectorXd
-Environment::
-getState(int index)
-{
-	// Character's state
-	Eigen::Vector2d p,v;
-	Character2D* character = mCharacters[index];
-	p = character->getSkeleton()->getPositions();
-	v = character->getSkeleton()->getVelocities();
-	// int isDribbler = (getDribblerIndex()==index) ? 1 : 0;
 
-	// Eigen::VectorXd distanceWall(4);
-
-	// distanceWall << 4-p[0], -4-p[0], 3-p[1], -3-p[1];
-
-	// if(index == 0)
-	// {
-	// 	cout<<distanceWall.transpose()<<endl;
-	// }
-
-	// Ball's state
-	Eigen::Vector2d ballP, ballV;
-	ballP = ballSkel->getPositions() - p;
-	ballV = ballSkel->getVelocities() - v;
-
-	// Observation
-	std::string teamName = character->getName().substr(0,1);
-	
-	// Do not count for cur Character
-	// double distance[mCharacters.size()-1];
-	// int distanceIndex[mCharacters.size()-1];
-	// int count =0;
-
-	// // We will get the other's position & velocities in sorted form.
-	// for(int i=0;i<mCharacters.size();i++)
-	// {
-	// 	if(i != index)
-	// 	{
-	// 		distanceIndex[count] = i;
-	// 		Eigen::Vector2d curP = mCharacters[i]->getSkeleton()->getPositions();
-	// 		distance[count] = (curP-p).norm();
-	// 		count++;
-	// 	}
-	// }
-	// count = 0;
-
-	Eigen::VectorXd ballPossession(1);
-	if(index == 0)
-	{
-		ballPossession[0] = mScoreBoard[0];
-	}
-	else
-	{
-		ballPossession[0] = 1-mScoreBoard[0];
-	}
-
-	Eigen::VectorXd kickable(1);
-	if(ballP.norm()<0.15+0.08)
-	{
-		kickable[0] = 1;
-	}
-	else
-	{
-		kickable[0] = 0;
-	}
-
-	// otherS.resize(0);
-	
-	// Fill in the goal basket's relational position
-	// Eigen::VectorXd goalpostPositions(4);
-	// if(teamName == mGoalposts[0].first)
-	// {
-	// 	goalpostPositions.segment(0,2) = mGoalposts[0].second.segment(0,2) - p;
-	// 	goalpostPositions.segment(2,2) = mGoalposts[1].second.segment(0,2) - p;
-	// }
-	// else
-	// {
-	// 	goalpostPositions.segment(0,2) = mGoalposts[1].second.segment(0,2) - p;
-	// 	goalpostPositions.segment(2,2) = mGoalposts[0].second.segment(0,2) - p;
-	// }
-
-
-
-	time_check_start();
-
-	// Put these arguments in a single vector
-
-	Eigen::VectorXd mapState = getStateMinimap(index);
-
-	Eigen::VectorXd s(p.rows() + v.rows() + ballP.rows() + ballV.rows() +
-	ballPossession.rows() + kickable.rows() + mapState.rows());
-
-
-	// Eigen::VectorXd s(p.rows() + v.rows() + ballP.rows() + ballV.rows() + 1);
-
-	// s.segment(0, p.rows()) = p;
-	// s.segment(p.rows(), v.rows()) = v;
-	// s.segment(p.rows() + v.rows(), 1)[0] = isDribbler;
-	// s.segment(p.rows() + v.rows() + 1, otherS.size()) = otherS;
-	// s.segment(p.rows() + v.rows() + 1 + otherS.size(), 4) = goalpostPositions;
-	s<<p,v,ballP,ballV,ballPossession,kickable, mapState;
-	mStates[index] = s;
-	time_check_end();
-	return s;
-}
-*/
 std::vector<double>
 Environment::
 getState(int index)
@@ -470,7 +366,12 @@ getState(int index)
 
 	// Put these arguments in a single vector
 
-	std::vector<double> mapState = getStateMinimap(index);
+	bool useMap = false;
+	std::vector<double> mapState;
+	if(useMap)
+	{
+		mapState = getStateMinimap(index);
+	}
 
 	Eigen::VectorXd vecState(p.rows() + v.rows() + ballP.rows() + ballV.rows() +
 	ballPossession.rows() + kickable.rows());
@@ -484,8 +385,18 @@ getState(int index)
 
 
 	std::vector<double> state;
-	state.resize(p.rows() + v.rows() + ballP.rows() + ballV.rows() +
-	ballPossession.rows() + kickable.rows() + mapState.size());
+	if(useMap)
+	{
+		state.resize(p.rows() + v.rows() + ballP.rows() + ballV.rows() +
+			ballPossession.rows() + kickable.rows() + mapState.size());
+	}
+	else
+	{
+		state.resize(p.rows() + v.rows() + ballP.rows() + ballV.rows() +
+			ballPossession.rows() + kickable.rows());
+	}
+
+	
 	int count = 0;
 	for(int i=0;i<p.rows();i++)
 	{
@@ -511,10 +422,24 @@ getState(int index)
 	{
 		state[count++] = kickable[i];
 	}
-	for(int i=0;i<mapState.size();i++)
+
+	if(useMap)
 	{
-		state[count++] = mapState[i];
+		for(int i=0;i<mapState.size();i++)
+		{
+			state[count++] = mapState[i];
+		}
 	}
+	
+
+	// for(int i=0;i<10;i++)
+	// {
+	// 	if(std::isnan(state[i]))
+	// 	{
+	// 		cout<<"get State : nan occured! "<<i<<endl;
+	// 	}
+	// }
+
 	// 
 	// if(index == 0)
 	// {
@@ -625,38 +550,6 @@ getStateMinimap(int index)
 			}
 		}
 
-		// for(double i = -4;i<4;i+= 0.1)
-		// {
-		// 	double j;
-		// 	j = -3;
-		// 	std::pair<int, int> pixel = getPixelFromPosition(i, j);
-		// 	minimap[pixel.second*numRows+pixel.first] = 1.0;
-
-		// 	j = 3;
-		// 	pixel = getPixelFromPosition(i, j);
-		// 	minimap[pixel.second*numRows+pixel.first] = 1.0;
-		// }
-
-		// for(double j = -3;j<3;j+= 0.1)
-		// {
-		// 	double i;
-		// 	i = -4;
-		// 	std::pair<int, int> pixel = getPixelFromPosition(i, j);
-		// 	minimap[pixel.second*numRows+pixel.first] = 1.0;
-
-		// 	i = 4;
-		// 	pixel = getPixelFromPosition(i, j);
-		// 	minimap[pixel.second*numRows+pixel.first] = 1.0;
-		// }
-
-		// for(int i=0;i<numCols;i++)
-		// {
-		// 	for(int j=0;j<numRows;j++)
-		// 	{
-		// 		minimaps[count] = minimap(i,j);
-		// 		count++;
-		// 	}
-		// }
 		for(int i=0;i<minimap.size();i++)
 		{
 			minimaps[count++] = minimap[i];
@@ -675,8 +568,10 @@ getStateMinimap(int index)
 	// }
 	/// map for me
 	{
+
 		std::vector<double> minimap;
 		minimap.resize(numRows*numCols);
+
 
 		Eigen::VectorXd position = mCharacters[index]->getSkeleton()->getPositions();
 
@@ -758,7 +653,13 @@ getStateMinimap(int index)
 		}
 	}
 
-
+	// for(int i=0;i<minimaps.size();i++)
+	// {
+	// 	if(std::isnan(minimaps[i]))
+	// 	{
+	// 		cout<<"Nan is occured at "<<i/(numRows*numCols)<<endl;
+	// 	}
+	// }
 	// for(int i=0;i<minimaps.size();i++)
 	// {
 	// 	for(int col=0;col<numCols;col++)
@@ -830,15 +731,15 @@ getReward(int index)
 	// }
 	// cout<<mNumIterations<<endl;
 
-	if(mCharacters[index]->getTeamName()=="A")
-	{
-		// cout<<index<<endl;
-		reward += (mNumIterations/400.0) * 0.1 * (2*mScoreBoard[0] -1);
-	}
-	else
-	{
-		reward += (mNumIterations/400.0) * 0.1 * (1-2*mScoreBoard[0]);
-	}
+	// if(mCharacters[index]->getTeamName()=="A")
+	// {
+	// 	// cout<<index<<endl;
+	// 	reward += (mNumIterations/400.0) * 0.1 * (2*mScoreBoard[0] -1);
+	// }
+	// else
+	// {
+	// 	reward += (mNumIterations/400.0) * 0.1 * (1-2*mScoreBoard[0]);
+	// }
 
 
 	// reward += 1.0 * mKicked[index];
@@ -867,7 +768,7 @@ getReward(int index)
 	}
 	double myDistanceBall = mStates[index].segment(ID_BALL_P, 2).norm();
 
-	reward += (1-mNumIterations/400.0) * 0.1 * exp(-pow(myDistanceBall,2.0));
+	reward += 0.1 * exp(-pow(myDistanceBall,2.0));
 	// reward += 0.1 * exp(-pow(myDistanceBall,2.0));
 	// if(index == 0)
 	// {
@@ -875,8 +776,8 @@ getReward(int index)
 	// }
 	// reward += 0.1 * exp(-pow(myDistanceBall,2.0));
 
-	if(abs(oppMinDistance - myTeamMinDistance)>0.01)
-		reward += (mNumIterations/400.0) * 0.05 * (oppMinDistance - myTeamMinDistance)/abs(oppMinDistance - myTeamMinDistance);
+	// if(abs(oppMinDistance - myTeamMinDistance)>0.01)
+	// 	reward += (mNumIterations/400.0) * 0.05 * (oppMinDistance - myTeamMinDistance)/abs(oppMinDistance - myTeamMinDistance);
 
 
 
@@ -970,13 +871,24 @@ void
 Environment::
 setAction(int index, const Eigen::VectorXd& a)
 {
-	mActions[index] = a;
-	mTimeElapsed += 1.0 / (double)mControlHz;
+
+	bool isNanOccured = false;
+	for(int i=0;i<a.size();i++)
+	{
+		if(std::isnan(a[i]))
+		{
+			isNanOccured = true;
+		}
+	}
+	if(!isNanOccured)
+		mActions[index] = a;
+	else
+		mActions[index].setZero();
 	double maxVel = 3.0;
 	SkeletonPtr skel = mCharacters[index]->getSkeleton();
 	Eigen::VectorXd vel = skel->getVelocities();
 
-	vel += a.segment(0, vel.size());
+	vel += mActions[index].segment(0, vel.size());
 	// cout<<vel.transpose()<<endl;
 
 	// for(int i=0;i<vel.size();i++)
@@ -985,6 +897,14 @@ setAction(int index, const Eigen::VectorXd& a)
 	// 	{
 	// 		vel[i] /= abs(vel[i]);
 	// 		vel[i] *= maxVel;
+	// 	}
+	// }
+
+	// for(int i=0;i<mActions[index].size();i++)
+	// {
+	// 	if(std::isnan(mActions[index][i]))
+	// 	{
+	// 		cout<<"NAN OCCURED IN SET ACTION ! "<<endl;
 	// 	}
 	// }
 
@@ -1005,7 +925,11 @@ Environment::
 isTerminalState()
 {
 	if(mTimeElapsed>15.0)
+	{
+		cout<<"Time overed"<<endl;
 		mIsTerminalState = true;
+	}
+
 	return mIsTerminalState;
 }
 

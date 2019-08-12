@@ -38,6 +38,21 @@ class EpisodeBuffer(object):
 		return self.data
 
 Transition = namedtuple('Transition',('s','a','logprob','TD','GAE'))
+
+RNNTransition = namedtuple('RNNTransition',('s','a','logprob','TD','GAE'))
+
+class RNNReplayBuffer(object):
+	def __init__(self, buff_size = 10000):
+		super(RNNReplayBuffer, self).__init__()
+		self.buffer = deque(maxlen=buff_size)
+
+	def push(self,*args):
+		self.buffer.append(RNNTransition(*args))
+
+	def clear(self):
+		self.buffer.clear()
+
+
 class ReplayBuffer(object):
 	def __init__(self, buff_size = 10000):
 		super(ReplayBuffer, self).__init__()
@@ -45,6 +60,17 @@ class ReplayBuffer(object):
 
 	def push(self,*args):
 		self.buffer.append(Transition(*args))
+
+	def clear(self):
+		self.buffer.clear()
+
+class RNNBuffer(object):
+	def __init__(self, buff_size = 10000):
+		super(RNNBuffer, self).__init__()
+		self.buffer = deque(maxlen=buff_size)
+
+	def push(self,replay_buffer):
+		self.buffer.append(replay_buffer)
 
 	def clear(self):
 		self.buffer.clear()
@@ -59,7 +85,6 @@ class PPO(object):
 		self.num_action = self.env.getNumAction()
 
 		self.num_epochs = 10
-		self.num_epochs_muscle = 3
 		self.num_evaluation = 0
 		self.num_tuple_so_far = 0
 		self.num_episode = 0
@@ -72,14 +97,22 @@ class PPO(object):
 		self.lb = 0.95
 
 		self.buffer_size = 2*2048
-		self.batch_size = 128
-		self.muscle_batch_size = 128
-		self.replay_buffer = ReplayBuffer(30000)
+		self.batch_size = 64
+		self.trunc_size = 30
+		self.burn_in_size = 5
+		# self.replay_buffer = ReplayBuffer(30000)
+		self.rnn_buffer = RNNBuffer(30000)
+
+		useMap = False;
 
 		self.model = [None]*self.num_slaves*self.num_agents
 		for i in range(self.num_slaves*self.num_agents):
 			# exit()
-			self.model[i] = CombinedSimulationNN(self.num_state, self.num_action)
+			if useMap:
+				self.model[i] = CombinedSimulationNN(self.num_state, self.num_action)
+			else:
+				self.model[i] = NoCNNSimulationNN(self.num_state, self.num_action)
+
 			if use_cuda:
 				self.model[i].cuda()
 
@@ -101,9 +134,8 @@ class PPO(object):
 		self.max_return_epoch = 1
 		self.tic = time.time()
 
-		self.episodes = [None]*self.num_slaves
-		for j in range(self.num_slaves):
-			self.episodes[j] = EpisodeBuffer()
+		self.episodes = [[EpisodeBuffer() for y in range(self.num_agents)] for x in range(self.num_slaves)]
+
 		self.env.resets()
 
 	# def getCombState(self, index):
@@ -122,15 +154,49 @@ class PPO(object):
 	def loadModel(self,path,index):
 		self.model[index].load('../nn/'+path+'.pt')
 
+	# def computeTDandGAE(self):
+	# 	self.replay_buffer.clear();
+	# 	self.sum_return = 0.0
+	# 	for epi in self.total_episodes:
+	# 		data = epi.getData()
+	# 		size = len(data)
+	# 		if size == 0:
+	# 			continue
+	# 		# print("Size : ",size)
+	# 		states, actions, rewards, values, logprobs = zip(*data)
+	# 		values = np.concatenate((values, np.zeros(1)), axis=0)
+	# 		advantages = np.zeros(size)
+	# 		ad_t = 0
+
+	# 		epi_return = 0.0
+	# 		for i in reversed(range(len(data))):
+	# 			epi_return += rewards[i]
+	# 			delta = rewards[i] + values[i+1] * self.gamma - values[i]
+	# 			ad_t = delta + self.gamma * self.lb * ad_t
+	# 			advantages[i] = ad_t
+
+	# 		if not np.isnan(epi_return):
+	# 			self.sum_return += epi_return
+	# 			TD = values[:size] + advantages
+
+	# 			for i in range(size):
+	# 				self.replay_buffer.push(states[i], actions[i], logprobs[i], TD[i], advantages[i])
+
+	# 	self.num_episode = len(self.total_episodes)
+	# 	self.num_tuple = len(self.replay_buffer.buffer)
+	# 	print('SIM : {}'.format(self.num_tuple))
+	# 	self.num_tuple_so_far += self.num_tuple
+
 	def computeTDandGAE(self):
-		self.replay_buffer.clear();
+		# self.replay_buffer.clear()
+		self.rnn_buffer.clear()
 		self.sum_return = 0.0
 		for epi in self.total_episodes:
 			data = epi.getData()
 			size = len(data)
+			# print("Size : ",size)
 			if size == 0:
 				continue
-			# print("Size : ",size)
 			states, actions, rewards, values, logprobs = zip(*data)
 			values = np.concatenate((values, np.zeros(1)), axis=0)
 			advantages = np.zeros(size)
@@ -147,12 +213,19 @@ class PPO(object):
 				self.sum_return += epi_return
 				TD = values[:size] + advantages
 
+				rnn_replay_buffer = RNNReplayBuffer(4000)
+				# print("size of data ",size)
 				for i in range(size):
-					self.replay_buffer.push(states[i], actions[i], logprobs[i], TD[i], advantages[i])
+					rnn_replay_buffer.push(states[i], actions[i], logprobs[i], TD[i], advantages[i])
+				self.rnn_buffer.push(rnn_replay_buffer)
+
 
 		self.num_episode = len(self.total_episodes)
-		self.num_tuple = len(self.replay_buffer.buffer)
-		print('SIM : {}'.format(self.num_tuple))
+		self.num_tuple = 0
+		for rnn_replay_buffer in self.rnn_buffer.buffer:
+			# print(len(rnn_replay_buffer.buffer))
+			self.num_tuple += len(rnn_replay_buffer.buffer)
+		# self.num_tuple = len(self.replay_buffer.buffer)
 		self.num_tuple_so_far += self.num_tuple
 
 	def getHardcodedAction(self, slave_index, agent_index):
@@ -274,8 +347,6 @@ class PPO(object):
 							# a_dist_slave_agent,v_slave_agent = self.model[0](Tensor([states[i*self.num_agents+j]]))
 							# a_dist_slave.append(a_dist_slave_agent)
 							# v_slave.append(v_slave_agent)
-
-
 							actions[i*self.num_agents+j] = self.getHardcodedAction(i, j);
 
 				for j in range(self.num_agents):
@@ -310,109 +381,270 @@ class PPO(object):
 			# self.env.step(0)
 			# print(22222)
 
-			for j in range(self.num_slaves):
+			for i in range(self.num_slaves):
 				nan_occur = False
 				terminated_state = True
 				for k in range(self.num_agents):
 					if teamDic[k] == learningTeam:
-						rewards[j*self.num_agents+k] = self.env.getReward(j, k)
-						if np.any(np.isnan(rewards[j*self.num_agents+k])):
+						rewards[i*self.num_agents+k] = self.env.getReward(i, k)
+						if np.any(np.isnan(rewards[i*self.num_agents+k])):
 							nan_occur = True
-					if np.any(np.isnan(states[j*self.num_agents+k])) or np.any(np.isnan(actions[j*self.num_agents+k])):
+					if np.any(np.isnan(states[i*self.num_agents+k])) or np.any(np.isnan(actions[i*self.num_agents+k])):
 						nan_occur = True
 										 
-					# if j == 2:
-					# 	print(states[j*self.num_agents+k][0:10])
-					# 	print(actions[j*self.num_agents+k])
+					# if i == 2:
+					# 	print(states[i*self.num_agents+k][0:10])
+					# 	print(actions[i*self.num_agents+k])
 
 				if nan_occur is True:
 					for k in range(self.num_agents):
 						if teamDic[k] == learningTeam:
-							self.total_episodes.append(self.episodes[j])
-							self.episodes[j] = EpisodeBuffer()
-					self.env.reset(j)
+							self.total_episodes.append(self.episodes[i][k])
+							self.episodes[i][k] = EpisodeBuffer()
+					self.env.reset(i)
 
-				if self.env.isTerminalState(j) is False:
+				if self.env.isTerminalState(i) is False:
 					terminated_state = False
 					for k in range(self.num_agents):
 						if teamDic[k] == learningTeam:
-							# rewards[j*self.num_agents+k] = self.env.getReward(j, k)
-							self.episodes[j].push(states[j*self.num_agents+k], actions[j*self.num_agents+k],\
-								rewards[j*self.num_agents+k], values[j*self.num_agents+k], logprobs[j*self.num_agents+k])
+							# rewards[i*self.num_agents+k] = self.env.getReward(i, k)
+							# print(str(i)+" "+str(k), end=' ')
+							# print(len(self.episodes[i][k].getData()), end = ' ')
+							self.episodes[i][k].push(states[i*self.num_agents+k], actions[i*self.num_agents+k],\
+								rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k])
+							# print(local_step)
 							local_step += 1
 
+				# print(id(self.episodes[0][1].getData()))
+				# print(id(self.episodes[1][0].getData()))
+				# print(id(self.episodes[2][0].getData()))
+				# print(id(self.episodes[3][0].getData()))
+				# print("#######################")
 
-				elif terminated_state :
+
+				if terminated_state is True :
 					for k in range(self.num_agents):
 						if teamDic[k] == learningTeam:
-							self.total_episodes.append(self.episodes[j])
-							self.episodes[j] = EpisodeBuffer()
-					self.env.reset(j)
+							self.total_episodes.append(self.episodes[i][k])
+							self.episodes[i][k] = EpisodeBuffer()
+					self.env.reset(i)
 
 
 			if local_step >= self.buffer_size:
-				for k in range(self.num_agents):
-					if teamDic[k] == learningTeam:
-						self.total_episodes.append(self.episodes[j])
-						self.episodes[j] = EpisodeBuffer()
-				self.env.reset(j)
+				for i in range(self.num_slaves):
+					for k in range(self.num_agents):
+						if teamDic[k] == learningTeam:
+							# print(str(i)+" "+str(k), end=' ')
+							# print(len(self.episodes[i][k].getData()))
+							self.total_episodes.append(self.episodes[i][k])
+							self.episodes[i][k] = EpisodeBuffer()
+					self.env.reset(i)
 				break
 			for i in range(self.num_slaves):
 				for j in range(self.num_agents):
 					states[i*self.num_agents+j] = self.env.getState(i,j)
 
 		self.env.endOfIteration()
+		print('SIM : {}'.format(local_step))
 
+
+	# def optimizeSimulationNN(self):
+	# 	all_transitions = np.array(self.replay_buffer.buffer)
+	# 	for j in range(self.num_epochs):
+	# 		np.random.shuffle(all_transitions)
+	# 		for i in range(len(all_transitions)//self.batch_size):
+	# 			transitions = all_transitions[i*self.batch_size:(i+1)*self.batch_size]
+	# 			batch = Transition(*zip(*transitions))
+
+	# 			stack_s =np.vstack(batch.s).astype(np.float32)
+	# 			stack_a = np.vstack(batch.a).astype(np.float32)
+	# 			stack_lp = np.vstack(batch.logprob).astype(np.float32)
+	# 			stack_td = np.vstack(batch.TD).astype(np.float32)
+	# 			stack_gae = np.vstack(batch.GAE).astype(np.float32)
+
+	# 			a_dist,v = self.model[0](Tensor(stack_s))
+
+	# 			# print(v.size())
+	# 			# exit()
+
+	# 			'''Critic Loss'''
+	# 			loss_critic = ((v-Tensor(stack_td)).pow(2)).mean()
+
+	# 			'''Actor Loss'''
+	# 			ratio = torch.exp(a_dist.log_prob(Tensor(stack_a))-Tensor(stack_lp))
+	# 			stack_gae = (stack_gae-stack_gae.mean())/(stack_gae.std()+1E-5)
+	# 			stack_gae = Tensor(stack_gae)
+	# 			surrogate1 = ratio * stack_gae
+	# 			surrogate2 = torch.clamp(ratio, min=1.0-self.clip_ratio, max=1.0+self.clip_ratio) * stack_gae
+	# 			loss_actor = - torch.min(surrogate1, surrogate2).mean()
+
+	# 			'''Entropy Loss'''
+	# 			loss_entropy = - self.w_entropy * a_dist.entropy().mean()
+
+	# 			self.loss_actor = loss_actor.cpu().detach().numpy().tolist()
+	# 			self.loss_critic = loss_critic.cpu().detach().numpy().tolist()
+
+	# 			loss = loss_actor + loss_entropy + loss_critic
+	
+				
+			
+	# 			# print(loss.cpu().detach().numpy().tolist())
+	# 			# if np.any(np.isnan(loss.cpu().detach().numpy().tolist())):
+	# 			# 	continue;
+
+	# 			self.optimizer.zero_grad()
+	# 			loss.backward(retain_graph=True)
+	# 			# print(loss)
+	# 			# exit()
+	# 			for param in self.model[0].parameters():
+	# 				if param.grad is not None:
+	# 					param.grad.data.clamp_(-0.5, 0.5)
+	# 			self.optimizer.step()
+	# 		print('Optimizing sim nn : {}/{}'.format(j+1,self.num_epochs),end='\r')
+	# 	print('')
 
 	def optimizeSimulationNN(self):
-		all_transitions = np.array(self.replay_buffer.buffer)
+		all_rnn_replay_buffer= np.array(self.rnn_buffer.buffer)
+		# num_epochs
 		for j in range(self.num_epochs):
-			np.random.shuffle(all_transitions)
-			for i in range(len(all_transitions)//self.batch_size):
-				transitions = all_transitions[i*self.batch_size:(i+1)*self.batch_size]
-				batch = Transition(*zip(*transitions))
+			# Get truncated transitions. The transitions will be splited by size self.trunc_size
+			all_segmented_transitions = []
+			for rnn_replay_buffer in all_rnn_replay_buffer:
+				rnn_replay_buffer_size = len(rnn_replay_buffer.buffer)
 
-				stack_s =np.vstack(batch.s).astype(np.float32)
-				stack_a = np.vstack(batch.a).astype(np.float32)
-				stack_lp = np.vstack(batch.logprob).astype(np.float32)
-				stack_td = np.vstack(batch.TD).astype(np.float32)
-				stack_gae = np.vstack(batch.GAE).astype(np.float32)
+				# We will fill the remainder with 0.
+				for i in range(rnn_replay_buffer_size//self.trunc_size):
+					segmented_transitions = np.array(rnn_replay_buffer.buffer)[i*self.trunc_size:(i+1)*self.trunc_size]
+					all_segmented_transitions.append(segmented_transitions)
+					# print(len(segmented_transitions))
+					# zero padding
+					if (i+2)*self.trunc_size > rnn_replay_buffer_size :
+						segmented_transitions = [RNNTransition(None,None,None,None,None) for x in range(self.trunc_size)]
+						segmented_transitions[:rnn_replay_buffer_size - (i+1)*self.trunc_size] = \
+							np.array(rnn_replay_buffer.buffer)[(i+1)*self.trunc_size:rnn_replay_buffer_size]
+						# print(len(segmented_transitions))
+						all_segmented_transitions.append(segmented_transitions)
 
-				a_dist,v = self.model[0](Tensor(stack_s))
+			# print(len(all_segmented_transitions))
 
-				'''Critic Loss'''
-				loss_critic = ((v-Tensor(stack_td)).pow(2)).mean()
+			# Shuffle the segmented transition (order of episodes)
+			np.random.shuffle(all_segmented_transitions)
 
-				'''Actor Loss'''
-				ratio = torch.exp(a_dist.log_prob(Tensor(stack_a))-Tensor(stack_lp))
-				stack_gae = (stack_gae-stack_gae.mean())/(stack_gae.std()+1E-5)
-				stack_gae = Tensor(stack_gae)
-				surrogate1 = ratio * stack_gae
-				surrogate2 = torch.clamp(ratio, min=1.0-self.clip_ratio, max=1.0+self.clip_ratio) * stack_gae
-				loss_actor = - torch.min(surrogate1, surrogate2).mean()
+			# We will get loss with trunc_size in a batch. And then we use the mean value.
+			for i in range(len(all_segmented_transitions)//self.batch_size):
+				batch_segmented_transitions = all_segmented_transitions[i*self.batch_size:(i+1)*self.batch_size]
 
-				'''Entropy Loss'''
-				loss_entropy = - self.w_entropy * a_dist.entropy().mean()
+				non_None_batch_list = [[] for x in range(self.trunc_size)]
 
-				self.loss_actor = loss_actor.cpu().detach().numpy().tolist()
-				self.loss_critic = loss_critic.cpu().detach().numpy().tolist()
+				for timeStep in range(self.trunc_size):
 
-				loss = loss_actor + loss_entropy + loss_critic
-				
-				# print(loss.cpu().detach().numpy().tolist())
-				# if np.any(np.isnan(loss.cpu().detach().numpy().tolist())):
-				# 	continue;
+					non_None_batch_segmented_transitions = []
 
-				self.optimizer.zero_grad()
-				loss.backward(retain_graph=True)
-				# print(loss)
-				# exit()
-				for param in self.model[0].parameters():
-					if param.grad is not None:
-						param.grad.data.clamp_(-0.5, 0.5)
-				self.optimizer.step()
+
+					# Make non-None list of batch_segmented_transitions
+					for k in range(self.batch_size):
+						if RNNTransition(*batch_segmented_transitions[k][timeStep]).s is not None :
+							non_None_batch_segmented_transitions.append(batch_segmented_transitions[k][timeStep])
+							non_None_batch_list[timeStep].append(k)
+					# print(non_None_batch_list)
+
+					batch = RNNTransition(*zip(*non_None_batch_segmented_transitions))
+
+					stack_s = np.vstack(batch.s).astype(np.float32)
+					stack_a = np.vstack(batch.a).astype(np.float32)
+					stack_lp = np.vstack(batch.logprob).astype(np.float32)
+					stack_td = np.vstack(batch.TD).astype(np.float32)
+					stack_gae = np.vstack(batch.GAE).astype(np.float32)
+
+					a_dist,v = self.model[0](Tensor(stack_s))
+
+					# if timeStep >= self.burn_in_size : 
+					'''Critic Loss'''
+					loss_critic = ((v-Tensor(stack_td)).pow(2)).mean()
+
+					'''Actor Loss'''
+					ratio = torch.exp(a_dist.log_prob(Tensor(stack_a))-Tensor(stack_lp))
+					stack_gae = (stack_gae-stack_gae.mean())/(stack_gae.std()+1E-5)
+					stack_gae = Tensor(stack_gae)
+					surrogate1 = ratio * stack_gae
+					surrogate2 = torch.clamp(ratio, min=1.0-self.clip_ratio, max=1.0+self.clip_ratio) * stack_gae
+					loss_actor = - torch.min(surrogate1, surrogate2).mean()
+
+					'''Entropy Loss'''
+					loss_entropy = - self.w_entropy * a_dist.entropy().mean()
+
+					self.loss_actor = loss_actor.cpu().detach().numpy().tolist()
+					self.loss_critic = loss_critic.cpu().detach().numpy().tolist()
+
+					loss = loss_actor + loss_entropy + loss_critic
+			
+					self.optimizer.zero_grad()
+					loss.backward(retain_graph=True)
+					# print(loss)
+					# exit()
+					for param in self.model[0].parameters():
+						if param.grad is not None:
+							param.grad.data.clamp_(-0.5, 0.5)
+					self.optimizer.step()
 			print('Optimizing sim nn : {}/{}'.format(j+1,self.num_epochs),end='\r')
 		print('')
+		# all_transitions = []
+		# for rnn_replay_buffer in all_rnn_replay_buffer :
+		# 	for single_transition in np.array(rnn_replay_buffer.buffer) :
+		# 		all_transitions.append(single_transition)
+
+		# for j in range(self.num_epochs):
+		# 	np.random.shuffle(all_transitions)
+		# 	for i in range(len(all_transitions)//self.batch_size):
+		# 		transitions = all_transitions[i*self.batch_size:(i+1)*self.batch_size]
+		# 		batch = Transition(*zip(*transitions))
+
+		# 		stack_s =np.vstack(batch.s).astype(np.float32)
+		# 		stack_a = np.vstack(batch.a).astype(np.float32)
+		# 		stack_lp = np.vstack(batch.logprob).astype(np.float32)
+		# 		stack_td = np.vstack(batch.TD).astype(np.float32)
+		# 		stack_gae = np.vstack(batch.GAE).astype(np.float32)
+
+		# 		a_dist,v = self.model[0](Tensor(stack_s))
+
+		# 		# print(v.size())
+		# 		# exit()
+
+		# 		'''Critic Loss'''
+		# 		loss_critic = ((v-Tensor(stack_td)).pow(2)).mean()
+
+		# 		'''Actor Loss'''
+		# 		ratio = torch.exp(a_dist.log_prob(Tensor(stack_a))-Tensor(stack_lp))
+		# 		stack_gae = (stack_gae-stack_gae.mean())/(stack_gae.std()+1E-5)
+		# 		stack_gae = Tensor(stack_gae)
+		# 		surrogate1 = ratio * stack_gae
+		# 		surrogate2 = torch.clamp(ratio, min=1.0-self.clip_ratio, max=1.0+self.clip_ratio) * stack_gae
+		# 		loss_actor = - torch.min(surrogate1, surrogate2).mean()
+
+		# 		'''Entropy Loss'''
+		# 		loss_entropy = - self.w_entropy * a_dist.entropy().mean()
+
+		# 		self.loss_actor = loss_actor.cpu().detach().numpy().tolist()
+		# 		self.loss_critic = loss_critic.cpu().detach().numpy().tolist()
+
+		# 		loss = loss_actor + loss_entropy + loss_critic
+	
+				
+			
+		# 		# print(loss.cpu().detach().numpy().tolist())
+		# 		# if np.any(np.isnan(loss.cpu().detach().numpy().tolist())):
+		# 		# 	continue;
+
+		# 		self.optimizer.zero_grad()
+		# 		loss.backward(retain_graph=True)
+		# 		# print(loss)
+		# 		# exit()
+		# 		for param in self.model[0].parameters():
+		# 			if param.grad is not None:
+		# 				param.grad.data.clamp_(-0.5, 0.5)
+		# 		self.optimizer.step()
+		# 	print('Optimizing sim nn : {}/{}'.format(j+1,self.num_epochs),end='\r')
+		# print('')
 
 
 	def optimizeModel(self):
@@ -510,6 +742,7 @@ if __name__=="__main__":
 		ppo.train()
 		rewards = ppo.evaluate()
 		plot(rewards,'reward',0,False)
+
 
 
 

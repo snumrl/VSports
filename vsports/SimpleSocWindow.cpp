@@ -73,7 +73,7 @@ SimpleSocWindow(const std::string& nn_path)
 	// p::exec(str, mns);
 
 
-	nn_module = p::eval("CombinedSimulationNN(num_state, num_action).cuda()", mns);
+	nn_module = p::eval("NoCNNSimulationNN(num_state, num_action).cuda()", mns);
 
 	p::object load = nn_module.attr("load");
 	load(nn_path);

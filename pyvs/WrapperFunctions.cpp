@@ -1,4 +1,5 @@
 #include "WrapperFunctions.h"
+#include <iostream>
 
 np::ndarray toNumPyArray(const std::vector<float>& val)
 {
