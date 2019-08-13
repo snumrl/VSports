@@ -404,10 +404,10 @@ class NoCNNSimulationNN(nn.Module):
 
 		# print(2222)
 
-		num_policyInput = 10
+		num_policyInput = 22
 
-		self.hidden_size = 60
-		self.num_layers = 3
+		self.hidden_size = 256
+		self.num_layers = 1
 
 		# self.prev_hidden = self.init_hidden(1)
 		# self.prev_cell = self.init_hidden(1)
@@ -443,6 +443,25 @@ class NoCNNSimulationNN(nn.Module):
 			nn.Linear(num_h3,1)
 		)
 
+		self.policy_rnn = nn.Sequential(
+			nn.Linear(self.hidden_size, num_h1),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h1, num_h2),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h2, num_h3),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h3, num_actions)
+		)
+		self.value_rnn = nn.Sequential(
+			nn.Linear(self.hidden_size, num_h1),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h1, num_h2),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h2, num_h3),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h3,1)
+		)
+
 		# if use_cuda:
 		# 	self.policy = self.policy.cuda()
 		# 	self.value = self.value.cuda()
@@ -451,6 +470,8 @@ class NoCNNSimulationNN(nn.Module):
 		self.fc_module.apply(weights_init)
 		self.policy.apply(weights_init)
 		self.value.apply(weights_init)
+		self.policy_rnn.apply(weights_init)
+		self.value_rnn.apply(weights_init)
 
 	def forward(self,x):
 		# mapRow = 40
@@ -485,11 +506,12 @@ class NoCNNSimulationNN(nn.Module):
 
 		# concatVecX = torch.cat((mapX_, concatVecX), 1)
 
-		# we will see infinite timesteps. Hmm.. or just 5 timestep?
+		# we will see infinite timesteps.
 		# concatVecX = concatVecX.view(1, batch_size, -1)
-		# print(concatVecX.size())
+
+
 		# rnnOutput, (hidden, cell) = self.rnn(concatVecX, (hidden, cell) )
-		# print(hidden.size())
+
 
 
 		# rnnOutput, (a,b) = self.rnn(concatVecX)
@@ -507,67 +529,42 @@ class NoCNNSimulationNN(nn.Module):
 		# return MultiVariateNormal(self.policy(x),self.log_std.exp()),self.value(x);
 
 
-	def forward_rnn(self,x, hidden, cell):
+	def forward_rnn(self,x, in_hidden):
 		# print(x.size())
 		# exit(0)
 
+		useMap = False
 
-		# x = x.cuda()
-		mapRow = 40
-		mapCol = 40
-		numLayer = 5
+		if useMap is True:
+			mapRow = 40
+			mapCol = 40
+			numLayer = 5
 
-		x = x.cuda()
-		mapX = x.narrow(1, 10, numLayer*mapCol*mapRow).view(-1, numLayer, mapCol, mapRow)
+			x = x.cuda()
+			mapX = x.narrow(1, 10, numLayer*mapCol*mapRow).view(-1, numLayer, mapCol, mapRow)
 
-		# .view(1, numLayer, mapCol, mapRow)
+			vecX = x.narrow(1,0,10)
+			
 
-		# print(x.size(), end=' ')
-		# vecX = x.view(1, 10)
-		
-		# vecX = x[0][:10].view(1, -1)
-		vecX = x.narrow(1,0,10)
-		
-		# print(vecX.size())
-		# exit()
-		# print(vecX.requires_grad)
-		# exit()
-		mapX_ = self.conv_module(mapX)
+			mapX_ = self.conv_module(mapX)
 
-		dim = 1
-		for d in mapX_.size()[1:]:
-			dim = dim * d
-		mapX_ = mapX_.view(-1, dim)
-		mapX_ = self.fc_module(mapX_)
+			dim = 1
+			for d in mapX_.size()[1:]:
+				dim = dim * d
+			mapX_ = mapX_.view(-1, dim)
+			mapX_ = self.fc_module(mapX_)
 
-
-		# print(vecX.size(), end=" ")
-		# print(mapX_.size())
-		concatVecX = torch.cat((vecX,mapX_),1)
-		# print(concatVecX.size(), end = " ")
-		concatVecX = concatVecX.view(-1, 30)
-
-
-		batch_size = x.size(0)
+			concatVecX = torch.cat((vecX,mapX_),1)
+			concatVecX = concatVecX.view(-1, 30)
+		else :
+			concatVecX = x.cuda()
 
 		# Initializing hidden state for first input using method defined below
-		if hidden == None :
-			hidden = self.init_hidden(batch_size)
-
-		if cell == None :
-			cell = self.init_hidden(batch_size)
-
-
-		# concatVecX = torch.cat((mapX_, concatVecX), 1)
-
-		# we will see infinite timesteps. Hmm.. or just 5 timestep?
-		# concatVecX = concatVecX.view(1, batch_size, -1)
 		# print(concatVecX.size())
-		# rnnOutput, (hidden, cell) = self.rnn(concatVecX, (hidden, cell) )
-		# print(hidden.size())
+		batch_size = concatVecX.size()[0];
+		rnnOutput, out_hidden = self.rnn(concatVecX.view(1, batch_size,-1), in_hidden)
 
-
-		rnnOutput, (a,b) = self.rnn(concatVecX, (hidden, cell))
+		# print(out_h_c_tuple)
 
 		# print(a.size())
 
@@ -577,7 +574,7 @@ class NoCNNSimulationNN(nn.Module):
 		# print(concatVecX.size())
 		# concatVecX = torch.cat((vecX[0],mapX_[0]),0).view(1,-1)
 
-		return MultiVariateNormal(self.policy(concatVecX),self.log_std.exp()),self.value(concatVecX);
+		return MultiVariateNormal(self.policy_rnn(rnnOutput),self.log_std.exp()),self.value_rnn(rnnOutput), out_hidden
 
 	def load(self,path):
 		print('load simulation nn {}'.format(path))
@@ -594,6 +591,16 @@ class NoCNNSimulationNN(nn.Module):
 		# print(p.size())
 		return p.loc.cpu().detach().numpy()
 
+	def get_action_rnn(self,s, in_hidden):
+		ts = torch.tensor(s)
+		# print(ts.size())
+		if in_hidden is None:
+			new_hidden = self.init_hidden
+		p,_1 ,_2= self.forward_rnn(ts.view(1,-1), new_hidden)
+		# print(p.size())
+		return p.loc.cpu().detach().numpy()
+
+
 	def get_random_action(self,s):
 		ts = torch.tensor(s)
 		p,_ = self.forward(ts.view(1,-1))
@@ -602,5 +609,5 @@ class NoCNNSimulationNN(nn.Module):
 	def init_hidden(self, batch_size):
         # This method generates the first hidden state of zeros which we'll use in the forward pass
         # We'll send the tensor holding the hidden state to the device we specified earlier as well
-		hidden = torch.zeros(self.num_layers, batch_size, self.hidden_size)
+		hidden = (torch.zeros(self.num_layers, batch_size, self.hidden_size).cuda(),torch.zeros(self.num_layers, batch_size, self.hidden_size).cuda())
 		return hidden

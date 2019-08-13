@@ -26,6 +26,8 @@ LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
 ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
 Tensor = FloatTensor
 Episode = namedtuple('Episode', ('s','a','r','value','logprob'))
+RNNEpisode = namedtuple('RNNEpisode', ('s','a','r','value','logprob','hidden'))
+# RNNEpisode = namedtuple('RNNEpisode', ('s','a','r','value','logprob','hidden_h','hidden_c'))
 
 class EpisodeBuffer(object):
 	def __init__(self):
@@ -37,9 +39,19 @@ class EpisodeBuffer(object):
 	def getData(self):
 		return self.data
 
+class RNNEpisodeBuffer(object):
+	def __init__(self):
+		self.data = []
+
+	def push(self, *args):
+		self.data.append(RNNEpisode(*args))
+
+	def getData(self):
+		return self.data
+
 Transition = namedtuple('Transition',('s','a','logprob','TD','GAE'))
 
-RNNTransition = namedtuple('RNNTransition',('s','a','logprob','TD','GAE'))
+RNNTransition = namedtuple('RNNTransition',('s','a','logprob','TD','GAE','hidden_h','hidden_c'))
 
 class RNNReplayBuffer(object):
 	def __init__(self, buff_size = 10000):
@@ -134,7 +146,8 @@ class PPO(object):
 		self.max_return_epoch = 1
 		self.tic = time.time()
 
-		self.episodes = [[EpisodeBuffer() for y in range(self.num_agents)] for x in range(self.num_slaves)]
+		# self.episodes = [[EpisodeBuffer() for y in range(self.num_agents)] for x in range(self.num_slaves)]
+		self.rnn_episodes = [[RNNEpisodeBuffer() for y in range(self.num_agents)] for x in range(self.num_slaves)]
 
 		self.env.resets()
 
@@ -154,39 +167,6 @@ class PPO(object):
 	def loadModel(self,path,index):
 		self.model[index].load('../nn/'+path+'.pt')
 
-	# def computeTDandGAE(self):
-	# 	self.replay_buffer.clear();
-	# 	self.sum_return = 0.0
-	# 	for epi in self.total_episodes:
-	# 		data = epi.getData()
-	# 		size = len(data)
-	# 		if size == 0:
-	# 			continue
-	# 		# print("Size : ",size)
-	# 		states, actions, rewards, values, logprobs = zip(*data)
-	# 		values = np.concatenate((values, np.zeros(1)), axis=0)
-	# 		advantages = np.zeros(size)
-	# 		ad_t = 0
-
-	# 		epi_return = 0.0
-	# 		for i in reversed(range(len(data))):
-	# 			epi_return += rewards[i]
-	# 			delta = rewards[i] + values[i+1] * self.gamma - values[i]
-	# 			ad_t = delta + self.gamma * self.lb * ad_t
-	# 			advantages[i] = ad_t
-
-	# 		if not np.isnan(epi_return):
-	# 			self.sum_return += epi_return
-	# 			TD = values[:size] + advantages
-
-	# 			for i in range(size):
-	# 				self.replay_buffer.push(states[i], actions[i], logprobs[i], TD[i], advantages[i])
-
-	# 	self.num_episode = len(self.total_episodes)
-	# 	self.num_tuple = len(self.replay_buffer.buffer)
-	# 	print('SIM : {}'.format(self.num_tuple))
-	# 	self.num_tuple_so_far += self.num_tuple
-
 	def computeTDandGAE(self):
 		# self.replay_buffer.clear()
 		self.rnn_buffer.clear()
@@ -197,7 +177,7 @@ class PPO(object):
 			# print("Size : ",size)
 			if size == 0:
 				continue
-			states, actions, rewards, values, logprobs = zip(*data)
+			states, actions, rewards, values, logprobs, hiddens = zip(*data)
 			values = np.concatenate((values, np.zeros(1)), axis=0)
 			advantages = np.zeros(size)
 			ad_t = 0
@@ -216,7 +196,10 @@ class PPO(object):
 				rnn_replay_buffer = RNNReplayBuffer(4000)
 				# print("size of data ",size)
 				for i in range(size):
-					rnn_replay_buffer.push(states[i], actions[i], logprobs[i], TD[i], advantages[i])
+					# print(actions[i])
+					# print(hiddens[i])
+					# exit(0)
+					rnn_replay_buffer.push(states[i], actions[i], logprobs[i], TD[i], advantages[i], hiddens[i][0], hiddens[i][1])
 				self.rnn_buffer.push(rnn_replay_buffer)
 
 
@@ -258,10 +241,13 @@ class PPO(object):
 		rewards = [None]*self.num_slaves*self.num_agents
 		logprobs = [None]*self.num_slaves*self.num_agents
 		values = [None]*self.num_slaves*self.num_agents
+		# hiddens : (hidden ,cell) tuple
+		hiddens = [None]*self.num_slaves*self.num_agents
 		# states_next = [None]*self.num_slaves*self.num_agents
 		for i in range(self.num_slaves):
 			for j in range(self.num_agents):
 				states[i*self.num_agents+j] = self.env.getState(i,j)
+				hiddens[i*self.num_agents+j] = self.model[0].init_hidden(1)
 		local_step = 0
 		terminated = [False]*self.num_slaves*self.num_agents
 		counter = 0
@@ -320,28 +306,35 @@ class PPO(object):
 				actions_slave = []
 				logprobs_slave = []
 				values_slave = []
+				hiddens_slave = []
 				for j in range(self.num_agents):
 					if not useHardCoded:
 						if teamDic[j] == learningTeam:
-							a_dist_slave_agent,v_slave_agent = self.model[0](Tensor([states[i*self.num_agents+j]]))
+							# a_dist_slave_agent,v_slave_agent = self.model[0](Tensor([states[i*self.num_agents+j]]))
+							a_dist_slave_agent,v_slave_agent, hiddens_slave_agent = self.model[0].forward_rnn(\
+								Tensor([states[i*self.num_agents+j]]), Tensor(hiddens[i*self.num_agents+j]))
 						else :
-							a_dist_slave_agent,v_slave_agent = self.model[i*self.num_agents+j](Tensor([states[i*self.num_agents+j]]))
+							a_dist_slave_agent,v_slave_agent, hiddens_slave_agent = self.model[0].forward_rnn(\
+								Tensor([states[i*self.num_agents+j]]), Tensor(hiddens[i*self.num_agents+j]))
 						# print(a_dist_slave_agent)
 						a_dist_slave.append(a_dist_slave_agent)
 						v_slave.append(v_slave_agent)
+						hiddens_slave.append(hiddens_slave_agent)
 						# print(actions_slave,a_dist_slave[j].sample().cpu().detach().numpy())
 						# exit()
 						# print(a_dist_slave[j].sample().cpu().detach().numpy())
-						actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy()[0];
+						actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy()[0][0];
 
 					else :
 						# print(self.model[0](Tensor([states[i*self.num_agents+j]])))
 						# exit()
 						if teamDic[j] == learningTeam:
-							a_dist_slave_agent,v_slave_agent = self.model[0](Tensor([states[i*self.num_agents+j]]))
+							a_dist_slave_agent,v_slave_agent, hiddens_slave_agent = self.model[0].forward_rnn(\
+								Tensor([states[i*self.num_agents+j]]),(Tensor(hiddens[i*self.num_agents+j][0]), Tensor(hiddens[i*self.num_agents+j][1])))
 							a_dist_slave.append(a_dist_slave_agent)
 							v_slave.append(v_slave_agent)
-							actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy()[0];		
+							hiddens_slave.append((hiddens_slave_agent[0].cpu().detach().numpy(), hiddens_slave_agent[1].cpu().detach().numpy()))
+							actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy()[0][0];		
 						else :
 							# dummy
 							# a_dist_slave_agent,v_slave_agent = self.model[0](Tensor([states[i*self.num_agents+j]]))
@@ -356,6 +349,7 @@ class PPO(object):
 						logprobs[i*self.num_agents+j] = a_dist_slave[j].log_prob(Tensor(actions[i*self.num_agents+j]))\
 							.cpu().detach().numpy().reshape(-1)[0];
 						values[i*self.num_agents+j] = v_slave[j].cpu().detach().numpy().reshape(-1)[0];
+						hiddens[i*self.num_agents+j] = hiddens_slave[j]
 
 
 				# logprobs_slave = a_dist_slave.log_prob(Tensor(actions)).cpu().detach().numpy().reshape(-1)
@@ -399,8 +393,8 @@ class PPO(object):
 				if nan_occur is True:
 					for k in range(self.num_agents):
 						if teamDic[k] == learningTeam:
-							self.total_episodes.append(self.episodes[i][k])
-							self.episodes[i][k] = EpisodeBuffer()
+							self.total_episodes.append(self.rnn_episodes[i][k])
+							self.rnn_episodes[i][k] = RNNEpisodeBuffer()
 					self.env.reset(i)
 
 				if self.env.isTerminalState(i) is False:
@@ -410,8 +404,8 @@ class PPO(object):
 							# rewards[i*self.num_agents+k] = self.env.getReward(i, k)
 							# print(str(i)+" "+str(k), end=' ')
 							# print(len(self.episodes[i][k].getData()), end = ' ')
-							self.episodes[i][k].push(states[i*self.num_agents+k], actions[i*self.num_agents+k],\
-								rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k])
+							self.rnn_episodes[i][k].push(states[i*self.num_agents+k], actions[i*self.num_agents+k],\
+								rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k], hiddens[i*self.num_agents+k])
 							# print(local_step)
 							local_step += 1
 
@@ -425,8 +419,8 @@ class PPO(object):
 				if terminated_state is True :
 					for k in range(self.num_agents):
 						if teamDic[k] == learningTeam:
-							self.total_episodes.append(self.episodes[i][k])
-							self.episodes[i][k] = EpisodeBuffer()
+							self.total_episodes.append(self.rnn_episodes[i][k])
+							self.rnn_episodes[i][k] = RNNEpisodeBuffer()
 					self.env.reset(i)
 
 
@@ -436,8 +430,8 @@ class PPO(object):
 						if teamDic[k] == learningTeam:
 							# print(str(i)+" "+str(k), end=' ')
 							# print(len(self.episodes[i][k].getData()))
-							self.total_episodes.append(self.episodes[i][k])
-							self.episodes[i][k] = EpisodeBuffer()
+							self.total_episodes.append(self.rnn_episodes[i][k])
+							self.rnn_episodes[i][k] = RNNEpisodeBuffer()
 					self.env.reset(i)
 				break
 			for i in range(self.num_slaves):
@@ -448,64 +442,8 @@ class PPO(object):
 		print('SIM : {}'.format(local_step))
 
 
-	# def optimizeSimulationNN(self):
-	# 	all_transitions = np.array(self.replay_buffer.buffer)
-	# 	for j in range(self.num_epochs):
-	# 		np.random.shuffle(all_transitions)
-	# 		for i in range(len(all_transitions)//self.batch_size):
-	# 			transitions = all_transitions[i*self.batch_size:(i+1)*self.batch_size]
-	# 			batch = Transition(*zip(*transitions))
-
-	# 			stack_s =np.vstack(batch.s).astype(np.float32)
-	# 			stack_a = np.vstack(batch.a).astype(np.float32)
-	# 			stack_lp = np.vstack(batch.logprob).astype(np.float32)
-	# 			stack_td = np.vstack(batch.TD).astype(np.float32)
-	# 			stack_gae = np.vstack(batch.GAE).astype(np.float32)
-
-	# 			a_dist,v = self.model[0](Tensor(stack_s))
-
-	# 			# print(v.size())
-	# 			# exit()
-
-	# 			'''Critic Loss'''
-	# 			loss_critic = ((v-Tensor(stack_td)).pow(2)).mean()
-
-	# 			'''Actor Loss'''
-	# 			ratio = torch.exp(a_dist.log_prob(Tensor(stack_a))-Tensor(stack_lp))
-	# 			stack_gae = (stack_gae-stack_gae.mean())/(stack_gae.std()+1E-5)
-	# 			stack_gae = Tensor(stack_gae)
-	# 			surrogate1 = ratio * stack_gae
-	# 			surrogate2 = torch.clamp(ratio, min=1.0-self.clip_ratio, max=1.0+self.clip_ratio) * stack_gae
-	# 			loss_actor = - torch.min(surrogate1, surrogate2).mean()
-
-	# 			'''Entropy Loss'''
-	# 			loss_entropy = - self.w_entropy * a_dist.entropy().mean()
-
-	# 			self.loss_actor = loss_actor.cpu().detach().numpy().tolist()
-	# 			self.loss_critic = loss_critic.cpu().detach().numpy().tolist()
-
-	# 			loss = loss_actor + loss_entropy + loss_critic
-	
-				
-			
-	# 			# print(loss.cpu().detach().numpy().tolist())
-	# 			# if np.any(np.isnan(loss.cpu().detach().numpy().tolist())):
-	# 			# 	continue;
-
-	# 			self.optimizer.zero_grad()
-	# 			loss.backward(retain_graph=True)
-	# 			# print(loss)
-	# 			# exit()
-	# 			for param in self.model[0].parameters():
-	# 				if param.grad is not None:
-	# 					param.grad.data.clamp_(-0.5, 0.5)
-	# 			self.optimizer.step()
-	# 		print('Optimizing sim nn : {}/{}'.format(j+1,self.num_epochs),end='\r')
-	# 	print('')
-
 	def optimizeSimulationNN(self):
 		all_rnn_replay_buffer= np.array(self.rnn_buffer.buffer)
-		# num_epochs
 		for j in range(self.num_epochs):
 			# Get truncated transitions. The transitions will be splited by size self.trunc_size
 			all_segmented_transitions = []
@@ -516,16 +454,13 @@ class PPO(object):
 				for i in range(rnn_replay_buffer_size//self.trunc_size):
 					segmented_transitions = np.array(rnn_replay_buffer.buffer)[i*self.trunc_size:(i+1)*self.trunc_size]
 					all_segmented_transitions.append(segmented_transitions)
-					# print(len(segmented_transitions))
 					# zero padding
 					if (i+2)*self.trunc_size > rnn_replay_buffer_size :
-						segmented_transitions = [RNNTransition(None,None,None,None,None) for x in range(self.trunc_size)]
+						segmented_transitions = [RNNTransition(None,None,None,None,None,None,None) for x in range(self.trunc_size)]
 						segmented_transitions[:rnn_replay_buffer_size - (i+1)*self.trunc_size] = \
 							np.array(rnn_replay_buffer.buffer)[(i+1)*self.trunc_size:rnn_replay_buffer_size]
-						# print(len(segmented_transitions))
 						all_segmented_transitions.append(segmented_transitions)
 
-			# print(len(all_segmented_transitions))
 
 			# Shuffle the segmented transition (order of episodes)
 			np.random.shuffle(all_segmented_transitions)
@@ -536,17 +471,21 @@ class PPO(object):
 
 				non_None_batch_list = [[] for x in range(self.trunc_size)]
 
+
+				loss_list = [Tensor([0])] * self.batch_size
+
+				a_dist_list = [None]*self.trunc_size
+				v_list = [None]*self.trunc_size
+
 				for timeStep in range(self.trunc_size):
 
 					non_None_batch_segmented_transitions = []
-
 
 					# Make non-None list of batch_segmented_transitions
 					for k in range(self.batch_size):
 						if RNNTransition(*batch_segmented_transitions[k][timeStep]).s is not None :
 							non_None_batch_segmented_transitions.append(batch_segmented_transitions[k][timeStep])
 							non_None_batch_list[timeStep].append(k)
-					# print(non_None_batch_list)
 
 					batch = RNNTransition(*zip(*non_None_batch_segmented_transitions))
 
@@ -555,8 +494,45 @@ class PPO(object):
 					stack_lp = np.vstack(batch.logprob).astype(np.float32)
 					stack_td = np.vstack(batch.TD).astype(np.float32)
 					stack_gae = np.vstack(batch.GAE).astype(np.float32)
+					# print(batch.a)
+					# print(batch.hidden_h)
+					stack_hidden_h = np.vstack(batch.hidden_h).astype(np.float32)
+					stack_hidden_c = np.vstack(batch.hidden_c).astype(np.float32)
 
-					a_dist,v = self.model[0](Tensor(stack_s))
+					# for h, c in stack_hidden:
+					# 	h = h.cpu().detach().numpy().astype(np.float32)
+					# 	c = c.cpu().detach().numpy().astype(np.float32)
+					# stack_hidden[:][0] = stack_hidden[:][0].astype(np.float32)
+					# stack_hidden[:][1] = stack_hidden[:][1].astype(np.float32)
+					# for t in range(self.batch_size):
+					# 	stack_hidden[t] = (stack_hidden[t][0].astype(np.float32), stack_hidden[t][1].astype(np.float32))
+					# print(type(batch.hidden))
+					# print(len(batch.hidden))
+					# print(len(batch.hidden[0]))
+					# batch_hidden_h = batch.hidden.narrow(1,0,1)
+					# batch_hidden_c = batch.hidden.narrow(1,1,1)
+
+					# stack_hidden_h = np.vstack(batch.hidden.).astype(np.float32)
+					# stack_hidden_c = np.vstack(batch.hidden[1]).astype(np.float32)
+
+					# print(type(stack_hidden))
+					# print(Tensor(stack_s).size())
+
+					# stack_hidden = (stack_hidden_h.view(1,len(non_None_batch_segmented_transitions),-1), 
+					# 				stack_hidden_c.view(1,len(non_None_batch_segmented_transitions),-1))
+
+					# stack_hidden = (np.reshape(stack_hidden_h, (1,len(non_None_batch_segmented_transitions),-1)), 
+					# 				np.reshape(stack_hidden_c, (1,len(non_None_batch_segmented_transitions),-1)))
+					stack_hidden = (Tensor(np.reshape(stack_hidden_h, (1,len(non_None_batch_segmented_transitions),-1))), 
+									Tensor(np.reshape(stack_hidden_c, (1,len(non_None_batch_segmented_transitions),-1))))
+					# stack_hidden = (stack_hidden_h, stack_hidden_c)
+
+					# for l in range(self.batch_size):
+					# 	stack_hidden.append((stack_hidden_h[l], stack_hidden_c[l]))
+
+					# a_dist,v,_ = self.model[0].forward_rnn(Tensor(stack_s),Tensor(stack_hidden))	
+					a_dist,v,_ = self.model[0].forward_rnn(Tensor(stack_s), stack_hidden)	
+
 
 					# if timeStep >= self.burn_in_size : 
 					'''Critic Loss'''
@@ -576,12 +552,14 @@ class PPO(object):
 					self.loss_actor = loss_actor.cpu().detach().numpy().tolist()
 					self.loss_critic = loss_critic.cpu().detach().numpy().tolist()
 
+					stack_hidden[0].cpu().detach();
+
 					loss = loss_actor + loss_entropy + loss_critic
-			
+
 					self.optimizer.zero_grad()
+
 					loss.backward(retain_graph=True)
-					# print(loss)
-					# exit()
+
 					for param in self.model[0].parameters():
 						if param.grad is not None:
 							param.grad.data.clamp_(-0.5, 0.5)

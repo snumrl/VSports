@@ -305,26 +305,6 @@ getState(int index)
 	ballP = ballSkel->getPositions() - p;
 	ballV = ballSkel->getVelocities() - v;
 
-	// Observation
-	std::string teamName = character->getName().substr(0,1);
-	
-	// Do not count for cur Character
-	// double distance[mCharacters.size()-1];
-	// int distanceIndex[mCharacters.size()-1];
-	// int count =0;
-
-	// // We will get the other's position & velocities in sorted form.
-	// for(int i=0;i<mCharacters.size();i++)
-	// {
-	// 	if(i != index)
-	// 	{
-	// 		distanceIndex[count] = i;
-	// 		Eigen::Vector2d curP = mCharacters[i]->getSkeleton()->getPositions();
-	// 		distance[count] = (curP-p).norm();
-	// 		count++;
-	// 	}
-	// }
-	// count = 0;
 
 	Eigen::VectorXd ballPossession(1);
 	if(index == 0)
@@ -344,6 +324,85 @@ getState(int index)
 	else
 	{
 		kickable[0] = 0;
+	}
+	std::string teamName = character->getName().substr(0,1);
+	
+	// Do not count for cur Character
+	double distance[mCharacters.size()-1];
+	int distanceIndex[mCharacters.size()-1];
+	int count =0;
+
+	// We will get the other's position & velocities in sorted form.
+	for(int i=0;i<mCharacters.size();i++)
+	{
+		if(i != index)
+		{
+			distanceIndex[count] = i;
+			Eigen::Vector2d curP = mCharacters[i]->getSkeleton()->getPositions();
+			distance[count] = (curP-p).norm();
+			count++;
+		}
+	}
+	count = 0;
+	double min = DBL_MAX;
+	int minIndex = 0;
+	for(int i=0;i<mCharacters.size()-1;i++)
+	{
+		for(int j=i;j<mCharacters.size();j++)
+		{
+			if(distance[j]<min)
+			{
+				min = distance[j];
+				minIndex = j;
+			}
+		}
+		distance[minIndex] = distance[i];
+		distanceIndex[minIndex] = distanceIndex[i];
+
+		distance[i] = min;
+		distanceIndex[i] = minIndex;
+
+		min = distance[i+1];
+		minIndex = i+1;
+	}
+
+	// Observation
+	
+	int numCurTeam=0;
+	int numOppTeam=0;
+	for(int i=0;i<mCharacters.size();i++)
+	{
+		if(teamName == mCharacters[i]->getName().substr(0,1))
+			numCurTeam++;
+		else
+			numOppTeam++;
+	}
+
+	// Fill in the other agent's relational state in team+distance order
+	// 5 = positionDof(2) + velocityDof(2)
+	Eigen::VectorXd otherS((numCurTeam-1)*4 + numOppTeam*4);
+
+	for(int i=0;i<mCharacters.size()-1;i++)
+	{
+		if(mCharacters[distanceIndex[i]]->getName() == teamName)
+		{
+			SkeletonPtr skel = mCharacters[distanceIndex[i]]->getSkeleton();
+			otherS.segment(count*4,2) = skel->getPositions() - p;
+			otherS.segment(count*4+2,2) = skel->getVelocities() - v;
+			// otherS.segment(count*5+4,1)[0] = (getDribblerIndex()==index) ? 1 : 0;
+			count++;
+		}
+	}
+	for(int i=0;i<mCharacters.size()-1;i++)
+	{
+		if(mCharacters[distanceIndex[i]]->getName() != teamName)
+		{
+			SkeletonPtr skel = mCharacters[distanceIndex[i]]->getSkeleton();
+			otherS.segment(count*4,2) = skel->getPositions() - p;
+			otherS.segment(count*4+2,2) = skel->getVelocities() - v;
+			// otherS.segment(count*5+4,1)[0] = (getDribblerIndex()==index) ? 1 : 0;
+			count++;
+		}
 	}
 
 	
@@ -393,11 +452,11 @@ getState(int index)
 	else
 	{
 		state.resize(p.rows() + v.rows() + ballP.rows() + ballV.rows() +
-			ballPossession.rows() + kickable.rows());
+			ballPossession.rows() + kickable.rows() + otherS.rows());
 	}
 
 	
-	int count = 0;
+	count = 0;
 	for(int i=0;i<p.rows();i++)
 	{
 		state[count++] = p[i];
@@ -429,6 +488,14 @@ getState(int index)
 		{
 			state[count++] = mapState[i];
 		}
+	}
+	else
+	{
+		for(int i=0;i<otherS.rows();i++)
+		{
+			state[count++] = otherS[i];
+		}
+
 	}
 	
 
