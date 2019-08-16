@@ -25,7 +25,7 @@ public:
 	void initGoalpost();
 	void initCustomView();
 
-	void getActionFromNN(bool vsHardcodedAI = false);
+	void getActionFromNN(bool vsHardcodedAI = false, bool isRNN = false);
 	double vsHardcodedAI_difficulty;
 
 	dart::dynamics::SkeletonPtr makeGoalpost(Eigen::Vector3d position, std::string label);
@@ -46,6 +46,7 @@ public:
 	std::vector<Eigen::VectorXd> mActions;
 
 	boost::python::object mm,mns,sys_module,nn_module,muscle_nn_module;
+	boost::python::object reset_hidden;
 	bool mIsNNLoaded;
 };
 

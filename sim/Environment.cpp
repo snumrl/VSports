@@ -835,7 +835,9 @@ getReward(int index)
 	}
 	double myDistanceBall = mStates[index].segment(ID_BALL_P, 2).norm();
 
-	reward += 0.1 * exp(-pow(myDistanceBall,2.0));
+	reward += 1.0 * exp(-pow(myDistanceBall,2.0));
+	// reward += 0.1 * (1 - mNumIterations/400.0) * exp(-pow(myDistanceBall,2.0));
+
 	// reward += 0.1 * exp(-pow(myDistanceBall,2.0));
 	// if(index == 0)
 	// {

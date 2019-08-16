@@ -417,6 +417,7 @@ class NoCNNSimulationNN(nn.Module):
 		self.rnn = nn.LSTM(num_policyInput, self.hidden_size, num_layers=self.num_layers)#,bias=True,batch_first=True,bidirectional=True)
 
 
+		self.cur_hidden = self.init_hidden(1)
 
 
 		num_h1 = 128
@@ -474,66 +475,16 @@ class NoCNNSimulationNN(nn.Module):
 		self.value_rnn.apply(weights_init)
 
 	def forward(self,x):
-		# mapRow = 40
-		# mapCol = 40
-		# numLayer = 5
-
-		# x = x.cuda()
-		# mapX = x.narrow(1, 10, numLayer*mapCol*mapRow).view(-1, numLayer, mapCol, mapRow)
-
-		# vecX = x.narrow(1,0,10)
-
-		# mapX_ = self.conv_module(mapX)
-
-		# dim = 1
-		# for d in mapX_.size()[1:]:
-		# 	dim = dim * d
-		# mapX_ = mapX_.view(-1, dim)
-		# mapX_ = self.fc_module(mapX_)
-
-		# concatVecX = torch.cat((vecX,mapX_),1)
-		# concatVecX = concatVecX.view(-1, 30)
-
 		concatVecX = x.cuda()
-
-
-		# batch_size = x.size(0)
-
-		# Initializing hidden state for first input using method defined below
-		# hidden = self.init_hidden(batch_size)
-		# cell = self.init_hidden(batch_size)
-
-
-		# concatVecX = torch.cat((mapX_, concatVecX), 1)
-
-		# we will see infinite timesteps.
-		# concatVecX = concatVecX.view(1, batch_size, -1)
-
-
-		# rnnOutput, (hidden, cell) = self.rnn(concatVecX, (hidden, cell) )
-
-
-
-		# rnnOutput, (a,b) = self.rnn(concatVecX)
-
-		# print(a.size())
-
-		# print(rnnOutput.size())
-		# exit()
-
-		# print(concatVecX.size())
-		# concatVecX = torch.cat((vecX[0],mapX_[0]),0).view(1,-1)
-
 		return MultiVariateNormal(self.policy(concatVecX),self.log_std.exp()),self.value(concatVecX);
-		# return MultiVariateNormal(self.policy(vecX),self.log_std.exp()),self.value(vecX);
-		# return MultiVariateNormal(self.policy(x),self.log_std.exp()),self.value(x);
-
 
 	def forward_rnn(self,x, in_hidden):
 		# print(x.size())
 		# exit(0)
 
 		useMap = False
+
+		# x = x.squeeze()
 
 		if useMap is True:
 			mapRow = 40
@@ -560,21 +511,16 @@ class NoCNNSimulationNN(nn.Module):
 			concatVecX = x.cuda()
 
 		# Initializing hidden state for first input using method defined below
-		# print(concatVecX.size())
 		batch_size = concatVecX.size()[0];
-		rnnOutput, out_hidden = self.rnn(concatVecX.view(1, batch_size,-1), in_hidden)
 
-		# print(out_h_c_tuple)
+		useRNN = True
 
-		# print(a.size())
+		if useRNN :
+			rnnOutput, out_hidden = self.rnn(concatVecX.view(1, batch_size,-1), in_hidden)
+			return MultiVariateNormal(self.policy_rnn(rnnOutput),self.log_std.exp()),self.value_rnn(rnnOutput), out_hidden
+		else :
+			return MultiVariateNormal(self.policy(concatVecX).unsqueeze(0),self.log_std.exp()),self.value(concatVecX).unsqueeze(0), in_hidden
 
-		# print(rnnOutput.size())
-		# exit()
-
-		# print(concatVecX.size())
-		# concatVecX = torch.cat((vecX[0],mapX_[0]),0).view(1,-1)
-
-		return MultiVariateNormal(self.policy_rnn(rnnOutput),self.log_std.exp()),self.value_rnn(rnnOutput), out_hidden
 
 	def load(self,path):
 		print('load simulation nn {}'.format(path))
@@ -591,20 +537,25 @@ class NoCNNSimulationNN(nn.Module):
 		# print(p.size())
 		return p.loc.cpu().detach().numpy()
 
-	def get_action_rnn(self,s, in_hidden):
+	def get_action_rnn(self,s):
 		ts = torch.tensor(s)
 		# print(ts.size())
-		if in_hidden is None:
-			new_hidden = self.init_hidden
-		p,_1 ,_2= self.forward_rnn(ts.view(1,-1), new_hidden)
+		# if in_hidden is None:
+		# 	new_hidden = self.init_hidden
+		# else :
+		# 	new_hidden = in_hidden
+		p,_1 ,new_hidden= self.forward_rnn(ts.unsqueeze(0), self.cur_hidden)
+		new_hidden = self.cur_hidden
 		# print(p.size())
 		return p.loc.cpu().detach().numpy()
 
+	def reset_hidden(self):
+		self.cur_hidden = self.init_hidden(1)
 
-	def get_random_action(self,s):
-		ts = torch.tensor(s)
-		p,_ = self.forward(ts.view(1,-1))
-		return p.sample().cpu().detach().numpy()
+	# def get_random_action(self,s):
+	# 	ts = torch.tensor(s)
+	# 	p,_ = self.forward(ts.view(1,-1))
+	# 	return p.sample().cpu().detach().numpy()
 	
 	def init_hidden(self, batch_size):
         # This method generates the first hidden state of zeros which we'll use in the forward pass

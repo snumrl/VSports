@@ -2,6 +2,7 @@
 #include "../render/GLfunctionsDART.h"
 #include "../model/SkelMaker.h"
 #include "../model/SkelHelper.h"
+#include "../pyvs/EnvironmentPython.h"
 #include <GL/glut.h>
 #include <iostream>
 using namespace dart::dynamics;
@@ -76,6 +77,7 @@ SimpleSocWindow(const std::string& nn_path)
 	nn_module = p::eval("NoCNNSimulationNN(num_state, num_action).cuda()", mns);
 
 	p::object load = nn_module.attr("load");
+	reset_hidden = nn_module.attr("reset_hidden"); 
 	load(nn_path);
 }
 
@@ -133,6 +135,7 @@ keyboard(unsigned char key, int x, int y)
 			break;
 		case 'r':
 			mEnv->reset();
+			reset_hidden();
 			break;
 		case ']':
 			vsHardcodedAI_difficulty += 0.1;
@@ -166,7 +169,7 @@ SimpleSocWindow::
 step()
 {
 	// cout<<"????????"<<endl;
-	getActionFromNN(true);
+	getActionFromNN(true, true);
 	// std::cout<<"step!"<<std::endl;
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
@@ -195,12 +198,15 @@ step()
 
 void
 SimpleSocWindow::
-getActionFromNN(bool vsHardcodedAI)
+getActionFromNN(bool vsHardcodedAI, bool isRNN)
 {
 	// cout<<"getActionFromNN"<<endl;
 	p::object get_action;
 	mActions.clear();
-	get_action = nn_module.attr("get_action");
+	if(!isRNN)
+		get_action = nn_module.attr("get_action");
+	else
+		get_action = nn_module.attr("get_action_rnn");
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
 
@@ -239,19 +245,16 @@ getActionFromNN(bool vsHardcodedAI)
 
 			// cout<<"33333"<<endl;
 	// time_check_start();
-			p::object temp = get_action(state_np);
-	// time_check_end();
-			// cout<<"33344"<<endl;
 
+			p::object temp = get_action(state_np);
 			np::ndarray action_np = np::from_object(temp);
-			// cout<<"44444"<<endl;
 			float* srcs = reinterpret_cast<float*>(action_np.get_data());
 			for(int j=0;j<mAction.rows();j++)
 			{
 				mAction[j] = srcs[j];
 			}
-			// cout<<mAction[mAction.rows()-1]<<endl;
 			mActions.push_back(mAction);
+
 		}
 	}
 	// cout<<endl;

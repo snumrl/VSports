@@ -3,6 +3,7 @@ import random
 import time
 import os
 import sys
+import copy
 from datetime import datetime
 
 import collections
@@ -461,9 +462,9 @@ class PPO(object):
 							np.array(rnn_replay_buffer.buffer)[(i+1)*self.trunc_size:rnn_replay_buffer_size]
 						all_segmented_transitions.append(segmented_transitions)
 
-
 			# Shuffle the segmented transition (order of episodes)
 			np.random.shuffle(all_segmented_transitions)
+
 
 			# We will get loss with trunc_size in a batch. And then we use the mean value.
 			for i in range(len(all_segmented_transitions)//self.batch_size):
@@ -472,7 +473,8 @@ class PPO(object):
 				non_None_batch_list = [[] for x in range(self.trunc_size)]
 
 
-				loss_list = [Tensor([0])] * self.batch_size
+				loss_list = [Tensor([0])] * self.trunc_size
+				hidden_list = [None]*self.trunc_size
 
 				a_dist_list = [None]*self.trunc_size
 				v_list = [None]*self.trunc_size
@@ -482,10 +484,16 @@ class PPO(object):
 					non_None_batch_segmented_transitions = []
 
 					# Make non-None list of batch_segmented_transitions
-					for k in range(self.batch_size):
-						if RNNTransition(*batch_segmented_transitions[k][timeStep]).s is not None :
-							non_None_batch_segmented_transitions.append(batch_segmented_transitions[k][timeStep])
-							non_None_batch_list[timeStep].append(k)
+					if timeStep == 0:
+						for k in range(self.batch_size):
+							if RNNTransition(*batch_segmented_transitions[k][timeStep]).s is not None :
+								non_None_batch_segmented_transitions.append(batch_segmented_transitions[k][timeStep])
+								non_None_batch_list[timeStep].append(k)
+					else :
+						for k in non_None_batch_list[timeStep-1]:
+							if RNNTransition(*batch_segmented_transitions[k][timeStep]).s is not None :
+								non_None_batch_segmented_transitions.append(batch_segmented_transitions[k][timeStep])
+								non_None_batch_list[timeStep].append(k)
 
 					batch = RNNTransition(*zip(*non_None_batch_segmented_transitions))
 
@@ -494,76 +502,83 @@ class PPO(object):
 					stack_lp = np.vstack(batch.logprob).astype(np.float32)
 					stack_td = np.vstack(batch.TD).astype(np.float32)
 					stack_gae = np.vstack(batch.GAE).astype(np.float32)
-					# print(batch.a)
-					# print(batch.hidden_h)
 					stack_hidden_h = np.vstack(batch.hidden_h).astype(np.float32)
 					stack_hidden_c = np.vstack(batch.hidden_c).astype(np.float32)
 
-					# for h, c in stack_hidden:
-					# 	h = h.cpu().detach().numpy().astype(np.float32)
-					# 	c = c.cpu().detach().numpy().astype(np.float32)
-					# stack_hidden[:][0] = stack_hidden[:][0].astype(np.float32)
-					# stack_hidden[:][1] = stack_hidden[:][1].astype(np.float32)
-					# for t in range(self.batch_size):
-					# 	stack_hidden[t] = (stack_hidden[t][0].astype(np.float32), stack_hidden[t][1].astype(np.float32))
-					# print(type(batch.hidden))
-					# print(len(batch.hidden))
-					# print(len(batch.hidden[0]))
-					# batch_hidden_h = batch.hidden.narrow(1,0,1)
-					# batch_hidden_c = batch.hidden.narrow(1,1,1)
+					stack_hidden = [None, None]
 
-					# stack_hidden_h = np.vstack(batch.hidden.).astype(np.float32)
-					# stack_hidden_c = np.vstack(batch.hidden[1]).astype(np.float32)
+					# start = time.time()
+					if timeStep == 0:
+						stack_hidden = [Tensor(np.reshape(stack_hidden_h, (1,len(non_None_batch_segmented_transitions),-1))), 
+										Tensor(np.reshape(stack_hidden_c, (1,len(non_None_batch_segmented_transitions),-1)))]
+						# stack_hidden = tuple(stack_hidden)
+					else :
+						firstCat = True;
+						for k in non_None_batch_list[timeStep]:
+							if firstCat is True :
+								for l in range(len(non_None_batch_list[timeStep-1])) :
+									if non_None_batch_list[timeStep-1][l] == k:
+										stack_hidden[0] = hidden_list[timeStep-1][0][0][l].unsqueeze(0).unsqueeze(0)
+										stack_hidden[1] = hidden_list[timeStep-1][1][0][l].unsqueeze(0).unsqueeze(0)
+										firstCat = False
+							else :
+								for l in range(len(non_None_batch_list[timeStep-1])) :
+									if non_None_batch_list[timeStep-1][l] == k:
+										stack_hidden[0] = torch.cat((stack_hidden[0], hidden_list[timeStep-1][0][0][l].unsqueeze(0).unsqueeze(0)),1)
+										stack_hidden[1] = torch.cat((stack_hidden[1], hidden_list[timeStep-1][1][0][l].unsqueeze(0).unsqueeze(0)),1)
 
-					# print(type(stack_hidden))
-					# print(Tensor(stack_s).size())
+					# stack_hidden = list(self.model[0].init_hidden(len(non_None_batch_list[timeStep])))
 
-					# stack_hidden = (stack_hidden_h.view(1,len(non_None_batch_segmented_transitions),-1), 
-					# 				stack_hidden_c.view(1,len(non_None_batch_segmented_transitions),-1))
+					if timeStep % 5 == 0 :
+						stack_hidden[0] = stack_hidden[0].detach()
+						stack_hidden[1] = stack_hidden[1].detach()
 
-					# stack_hidden = (np.reshape(stack_hidden_h, (1,len(non_None_batch_segmented_transitions),-1)), 
-					# 				np.reshape(stack_hidden_c, (1,len(non_None_batch_segmented_transitions),-1)))
-					stack_hidden = (Tensor(np.reshape(stack_hidden_h, (1,len(non_None_batch_segmented_transitions),-1))), 
-									Tensor(np.reshape(stack_hidden_c, (1,len(non_None_batch_segmented_transitions),-1))))
-					# stack_hidden = (stack_hidden_h, stack_hidden_c)
+					a_dist,v,cur_stack_hidden = self.model[0].forward_rnn(Tensor(stack_s), stack_hidden)	
+					
+					hidden_list[timeStep] = list(cur_stack_hidden)
 
-					# for l in range(self.batch_size):
-					# 	stack_hidden.append((stack_hidden_h[l], stack_hidden_c[l]))
+					# print(id(hidden_list[timeStep][0]))
+					# print(id(cur_stack_hidden[0]))
 
-					# a_dist,v,_ = self.model[0].forward_rnn(Tensor(stack_s),Tensor(stack_hidden))	
-					a_dist,v,_ = self.model[0].forward_rnn(Tensor(stack_s), stack_hidden)	
+					# hidden_list[timeStep] = copy.deep_copy(cur_stack_hidden)
+					# print(id(hidden_list[timeStep]))
+					# print(id(cur_stack_hidden))
+					# print(hidden_list[timeStep][0].size())
 
 
 					# if timeStep >= self.burn_in_size : 
 					'''Critic Loss'''
-					loss_critic = ((v-Tensor(stack_td)).pow(2)).mean()
 
-					'''Actor Loss'''
-					ratio = torch.exp(a_dist.log_prob(Tensor(stack_a))-Tensor(stack_lp))
-					stack_gae = (stack_gae-stack_gae.mean())/(stack_gae.std()+1E-5)
-					stack_gae = Tensor(stack_gae)
-					surrogate1 = ratio * stack_gae
-					surrogate2 = torch.clamp(ratio, min=1.0-self.clip_ratio, max=1.0+self.clip_ratio) * stack_gae
-					loss_actor = - torch.min(surrogate1, surrogate2).mean()
+					if timeStep % 5 == 4 :
 
-					'''Entropy Loss'''
-					loss_entropy = - self.w_entropy * a_dist.entropy().mean()
+						loss_critic = ((v-Tensor(stack_td)).pow(2)).mean()
 
-					self.loss_actor = loss_actor.cpu().detach().numpy().tolist()
-					self.loss_critic = loss_critic.cpu().detach().numpy().tolist()
+						'''Actor Loss'''
+						ratio = torch.exp(a_dist.log_prob(Tensor(stack_a))-Tensor(stack_lp))
+						stack_gae = (stack_gae-stack_gae.mean())/(stack_gae.std()+1E-5)
+						stack_gae = Tensor(stack_gae)
+						surrogate1 = ratio * stack_gae
+						surrogate2 = torch.clamp(ratio, min=1.0-self.clip_ratio, max=1.0+self.clip_ratio) * stack_gae
+						loss_actor = - torch.min(surrogate1, surrogate2).mean()
 
-					stack_hidden[0].cpu().detach();
+						'''Entropy Loss'''
+						loss_entropy = - self.w_entropy * a_dist.entropy().mean()
 
-					loss = loss_actor + loss_entropy + loss_critic
+						self.loss_actor = loss_actor.cpu().detach().numpy().tolist()
+						self.loss_critic = loss_critic.cpu().detach().numpy().tolist()
 
-					self.optimizer.zero_grad()
+						loss = loss_actor + loss_entropy + loss_critic
 
-					loss.backward(retain_graph=True)
+						self.optimizer.zero_grad()
 
-					for param in self.model[0].parameters():
-						if param.grad is not None:
-							param.grad.data.clamp_(-0.5, 0.5)
-					self.optimizer.step()
+						# start = time.time()
+						loss.backward(retain_graph=True)
+						# print("time :", time.time() - start)
+
+						for param in self.model[0].parameters():
+							if param.grad is not None:
+								param.grad.data.clamp_(-0.5, 0.5)
+						self.optimizer.step()
 			print('Optimizing sim nn : {}/{}'.format(j+1,self.num_epochs),end='\r')
 		print('')
 		# all_transitions = []
