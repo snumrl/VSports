@@ -109,7 +109,7 @@ class PPO(object):
 		self.gamma = 0.95
 		self.lb = 0.95
 
-		self.buffer_size = 2*2048
+		self.buffer_size = 4*2048
 		self.batch_size = 64
 		self.trunc_size = 30
 		self.burn_in_size = 5
@@ -162,8 +162,8 @@ class PPO(object):
 
 		if self.max_return_epoch == self.num_evaluation:
 			self.model[0].save('../nn/max.pt')
-		if self.num_evaluation%50 == 0:
-			self.model[0].save('../nn/'+str(self.num_evaluation//50)+'.pt')
+		if self.num_evaluation%20 == 0:
+			self.model[0].save('../nn/'+str(self.num_evaluation//20)+'.pt')
 
 	def loadModel(self,path,index):
 		self.model[index].load('../nn/'+path+'.pt')
@@ -224,13 +224,18 @@ class PPO(object):
 
 		direction_norm = math.sqrt(direction_norm)
 
-		maxvel = 3.0
+
+		# maxvel = 1.5 + 1.5* self.env.getNumIterations()/150.0
+		# if maxvel > 3.0:
+		# 	maxvel = 3.0
+		maxvel = 1.5
 
 		action = (maxvel*direction/direction_norm - state[2:4])
 		# for i in range(action.size()):
 		# 	if action[i] > 0.3:
 		# 		action[i] = 0.3
-		action = np.append(action, [random.randrange(0,2)])
+		# action = np.append(action, [random.randrange(0,3) - 1])
+		action = np.append(action, [1])
 		# action = np.append(action, [0])
 
 		return action
@@ -244,11 +249,15 @@ class PPO(object):
 		values = [None]*self.num_slaves*self.num_agents
 		# hiddens : (hidden ,cell) tuple
 		hiddens = [None]*self.num_slaves*self.num_agents
+		hiddens_forward = [None]*self.num_slaves*self.num_agents
 		# states_next = [None]*self.num_slaves*self.num_agents
 		for i in range(self.num_slaves):
 			for j in range(self.num_agents):
 				states[i*self.num_agents+j] = self.env.getState(i,j)
 				hiddens[i*self.num_agents+j] = self.model[0].init_hidden(1)
+				hiddens[i*self.num_agents+j] = (hiddens[i*self.num_agents+j][0].cpu().detach().numpy(), \
+							hiddens[i*self.num_agents+j][1].cpu().detach().numpy())
+				hiddens_forward[i*self.num_agents+j] = self.model[0].init_hidden(1)
 		local_step = 0
 		terminated = [False]*self.num_slaves*self.num_agents
 		counter = 0
@@ -257,8 +266,8 @@ class PPO(object):
 
 
 		if not useHardCoded:
-			if self.num_evaluation > 50:
-				curEvalNum = self.num_evaluation//50
+			if self.num_evaluation > 20:
+				curEvalNum = self.num_evaluation//20
 
 				clipedRandomNormal = 0
 				while clipedRandomNormal <= 0.5:
@@ -310,26 +319,22 @@ class PPO(object):
 				hiddens_slave = []
 				for j in range(self.num_agents):
 					if not useHardCoded:
-						if teamDic[j] == learningTeam:
-							# a_dist_slave_agent,v_slave_agent = self.model[0](Tensor([states[i*self.num_agents+j]]))
+						if teamDic[j] == learningTeam or True:
 							a_dist_slave_agent,v_slave_agent, hiddens_slave_agent = self.model[0].forward_rnn(\
-								Tensor([states[i*self.num_agents+j]]), Tensor(hiddens[i*self.num_agents+j]))
+								Tensor([states[i*self.num_agents+j]]),(Tensor(hiddens[i*self.num_agents+j][0]), Tensor(hiddens[i*self.num_agents+j][1])))
 						else :
-							a_dist_slave_agent,v_slave_agent, hiddens_slave_agent = self.model[0].forward_rnn(\
-								Tensor([states[i*self.num_agents+j]]), Tensor(hiddens[i*self.num_agents+j]))
-						# print(a_dist_slave_agent)
+							a_dist_slave_agent,v_slave_agent, hiddens_slave_agent = self.model[i*self.num_agents+j].forward_rnn(\
+								Tensor([states[i*self.num_agents+j]]),(Tensor(hiddens[i*self.num_agents+j][0]), Tensor(hiddens[i*self.num_agents+j][1])))
 						a_dist_slave.append(a_dist_slave_agent)
 						v_slave.append(v_slave_agent)
-						hiddens_slave.append(hiddens_slave_agent)
-						# print(actions_slave,a_dist_slave[j].sample().cpu().detach().numpy())
-						# exit()
-						# print(a_dist_slave[j].sample().cpu().detach().numpy())
-						actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy()[0][0];
+						hiddens_slave.append((hiddens_slave_agent[0].cpu().detach().numpy(), hiddens_slave_agent[1].cpu().detach().numpy()))
+						actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy()[0][0];		
 
 					else :
 						# print(self.model[0](Tensor([states[i*self.num_agents+j]])))
 						# exit()
 						if teamDic[j] == learningTeam:
+							print(Tensor(hiddens[i*self.num_agents+j][0]).size())
 							a_dist_slave_agent,v_slave_agent, hiddens_slave_agent = self.model[0].forward_rnn(\
 								Tensor([states[i*self.num_agents+j]]),(Tensor(hiddens[i*self.num_agents+j][0]), Tensor(hiddens[i*self.num_agents+j][1])))
 							a_dist_slave.append(a_dist_slave_agent)
@@ -341,29 +346,20 @@ class PPO(object):
 							# a_dist_slave_agent,v_slave_agent = self.model[0](Tensor([states[i*self.num_agents+j]]))
 							# a_dist_slave.append(a_dist_slave_agent)
 							# v_slave.append(v_slave_agent)
+							a_dist_slave_agent,v_slave_agent, hiddens_slave_agent = self.model[0].forward_rnn(\
+								Tensor([states[i*self.num_agents+j]]),(Tensor(hiddens[i*self.num_agents+j][0]), Tensor(hiddens[i*self.num_agents+j][1])))
+							a_dist_slave.append(a_dist_slave_agent)
+							v_slave.append(v_slave_agent)
+							hiddens_slave.append((hiddens_slave_agent[0].cpu().detach().numpy(), hiddens_slave_agent[1].cpu().detach().numpy()))
 							actions[i*self.num_agents+j] = self.getHardcodedAction(i, j);
 
 				for j in range(self.num_agents):
-					# logprob = np.concatenate((\
-					# 	logprob,a_dist_slave[j].log_prob(Tensor(actions[j])).cpu().detach().numpy().reshape(-1)), axis=0)
-					if teamDic[j] == learningTeam:
+					if teamDic[j] == learningTeam or True:
 						logprobs[i*self.num_agents+j] = a_dist_slave[j].log_prob(Tensor(actions[i*self.num_agents+j]))\
 							.cpu().detach().numpy().reshape(-1)[0];
 						values[i*self.num_agents+j] = v_slave[j].cpu().detach().numpy().reshape(-1)[0];
-						hiddens[i*self.num_agents+j] = hiddens_slave[j]
+						hiddens_forward[i*self.num_agents+j] = hiddens_slave[j]
 
-
-				# logprobs_slave = a_dist_slave.log_prob(Tensor(actions)).cpu().detach().numpy().reshape(-1)
-				# values_slave = v_slave.cpu().detach().numpy().reshape(-1)
-
-				# for action in actions_slave:
-				# 	print(action)
-				# 	actions = np.concatenate((actions, action), axis=0)
-				# for logprob in logprobs_slave:
-				# 	logprobs = np.concatenate((logprobs, logprob), axis=0)
-				# for value in values_slave:
-				# 	values = np.concatenate((values, value), axis=0)
-			for i in range(self.num_slaves):
 				for j in range(self.num_agents):
 					self.env.setAction(actions[i*self.num_agents+j], i, j);
 
@@ -380,7 +376,7 @@ class PPO(object):
 				nan_occur = False
 				terminated_state = True
 				for k in range(self.num_agents):
-					if teamDic[k] == learningTeam:
+					if teamDic[k] == learningTeam or True:
 						rewards[i*self.num_agents+k] = self.env.getReward(i, k)
 						if np.any(np.isnan(rewards[i*self.num_agents+k])):
 							nan_occur = True
@@ -393,7 +389,7 @@ class PPO(object):
 
 				if nan_occur is True:
 					for k in range(self.num_agents):
-						if teamDic[k] == learningTeam:
+						if teamDic[k] == learningTeam or False:
 							self.total_episodes.append(self.rnn_episodes[i][k])
 							self.rnn_episodes[i][k] = RNNEpisodeBuffer()
 					self.env.reset(i)
@@ -401,7 +397,7 @@ class PPO(object):
 				if self.env.isTerminalState(i) is False:
 					terminated_state = False
 					for k in range(self.num_agents):
-						if teamDic[k] == learningTeam:
+						if teamDic[k] == learningTeam or False:
 							# rewards[i*self.num_agents+k] = self.env.getReward(i, k)
 							# print(str(i)+" "+str(k), end=' ')
 							# print(len(self.episodes[i][k].getData()), end = ' ')
@@ -419,7 +415,7 @@ class PPO(object):
 
 				if terminated_state is True :
 					for k in range(self.num_agents):
-						if teamDic[k] == learningTeam:
+						if teamDic[k] == learningTeam or False:
 							self.total_episodes.append(self.rnn_episodes[i][k])
 							self.rnn_episodes[i][k] = RNNEpisodeBuffer()
 					self.env.reset(i)
@@ -428,7 +424,7 @@ class PPO(object):
 			if local_step >= self.buffer_size:
 				for i in range(self.num_slaves):
 					for k in range(self.num_agents):
-						if teamDic[k] == learningTeam:
+						if teamDic[k] == learningTeam or False:
 							# print(str(i)+" "+str(k), end=' ')
 							# print(len(self.episodes[i][k].getData()))
 							self.total_episodes.append(self.rnn_episodes[i][k])
@@ -438,6 +434,7 @@ class PPO(object):
 			for i in range(self.num_slaves):
 				for j in range(self.num_agents):
 					states[i*self.num_agents+j] = self.env.getState(i,j)
+					hiddens[i*self.num_agents+j] = hiddens_forward[i*self.num_agents+j]
 
 		self.env.endOfIteration()
 		print('SIM : {}'.format(local_step))
@@ -521,6 +518,7 @@ class PPO(object):
 										stack_hidden[0] = hidden_list[timeStep-1][0][0][l].unsqueeze(0).unsqueeze(0)
 										stack_hidden[1] = hidden_list[timeStep-1][1][0][l].unsqueeze(0).unsqueeze(0)
 										firstCat = False
+										break
 							else :
 								for l in range(len(non_None_batch_list[timeStep-1])) :
 									if non_None_batch_list[timeStep-1][l] == k:
@@ -529,7 +527,7 @@ class PPO(object):
 
 					# stack_hidden = list(self.model[0].init_hidden(len(non_None_batch_list[timeStep])))
 
-					if timeStep % 5 == 0 :
+					if timeStep % 5 == 0 or True:
 						stack_hidden[0] = stack_hidden[0].detach()
 						stack_hidden[1] = stack_hidden[1].detach()
 
@@ -549,7 +547,7 @@ class PPO(object):
 					# if timeStep >= self.burn_in_size : 
 					'''Critic Loss'''
 
-					if timeStep % 5 == 4 :
+					if timeStep % 5 == 4 or True:
 
 						loss_critic = ((v-Tensor(stack_td)).pow(2)).mean()
 
@@ -559,7 +557,13 @@ class PPO(object):
 						stack_gae = Tensor(stack_gae)
 						surrogate1 = ratio * stack_gae
 						surrogate2 = torch.clamp(ratio, min=1.0-self.clip_ratio, max=1.0+self.clip_ratio) * stack_gae
+						# print(ratio.mean(), end=" ")
+						# print(surrogate1.mean(), end= " ")
+						# print(surrogate2.mean())
+						# print(surrogate1.mean(), end=" ")
+						# print(surrogate2.mean())
 						loss_actor = - torch.min(surrogate1, surrogate2).mean()
+						# loss_actor = - surrogate2.mean()
 
 						'''Entropy Loss'''
 						loss_entropy = - self.w_entropy * a_dist.entropy().mean()

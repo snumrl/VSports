@@ -175,20 +175,76 @@ handleBallContact(int index, double radius, double me)
 	// Eigen::VectorXd ballVel = ballSkel->getVelocities();
 	double ballDistance = (ballSkel->getPositions() - skel->getPositions()).norm();
 
-	if(mStates[index][ID_KICKABLE] == 1)
+	// if(mStates[index][ID_KICKABLE] == 1)
+	// {
+	// 	// for(int i=0;i<mNumChars;i++)
+	// 	// {
+	// 	// 	if(ballDistance > (ballSkel->getPositions() - mCharacters[i]->getSkeleton()->getPositions()).norm())
+	// 	// 		return;
+	// 	// }
+	// 	// Eigen::VectorXd relativeVel = skel->getVelocities() - ballSkel->getVelocities();
+	// 	ballSkel->setVelocities(skel->getVelocities()*(1.0+me*2.0));
+	// 	if(mCharacters[index]->getTeamName() == "A")
+	// 		mKicked[0] = 1;
+	// 	else
+	// 		mKicked[1] = 1;
+	// }
+
+	double kickPower = mActions[index][2];
+	if(kickPower >= 0)
 	{
-		// for(int i=0;i<mNumChars;i++)
-		// {
-		// 	if(ballDistance > (ballSkel->getPositions() - mCharacters[i]->getSkeleton()->getPositions()).norm())
-		// 		return;
-		// }
-		// Eigen::VectorXd relativeVel = skel->getVelocities() - ballSkel->getVelocities();
-		ballSkel->setVelocities(skel->getVelocities()*(1.0+me*2.0));
+		kickPower = 1.0/(exp(-kickPower)+1);
+		ballSkel->setVelocities(skel->getVelocities()*(1.0+me*2.0)*(4.0*kickPower-2.0));
 		if(mCharacters[index]->getTeamName() == "A")
 			mKicked[0] = 1;
 		else
 			mKicked[1] = 1;
 	}
+
+}
+
+void
+Environment::
+handlePlayerContact(int index1, int index2, double me)
+{
+	SkeletonPtr skel1 = mCharacters[index1]->getSkeleton();
+	SkeletonPtr skel2 = mCharacters[index2]->getSkeleton();
+
+	double playerRadius = 0.15;
+
+	Eigen::Vector2d skel1Positions = skel1->getPositions();
+	Eigen::Vector2d skel2Positions = skel2->getPositions();
+
+	if((skel1Positions - skel2Positions).norm() < playerRadius)
+	{
+		Eigen::Vector2d skel1Velocities = skel1->getVelocities();
+		Eigen::Vector2d skel2Velocities = skel2->getVelocities();
+
+		Eigen::Vector2d p2pVector = skel1Positions - skel2Positions;
+
+		p2pVector.normalize();
+
+		// check the direction of velocities
+		Eigen::Vector2d relativeVel = skel1Velocities - skel2Velocities;
+		if(relativeVel.dot(p2pVector) >= 0)
+			return;
+
+		double relativeVel_p2p = p2pVector.dot(relativeVel);
+		double skel1Vel_p2p = p2pVector.dot(skel1Velocities);
+		double skel2Vel_p2p = p2pVector.dot(skel2Velocities);
+		double meanVel_p2p = (skel1Vel_p2p+skel2Vel_p2p)/2.0;
+
+		Eigen::Vector2d p2pNormalVector = Eigen::Vector2d(p2pVector[1], -p2pVector[0]); 
+
+		Eigen::Vector2d skel1NewVelocities, skel2NewVelocities;
+		skel1NewVelocities = (meanVel_p2p + (skel2Vel_p2p-meanVel_p2p) * me) * p2pVector + skel1Velocities.dot(p2pNormalVector) * p2pNormalVector;
+		skel2NewVelocities = (meanVel_p2p + (skel1Vel_p2p-meanVel_p2p) * me) * p2pVector + skel2Velocities.dot(p2pNormalVector) * p2pNormalVector;
+
+		skel1->setVelocities(skel1NewVelocities);
+		skel2->setVelocities(skel2NewVelocities);
+	}
+
+
 
 }
 
@@ -222,6 +278,14 @@ step()
 	mTimeElapsed += 1.0 / (double)mSimulationHz;
 	// cout<<mTimeElapsed<<endl;
 
+	for(int i=1;i<mCharacters.size();i++)
+	{
+		for(int j=0;j<i;j++)
+		{
+			handlePlayerContact(i,j,0.5);
+		}
+	}
+
 	for(int i=0;i<mCharacters.size();i++)
 	{
 		// cout<<"aaaaaaaaaaaaa"<<endl;
@@ -230,7 +294,7 @@ step()
 	// cout<<"111111111111@"<<endl;
 		// cout<<mActions.size()<<endl;
 		// handleBallContact(mCharacters[i]->getSkeleton(), 0.08, 1.3);
-		if(mActions[i][2] > 0.0)
+		if(mStates[i][ID_KICKABLE] == 1)
 			handleBallContact(i, 0.08, 1.3);
 				// cout<<"cccccccccccc"<<endl;
 	// cout<<"222222222222@"<<endl;
@@ -291,9 +355,9 @@ getState(int index)
 	v = character->getSkeleton()->getVelocities();
 	// int isDribbler = (getDribblerIndex()==index) ? 1 : 0;
 
-	// Eigen::VectorXd distanceWall(4);
+	Eigen::VectorXd distanceWall(4);
 
-	// distanceWall << 4-p[0], -4-p[0], 3-p[1], -3-p[1];
+	distanceWall << 4-p[0], -4-p[0], 3-p[1], -3-p[1];
 
 	// if(index == 0)
 	// {
@@ -307,7 +371,7 @@ getState(int index)
 
 
 	Eigen::VectorXd ballPossession(1);
-	if(index == 0)
+	if(index == 0 || index == 1)
 	{
 		ballPossession[0] = mScoreBoard[0];
 	}
@@ -446,32 +510,34 @@ getState(int index)
 	std::vector<double> state;
 	if(useMap)
 	{
-		state.resize(p.rows() + v.rows() + ballP.rows() + ballV.rows() +
-			ballPossession.rows() + kickable.rows() + mapState.size());
+		state.resize(ballPossession.rows() + kickable.rows() + mapState.size());
 	}
 	else
 	{
-		state.resize(p.rows() + v.rows() + ballP.rows() + ballV.rows() +
+		state.resize(p.rows() + v.rows() + distanceWall.rows() + ballP.rows() + ballV.rows() +
 			ballPossession.rows() + kickable.rows() + otherS.rows());
 	}
 
 	
 	count = 0;
-	for(int i=0;i<p.rows();i++)
+	if(!useMap)
 	{
-		state[count++] = p[i];
-	}
-	for(int i=0;i<v.rows();i++)
-	{
-		state[count++] = v[i];
-	}
-	for(int i=0;i<ballP.rows();i++)
-	{
-		state[count++] = ballP[i];
-	}
-	for(int i=0;i<ballV.rows();i++)
-	{
-		state[count++] = ballV[i];
+		for(int i=0;i<p.rows();i++)
+		{
+			state[count++] = p[i];
+		}
+		for(int i=0;i<v.rows();i++)
+		{
+			state[count++] = v[i];
+		}
+		for(int i=0;i<ballP.rows();i++)
+		{
+			state[count++] = ballP[i];
+		}
+		for(int i=0;i<ballV.rows();i++)
+		{
+			state[count++] = ballV[i];
+		}
 	}
 	for(int i=0;i<ballPossession.rows();i++)
 	{
@@ -494,6 +560,10 @@ getState(int index)
 		for(int i=0;i<otherS.rows();i++)
 		{
 			state[count++] = otherS[i];
+		}
+		for(int i=0;i<distanceWall.rows();i++)
+		{
+			state[count++] = distanceWall[i];
 		}
 
 	}
@@ -604,7 +674,172 @@ getStateMinimap(int index)
 		{
 			for(int j=0;j<numRows;j++)
 			{
-				minimap[i*numRows+j] = 1.0;
+				minimap[i*numRows+j] = 0.5;
+			}	
+		}
+		for(double i = -4;i<4;i+= 0.1)
+		{
+			for(double j=-3;j<3;j+=0.1)
+			{
+				std::pair<int, int> pixel = getPixelFromPosition(i, j);
+				minimap[pixel.second*numRows+pixel.first] = 0.0;
+			}
+		}
+
+		for(int i=0;i<minimap.size();i++)
+		{
+			minimaps[count++] = minimap[i];
+		}
+
+		// minimaps.push_back(minimap);
+
+	}
+	// try
+	// {
+	//     *(int*) 0 = 0;
+	// }
+	// catch (std::exception& e)
+	// {
+	//     std::cerr << "Exception caught : " << e.what() << std::endl;
+	// }
+	/// map for me
+	{
+
+		std::vector<double> minimap;
+		minimap.resize(numRows*numCols);
+
+
+		Eigen::VectorXd position = mCharacters[index]->getSkeleton()->getPositions();
+
+		std::pair<int, int> pixel = getPixelFromPosition(position[0], position[1]);
+		minimap[pixel.second*numRows+pixel.first] = 1.0;
+		// std::string teamName = mCharacters[index]->getTeamName();
+		for(int i=0;i<minimap.size();i++)
+		{
+			minimaps[count++] = minimap[i];
+		}
+	}
+
+	/// map for My Team
+	{
+		std::vector<double> minimap;
+		minimap.resize(numRows*numCols);
+
+		std::string mTeamName = mCharacters[index]->getTeamName();
+		for(int i=0;i<mCharacters.size();i++)
+		{
+			if(i != index)
+			{
+				if(mCharacters[i]->getTeamName()==mTeamName)
+				{
+					Eigen::VectorXd position = mCharacters[i]->getSkeleton()->getPositions();
+
+					std::pair<int, int> pixel = getPixelFromPosition(position[0], position[1]);
+					minimap[pixel.second*numRows+pixel.first] = 1.0;
+				}
+			}
+
+		}
+
+
+		// std::string teamName = mCharacters[index]->getTeamName();
+		for(int i=0;i<minimap.size();i++)
+		{
+			minimaps[count++] = minimap[i];
+		}
+	}
+
+	/// map for ball
+	{
+		std::vector<double> minimap;
+		minimap.resize(numRows*numCols);
+
+		Eigen::VectorXd position = ballSkel->getPositions();
+
+		std::pair<int, int> pixel = getPixelFromPosition(position[0], position[1]);
+		minimap[pixel.second*numRows+pixel.first] = 1.0;
+		// std::string teamName = mCharacters[index]->getTeamName();
+		for(int i=0;i<minimap.size();i++)
+		{
+			minimaps[count++] = minimap[i];
+		}
+	}
+
+
+	/// map for Opponent Team
+	{
+		std::vector<double> minimap;
+		minimap.resize(numRows*numCols);
+
+		std::string mTeamName = mCharacters[index]->getTeamName();
+		for(int i=0;i<mCharacters.size();i++)
+		{
+			if(mCharacters[i]->getTeamName()!=mTeamName)
+			{
+				Eigen::VectorXd position = mCharacters[i]->getSkeleton()->getPositions();
+
+				std::pair<int, int> pixel = getPixelFromPosition(position[0], position[1]);
+				minimap[pixel.second*numRows+pixel.first] = 1.0;
+			}
+
+		}
+		for(int i=0;i<minimap.size();i++)
+		{
+			minimaps[count++] = minimap[i];
+		}
+	}
+
+	// for(int i=0;i<minimaps.size();i++)
+	// {
+	// 	if(std::isnan(minimaps[i]))
+	// 	{
+	// 		cout<<"Nan is occured at "<<i/(numRows*numCols)<<endl;
+	// 	}
+	// }
+	// for(int i=0;i<minimaps.size();i++)
+	// {
+	// 	for(int col=0;col<numCols;col++)
+	// 	{
+	// 		for(int row=0;row<numCols;row++)
+	// 		{
+	// 			cout<<minimaps[i](col,row)<<" ";
+	// 		}
+	// 		cout<<endl;
+	// 	}
+	// 	cout<<"#################################################"<<endl;
+	// }
+
+	// visualizeMinimap(minimaps);
+	// exit(0);
+
+
+	return minimaps;
+}
+
+std::vector<double>
+Environment::
+getStateMinimapRGB(int index)
+{
+	// std::vector<Eigen::MatrixXd> minimaps;
+
+	std::vector<double> minimaps;
+	minimaps.resize(40*40*1);
+	int count =0;
+	int numRows = 40;
+	int numCols = 40; 
+
+	/// map for wall
+	{
+		// Eigen::MatrixXd minimap(numRows, numCols);
+		// minimap.setZero();
+		std::vector<double> minimap;
+		minimap.resize(numRows*numCols);
+
+		for(int i=0;i<numCols;i++)
+		{
+			for(int j=0;j<numRows;j++)
+			{
+				minimap[i*numRows+j] = 0.5;
 			}	
 			
 		}
@@ -616,6 +851,10 @@ getStateMinimap(int index)
 				minimap[pixel.second*numRows+pixel.first] = 0.0;
 			}
 		}
+		Eigen::VectorXd position = mCharacters[index]->getSkeleton()->getPositions();
+
+		std::pair<int, int> pixel = getPixelFromPosition(position[0], position[1]);
+		minimap[pixel.second*numRows+pixel.first] = 1.0;
 
 		for(int i=0;i<minimap.size();i++)
 		{
@@ -792,50 +1031,46 @@ getReward(int index)
 	Eigen::Vector2d ballPosition = ballSkel->getPositions();
 	Eigen::Vector2d widthVector = Eigen::Vector2d::UnitX();
 	Eigen::Vector2d heightVector = Eigen::Vector2d::UnitY();
-	// if((mCharacters[index]->getSkeleton()->getPositions() - ballPosition).norm() < 0.08 + )
-	// {
-
-	// }
-	// cout<<mNumIterations<<endl;
-
-	// if(mCharacters[index]->getTeamName()=="A")
-	// {
-	// 	// cout<<index<<endl;
-	// 	reward += (mNumIterations/400.0) * 0.1 * (2*mScoreBoard[0] -1);
-	// }
-	// else
-	// {
-	// 	reward += (mNumIterations/400.0) * 0.1 * (1-2*mScoreBoard[0]);
-	// }
 
 
-	// reward += 1.0 * mKicked[index];
-	
-	double myTeamMinDistance = FLT_MAX;
-	double oppMinDistance = FLT_MAX;
-
-	for(int i=0;i<mCharacters.size();i++)
+	if(mCharacters[index]->getTeamName()=="A")
 	{
-		if(mCharacters[i]->getTeamName() == mCharacters[index]->getTeamName())
-		{
-			double distanceBall = mStates[i].segment(ID_BALL_P, 2).norm();
-			if(myTeamMinDistance > distanceBall)
-			{
-				myTeamMinDistance = distanceBall;
-			}
-		}
-		else
-		{
-			double distanceBall = mStates[i].segment(ID_BALL_P, 2).norm();
-			if(oppMinDistance > distanceBall)
-			{
-				oppMinDistance = distanceBall;
-			}
-		}
+		// reward += (mNumIterations/100.0) * 1.0 * (2*mScoreBoard[0] -1);
+		reward += (mNumIterations/100.0) * 1.0 * (mScoreBoard[0]);
 	}
+	else
+	{
+		// reward += (mNumIterations/100.0) * 1.0 * (1-2*mScoreBoard[0]);
+		reward += (mNumIterations/100.0) * 1.0 * (1-mScoreBoard[0]);
+	}
+
+	
+	// double myTeamMinDistance = FLT_MAX;
+	// double oppMinDistance = FLT_MAX;
+
+	// for(int i=0;i<mCharacters.size();i++)
+	// {
+	// 	if(mCharacters[i]->getTeamName() == mCharacters[index]->getTeamName())
+	// 	{
+	// 		double distanceBall = mStates[i].segment(ID_BALL_P, 2).norm();
+	// 		if(myTeamMinDistance > distanceBall)
+	// 		{
+	// 			myTeamMinDistance = distanceBall;
+	// 		}
+	// 	}
+	// 	else
+	// 	{
+	// 		double distanceBall = mStates[i].segment(ID_BALL_P, 2).norm();
+	// 		if(oppMinDistance > distanceBall)
+	// 		{
+	// 			oppMinDistance = distanceBall;
+	// 		}
+	// 	}
+	// }
 	double myDistanceBall = mStates[index].segment(ID_BALL_P, 2).norm();
 
-	reward += 1.0 * exp(-pow(myDistanceBall,2.0));
+	// reward += 1.0 * exp(-pow(myDistanceBall,2.0));
+	reward += 1.0 * (1 - mNumIterations/100.0) * exp(-pow(myDistanceBall,2.0));
 	// reward += 0.1 * (1 - mNumIterations/400.0) * exp(-pow(myDistanceBall,2.0));
 
 	// reward += 0.1 * exp(-pow(myDistanceBall,2.0));
@@ -979,6 +1214,16 @@ setAction(int index, const Eigen::VectorXd& a)
 
 	if (vel.norm() > maxVel)
 		vel = vel/vel.norm() * maxVel;
+
+	if (mStates[index][ID_POSSESSION] == 1)
+	{
+		mActions[index][2] = -1.0;
+
+		vel = vel/vel.norm() * 0.3;
+		// vel.setZero();
+	}
+	mActions[index][2] = 1.0;
+	
 
 	// if(index == 1)
 	// {

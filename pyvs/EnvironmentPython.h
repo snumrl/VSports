@@ -28,8 +28,10 @@ public:
 	void setAction(np::ndarray np_array, int id, int index);
 	void setActions(np::ndarray np_array);
 	double getReward(int id, int index);
+	double getNumIterations();
 
 	void endOfIteration();
+
 
 	// For all slaves
 	void stepsAtOnce();

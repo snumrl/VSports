@@ -353,8 +353,6 @@ class CombinedSimulationNN(nn.Module):
 		hidden = torch.zeros(self.num_layers, batch_size, self.hidden_size)
 		return hidden
 
-
-
 class NoCNNSimulationNN(nn.Module):
 	def __init__(self,num_states,num_actions):
 		super(NoCNNSimulationNN, self).__init__()
@@ -403,8 +401,12 @@ class NoCNNSimulationNN(nn.Module):
 		# 	self.fc_module = self.fc_module.cuda()
 
 		# print(2222)
-
-		num_policyInput = 22
+		self.useMap = False
+		self.num_policyInput = 0
+		if self.useMap:
+			self.num_policyInput = 22
+		else:
+			self.num_policyInput = 26
 
 		self.hidden_size = 256
 		self.num_layers = 1
@@ -414,7 +416,7 @@ class NoCNNSimulationNN(nn.Module):
 
 		# self.rnn = nn.LSTM(num_policyInput, self.hidden_size, num_layers=self.num_layers,bias=True,batch_first=True,bidirectional=True)
 		
-		self.rnn = nn.LSTM(num_policyInput, self.hidden_size, num_layers=self.num_layers)#,bias=True,batch_first=True,bidirectional=True)
+		self.rnn = nn.LSTM(self.num_policyInput, self.hidden_size, num_layers=self.num_layers)#,bias=True,batch_first=True,bidirectional=True)
 
 
 		self.cur_hidden = self.init_hidden(1)
@@ -426,7 +428,7 @@ class NoCNNSimulationNN(nn.Module):
 
 
 		self.policy = nn.Sequential(
-			nn.Linear(num_policyInput, num_h1),
+			nn.Linear(self.num_policyInput, num_h1),
 			nn.LeakyReLU(0.2, inplace=True),
 			nn.Linear(num_h1, num_h2),
 			nn.LeakyReLU(0.2, inplace=True),
@@ -435,7 +437,7 @@ class NoCNNSimulationNN(nn.Module):
 			nn.Linear(num_h3, num_actions)
 		)
 		self.value = nn.Sequential(
-			nn.Linear(num_policyInput, num_h1),
+			nn.Linear(self.num_policyInput, num_h1),
 			nn.LeakyReLU(0.2, inplace=True),
 			nn.Linear(num_h1, num_h2),
 			nn.LeakyReLU(0.2, inplace=True),
@@ -482,19 +484,20 @@ class NoCNNSimulationNN(nn.Module):
 		# print(x.size())
 		# exit(0)
 
-		useMap = False
+		# self.useMap = False
 
 		# x = x.squeeze()
+		numNumberState = 2
 
-		if useMap is True:
+		if self.useMap is True:
 			mapRow = 40
 			mapCol = 40
 			numLayer = 5
 
 			x = x.cuda()
-			mapX = x.narrow(1, 10, numLayer*mapCol*mapRow).view(-1, numLayer, mapCol, mapRow)
+			mapX = x.narrow(1, numNumberState, numLayer*mapCol*mapRow).view(-1, numLayer, mapCol, mapRow)
 
-			vecX = x.narrow(1,0,10)
+			vecX = x.narrow(1,0,numNumberState)
 			
 
 			mapX_ = self.conv_module(mapX)
@@ -506,14 +509,14 @@ class NoCNNSimulationNN(nn.Module):
 			mapX_ = self.fc_module(mapX_)
 
 			concatVecX = torch.cat((vecX,mapX_),1)
-			concatVecX = concatVecX.view(-1, 30)
+			concatVecX = concatVecX.view(-1, self.num_policyInput)
 		else :
 			concatVecX = x.cuda()
 
 		# Initializing hidden state for first input using method defined below
 		batch_size = concatVecX.size()[0];
 
-		useRNN = True
+		useRNN = False
 
 		if useRNN :
 			rnnOutput, out_hidden = self.rnn(concatVecX.view(1, batch_size,-1), in_hidden)
@@ -545,7 +548,9 @@ class NoCNNSimulationNN(nn.Module):
 		# else :
 		# 	new_hidden = in_hidden
 		p,_1 ,new_hidden= self.forward_rnn(ts.unsqueeze(0), self.cur_hidden)
-		new_hidden = self.cur_hidden
+		# new_hidden = self.cur_hidden
+		# new_hidden = self.cur_hidden
+		self.cur_hidden = new_hidden
 		# print(p.size())
 		return p.loc.cpu().detach().numpy()
 
@@ -560,5 +565,5 @@ class NoCNNSimulationNN(nn.Module):
 	def init_hidden(self, batch_size):
         # This method generates the first hidden state of zeros which we'll use in the forward pass
         # We'll send the tensor holding the hidden state to the device we specified earlier as well
-		hidden = (torch.zeros(self.num_layers, batch_size, self.hidden_size).cuda(),torch.zeros(self.num_layers, batch_size, self.hidden_size).cuda())
+		hidden = (Tensor(torch.zeros(self.num_layers, batch_size, self.hidden_size).cuda()),Tensor(torch.zeros(self.num_layers, batch_size, self.hidden_size).cuda()))
 		return hidden

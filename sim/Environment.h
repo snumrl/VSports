@@ -37,6 +37,7 @@ public:
 	// std::vector<Eigen::MatrixXd> getStateMinimap(int index);
 	// Eigen::VectorXd getStateMinimap(int index);
 	std::vector<double> getStateMinimap(int index);
+	std::vector<double> getStateMinimapRGB(int index);
 
 	double getReward(int index);
 	std::vector<double> getRewards();
@@ -66,6 +67,7 @@ public:
 
 	void handleWallContact(dart::dynamics::SkeletonPtr skel, double radius, double me = 1.0);
 	void handleBallContact(int index, double radius, double me = 0.5);
+	void handlePlayerContact(int index1, int index2, double me = 0.5);
 
 	void boundBallVelocitiy(double maxVel);
 

@@ -169,7 +169,7 @@ SimpleSocWindow::
 step()
 {
 	// cout<<"????????"<<endl;
-	getActionFromNN(true, true);
+	getActionFromNN(true, false);
 	// std::cout<<"step!"<<std::endl;
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
@@ -187,7 +187,7 @@ step()
 		mEnv->setAction(i, mActions[i]);
 	}
 
-	mEnv->mNumIterations = 400;
+	mEnv->mNumIterations = 100;
 	int sim_per_control = mEnv->getSimulationHz()/mEnv->getControlHz();
 	for(int i=0;i<sim_per_control;i++)
 	{
@@ -222,7 +222,8 @@ getActionFromNN(bool vsHardcodedAI, bool isRNN)
 			Eigen::VectorXd direction = curBallRelaltionalP.normalized();
 			Eigen::VectorXd curVel = mEnv->mStates[i].segment(ID_V,2);
 			mAction.segment(0, 2) = (direction*vsHardcodedAI_difficulty - curVel);
-			mAction[2] = rand()%2;
+			// mAction[2] = rand()%3-1;
+			mAction[2] = 1;
 			// mAction[2] = 0;
 			mActions.push_back(mAction);
 		}

@@ -133,10 +133,18 @@ endOfIteration()
 	for(int i=0;i<mNumSlaves;i++)
 	{
 		mSlaves[i]->mNumIterations++;
-		if(mSlaves[i]->mNumIterations >= 400)
-			mSlaves[i]->mNumIterations = 400;
+		if(mSlaves[i]->mNumIterations >= 100)
+			mSlaves[i]->mNumIterations = 100;
 	}
 }
+
+double
+EnvironmentPython::
+getNumIterations()
+{
+	return mSlaves[0]->mNumIterations;
+}
+
 
 using namespace boost::python;
 
@@ -159,5 +167,6 @@ BOOST_PYTHON_MODULE(pyvs)
 		.def("steps",&EnvironmentPython::steps)
 		.def("step",&EnvironmentPython::step)
 		.def("resets",&EnvironmentPython::resets)
+		.def("getNumIterations",&EnvironmentPython::getNumIterations)
 		.def("endOfIteration",&EnvironmentPython::endOfIteration);
 }
