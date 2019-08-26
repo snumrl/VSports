@@ -503,6 +503,8 @@ if __name__=="__main__":
 	
 	if args.model is not None:
 		ppo.loadModel(args.model, 0)
+		for i in range(50) :
+			ppo.env.endOfIteration()
 	else:
 		ppo.saveModel()
 	print('num states: {}, num actions: {}'.format(ppo.env.getNumState(),ppo.env.getNumAction()))

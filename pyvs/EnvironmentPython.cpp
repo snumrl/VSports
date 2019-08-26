@@ -133,8 +133,8 @@ endOfIteration()
 	for(int i=0;i<mNumSlaves;i++)
 	{
 		mSlaves[i]->mNumIterations++;
-		if(mSlaves[i]->mNumIterations >= 100)
-			mSlaves[i]->mNumIterations = 100;
+		if(mSlaves[i]->mNumIterations >= 50)
+			mSlaves[i]->mNumIterations = 50;
 	}
 }
 

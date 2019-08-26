@@ -33,7 +33,7 @@ setDefaultShape(const Eigen::Vector3d& color)
 	pb2jT.setIdentity();
 	pb2jT.translation() += Eigen::Vector3d(0.0, 0.0, 0.2);
 	SkelMaker::makeWeldJointBody(mName + "_headJoint", mSkeleton, mSkeleton->getRootBodyNode(), 
-		SHAPE_TYPE::BALL, Eigen::Vector3d::UnitX() * 0.08, 
+		SHAPE_TYPE::BALL, Eigen::Vector3d::UnitX() * 0.10, 
 		pb2jT, Eigen::Isometry3d::Identity());
 }
 

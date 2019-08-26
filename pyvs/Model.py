@@ -409,7 +409,7 @@ class NoCNNSimulationNN(nn.Module):
 			self.num_policyInput = 26
 
 		self.hidden_size = 256
-		self.num_layers = 1
+		self.num_layers = 2
 
 		# self.prev_hidden = self.init_hidden(1)
 		# self.prev_cell = self.init_hidden(1)
@@ -422,9 +422,9 @@ class NoCNNSimulationNN(nn.Module):
 		self.cur_hidden = self.init_hidden(1)
 
 
-		num_h1 = 128
-		num_h2 = 128
-		num_h3 = 128
+		num_h1 = 256
+		num_h2 = 256
+		num_h3 = 256
 
 
 		self.policy = nn.Sequential(
@@ -516,7 +516,7 @@ class NoCNNSimulationNN(nn.Module):
 		# Initializing hidden state for first input using method defined below
 		batch_size = concatVecX.size()[0];
 
-		useRNN = False
+		useRNN = True
 
 		if useRNN :
 			rnnOutput, out_hidden = self.rnn(concatVecX.view(1, batch_size,-1), in_hidden)
@@ -547,10 +547,13 @@ class NoCNNSimulationNN(nn.Module):
 		# 	new_hidden = self.init_hidden
 		# else :
 		# 	new_hidden = in_hidden
+		# print(self.cur_hidden[0][0])
 		p,_1 ,new_hidden= self.forward_rnn(ts.unsqueeze(0), self.cur_hidden)
 		# new_hidden = self.cur_hidden
 		# new_hidden = self.cur_hidden
 		self.cur_hidden = new_hidden
+		# print(self.cur_hidden[0][0])
+		# print("###########")
 		# print(p.size())
 		return p.loc.cpu().detach().numpy()
 

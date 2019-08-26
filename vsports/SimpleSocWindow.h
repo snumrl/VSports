@@ -45,8 +45,9 @@ public:
 
 	std::vector<Eigen::VectorXd> mActions;
 
-	boost::python::object mm,mns,sys_module,nn_module,muscle_nn_module;
-	boost::python::object reset_hidden;
+	boost::python::object mm,mns,sys_module;
+	boost::python::object *nn_module;
+	boost::python::object *reset_hidden;
 	bool mIsNNLoaded;
 };
 

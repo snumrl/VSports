@@ -30,7 +30,7 @@ double floorDepth = -0.1;
 
 SimpleSocWindow::
 SimpleSocWindow()
-:SimWindow(),vsHardcodedAI_difficulty(3.0)
+:SimWindow(),vsHardcodedAI_difficulty(4.0)
 {
 	mEnv = new Environment(30, 600, 4);
 	initCustomView();
@@ -72,13 +72,22 @@ SimpleSocWindow(const std::string& nn_path)
 	p::exec(str, mns);
 	// str = "use_cuda = torch.cuda.is_available()";
 	// p::exec(str, mns);
+	nn_module = new boost::python::object[2];
 
+	nn_module[0] = p::eval("NoCNNSimulationNN(num_state, num_action).cuda()", mns);
+	nn_module[1] = p::eval("NoCNNSimulationNN(num_state, num_action).cuda()", mns);
 
-	nn_module = p::eval("NoCNNSimulationNN(num_state, num_action).cuda()", mns);
+	p::object *load = new p::object[2];
 
-	p::object load = nn_module.attr("load");
-	reset_hidden = nn_module.attr("reset_hidden"); 
-	load(nn_path);
+	load[0] = nn_module[0].attr("load");
+	load[1] = nn_module[1].attr("load");
+
+	reset_hidden = new boost::python::object[2];
+
+	reset_hidden[0] = nn_module[0].attr("reset_hidden"); 
+	reset_hidden[1] = nn_module[1].attr("reset_hidden"); 
+	load[0](nn_path);
+	load[1](nn_path);
 }
 
 void
@@ -135,7 +144,8 @@ keyboard(unsigned char key, int x, int y)
 			break;
 		case 'r':
 			mEnv->reset();
-			reset_hidden();
+			reset_hidden[0]();
+			reset_hidden[1]();
 			break;
 		case ']':
 			vsHardcodedAI_difficulty += 0.1;
@@ -169,7 +179,7 @@ SimpleSocWindow::
 step()
 {
 	// cout<<"????????"<<endl;
-	getActionFromNN(true, false);
+	getActionFromNN(true, true);
 	// std::cout<<"step!"<<std::endl;
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
@@ -187,7 +197,7 @@ step()
 		mEnv->setAction(i, mActions[i]);
 	}
 
-	mEnv->mNumIterations = 100;
+	mEnv->mNumIterations = 50;
 	int sim_per_control = mEnv->getSimulationHz()/mEnv->getControlHz();
 	for(int i=0;i<sim_per_control;i++)
 	{
@@ -203,10 +213,7 @@ getActionFromNN(bool vsHardcodedAI, bool isRNN)
 	// cout<<"getActionFromNN"<<endl;
 	p::object get_action;
 	mActions.clear();
-	if(!isRNN)
-		get_action = nn_module.attr("get_action");
-	else
-		get_action = nn_module.attr("get_action_rnn");
+	
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
 
@@ -223,12 +230,16 @@ getActionFromNN(bool vsHardcodedAI, bool isRNN)
 			Eigen::VectorXd curVel = mEnv->mStates[i].segment(ID_V,2);
 			mAction.segment(0, 2) = (direction*vsHardcodedAI_difficulty - curVel);
 			// mAction[2] = rand()%3-1;
-			mAction[2] = 1;
+			mAction[2] = 1.0;
 			// mAction[2] = 0;
 			mActions.push_back(mAction);
 		}
 		else
 		{
+			if(!isRNN)
+				get_action = nn_module[i].attr("get_action");
+			else
+				get_action = nn_module[i].attr("get_action_rnn");
 			// cout<<"i : "<<i<<endl;
 			p::tuple shape = p::make_tuple(state.size());
 			np::dtype dtype = np::dtype::get_builtin<float>();
@@ -302,9 +313,9 @@ display()
 
 	GUI::drawSkeleton(mEnv->floorSkel, Eigen::Vector3d(0.5, 1.0, 0.5));
 	if(mEnv->mScoreBoard[0] == 1)
-		GUI::drawSkeleton(mEnv->ballSkel, Eigen::Vector3d(0.7, 0.1, 0.1));
+		GUI::drawSkeleton(mEnv->ballSkel, Eigen::Vector3d(0.9, 0.3, 0.3));
 	else if(mEnv->mScoreBoard[0] == 0)
-		GUI::drawSkeleton(mEnv->ballSkel, Eigen::Vector3d(0.1, 0.1, 0.7));
+		GUI::drawSkeleton(mEnv->ballSkel, Eigen::Vector3d(0.3, 0.3, 0.9));
 	else
 		GUI::drawSkeleton(mEnv->ballSkel, Eigen::Vector3d(0.1, 0.1, 0.1));
 
@@ -315,7 +326,7 @@ display()
 	GUI::drawSkeleton(blueGoalpostSkel, Eigen::Vector3d(1.0, 1.0, 1.0));
 
 	std::string scoreString
-	= "Red : "+to_string((int)mEnv->mAccScore[0])+" |Blue : "+to_string((int)mEnv->mAccScore[2]);
+	= "Red : "+to_string((int)mEnv->mAccScore[0] + (int)mEnv->mAccScore[1])+" |Blue : "+to_string((int)mEnv->mAccScore[2]+(int)mEnv->mAccScore[3]);
 
 
 

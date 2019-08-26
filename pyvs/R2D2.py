@@ -97,7 +97,7 @@ class PPO(object):
 		self.num_state = self.env.getNumState()
 		self.num_action = self.env.getNumAction()
 
-		self.num_epochs = 10
+		self.num_epochs = 4
 		self.num_evaluation = 0
 		self.num_tuple_so_far = 0
 		self.num_episode = 0
@@ -106,13 +106,13 @@ class PPO(object):
 		self.num_control_Hz = self.env.getControlHz()
 		self.num_simulation_per_control = self.num_simulation_Hz // self.num_control_Hz
 
-		self.gamma = 0.95
+		self.gamma = 0.997
 		self.lb = 0.95
 
 		self.buffer_size = 4*2048
-		self.batch_size = 64
-		self.trunc_size = 30
-		self.burn_in_size = 5
+		self.batch_size = 128
+		self.trunc_size = 64
+		self.burn_in_size = 32
 		# self.replay_buffer = ReplayBuffer(30000)
 		self.rnn_buffer = RNNBuffer(30000)
 
@@ -228,14 +228,14 @@ class PPO(object):
 		# maxvel = 1.5 + 1.5* self.env.getNumIterations()/150.0
 		# if maxvel > 3.0:
 		# 	maxvel = 3.0
-		maxvel = 1.5
+		maxvel = 4.0
 
 		action = (maxvel*direction/direction_norm - state[2:4])
 		# for i in range(action.size()):
 		# 	if action[i] > 0.3:
 		# 		action[i] = 0.3
 		# action = np.append(action, [random.randrange(0,3) - 1])
-		action = np.append(action, [1])
+		action = np.append(action, [1.0])
 		# action = np.append(action, [0])
 
 		return action
@@ -334,7 +334,6 @@ class PPO(object):
 						# print(self.model[0](Tensor([states[i*self.num_agents+j]])))
 						# exit()
 						if teamDic[j] == learningTeam:
-							print(Tensor(hiddens[i*self.num_agents+j][0]).size())
 							a_dist_slave_agent,v_slave_agent, hiddens_slave_agent = self.model[0].forward_rnn(\
 								Tensor([states[i*self.num_agents+j]]),(Tensor(hiddens[i*self.num_agents+j][0]), Tensor(hiddens[i*self.num_agents+j][1])))
 							a_dist_slave.append(a_dist_slave_agent)
@@ -475,6 +474,7 @@ class PPO(object):
 
 				a_dist_list = [None]*self.trunc_size
 				v_list = [None]*self.trunc_size
+				loss = Tensor(torch.zeros(1).cuda())
 
 				for timeStep in range(self.trunc_size):
 
@@ -502,38 +502,71 @@ class PPO(object):
 					stack_hidden_h = np.vstack(batch.hidden_h).astype(np.float32)
 					stack_hidden_c = np.vstack(batch.hidden_c).astype(np.float32)
 
-					stack_hidden = [None, None]
+					# print(Tensor(batch.hidden_h).size())
+					# print(Tensor(stack_hidden_h).size())
+					# exit()
+					# print(type(batch.s))
+					# print(type(stack_s))
+					# exit()
+
+					num_layers =self.model[0].num_layers
+					# stack_hidden = [[[]for x in range(4)], [[]for y in range(4)]]
+					stack_hidden = [Tensor(np.reshape(stack_hidden_h, (num_layers,len(non_None_batch_list[timeStep]),-1))), 
+										Tensor(np.reshape(stack_hidden_c, (num_layers,len(non_None_batch_list[timeStep]),-1)))]
+					# stack_hidden = [None,None]
 
 					# start = time.time()
-					if timeStep == 0:
-						stack_hidden = [Tensor(np.reshape(stack_hidden_h, (1,len(non_None_batch_segmented_transitions),-1))), 
-										Tensor(np.reshape(stack_hidden_c, (1,len(non_None_batch_segmented_transitions),-1)))]
-						# stack_hidden = tuple(stack_hidden)
-					else :
-						firstCat = True;
+					# if timeStep == 0:
+					# 	stack_hidden = [Tensor(np.reshape(stack_hidden_h, (4,len(non_None_batch_segmented_transitions),-1))), 
+					# 					Tensor(np.reshape(stack_hidden_c, (4,len(non_None_batch_segmented_transitions),-1)))]
+					# 	# stack_hidden = tuple(stack_hidden)
+					# else :
+						# firstCat = True;
+						# for k in non_None_batch_list[timeStep]:
+						# 	if firstCat is True :
+						# 		for l in range(len(non_None_batch_list[timeStep-1])) :
+						# 			if non_None_batch_list[timeStep-1][l] == k:
+						# 				for t in range(num_layers):
+						# 					stack_hidden[0][t] = hidden_list[timeStep-1][0][t][l].unsqueeze(0)
+						# 					stack_hidden[1][t] = hidden_list[timeStep-1][1][t][l].unsqueeze(0)
+						# 				# print(hidden_list[timeStep-1][0][t][l].size())
+						# 				# print(hidden_list[timeStep-1][0][t][l].unsqueeze(0).size())
+						# 				# print(stack_hidden[0].size())
+						# 				firstCat = False
+						# 				break
+						# 	else :
+						# 		for l in range(len(non_None_batch_list[timeStep-1])) :
+						# 			if non_None_batch_list[timeStep-1][l] == k:
+						# 				for t in range(num_layers):
+						# 					stack_hidden[0][t] = torch.cat((stack_hidden[0][t], hidden_list[timeStep-1][0][t][l].unsqueeze(0)),1)
+						# 					stack_hidden[1][t] = torch.cat((stack_hidden[1][t], hidden_list[timeStep-1][1][t][l].unsqueeze(0)),1)
+
+					if timeStep >= 1:
+						batch_count = 0
 						for k in non_None_batch_list[timeStep]:
-							if firstCat is True :
-								for l in range(len(non_None_batch_list[timeStep-1])) :
-									if non_None_batch_list[timeStep-1][l] == k:
-										stack_hidden[0] = hidden_list[timeStep-1][0][0][l].unsqueeze(0).unsqueeze(0)
-										stack_hidden[1] = hidden_list[timeStep-1][1][0][l].unsqueeze(0).unsqueeze(0)
-										firstCat = False
-										break
-							else :
-								for l in range(len(non_None_batch_list[timeStep-1])) :
-									if non_None_batch_list[timeStep-1][l] == k:
-										stack_hidden[0] = torch.cat((stack_hidden[0], hidden_list[timeStep-1][0][0][l].unsqueeze(0).unsqueeze(0)),1)
-										stack_hidden[1] = torch.cat((stack_hidden[1], hidden_list[timeStep-1][1][0][l].unsqueeze(0).unsqueeze(0)),1)
+							for l in range(len(non_None_batch_list[timeStep-1])) :
+								if non_None_batch_list[timeStep-1][l] == k:
+									for t in range(num_layers):
+										stack_hidden[0][t][batch_count] = hidden_list[timeStep-1][0][t][l]
+										stack_hidden[1][t][batch_count] = hidden_list[timeStep-1][1][t][l]
+									batch_count += 1
+
 
 					# stack_hidden = list(self.model[0].init_hidden(len(non_None_batch_list[timeStep])))
 
-					if timeStep % 5 == 0 or True:
+
+
+					if timeStep % 8 == 0:
 						stack_hidden[0] = stack_hidden[0].detach()
 						stack_hidden[1] = stack_hidden[1].detach()
+						loss = Tensor(torch.zeros(1).cuda())
 
+					# print(Tensor(stack_hidden[0]).size())
 					a_dist,v,cur_stack_hidden = self.model[0].forward_rnn(Tensor(stack_s), stack_hidden)	
-					
+					# exit()
+
 					hidden_list[timeStep] = list(cur_stack_hidden)
+					# print(hidden_list[timeStep])
 
 					# print(id(hidden_list[timeStep][0]))
 					# print(id(cur_stack_hidden[0]))
@@ -547,8 +580,9 @@ class PPO(object):
 					# if timeStep >= self.burn_in_size : 
 					'''Critic Loss'''
 
-					if timeStep % 5 == 4 or True:
+					# if timeStep % 5 == 4:
 
+					if timeStep >= self.burn_in_size :
 						loss_critic = ((v-Tensor(stack_td)).pow(2)).mean()
 
 						'''Actor Loss'''
@@ -571,18 +605,19 @@ class PPO(object):
 						self.loss_actor = loss_actor.cpu().detach().numpy().tolist()
 						self.loss_critic = loss_critic.cpu().detach().numpy().tolist()
 
-						loss = loss_actor + loss_entropy + loss_critic
+						loss += loss_actor + loss_entropy + loss_critic
 
-						self.optimizer.zero_grad()
+						if timeStep % 8 == 7:
+							self.optimizer.zero_grad()
 
-						# start = time.time()
-						loss.backward(retain_graph=True)
-						# print("time :", time.time() - start)
+							# start = time.time()
+							loss.backward(retain_graph=True)
+							# print("time :", time.time() - start)
 
-						for param in self.model[0].parameters():
-							if param.grad is not None:
-								param.grad.data.clamp_(-0.5, 0.5)
-						self.optimizer.step()
+							for param in self.model[0].parameters():
+								if param.grad is not None:
+									param.grad.data.clamp_(-0.5, 0.5)
+							self.optimizer.step()
 			print('Optimizing sim nn : {}/{}'.format(j+1,self.num_epochs),end='\r')
 		print('')
 		# all_transitions = []

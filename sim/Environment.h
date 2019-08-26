@@ -99,6 +99,7 @@ public:
 
 	Eigen::VectorXd mKicked;
 	Eigen::VectorXd mScoreBoard;
+	Eigen::VectorXd mPrevScoreBoard;
 
 	Eigen::VectorXd mAccScore;
 
