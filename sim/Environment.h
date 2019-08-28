@@ -13,6 +13,28 @@
 
 typedef std::pair<std::string, Eigen::Vector3d> GoalpostInfo;
 
+class MapState
+{
+public:
+	MapState(int numPrev){
+		mNumPrev = numPrev;
+		minimaps.reserve(numPrev);
+		isFirst = true;
+		updated = false;
+	}
+	void setCurState(Eigen::VectorXd curState);
+	void endOfStep();
+
+	void reset();
+	std::vector<float> getVectorizedValue();
+
+
+	int mNumPrev;
+	std::vector<Eigen::VectorXd> minimaps;
+	bool updated;
+	bool isFirst;
+};
+
 class Environment
 {
 public:
@@ -32,11 +54,11 @@ public:
 
 	// For DeepRL
 	// Eigen::VectorXd getState(int index);
-	std::vector<double> getState(int index);
+	std::vector<float> getState(int index);
 
 	// std::vector<Eigen::MatrixXd> getStateMinimap(int index);
 	// Eigen::VectorXd getStateMinimap(int index);
-	std::vector<double> getStateMinimap(int index);
+	void setStateMinimap(int index);
 	std::vector<double> getStateMinimapRGB(int index);
 
 	double getReward(int index);
@@ -106,6 +128,9 @@ public:
 	Eigen::VectorXd mTouch;
 
 	int mNumIterations;
+
+	std::vector<MapState*> mMapStates;
+
 };
 
 #endif

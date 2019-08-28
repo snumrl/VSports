@@ -5,7 +5,7 @@
 
 EnvironmentPython::
 EnvironmentPython(int simulationHz)
-	:mNumSlaves(16)
+	:mNumSlaves(8)
 {
 	dart::math::seedRand();
 	omp_set_num_threads(mNumSlaves);
@@ -68,6 +68,8 @@ EnvironmentPython::
 getState(int id, int index)
 {
 	// std::cout<<"getState in wrapper"<<std::endl;
+	// mSlaves[id]->getState(index);
+	// std::cout<<"I got state"<<std::endl;
 	// std::cout<< toNumPyArray(mSlaves[id]->getState(index)).shape(0)<<std::endl;
 	// exit(0);
 	return toNumPyArray(mSlaves[id]->getState(index));
@@ -133,8 +135,8 @@ endOfIteration()
 	for(int i=0;i<mNumSlaves;i++)
 	{
 		mSlaves[i]->mNumIterations++;
-		if(mSlaves[i]->mNumIterations >= 50)
-			mSlaves[i]->mNumIterations = 50;
+		if(mSlaves[i]->mNumIterations >= 150)
+			mSlaves[i]->mNumIterations = 150;
 	}
 }
 

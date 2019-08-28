@@ -149,3 +149,62 @@ GUI::drawStringOnScreen(float _x, float _y, const std::string &_s, bool _bigFont
 	glPopMatrix();
 	glMatrixMode(oldMode);
 }
+
+void
+GUI::drawMapOnScreen(Eigen::VectorXd minimap, int numRows, int numCols)
+{
+	// draws text on the screen
+	double _x, _y;
+	_x = 0.8;
+	_y = 0.0;
+	GLint oldMode;
+	glGetIntegerv(GL_MATRIX_MODE, &oldMode);
+	glMatrixMode(GL_PROJECTION);
+
+	glPushMatrix();
+	glDisable(GL_LIGHTING);
+	glLoadIdentity();
+	gluOrtho2D(0.0, 1.0, 0.0, 1.0);
+
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+	// glRasterPos2f(_x, _y);
+
+	for(int col=0;col<numCols;col++)
+	{
+		for(int row=0;row<numRows;row++)
+		{
+			glPushMatrix();
+			glLoadIdentity();
+			double curColor = minimap[col*numRows+row];
+			glTranslated(_x+0.2*row/(double)numRows, _y+(0.2-0.2*col/(double)numCols), 0.0);
+
+			glColor3f(curColor, curColor, curColor);
+			drawCube(Eigen::Vector3d(0.0025, 0.0025, 0.0025));
+			glTranslated(-_x-0.2*row/(double)numRows, -_y-(0.2-0.2*col/(double)numCols), 0.0);
+			glPopMatrix();
+
+			// glTranslated(-0.5-0.4*row/numRows, -0.5-0.4*col/numCols, 0.0);
+			// glTranslated(-0.5-0.01*row/numCols, -0.5-0.01*col/numRows, 0.0);
+
+		}
+	}
+	// glTranslated(0.1, 0.1, 0.0);
+	// drawCube(Eigen::Vector3d(0.05, 0.05, 0.05));
+
+
+
+	glPopMatrix();
+
+	// glPushMatrix();
+	// glLoadIdentity();
+	// glTranslated(0.2, 0.2, 0.0);
+	// drawCube(Eigen::Vector3d(0.05, 0.05, 0.05));
+	// glPopMatrix();
+
+	glMatrixMode(GL_PROJECTION);
+	glEnable(GL_LIGHTING);
+	glPopMatrix();
+	glMatrixMode(oldMode);
+}

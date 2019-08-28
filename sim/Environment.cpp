@@ -27,6 +27,7 @@ mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0)
 	initGoalposts();
 	initFloor();
 	initBall();
+	getNumState();
 	mWorld->getConstraintSolver()->removeAllConstraints();
 }
 
@@ -80,6 +81,12 @@ initCharacters()
 	mAccScore.setZero();
 	mStates.resize(mNumChars);
 
+	mMapStates.resize(mNumChars);
+
+	for(int i=0;i<mNumChars;i++)
+	{
+		mMapStates[i] = new MapState(4);
+	}
 
 }
 
@@ -337,6 +344,11 @@ step()
 	getRewards();
 
 	mWorld->step();
+
+	for(int i=0;i<mMapStates.size();i++)
+	{
+		mMapStates[i]->endOfStep();
+	}
 	// cout<<"55555555"<<endl;	
 	// std::cout<<mCharacters[0]->getSkeleton()->getVelocities().transpose()<<std::endl;
 	// std::cout<<endl;
@@ -350,7 +362,7 @@ getDribblerIndex()
 	return curDribblerIndex;
 }
 
-std::vector<double>
+std::vector<float>
 Environment::
 getState(int index)
 {
@@ -475,6 +487,22 @@ getState(int index)
 		}
 	}
 
+	Eigen::VectorXd goalpostPositions(8);
+	if(teamName == mGoalposts[0].first)
+	{
+		goalpostPositions.segment(0,2) = mGoalposts[0].second.segment(0,2) + Eigen::Vector2d(0.0, 1.5/2.0) - p;
+		goalpostPositions.segment(2,2) = mGoalposts[0].second.segment(0,2) + Eigen::Vector2d(0.0, -1.5/2.0) - p;
+		goalpostPositions.segment(4,2) = mGoalposts[1].second.segment(0,2) + Eigen::Vector2d(0.0, 1.5/2.0) - p;
+		goalpostPositions.segment(6,2) = mGoalposts[1].second.segment(0,2) + Eigen::Vector2d(0.0, -1.5/2.0) - p;
+	}
+	else
+	{
+		goalpostPositions.segment(0,2) = mGoalposts[1].second.segment(0,2) + Eigen::Vector2d(0.0, 1.5/2.0) - p;
+		goalpostPositions.segment(2,2) = mGoalposts[1].second.segment(0,2) + Eigen::Vector2d(0.0, -1.5/2.0) - p;
+		goalpostPositions.segment(4,2) = mGoalposts[0].second.segment(0,2) + Eigen::Vector2d(0.0, 1.5/2.0) - p;
+		goalpostPositions.segment(6,2) = mGoalposts[0].second.segment(0,2) + Eigen::Vector2d(0.0, -1.5/2.0) - p;
+	}
+
 	
 	// Fill in the goal basket's relational position
 	// Eigen::VectorXd goalpostPositions(4);
@@ -496,10 +524,12 @@ getState(int index)
 	// Put these arguments in a single vector
 
 	bool useMap = false;
-	std::vector<double> mapState;
+	std::vector<float> mapState;
 	if(useMap)
 	{
-		mapState = getStateMinimap(index);
+		setStateMinimap(index);
+		mapState = mMapStates[index]->getVectorizedValue();
+		// cout<<mapState.size()<<endl;
 	}
 
 	Eigen::VectorXd vecState(p.rows() + v.rows() + ballP.rows() + ballV.rows() +
@@ -512,17 +542,23 @@ getState(int index)
 	// if(index == 1)
 	// 	cout<<vecState.segment(ID_BALL_P, 2).transpose()<<endl;
 
-
-	std::vector<double> state;
+	// cout<<"000000000000"<<endl;
+	std::vector<float> state;
 	if(useMap)
 	{
+		// cout<<"mapState.size() : "<<mapState.size()<<endl;
+		// cout<<"ballPossession.size() : "<<ballPossession.rows()<<endl;
+		// cout<<"kickable.size() : "<<kickable.rows()<<endl;
 		state.resize(ballPossession.rows() + kickable.rows() + mapState.size());
+		// cout<<"state.size() : "<<state.size()<<endl;
 	}
 	else
 	{
 		state.resize(p.rows() + v.rows() + ballP.rows() + ballV.rows() +
 			ballPossession.rows() + kickable.rows() + otherS.rows() + distanceWall.rows());
 	}
+	// cout<<"11111111111"<<endl;
+
 
 	
 	count = 0;
@@ -553,6 +589,7 @@ getState(int index)
 	{
 		state[count++] = kickable[i];
 	}
+	// cout<<"222222222222"<<endl;
 
 	if(useMap)
 	{
@@ -574,7 +611,7 @@ getState(int index)
 
 	}
 	
-
+	// cout<<"getState completed in the function"<<endl;
 	// for(int i=0;i<10;i++)
 	// {
 	// 	if(std::isnan(state[i]))
@@ -608,7 +645,7 @@ getState(int index)
 */
 
 std::pair<int, int> getPixelFromPosition(double x, double y, double maxX = 4.0, double maxY = 3.0, 
-													int numRows = 40, int numCols = 40)
+													int numRows = 84, int numCols = 84)
 {
 	int pixelX, pixelY;
 
@@ -657,339 +694,109 @@ void visualizeMinimap(std::vector<double> minimaps)
 	}
 }
 
-std::vector<double>
+void
 Environment::
-getStateMinimap(int index)
+setStateMinimap(int index)
 {
 	// std::vector<Eigen::MatrixXd> minimaps;
-
-	std::vector<double> minimaps;
-	minimaps.resize(40*40*5);
-	int count =0;
-	int numRows = 40;
-	int numCols = 40; 
+	int numRows = 84;
+	int numCols = 84; 
 
 	/// map for wall
+	Eigen::VectorXd minimap;
+	minimap.resize(numRows*numCols);
+	minimap.setZero();
+
+	for(int i=0;i<numCols;i++)
 	{
-		// Eigen::MatrixXd minimap(numRows, numCols);
-		// minimap.setZero();
-		std::vector<double> minimap;
-		minimap.resize(numRows*numCols);
-
-		for(int i=0;i<numCols;i++)
+		for(int j=0;j<numRows;j++)
 		{
-			for(int j=0;j<numRows;j++)
-			{
-				minimap[i*numRows+j] = 0.5;
-			}	
-		}
-		for(double i = -4;i<4;i+= 0.1)
-		{
-			for(double j=-3;j<3;j+=0.1)
-			{
-				std::pair<int, int> pixel = getPixelFromPosition(i, j);
-				minimap[pixel.second*numRows+pixel.first] = 0.0;
-			}
-		}
-
-		for(int i=0;i<minimap.size();i++)
-		{
-			minimaps[count++] = minimap[i];
-		}
-
-		// minimaps.push_back(minimap);
-
+			minimap[i*numRows+j] = 0.5;
+		}	
 	}
-	// try
+	for(double i = -4;i<4;i+= 0.05)
+	{
+		for(double j=-3;j<3;j+=0.05)
+		{
+			std::pair<int, int> pixel = getPixelFromPosition(i, j);
+			minimap[pixel.second*numRows+pixel.first] = 0.0;
+		}
+	}
+
+	Eigen::VectorXd position;
+	std::pair<int, int> pixel;
+
+	// cur agent position
+
+	position = mCharacters[index]->getSkeleton()->getPositions();
+	pixel = getPixelFromPosition(position[0], position[1]);
+	minimap[pixel.second*numRows+pixel.first] = 1.0;
+
+	// // team position
+	// std::string mTeamName = mCharacters[index]->getTeamName();
+	// for(int i=0;i<mCharacters.size();i++)
 	// {
-	//     *(int*) 0 = 0;
-	// }
-	// catch (std::exception& e)
-	// {
-	//     std::cerr << "Exception caught : " << e.what() << std::endl;
-	// }
-	/// map for me
-	{
-
-		std::vector<double> minimap;
-		minimap.resize(numRows*numCols);
-
-
-		Eigen::VectorXd position = mCharacters[index]->getSkeleton()->getPositions();
-
-		std::pair<int, int> pixel = getPixelFromPosition(position[0], position[1]);
-		minimap[pixel.second*numRows+pixel.first] = 1.0;
-		// std::string teamName = mCharacters[index]->getTeamName();
-		for(int i=0;i<minimap.size();i++)
-		{
-			minimaps[count++] = minimap[i];
-		}
-	}
-
-	/// map for My Team
-	{
-		std::vector<double> minimap;
-		minimap.resize(numRows*numCols);
-
-		std::string mTeamName = mCharacters[index]->getTeamName();
-		for(int i=0;i<mCharacters.size();i++)
-		{
-			if(i != index)
-			{
-				if(mCharacters[i]->getTeamName()==mTeamName)
-				{
-					Eigen::VectorXd position = mCharacters[i]->getSkeleton()->getPositions();
-
-					std::pair<int, int> pixel = getPixelFromPosition(position[0], position[1]);
-					minimap[pixel.second*numRows+pixel.first] = 1.0;
-				}
-			}
-
-		}
-
-
-		// std::string teamName = mCharacters[index]->getTeamName();
-		for(int i=0;i<minimap.size();i++)
-		{
-			minimaps[count++] = minimap[i];
-		}
-	}
-
-	/// map for ball
-	{
-		std::vector<double> minimap;
-		minimap.resize(numRows*numCols);
-
-		Eigen::VectorXd position = ballSkel->getPositions();
-
-		std::pair<int, int> pixel = getPixelFromPosition(position[0], position[1]);
-		minimap[pixel.second*numRows+pixel.first] = 1.0;
-		// std::string teamName = mCharacters[index]->getTeamName();
-		for(int i=0;i<minimap.size();i++)
-		{
-			minimaps[count++] = minimap[i];
-		}
-	}
-
-
-	/// map for Opponent Team
-	{
-		std::vector<double> minimap;
-		minimap.resize(numRows*numCols);
-
-		std::string mTeamName = mCharacters[index]->getTeamName();
-		for(int i=0;i<mCharacters.size();i++)
-		{
-			if(mCharacters[i]->getTeamName()!=mTeamName)
-			{
-				Eigen::VectorXd position = mCharacters[i]->getSkeleton()->getPositions();
-
-				std::pair<int, int> pixel = getPixelFromPosition(position[0], position[1]);
-				minimap[pixel.second*numRows+pixel.first] = 1.0;
-			}
-
-		}
-		for(int i=0;i<minimap.size();i++)
-		{
-			minimaps[count++] = minimap[i];
-		}
-	}
-
-	// for(int i=0;i<minimaps.size();i++)
-	// {
-	// 	if(std::isnan(minimaps[i]))
+	// 	if(i != index)
 	// 	{
-	// 		cout<<"Nan is occured at "<<i/(numRows*numCols)<<endl;
-	// 	}
-	// }
-	// for(int i=0;i<minimaps.size();i++)
-	// {
-	// 	for(int col=0;col<numCols;col++)
-	// 	{
-	// 		for(int row=0;row<numCols;row++)
+	// 		if(mCharacters[i]->getTeamName()==mTeamName)
 	// 		{
-	// 			cout<<minimaps[i](col,row)<<" ";
+	// 			position = mCharacters[i]->getSkeleton()->getPositions();
+
+	// 			pixel = getPixelFromPosition(position[0], position[1]);
+	// 			minimap[pixel.second*numRows+pixel.first] = 0.8;
 	// 		}
-	// 		cout<<endl;
 	// 	}
-	// 	cout<<"#################################################"<<endl;
+
 	// }
 
-	// visualizeMinimap(minimaps);
-	// exit(0);
+	// ball position
+	position = ballSkel->getPositions();
 
-
-	return minimaps;
-}
-
-std::vector<double>
-Environment::
-getStateMinimapRGB(int index)
-{
-	// std::vector<Eigen::MatrixXd> minimaps;
-
-	std::vector<double> minimaps;
-	minimaps.resize(40*40*1);
-	int count =0;
-	int numRows = 40;
-	int numCols = 40; 
-
-	/// map for wall
+	pixel = getPixelFromPosition(position[0], position[1]);
+	for(int i=-1;i<=1;i++)
 	{
-		// Eigen::MatrixXd minimap(numRows, numCols);
-		// minimap.setZero();
-		std::vector<double> minimap;
-		minimap.resize(numRows*numCols);
-
-		for(int i=0;i<numCols;i++)
+		for(int j=-1;j<=1;j++)
 		{
-			for(int j=0;j<numRows;j++)
-			{
-				minimap[i*numRows+j] = 0.5;
-			}	
-			
+			if(mScoreBoard[0] == 1)
+				minimap[(pixel.second+j)*numRows+pixel.first+i] = 0.6;
+			else if(mScoreBoard[0] == 0)
+				minimap[(pixel.second+j)*numRows+pixel.first+i] = 0.4;
+			else
+				minimap[(pixel.second+j)*numRows+pixel.first+i] = 0.5;
+
 		}
-		for(double i = -4;i<4;i+= 0.1)
-		{
-			for(double j=-3;j<3;j+=0.1)
-			{
-				std::pair<int, int> pixel = getPixelFromPosition(i, j);
-				minimap[pixel.second*numRows+pixel.first] = 0.0;
-			}
-		}
-		Eigen::VectorXd position = mCharacters[index]->getSkeleton()->getPositions();
-
-		std::pair<int, int> pixel = getPixelFromPosition(position[0], position[1]);
-		minimap[pixel.second*numRows+pixel.first] = 1.0;
-
-		for(int i=0;i<minimap.size();i++)
-		{
-			minimaps[count++] = minimap[i];
-		}
-
-		// minimaps.push_back(minimap);
-
 	}
-	// try
+	if(mScoreBoard[0] == 1)
+		minimap[pixel.second*numRows+pixel.first] = 0.7;
+	else if(mScoreBoard[0] == 0)
+		minimap[pixel.second*numRows+pixel.first] = 0.5;
+	else
+		minimap[pixel.second*numRows+pixel.first] = 0.6;
+
+
+
+	// // opponent team position
+	// for(int i=0;i<mCharacters.size();i++)
 	// {
-	//     *(int*) 0 = 0;
-	// }
-	// catch (std::exception& e)
-	// {
-	//     std::cerr << "Exception caught : " << e.what() << std::endl;
-	// }
-	/// map for me
-	{
-
-		std::vector<double> minimap;
-		minimap.resize(numRows*numCols);
-
-
-		Eigen::VectorXd position = mCharacters[index]->getSkeleton()->getPositions();
-
-		std::pair<int, int> pixel = getPixelFromPosition(position[0], position[1]);
-		minimap[pixel.second*numRows+pixel.first] = 1.0;
-		// std::string teamName = mCharacters[index]->getTeamName();
-		for(int i=0;i<minimap.size();i++)
-		{
-			minimaps[count++] = minimap[i];
-		}
-	}
-
-	/// map for My Team
-	{
-		std::vector<double> minimap;
-		minimap.resize(numRows*numCols);
-
-		std::string mTeamName = mCharacters[index]->getTeamName();
-		for(int i=0;i<mCharacters.size();i++)
-		{
-			if(i != index)
-			{
-				if(mCharacters[i]->getTeamName()==mTeamName)
-				{
-					Eigen::VectorXd position = mCharacters[i]->getSkeleton()->getPositions();
-
-					std::pair<int, int> pixel = getPixelFromPosition(position[0], position[1]);
-					minimap[pixel.second*numRows+pixel.first] = 1.0;
-				}
-			}
-
-		}
-
-
-		// std::string teamName = mCharacters[index]->getTeamName();
-		for(int i=0;i<minimap.size();i++)
-		{
-			minimaps[count++] = minimap[i];
-		}
-	}
-
-	/// map for ball
-	{
-		std::vector<double> minimap;
-		minimap.resize(numRows*numCols);
-
-		Eigen::VectorXd position = ballSkel->getPositions();
-
-		std::pair<int, int> pixel = getPixelFromPosition(position[0], position[1]);
-		minimap[pixel.second*numRows+pixel.first] = 1.0;
-		// std::string teamName = mCharacters[index]->getTeamName();
-		for(int i=0;i<minimap.size();i++)
-		{
-			minimaps[count++] = minimap[i];
-		}
-	}
-
-
-	/// map for Opponent Team
-	{
-		std::vector<double> minimap;
-		minimap.resize(numRows*numCols);
-
-		std::string mTeamName = mCharacters[index]->getTeamName();
-		for(int i=0;i<mCharacters.size();i++)
-		{
-			if(mCharacters[i]->getTeamName()!=mTeamName)
-			{
-				Eigen::VectorXd position = mCharacters[i]->getSkeleton()->getPositions();
-
-				std::pair<int, int> pixel = getPixelFromPosition(position[0], position[1]);
-				minimap[pixel.second*numRows+pixel.first] = 1.0;
-			}
-
-		}
-		for(int i=0;i<minimap.size();i++)
-		{
-			minimaps[count++] = minimap[i];
-		}
-	}
-
-	// for(int i=0;i<minimaps.size();i++)
-	// {
-	// 	if(std::isnan(minimaps[i]))
+	// 	if(mCharacters[i]->getTeamName()!=mTeamName)
 	// 	{
-	// 		cout<<"Nan is occured at "<<i/(numRows*numCols)<<endl;
+	// 		Eigen::VectorXd position = mCharacters[i]->getSkeleton()->getPositions();
+
+	// 		std::pair<int, int> pixel = getPixelFromPosition(position[0], position[1]);
+	// 		minimap[pixel.second*numRows+pixel.first] = 0.3;
 	// 	}
 	// }
-	// for(int i=0;i<minimaps.size();i++)
+
+	// for(int i=0;i<numCols;i++)
 	// {
-	// 	for(int col=0;col<numCols;col++)
+	// 	for(int j=0;j<numRows;j++)
 	// 	{
-	// 		for(int row=0;row<numCols;row++)
-	// 		{
-	// 			cout<<minimaps[i](col,row)<<" ";
-	// 		}
-	// 		cout<<endl;
+	// 		minimap[i*numRows+j] *= 1.0;
 	// 	}
-	// 	cout<<"#################################################"<<endl;
 	// }
 
-	// visualizeMinimap(minimaps);
-	// exit(0);
+	mMapStates[index]->setCurState(minimap);
 
-
-	return minimaps;
 }
 
 Eigen::VectorXd
@@ -1041,7 +848,6 @@ getReward(int index)
 
 	double rewardScale = 0.2;
 
-
 	if(mCharacters[index]->getTeamName()=="A")
 	{
 		reward += (mNumIterations/50.0) * rewardScale * (2*mScoreBoard[0] -1);
@@ -1053,36 +859,11 @@ getReward(int index)
 		// reward += (mNumIterations/50.0) * 1.0 * (1-mScoreBoard[0]);
 	}
 
-	
-	double myTeamMinDistance = FLT_MAX;
-	double oppMinDistance = FLT_MAX;
 
-	for(int i=0;i<mCharacters.size();i++)
-	{
-		if(mCharacters[i]->getTeamName() == mCharacters[index]->getTeamName())
-		{
-			double distanceBall = mStates[i].segment(ID_BALL_P, 2).norm();
-			if(myTeamMinDistance > distanceBall)
-			{
-				myTeamMinDistance = distanceBall;
-			}
-		}
-		else
-		{
-			double distanceBall = mStates[i].segment(ID_BALL_P, 2).norm();
-			if(oppMinDistance > distanceBall)
-			{
-				oppMinDistance = distanceBall;
-			}
-		}
-	}
 	double myDistanceBall = mStates[index].segment(ID_BALL_P, 2).norm();
-
-	// reward += 1.0 * exp(-pow(myDistanceBall,2.0));
-
 	reward += rewardScale * (1 - mNumIterations/50.0) * exp(-pow(myDistanceBall,2.0));
+	// reward += rewardScale * exp(-pow(myDistanceBall,2.0));
 
-	// reward += -0.5 * (mNumIterations/50.0) * exp(-pow(oppMinDistance,2.0));
 
 	if(mPrevScoreBoard[0] == mScoreBoard[0] + 1)
 	{
@@ -1109,82 +890,12 @@ getReward(int index)
 
 
 
-	// reward += 0.1 * (1 - mNumIterations/400.0) * exp(-pow(myDistanceBall,2.0));
 
-	// reward += rewardScale * exp(-pow(myDistanceBall,2.0));
-	// if(index == 0)
-	// {
-	// 	cout<<reward<<endl;
-	// }
-	// reward += 0.1 * exp(-pow(myDistanceBall,2.0));
-
-	// if(abs(oppMinDistance - myTeamMinDistance)>0.01)
-
-	// reward += (mNumIterations/50.0) * rewardScale/2.0 * (oppMinDistance - myTeamMinDistance);
+	// Goal Reward
 
 
 
 
-	// reward += -(1-mNumIterations/300.0) * 0.1 * exp(-pow((mCharacters[1-index]->getSkeleton()->getPositions() - ballPosition).norm(),2.0));
-
-
-
-	// cout<<mNumIterations<<endl;
-	/*
-	if(index<2)
-	{
-
-		// reward += exp(-(mGoalposts[1].second.segment(0,2) - ballPosition).norm()/3.0);
-		reward += 0.01 * exp(-pow((mCharacters[index]->getSkeleton()->getPositions() - ballPosition).norm(),2.0));
-		// std::cout<<widthVector.normalized().dot(ballPosition)-ballRadius<<" ";
-		// std::cout<< mGoalposts[0].second.x()<<endl;
-		// cout<<(mGoalposts[1].second.segment(0,2) - ballPosition).transpose()<<endl;
-		if(widthVector.normalized().dot(ballPosition)-ballRadius <= mGoalposts[0].second.x())
-		{
-			if(abs(heightVector.normalized().dot(ballPosition)) < goalpostSize/2.0)
-			{
-				// mIsTerminalState = true;
-				// std::cout<<"Blue Team GOALL!!"<<std::endl;
-				// reward += -100;
-			}
-		}
-		else if(widthVector.normalized().dot(ballPosition)+ballRadius >= mGoalposts[1].second.x())
-		{
-			if(abs(heightVector.normalized().dot(ballPosition)) < goalpostSize/2.0)
-			{
-				// mIsTerminalState = true;
-				// std::cout<<"Red Team GOALL!!"<<std::endl;
-				// reward += 100;
-			}
-		}
-
-	}
-	else
-	{
-
-		// reward = exp(-(mGoalposts[0].second.segment(0,2) - ballPosition).norm()/3.0);
-		reward += 0.01 * exp(-pow((mCharacters[index]->getSkeleton()->getPositions() - ballPosition).norm(),2.0));
-
-		if(widthVector.normalized().dot(ballPosition)-ballRadius <= mGoalposts[0].second.x())
-		{
-			if(abs(heightVector.normalized().dot(ballPosition)) < goalpostSize/2.0)
-			{
-				// mIsTerminalState = true;
-				// std::cout<<"Blue Team GOALL!!"<<std::endl;
-				// reward += +100;
-			}
-		}
-		else if(widthVector.normalized().dot(ballPosition)+ballRadius >= mGoalposts[1].second.x())
-		{
-			if(abs(heightVector.normalized().dot(ballPosition)) < goalpostSize/2.0)
-			{
-				// mIsTerminalState = true;
-				// std::cout<<"Red Team GOALL!!"<<std::endl;
-				// reward += -100;
-			}
-		}
-	}
-	*/
 	return reward;
 }
 
@@ -1276,7 +987,7 @@ setAction(int index, const Eigen::VectorXd& a)
 
 		// vel.setZero();
 	}
-	// mActions[index][2] = 1.0;
+	mActions[index][2] = -1.0;
 	
 
 	// if(index == 1)
@@ -1325,6 +1036,7 @@ reset()
 		skelVel[0] = 3.0 * (rand()/(double)RAND_MAX ) - 1.5;
 		skelVel[1] = 3.0 * (rand()/(double)RAND_MAX ) - 1.5;
 		skel->setVelocities(skelVel);
+		mMapStates[i]->reset();
 	}
 
 
@@ -1334,6 +1046,7 @@ reset()
 	mScoreBoard[0] = 0.5;
 
 	mAccScore.setZero();
+
 
 	// resetCharacterPositions();
 }
@@ -1364,4 +1077,65 @@ getCollidingWall(SkeletonPtr skel, double radius)
 		return 3;
 
 	return -1;
+}
+
+
+
+
+void MapState::setCurState(Eigen::VectorXd curState)
+{
+	if(isFirst)
+	{
+		for(int i=0;i<mNumPrev;i++)
+		{
+			minimaps.push_back(curState);
+		}
+		isFirst = false;
+	}
+
+	if(!updated)
+	{
+		for(int i=mNumPrev-1;i>0;i--)
+		{
+			minimaps[i] = minimaps[i-1];
+		}
+		minimaps[0] = curState;
+		updated = true;
+	}
+	
+}
+void MapState::endOfStep()
+{
+	updated = false;
+}
+
+void MapState::reset()
+{
+	minimaps.clear();
+	isFirst = true;
+	updated = false;
+}
+std::vector<float> MapState::getVectorizedValue()
+{
+	std::vector<float> vectorizedValue;
+	vectorizedValue.reserve(mNumPrev*minimaps[0].size());
+	for(int i=0;i<mNumPrev;i++)
+	{
+			// std::cout<<minimaps[i].size()<<std::endl;
+			// std::cout<<isFirst<<std::endl;
+		for(int j=0;j<minimaps[i].size();j++)
+		{
+			// std::cout<<minimaps[i].size()
+			// std::cout<<vectorizedValue.size()<<" "<<i<<" "<<j<<std::endl;
+
+			vectorizedValue.push_back(minimaps[i][j]);
+		}
+		// cout<<i<<endl;
+	}
+	// std::cout<<mNumPrev<<std::endl;
+	// std::cout<<vectorizedValue.size()<<std::endl;
+	// std::cout<<vectorizedValue.capacity()<<std::endl;
+	// exit(0);
+
+	return vectorizedValue;
 }

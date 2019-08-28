@@ -218,7 +218,7 @@ getActionFromNN(bool vsHardcodedAI, bool isRNN)
 	{
 
 		Eigen::VectorXd mAction(mEnv->getNumAction());
-		std::vector<double> state = mEnv->getState(i);
+		std::vector<float> state = mEnv->getState(i);
 		// mEnv->getState(i);
 		// Eigen::VectorXd state = mEnv->mStates[i];
 		//change the i=1 agent
@@ -331,6 +331,9 @@ display()
 
 
 	GUI::drawStringOnScreen(0.2, 0.8, scoreString, true, Eigen::Vector3d::Zero());
+
+
+	GUI::drawMapOnScreen(mEnv->mMapStates[0]->minimaps[0], 84, 84);
 
 
 	glutSwapBuffers();

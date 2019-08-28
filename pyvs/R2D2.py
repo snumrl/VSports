@@ -92,12 +92,12 @@ class PPO(object):
 	def __init__(self):
 		np.random.seed(seed = int(time.time()))
 		self.env = Env(600)
-		self.num_slaves = 16
+		self.num_slaves = 8
 		self.num_agents = 4
 		self.num_state = self.env.getNumState()
 		self.num_action = self.env.getNumAction()
 
-		self.num_epochs = 4
+		self.num_epochs = 8
 		self.num_evaluation = 0
 		self.num_tuple_so_far = 0
 		self.num_episode = 0
@@ -109,8 +109,8 @@ class PPO(object):
 		self.gamma = 0.997
 		self.lb = 0.95
 
-		self.buffer_size = 4*2048
-		self.batch_size = 128
+		self.buffer_size = 2*2048
+		self.batch_size = 64
 		self.trunc_size = 64
 		self.burn_in_size = 32
 		# self.replay_buffer = ReplayBuffer(30000)
@@ -121,10 +121,7 @@ class PPO(object):
 		self.model = [None]*self.num_slaves*self.num_agents
 		for i in range(self.num_slaves*self.num_agents):
 			# exit()
-			if useMap:
-				self.model[i] = CombinedSimulationNN(self.num_state, self.num_action)
-			else:
-				self.model[i] = NoCNNSimulationNN(self.num_state, self.num_action)
+			self.model[i] = NoCNNSimulationNN(self.num_state, self.num_action)
 
 			if use_cuda:
 				self.model[i].cuda()
@@ -175,7 +172,6 @@ class PPO(object):
 		for epi in self.total_episodes:
 			data = epi.getData()
 			size = len(data)
-			# print("Size : ",size)
 			if size == 0:
 				continue
 			states, actions, rewards, values, logprobs, hiddens = zip(*data)
@@ -262,7 +258,7 @@ class PPO(object):
 		terminated = [False]*self.num_slaves*self.num_agents
 		counter = 0
 
-		useHardCoded = True
+		useHardCoded = False
 
 
 		if not useHardCoded:
@@ -287,7 +283,7 @@ class PPO(object):
 
 		# 0 or 1
 		learningTeam = random.randrange(0,2)
-		learningTeam = 0
+		# learningTeam = 0
 		teamDic = {0: 0, 1: 0, 2: 1, 3:1}
 
 		while True:
@@ -333,7 +329,7 @@ class PPO(object):
 					else :
 						# print(self.model[0](Tensor([states[i*self.num_agents+j]])))
 						# exit()
-						if teamDic[j] == learningTeam:
+						if teamDic[j] == learningTeam or False:
 							a_dist_slave_agent,v_slave_agent, hiddens_slave_agent = self.model[0].forward_rnn(\
 								Tensor([states[i*self.num_agents+j]]),(Tensor(hiddens[i*self.num_agents+j][0]), Tensor(hiddens[i*self.num_agents+j][1])))
 							a_dist_slave.append(a_dist_slave_agent)
@@ -341,19 +337,16 @@ class PPO(object):
 							hiddens_slave.append((hiddens_slave_agent[0].cpu().detach().numpy(), hiddens_slave_agent[1].cpu().detach().numpy()))
 							actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy()[0][0];		
 						else :
-							# dummy
-							# a_dist_slave_agent,v_slave_agent = self.model[0](Tensor([states[i*self.num_agents+j]]))
+							# # dummy
+							# a_dist_slave_agent,v_slave_agent, hiddens_slave_agent = self.model[0].forward_rnn(\
+							# 	Tensor([states[i*self.num_agents+j]]),(Tensor(hiddens[i*self.num_agents+j][0]), Tensor(hiddens[i*self.num_agents+j][1])))
 							# a_dist_slave.append(a_dist_slave_agent)
 							# v_slave.append(v_slave_agent)
-							a_dist_slave_agent,v_slave_agent, hiddens_slave_agent = self.model[0].forward_rnn(\
-								Tensor([states[i*self.num_agents+j]]),(Tensor(hiddens[i*self.num_agents+j][0]), Tensor(hiddens[i*self.num_agents+j][1])))
-							a_dist_slave.append(a_dist_slave_agent)
-							v_slave.append(v_slave_agent)
-							hiddens_slave.append((hiddens_slave_agent[0].cpu().detach().numpy(), hiddens_slave_agent[1].cpu().detach().numpy()))
+							# hiddens_slave.append((hiddens_slave_agent[0].cpu().detach().numpy(), hiddens_slave_agent[1].cpu().detach().numpy()))
 							actions[i*self.num_agents+j] = self.getHardcodedAction(i, j);
 
 				for j in range(self.num_agents):
-					if teamDic[j] == learningTeam or True:
+					if teamDic[j] == learningTeam or False:
 						logprobs[i*self.num_agents+j] = a_dist_slave[j].log_prob(Tensor(actions[i*self.num_agents+j]))\
 							.cpu().detach().numpy().reshape(-1)[0];
 						values[i*self.num_agents+j] = v_slave[j].cpu().detach().numpy().reshape(-1)[0];
@@ -404,12 +397,6 @@ class PPO(object):
 								rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k], hiddens[i*self.num_agents+k])
 							# print(local_step)
 							local_step += 1
-
-				# print(id(self.episodes[0][1].getData()))
-				# print(id(self.episodes[1][0].getData()))
-				# print(id(self.episodes[2][0].getData()))
-				# print(id(self.episodes[3][0].getData()))
-				# print("#######################")
 
 
 				if terminated_state is True :

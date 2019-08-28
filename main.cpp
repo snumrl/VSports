@@ -1,5 +1,5 @@
 #include "vsports/SimpleSocWindow.h"
-#include "vsports/MultiSocWindow.h"
+// #include "vsports/MultiSocWindow.h"
 #include <GL/glut.h>
 #include <iostream>
 #include <stdio.h>
@@ -20,8 +20,8 @@ int main(int argc, char** argv)
 		simwindow = new SimpleSocWindow();
 	else if(argc==2)
 		simwindow = new SimpleSocWindow(argv[1]);
-	else if(argc==3)
-		simwindow = new MultiSocWindow(argv);
+	// else if(argc==3)
+	// 	simwindow = new MultiSocWindow(argv);
 
 
 	glutInit(&argc, argv);

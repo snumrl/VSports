@@ -18,6 +18,7 @@ namespace GUI
                  const double _arrowThickness = -1);
 	// void drawCylinder(double _radius, double _height,const Eigen::Vector3d& color = Eigen::Vector3d(0.8,0.8,0.8), int slices = 16, int stacks = 16);
 	void drawStringOnScreen(float _x, float _y, const std::string& _s,bool _bigFont,const Eigen::Vector3d& color=Eigen::Vector3d(0.8,0.8,0.8));
+	void drawMapOnScreen(Eigen::VectorXd minimap, int numRows, int numCols);
 
 };
 
