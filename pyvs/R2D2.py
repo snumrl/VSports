@@ -97,7 +97,7 @@ class PPO(object):
 		self.num_state = self.env.getNumState()
 		self.num_action = self.env.getNumAction()
 
-		self.num_epochs = 8
+		self.num_epochs = 4
 		self.num_evaluation = 0
 		self.num_tuple_so_far = 0
 		self.num_episode = 0
@@ -109,7 +109,7 @@ class PPO(object):
 		self.gamma = 0.997
 		self.lb = 0.95
 
-		self.buffer_size = 2*2048
+		self.buffer_size = 4*2048
 		self.batch_size = 64
 		self.trunc_size = 64
 		self.burn_in_size = 32
@@ -227,11 +227,20 @@ class PPO(object):
 		maxvel = 4.0
 
 		action = (maxvel*direction/direction_norm - state[2:4])
-		# for i in range(action.size()):
-		# 	if action[i] > 0.3:
-		# 		action[i] = 0.3
+		for i in range(action.size()):
+			if action[i] > 0.5:
+				action[i] = 0.5
+			elif action[i] <-0.5 :
+				action[i] = -0.5
+
+
 		# action = np.append(action, [random.randrange(0,3) - 1])
+
+
+
 		action = np.append(action, [1.0])
+		# print(action)
+		# exit(0)
 		# action = np.append(action, [0])
 
 		return action
@@ -265,16 +274,18 @@ class PPO(object):
 			if self.num_evaluation > 20:
 				curEvalNum = self.num_evaluation//20
 
-				clipedRandomNormal = 0
-				while clipedRandomNormal <= 0.5:
-					clipedRandomNormal = np.random.normal(curEvalNum, curEvalNum/2,1)[0]
-					if clipedRandomNormal > curEvalNum :
-						clipedRandomNormal = 2*curEvalNum - clipedRandomNormal;
+				# clipedRandomNormal = 0
+				# while clipedRandomNormal <= 0.5:
+				# 	clipedRandomNormal = np.random.normal(curEvalNum, curEvalNum/2,1)[0]
+				# 	if clipedRandomNormal > curEvalNum :
+				# 		clipedRandomNormal = 2*curEvalNum - clipedRandomNormal;
+
+				randomHistoryIndex = random.randrange(0,curEvalNum+1)
 
 				for i in range(self.num_slaves):
 					# prevPath = "../nn/"+clipedRandomNormal+".pt";
 
-					self.loadModel(str(int(clipedRandomNormal+0.5)), i*self.num_agents+1)
+					self.loadModel(str(randomHistoryIndex), i*self.num_agents+1)
 					# self.loadModel("current", i*self.num_agents+1)
 			else :
 				for i in range(self.num_slaves):
@@ -283,7 +294,7 @@ class PPO(object):
 
 		# 0 or 1
 		learningTeam = random.randrange(0,2)
-		# learningTeam = 0
+		learningTeam = 0
 		teamDic = {0: 0, 1: 0, 2: 1, 3:1}
 
 		while True:
@@ -315,12 +326,12 @@ class PPO(object):
 				hiddens_slave = []
 				for j in range(self.num_agents):
 					if not useHardCoded:
-						if teamDic[j] == learningTeam or True:
+						if teamDic[j] == learningTeam:
 							a_dist_slave_agent,v_slave_agent, hiddens_slave_agent = self.model[0].forward_rnn(\
-								Tensor([states[i*self.num_agents+j]]),(Tensor(hiddens[i*self.num_agents+j][0]), Tensor(hiddens[i*self.num_agents+j][1])))
+								Tensor([states[i*self.num_agents+j]]),(Tensor(hiddens[i*self.num_agents+j][0]), Tensor(hiddens[i*self.num_agents+j][1])), self.env.getNumIterations())
 						else :
-							a_dist_slave_agent,v_slave_agent, hiddens_slave_agent = self.model[i*self.num_agents+j].forward_rnn(\
-								Tensor([states[i*self.num_agents+j]]),(Tensor(hiddens[i*self.num_agents+j][0]), Tensor(hiddens[i*self.num_agents+j][1])))
+							a_dist_slave_agent,v_slave_agent, hiddens_slave_agent = self.model[i*self.num_agents+1].forward_rnn(\
+								Tensor([states[i*self.num_agents+j]]),(Tensor(hiddens[i*self.num_agents+j][0]), Tensor(hiddens[i*self.num_agents+j][1])), self.env.getNumIterations())
 						a_dist_slave.append(a_dist_slave_agent)
 						v_slave.append(v_slave_agent)
 						hiddens_slave.append((hiddens_slave_agent[0].cpu().detach().numpy(), hiddens_slave_agent[1].cpu().detach().numpy()))
@@ -329,24 +340,24 @@ class PPO(object):
 					else :
 						# print(self.model[0](Tensor([states[i*self.num_agents+j]])))
 						# exit()
-						if teamDic[j] == learningTeam or False:
+						if teamDic[j] == learningTeam:
 							a_dist_slave_agent,v_slave_agent, hiddens_slave_agent = self.model[0].forward_rnn(\
-								Tensor([states[i*self.num_agents+j]]),(Tensor(hiddens[i*self.num_agents+j][0]), Tensor(hiddens[i*self.num_agents+j][1])))
+								Tensor([states[i*self.num_agents+j]]),(Tensor(hiddens[i*self.num_agents+j][0]), Tensor(hiddens[i*self.num_agents+j][1])), self.env.getNumIterations())
 							a_dist_slave.append(a_dist_slave_agent)
 							v_slave.append(v_slave_agent)
 							hiddens_slave.append((hiddens_slave_agent[0].cpu().detach().numpy(), hiddens_slave_agent[1].cpu().detach().numpy()))
 							actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy()[0][0];		
 						else :
 							# # dummy
-							# a_dist_slave_agent,v_slave_agent, hiddens_slave_agent = self.model[0].forward_rnn(\
-							# 	Tensor([states[i*self.num_agents+j]]),(Tensor(hiddens[i*self.num_agents+j][0]), Tensor(hiddens[i*self.num_agents+j][1])))
-							# a_dist_slave.append(a_dist_slave_agent)
-							# v_slave.append(v_slave_agent)
-							# hiddens_slave.append((hiddens_slave_agent[0].cpu().detach().numpy(), hiddens_slave_agent[1].cpu().detach().numpy()))
+							a_dist_slave_agent,v_slave_agent, hiddens_slave_agent = self.model[0].forward_rnn(\
+								Tensor([states[i*self.num_agents+j]]),(Tensor(hiddens[i*self.num_agents+j][0]), Tensor(hiddens[i*self.num_agents+j][1])), self.env.getNumIterations())
+							a_dist_slave.append(a_dist_slave_agent)
+							v_slave.append(v_slave_agent)
+							hiddens_slave.append((hiddens_slave_agent[0].cpu().detach().numpy(), hiddens_slave_agent[1].cpu().detach().numpy()))
 							actions[i*self.num_agents+j] = self.getHardcodedAction(i, j);
 
 				for j in range(self.num_agents):
-					if teamDic[j] == learningTeam or False:
+					if teamDic[j] == learningTeam:
 						logprobs[i*self.num_agents+j] = a_dist_slave[j].log_prob(Tensor(actions[i*self.num_agents+j]))\
 							.cpu().detach().numpy().reshape(-1)[0];
 						values[i*self.num_agents+j] = v_slave[j].cpu().detach().numpy().reshape(-1)[0];
@@ -368,7 +379,7 @@ class PPO(object):
 				nan_occur = False
 				terminated_state = True
 				for k in range(self.num_agents):
-					if teamDic[k] == learningTeam or True:
+					if teamDic[k] == learningTeam:
 						rewards[i*self.num_agents+k] = self.env.getReward(i, k)
 						if np.any(np.isnan(rewards[i*self.num_agents+k])):
 							nan_occur = True
@@ -381,7 +392,7 @@ class PPO(object):
 
 				if nan_occur is True:
 					for k in range(self.num_agents):
-						if teamDic[k] == learningTeam or False:
+						if teamDic[k] == learningTeam:
 							self.total_episodes.append(self.rnn_episodes[i][k])
 							self.rnn_episodes[i][k] = RNNEpisodeBuffer()
 					self.env.reset(i)
@@ -389,7 +400,7 @@ class PPO(object):
 				if self.env.isTerminalState(i) is False:
 					terminated_state = False
 					for k in range(self.num_agents):
-						if teamDic[k] == learningTeam or False:
+						if teamDic[k] == learningTeam:
 							# rewards[i*self.num_agents+k] = self.env.getReward(i, k)
 							# print(str(i)+" "+str(k), end=' ')
 							# print(len(self.episodes[i][k].getData()), end = ' ')
@@ -401,7 +412,9 @@ class PPO(object):
 
 				if terminated_state is True :
 					for k in range(self.num_agents):
-						if teamDic[k] == learningTeam or False:
+						if teamDic[k] == learningTeam:
+							self.rnn_episodes[i][k].push(states[i*self.num_agents+k], actions[i*self.num_agents+k],\
+								rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k], hiddens[i*self.num_agents+k])
 							self.total_episodes.append(self.rnn_episodes[i][k])
 							self.rnn_episodes[i][k] = RNNEpisodeBuffer()
 					self.env.reset(i)
@@ -410,7 +423,7 @@ class PPO(object):
 			if local_step >= self.buffer_size:
 				for i in range(self.num_slaves):
 					for k in range(self.num_agents):
-						if teamDic[k] == learningTeam or False:
+						if teamDic[k] == learningTeam:
 							# print(str(i)+" "+str(k), end=' ')
 							# print(len(self.episodes[i][k].getData()))
 							self.total_episodes.append(self.rnn_episodes[i][k])
@@ -543,13 +556,13 @@ class PPO(object):
 
 
 
-					if timeStep % 8 == 0:
+					if timeStep % 16 == 0:
 						stack_hidden[0] = stack_hidden[0].detach()
 						stack_hidden[1] = stack_hidden[1].detach()
 						loss = Tensor(torch.zeros(1).cuda())
 
 					# print(Tensor(stack_hidden[0]).size())
-					a_dist,v,cur_stack_hidden = self.model[0].forward_rnn(Tensor(stack_s), stack_hidden)	
+					a_dist,v,cur_stack_hidden = self.model[0].forward_rnn(Tensor(stack_s), stack_hidden, self.num_evaluation)	
 					# exit()
 
 					hidden_list[timeStep] = list(cur_stack_hidden)
@@ -594,7 +607,7 @@ class PPO(object):
 
 						loss += loss_actor + loss_entropy + loss_critic
 
-						if timeStep % 8 == 7:
+						if timeStep % 16 == 15:
 							self.optimizer.zero_grad()
 
 							# start = time.time()
@@ -607,64 +620,6 @@ class PPO(object):
 							self.optimizer.step()
 			print('Optimizing sim nn : {}/{}'.format(j+1,self.num_epochs),end='\r')
 		print('')
-		# all_transitions = []
-		# for rnn_replay_buffer in all_rnn_replay_buffer :
-		# 	for single_transition in np.array(rnn_replay_buffer.buffer) :
-		# 		all_transitions.append(single_transition)
-
-		# for j in range(self.num_epochs):
-		# 	np.random.shuffle(all_transitions)
-		# 	for i in range(len(all_transitions)//self.batch_size):
-		# 		transitions = all_transitions[i*self.batch_size:(i+1)*self.batch_size]
-		# 		batch = Transition(*zip(*transitions))
-
-		# 		stack_s =np.vstack(batch.s).astype(np.float32)
-		# 		stack_a = np.vstack(batch.a).astype(np.float32)
-		# 		stack_lp = np.vstack(batch.logprob).astype(np.float32)
-		# 		stack_td = np.vstack(batch.TD).astype(np.float32)
-		# 		stack_gae = np.vstack(batch.GAE).astype(np.float32)
-
-		# 		a_dist,v = self.model[0](Tensor(stack_s))
-
-		# 		# print(v.size())
-		# 		# exit()
-
-		# 		'''Critic Loss'''
-		# 		loss_critic = ((v-Tensor(stack_td)).pow(2)).mean()
-
-		# 		'''Actor Loss'''
-		# 		ratio = torch.exp(a_dist.log_prob(Tensor(stack_a))-Tensor(stack_lp))
-		# 		stack_gae = (stack_gae-stack_gae.mean())/(stack_gae.std()+1E-5)
-		# 		stack_gae = Tensor(stack_gae)
-		# 		surrogate1 = ratio * stack_gae
-		# 		surrogate2 = torch.clamp(ratio, min=1.0-self.clip_ratio, max=1.0+self.clip_ratio) * stack_gae
-		# 		loss_actor = - torch.min(surrogate1, surrogate2).mean()
-
-		# 		'''Entropy Loss'''
-		# 		loss_entropy = - self.w_entropy * a_dist.entropy().mean()
-
-		# 		self.loss_actor = loss_actor.cpu().detach().numpy().tolist()
-		# 		self.loss_critic = loss_critic.cpu().detach().numpy().tolist()
-
-		# 		loss = loss_actor + loss_entropy + loss_critic
-	
-				
-			
-		# 		# print(loss.cpu().detach().numpy().tolist())
-		# 		# if np.any(np.isnan(loss.cpu().detach().numpy().tolist())):
-		# 		# 	continue;
-
-		# 		self.optimizer.zero_grad()
-		# 		loss.backward(retain_graph=True)
-		# 		# print(loss)
-		# 		# exit()
-		# 		for param in self.model[0].parameters():
-		# 			if param.grad is not None:
-		# 				param.grad.data.clamp_(-0.5, 0.5)
-		# 		self.optimizer.step()
-		# 	print('Optimizing sim nn : {}/{}'.format(j+1,self.num_epochs),end='\r')
-		# print('')
-
 
 	def optimizeModel(self):
 		self.computeTDandGAE()
@@ -748,16 +703,23 @@ if __name__=="__main__":
 	ppo = PPO()
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-m','--model',help='model path')
+	parser.add_argument('-iter','--iteration',help='num iterations')
 
 	args =parser.parse_args()
 	
 	
 	if args.model is not None:
 		ppo.loadModel(args.model, 0)
+		if args.iteration is not None:
+			ppo.num_evaluation = int(args.iteration)
+			for i in range(int(args.iteration)):
+				ppo.env.endOfIteration()
+
 	else:
 		ppo.saveModel()
 	print('num states: {}, num actions: {}'.format(ppo.env.getNumState(),ppo.env.getNumAction()))
-	for i in range(ppo.max_iteration-5):
+	# for i in range(ppo.max_iteration-5):
+	for i in range(5000000):
 		ppo.train()
 		rewards = ppo.evaluate()
 		plot(rewards,'reward',0,False)

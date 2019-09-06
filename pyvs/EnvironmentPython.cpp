@@ -43,6 +43,14 @@ step(int id)
 
 void
 EnvironmentPython::
+stepAtOnce(int id)
+{
+	// std::cout<<"Step in "<<id<<"'th slave"<<std::endl;
+	mSlaves[id]->stepAtOnce();
+}
+
+void
+EnvironmentPython::
 reset(int id)
 {
 	mSlaves[id]->reset();
@@ -111,22 +119,24 @@ stepsAtOnce()
 #pragma omp parallel for
 	for(int id=0;id<mNumSlaves;++id)
 	{
-		for(int j=0;j<num;j++)
-			this->step(id);
+		// for(int j=0;j<num;j++)
+		// 	this->step(id);
+		// this->step
+		this->stepAtOnce(id);
 	}
 }
 
-void
-EnvironmentPython::
-steps(int num)
-{
-#pragma omp parallel for
-	for(int id=0;id<mNumSlaves;++id)
-	{
-		for(int j=0;j<num;j++)
-			this->step(id);
-	}
-}
+// void
+// EnvironmentPython::
+// steps(int num)
+// {
+// #pragma omp parallel for
+// 	for(int id=0;id<mNumSlaves;++id)
+// 	{
+// 		for(int j=0;j<num;j++)
+// 			this->step(id);
+// 	}
+// }
 
 void
 EnvironmentPython::
@@ -135,8 +145,7 @@ endOfIteration()
 	for(int i=0;i<mNumSlaves;i++)
 	{
 		mSlaves[i]->mNumIterations++;
-		if(mSlaves[i]->mNumIterations >= 150)
-			mSlaves[i]->mNumIterations = 150;
+	// std::cout<<mSlaves[i]->mNumIterations<<std::endl;
 	}
 }
 
@@ -166,7 +175,6 @@ BOOST_PYTHON_MODULE(pyvs)
 		.def("setAction",&EnvironmentPython::setAction)
 		.def("getReward",&EnvironmentPython::getReward)
 		.def("stepsAtOnce",&EnvironmentPython::stepsAtOnce)
-		.def("steps",&EnvironmentPython::steps)
 		.def("step",&EnvironmentPython::step)
 		.def("resets",&EnvironmentPython::resets)
 		.def("getNumIterations",&EnvironmentPython::getNumIterations)

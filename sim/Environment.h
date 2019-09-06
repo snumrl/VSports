@@ -11,6 +11,8 @@
 // #define ID_GOALPOST 10
 
 
+// std::vector<std::string> skillSet{"ballChasing", "shooting", "ballBlocking"};
+
 typedef std::pair<std::string, Eigen::Vector3d> GoalpostInfo;
 
 class MapState
@@ -46,6 +48,8 @@ public:
 	void initBall();
 
 	void step();
+
+	void stepAtOnce();
 
 	void reset();
 	bool isTerminalState();
@@ -95,6 +99,8 @@ public:
 
 	Eigen::VectorXd updateScoreBoard(std::string teamName = "");
 
+	double addSkillReward(int index, int skillIndex);
+
 public:
 	dart::simulation::WorldPtr mWorld;
 	int mNumChars;
@@ -130,6 +136,8 @@ public:
 	int mNumIterations;
 
 	std::vector<MapState*> mMapStates;
+
+	std::vector<bool> goalRewardPaid;
 
 };
 

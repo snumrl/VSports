@@ -76,7 +76,7 @@ class NoCNNSimulationNN(nn.Module):
 		if self.useMap:
 			self.num_policyInput = 66
 		else:
-			self.num_policyInput = 26
+			self.num_policyInput = 34
 
 		self.hidden_size = 256
 		self.num_layers = 2
@@ -150,7 +150,7 @@ class NoCNNSimulationNN(nn.Module):
 		concatVecX = x.cuda()
 		return MultiVariateNormal(self.policy(concatVecX),self.log_std.exp()),self.value(concatVecX);
 
-	def forward_rnn(self,x, in_hidden):
+	def forward_rnn(self,x, in_hidden, numIteration=100):
 		# print(x.size())
 		# exit(0)
 
@@ -186,11 +186,16 @@ class NoCNNSimulationNN(nn.Module):
 		# Initializing hidden state for first input using method defined below
 		batch_size = concatVecX.size()[0];
 
+		if numIteration > 100 :
+			numIteration = 100
+
 		useRNN = True
 
 		if useRNN :
+			# print(self.log_std.exp())
+			# self.log_std = nn.Parameter(0.0*torch.ones(num_actions))
 			rnnOutput, out_hidden = self.rnn(concatVecX.view(1, batch_size,-1), in_hidden)
-			return MultiVariateNormal(self.policy_rnn(rnnOutput),self.log_std.exp()),self.value_rnn(rnnOutput), out_hidden
+			return MultiVariateNormal(self.policy_rnn(rnnOutput),self.log_std.exp() * np.exp(-2.0)),self.value_rnn(rnnOutput), out_hidden
 		else :
 			return MultiVariateNormal(self.policy(concatVecX).unsqueeze(0),self.log_std.exp()),self.value(concatVecX).unsqueeze(0), in_hidden
 
@@ -218,6 +223,7 @@ class NoCNNSimulationNN(nn.Module):
 		# else :
 		# 	new_hidden = in_hidden
 		# print(self.cur_hidden[0][0])
+		# print(self.log_std.exp())
 		p,_1 ,new_hidden= self.forward_rnn(ts.unsqueeze(0), self.cur_hidden)
 		# new_hidden = self.cur_hidden
 		# new_hidden = self.cur_hidden
@@ -226,6 +232,7 @@ class NoCNNSimulationNN(nn.Module):
 		# print("###########")
 		# print(p.size())
 		return p.loc.cpu().detach().numpy()
+		# return p.sample().cpu().detach().numpy()
 
 	def reset_hidden(self):
 		self.cur_hidden = self.init_hidden(1)

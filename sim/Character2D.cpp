@@ -39,7 +39,7 @@ setDefaultShape(const Eigen::Vector3d& color)
 
 void 
 Character2D::
-setVelocity(const Eigen::Vector3d& vel)
+setVelocity(const Eigen::Vector2d& vel)
 {
 	mSkeleton->setVelocities(vel);
 }

@@ -20,7 +20,8 @@ public:
 
 	// For each slave
 	void step(int id);
-	void steps(int id);
+	void stepAtOnce(int id);
+	// void steps(int id);
 	void reset(int id);
 	void resets();
 	bool isTerminalState(int id);

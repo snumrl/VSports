@@ -72,22 +72,30 @@ SimpleSocWindow(const std::string& nn_path)
 	p::exec(str, mns);
 	// str = "use_cuda = torch.cuda.is_available()";
 	// p::exec(str, mns);
-	nn_module = new boost::python::object[2];
 
-	nn_module[0] = p::eval("NoCNNSimulationNN(num_state, num_action).cuda()", mns);
-	nn_module[1] = p::eval("NoCNNSimulationNN(num_state, num_action).cuda()", mns);
 
-	p::object *load = new p::object[2];
+	// nn_module[0] = p::eval("NoCNNSimulationNN(num_state, num_action).cuda()", mns);
+	// nn_module[1] = p::eval("NoCNNSimulationNN(num_state, num_action).cuda()", mns);
 
-	load[0] = nn_module[0].attr("load");
-	load[1] = nn_module[1].attr("load");
+	// load[0] = nn_module[0].attr("load");
+	// load[1] = nn_module[1].attr("load");
 
-	reset_hidden = new boost::python::object[2];
+	// reset_hidden[0] = nn_module[0].attr("reset_hidden"); 
+	// reset_hidden[1] = nn_module[1].attr("reset_hidden"); 
+	// load[0](nn_path);
+	// load[1](nn_path);
+	nn_module = new boost::python::object[mEnv->mNumChars];
+	p::object *load = new p::object[mEnv->mNumChars];
+	reset_hidden = new boost::python::object[mEnv->mNumChars];
 
-	reset_hidden[0] = nn_module[0].attr("reset_hidden"); 
-	reset_hidden[1] = nn_module[1].attr("reset_hidden"); 
-	load[0](nn_path);
-	load[1](nn_path);
+	for(int i=0;i<mEnv->mNumChars;i++)
+	{
+		nn_module[i] = p::eval("NoCNNSimulationNN(num_state, num_action).cuda()", mns);
+		load[i] = nn_module[i].attr("load");
+		reset_hidden[i] = nn_module[i].attr("reset_hidden");
+		load[i](nn_path);
+	}
+
 }
 
 void
@@ -146,6 +154,8 @@ keyboard(unsigned char key, int x, int y)
 			mEnv->reset();
 			reset_hidden[0]();
 			reset_hidden[1]();
+			reset_hidden[2]();
+			reset_hidden[3]();
 			break;
 		case ']':
 			vsHardcodedAI_difficulty += 0.1;
@@ -178,6 +188,20 @@ void
 SimpleSocWindow::
 step()
 {
+	if(mEnv->isTerminalState())
+	{
+		// for(int i=0;i<4;i++)
+		// {
+		// 	for(int j=mEnv->getNumState()-8;j<mEnv->getNumState();j++)
+		// 	{
+		// 		cout<<mEnv->getState(i)[j]<<" ";
+		// 	}
+		// 	cout<<endl;
+		// }
+
+		sleep(1);
+		mEnv->reset();
+	}
 	// cout<<"????????"<<endl;
 	getActionFromNN(true, true);
 	// std::cout<<"step!"<<std::endl;
@@ -195,14 +219,18 @@ step()
 		// }
 		// else
 		mEnv->setAction(i, mActions[i]);
+		// cout<<i<<" "<<mActions[i][2]<<endl;
 	}
 
-	mEnv->mNumIterations = 50;
-	int sim_per_control = mEnv->getSimulationHz()/mEnv->getControlHz();
-	for(int i=0;i<sim_per_control;i++)
-	{
-		mEnv->step();
-	}
+	mEnv->mNumIterations = 100;
+	// int sim_per_control = mEnv->getSimulationHz()/mEnv->getControlHz();
+
+	mEnv->stepAtOnce();
+	mEnv->getRewards();
+	// for(int i=0;i<sim_per_control;i++)
+	// {
+	// 	mEnv->step();
+	// }
 
 }
 
@@ -222,13 +250,22 @@ getActionFromNN(bool vsHardcodedAI, bool isRNN)
 		// mEnv->getState(i);
 		// Eigen::VectorXd state = mEnv->mStates[i];
 		//change the i=1 agent
-		if(vsHardcodedAI && (i==2 || i == 3))
+		if(vsHardcodedAI && (i == 2 || i == 3))
 		{
 			// cout<<"i : "<<i<<endl;
 			Eigen::VectorXd curBallRelaltionalP = mEnv->mStates[i].segment(ID_BALL_P,2);
 			Eigen::VectorXd direction = curBallRelaltionalP.normalized();
 			Eigen::VectorXd curVel = mEnv->mStates[i].segment(ID_V,2);
 			mAction.segment(0, 2) = (direction*vsHardcodedAI_difficulty - curVel);
+
+			for(int j=0;j<2;j++)
+			{
+				if(mAction[j] > 0.5)
+					mAction[j] = 0.5;
+				else if(mAction[j] < -0.5)
+					mAction[j] = -0.5;
+			}
+
 			// mAction[2] = rand()%3-1;
 			mAction[2] = 1.0;
 			// mAction[2] = 0;
@@ -265,6 +302,7 @@ getActionFromNN(bool vsHardcodedAI, bool isRNN)
 			{
 				mAction[j] = srcs[j];
 			}
+			// cout<<i<<" "<<mAction[2]<<endl;
 			mActions.push_back(mAction);
 
 		}
@@ -326,14 +364,16 @@ display()
 	GUI::drawSkeleton(blueGoalpostSkel, Eigen::Vector3d(1.0, 1.0, 1.0));
 
 	std::string scoreString
-	= "Red : "+to_string((int)mEnv->mAccScore[0] + (int)mEnv->mAccScore[1])+" |Blue : "+to_string((int)mEnv->mAccScore[2]+(int)mEnv->mAccScore[3]);
+	= "Red : "+to_string((int)(mEnv->mAccScore[0] + mEnv->mAccScore[1]))+" |Blue : "+to_string((int)(mEnv->mAccScore[2]+mEnv->mAccScore[3]));
 
 
 
 	GUI::drawStringOnScreen(0.2, 0.8, scoreString, true, Eigen::Vector3d::Zero());
 
+	GUI::drawStringOnScreen(0.8, 0.8, to_string(mEnv->getElapsedTime()), true, Eigen::Vector3d::Zero());
 
-	GUI::drawMapOnScreen(mEnv->mMapStates[0]->minimaps[0], 84, 84);
+
+	// GUI::drawMapOnScreen(mEnv->mMapStates[0]->minimaps[0], 84, 84);
 
 
 	glutSwapBuffers();

@@ -11,15 +11,18 @@ public:
 
 
 	void setDefaultShape(const Eigen::Vector3d& color = Eigen::Vector3d(1.0, 0.0, 0.0));
-	void setVelocity(const Eigen::Vector3d& vel);
+	void setVelocity(const Eigen::Vector2d& vel);
 	std::string getName() {return mName;}
 	std::string getTeamName() {return mName.substr(0,1);}
 
 	void setCollision(bool enabl = true);
+	void setDirection(Eigen::Vector2d direction) {mDirection = direction;}
+	Eigen::Vector2d getDirection() {return mDirection;}
 
 protected:
 	dart::dynamics::SkeletonPtr mSkeleton;
 	std::string mName;
+	Eigen::Vector2d mDirection;
 };
 
 #endif
