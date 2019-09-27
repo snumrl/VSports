@@ -93,7 +93,7 @@ class PPO(object):
 		np.random.seed(seed = int(time.time()))
 		self.env = Env(600)
 		self.num_slaves = 8
-		self.num_agents = 4
+		self.num_agents = 2
 		self.num_state = self.env.getNumState()
 		self.num_action = self.env.getNumAction()
 
@@ -109,7 +109,7 @@ class PPO(object):
 		self.gamma = 0.997
 		self.lb = 0.95
 
-		self.buffer_size = 4*2048
+		self.buffer_size = 2*2048
 		self.batch_size = 64
 		self.trunc_size = 64
 		self.burn_in_size = 32
@@ -227,18 +227,20 @@ class PPO(object):
 		maxvel = 4.0
 
 		action = (maxvel*direction/direction_norm - state[2:4])
-		for i in range(action.size()):
+		# print(len(action))
+		for i in range(len(action)):
 			if action[i] > 0.5:
 				action[i] = 0.5
 			elif action[i] <-0.5 :
 				action[i] = -0.5
+			action[i] = 0.0
 
 
 		# action = np.append(action, [random.randrange(0,3) - 1])
 
 
 
-		action = np.append(action, [1.0])
+		action = np.append(action, [0.0])
 		# print(action)
 		# exit(0)
 		# action = np.append(action, [0])
@@ -267,7 +269,7 @@ class PPO(object):
 		terminated = [False]*self.num_slaves*self.num_agents
 		counter = 0
 
-		useHardCoded = False
+		useHardCoded = True
 
 
 		if not useHardCoded:
@@ -295,7 +297,7 @@ class PPO(object):
 		# 0 or 1
 		learningTeam = random.randrange(0,2)
 		learningTeam = 0
-		teamDic = {0: 0, 1: 0, 2: 1, 3:1}
+		teamDic = {0: 0, 1: 1, 2: 1, 3:1}
 
 		while True:
 			counter += 1
@@ -320,7 +322,6 @@ class PPO(object):
 			for i in range(self.num_slaves):
 				a_dist_slave = []
 				v_slave = []
-				actions_slave = []
 				logprobs_slave = []
 				values_slave = []
 				hiddens_slave = []

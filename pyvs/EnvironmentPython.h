@@ -26,16 +26,26 @@ public:
 	void resets();
 	bool isTerminalState(int id);
 	np::ndarray getState(int id, int index);
+	np::ndarray getSchedulerState(int id, int index);
+	np::ndarray getLinearActorState(int id, int index);
 	void setAction(np::ndarray np_array, int id, int index);
 	void setActions(np::ndarray np_array);
 	double getReward(int id, int index);
+	double getSchedulerReward(int id, int index);
+	double getLinearActorReward(int id, int index);
 	double getNumIterations();
+
+	void setLinearActorState(int id, int index, np::ndarray np_array);
 
 	void endOfIteration();
 
 
 	// For all slaves
 	void stepsAtOnce();
+
+	void setHindsightGoal(np::ndarray randomSchedulerState, np::ndarray randomSchedulerAction);	
+	np::ndarray getHindsightState(np::ndarray curState);
+	double getHindsightReward(np::ndarray curHindsightState, np::ndarray schedulerAction);
 
 private:
 	std::vector<Environment*> mSlaves;

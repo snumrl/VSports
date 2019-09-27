@@ -29,6 +29,166 @@ def weights_init(m):
 		torch.nn.init.xavier_uniform_(m.weight)
 		m.bias.data.zero_()
 
+
+# Current state, goal state -> (subgoal state - current state)* weight of state
+class SchedulerNN(nn.Module):
+	def __init__(self, num_states):
+		super(SchedulerNN, self).__init__()
+
+		self.num_policyInput = num_states*2
+
+		self.hidden_size = 512
+		self.num_layers = 2
+
+		self.ss_rnn = nn.LSTM(self.num_policyInput, self.hidden_size, num_layers=self.num_layers)
+		self.cur_hidden = self.init_hidden(1)
+
+		num_h1 = 256
+		num_h2 = 256
+		num_h3 = 256
+
+		self.ss_policy = nn.Sequential(
+			nn.Linear(self.hidden_size, num_h1),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h1, num_h2),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h2, num_h3),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h3, num_states*2)
+		)
+		self.ss_value = nn.Sequential(
+			nn.Linear(self.hidden_size, num_h1),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h1, num_h2),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h2, num_h3),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h3, 1)
+		)
+
+
+		self.log_std = nn.Parameter(-0.0 * torch.ones(num_states*2))
+
+		self.ss_rnn.apply(weights_init)
+		self.ss_policy.apply(weights_init)
+		self.ss_value.apply(weights_init)
+
+	def forward(self,x, in_hidden):
+		x = x.cuda()
+
+		batch_size = x.size()[0];
+
+		rnnOutput, out_hidden = self.ss_rnn(x.view(1, batch_size,-1), in_hidden)
+		return MultiVariateNormal(self.ss_policy(rnnOutput),self.log_std.exp()), self.ss_value(rnnOutput), out_hidden
+
+	def load(self,path):
+		print('load scheduler nn {}'.format(path))
+		self.load_state_dict(torch.load(path))
+
+	def save(self,path):
+		print('save scheduler nn {}'.format(path))
+		torch.save(self.state_dict(),path)
+
+	def get_action(self,s):
+		ts = torch.tensor(s)
+
+		p, _v, new_hidden= self.forward(ts.unsqueeze(0), self.cur_hidden)
+
+		self.cur_hidden = new_hidden
+
+		return p.loc.cpu().detach().numpy()
+
+	def reset_hidden(self):
+		self.cur_hidden = self.init_hidden(1)
+
+    # This method generates the first hidden state of zeros which we'll use in the forward pass
+	def init_hidden(self, batch_size):
+		hidden = (Tensor(torch.zeros(self.num_layers, batch_size, self.hidden_size).cuda()),\
+				Tensor(torch.zeros(self.num_layers, batch_size, self.hidden_size).cuda()))
+		return hidden
+
+
+# Current state to subgoal state
+class LActorNN(nn.Module):
+	def __init__(self, num_states, num_actions):
+		super(LActorNN, self).__init__()
+
+		self.num_policyInput = num_states*2
+
+		self.hidden_size = 256
+		self.num_layers = 1
+
+		self.rnn = nn.LSTM(self.num_policyInput, self.hidden_size, num_layers=self.num_layers)
+		self.cur_hidden = self.init_hidden(1)
+
+		num_h1 = 256
+		num_h2 = 256
+		num_h3 = 256
+
+		self.policy = nn.Sequential(
+			nn.Linear(self.hidden_size, num_h1),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h1, num_h2),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h2, num_h3),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h3, num_actions)
+		)
+		self.value = nn.Sequential(
+			nn.Linear(self.hidden_size, num_h1),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h1, num_h2),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h2, num_h3),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h3,1)
+		)
+
+
+		self.log_std = nn.Parameter(-1.0 * torch.ones(num_actions))
+
+		self.rnn.apply(weights_init)
+		self.policy.apply(weights_init)
+		self.value.apply(weights_init)
+
+	def forward(self,x, in_hidden):
+		x = x.cuda()
+
+		batch_size = x.size()[0];
+
+		rnnOutput, out_hidden = self.rnn(x.view(1, batch_size,-1), in_hidden)
+		return MultiVariateNormal(self.policy(rnnOutput),self.log_std.exp()),self.value(rnnOutput), out_hidden
+
+	def load(self,path):
+		print('load liner actor nn {}'.format(path))
+		self.load_state_dict(torch.load(path))
+
+	def save(self,path):
+		print('save linear actor nn {}'.format(path))
+		torch.save(self.state_dict(),path)
+
+	def get_action(self,s):
+		ts = torch.tensor(s)
+
+		p,_v, new_hidden= self.forward(ts.unsqueeze(0), self.cur_hidden)
+
+		self.cur_hidden = new_hidden
+
+		return p.loc.cpu().detach().numpy()
+
+	def reset_hidden(self):
+		self.cur_hidden = self.init_hidden(1)
+
+	
+	def init_hidden(self, batch_size):
+        # This method generates the first hidden state of zeros which we'll use in the forward pass
+        # We'll send the tensor holding the hidden state to the device we specified earlier as well
+		hidden = (Tensor(torch.zeros(self.num_layers, batch_size, self.hidden_size).cuda()),\
+				Tensor(torch.zeros(self.num_layers, batch_size, self.hidden_size).cuda()))
+		return hidden
+
+
+
 class NoCNNSimulationNN(nn.Module):
 	def __init__(self,num_states,num_actions):
 		super(NoCNNSimulationNN, self).__init__()
@@ -76,7 +236,7 @@ class NoCNNSimulationNN(nn.Module):
 		if self.useMap:
 			self.num_policyInput = 66
 		else:
-			self.num_policyInput = 34
+			self.num_policyInput = 26
 
 		self.hidden_size = 256
 		self.num_layers = 2
@@ -193,7 +353,7 @@ class NoCNNSimulationNN(nn.Module):
 
 		if useRNN :
 			# print(self.log_std.exp())
-			# self.log_std = nn.Parameter(0.0*torch.ones(num_actions))
+			# self.log_std = nn.Parameter(-1.0*torch.ones(3))
 			rnnOutput, out_hidden = self.rnn(concatVecX.view(1, batch_size,-1), in_hidden)
 			return MultiVariateNormal(self.policy_rnn(rnnOutput),self.log_std.exp() * np.exp(-2.0)),self.value_rnn(rnnOutput), out_hidden
 		else :
@@ -247,3 +407,4 @@ class NoCNNSimulationNN(nn.Module):
         # We'll send the tensor holding the hidden state to the device we specified earlier as well
 		hidden = (Tensor(torch.zeros(self.num_layers, batch_size, self.hidden_size).cuda()),Tensor(torch.zeros(self.num_layers, batch_size, self.hidden_size).cuda()))
 		return hidden
+

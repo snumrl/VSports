@@ -10,6 +10,21 @@
 #define ID_KICKABLE 9
 // #define ID_GOALPOST 10
 
+#define _ID_P 0
+#define _ID_V 2
+#define _ID_BALL_P 4
+#define _ID_BALL_V 6
+#define _ID_POSSESSION 8
+#define _ID_KICKABLE 9
+#define _ID_OTHERS 10
+#define _ID_DISTANCE_WALL 14
+#define _ID_GOALPOST_P 18
+
+/*
+	p.rows() + v.rows() + relativeBallP.rows() + relativeBallV.rows() +
+	ballPossession.rows() + kickable.rows() + otherS.rows() + distanceWall.rows() + goalpostPositions.rows()
+*/
+
 
 // std::vector<std::string> skillSet{"ballChasing", "shooting", "ballBlocking"};
 
@@ -58,7 +73,9 @@ public:
 
 	// For DeepRL
 	// Eigen::VectorXd getState(int index);
-	std::vector<float> getState(int index);
+	Eigen::VectorXd getState(int index);
+	Eigen::VectorXd getSchedulerState(int index);
+	Eigen::VectorXd getLinearActorState(int index);
 
 	// std::vector<Eigen::MatrixXd> getStateMinimap(int index);
 	// Eigen::VectorXd getStateMinimap(int index);
@@ -66,12 +83,15 @@ public:
 	std::vector<double> getStateMinimapRGB(int index);
 
 	double getReward(int index);
+	double getLinearActorReward(int index);
+	double getSchedulerReward(int index);
 	std::vector<double> getRewards();
 
 	Eigen::VectorXd getAction(int index){return mActions[index];}
 	std::vector<Eigen::VectorXd> getActions(){return mActions;}
 
 	void setAction(int index, const Eigen::VectorXd& a);
+	void applyAction(int index);
 	// void setActions(std::vector<Eigen::VectorXd> as);
 
 	int getNumState(int index = 0){return getState(index).size();}
@@ -87,19 +107,33 @@ public:
 
 	double getElapsedTime(){return mTimeElapsed;}
 
-	int getDribblerIndex();
-
-	int getCollidingWall(dart::dynamics::SkeletonPtr skel, double radius);
+	std::vector<int> getCollidingWall(dart::dynamics::SkeletonPtr skel, double radius);
 
 	void handleWallContact(dart::dynamics::SkeletonPtr skel, double radius, double me = 1.0);
 	void handleBallContact(int index, double radius, double me = 0.5);
 	void handlePlayerContact(int index1, int index2, double me = 0.5);
+	void handlePlayerContacts(double me = 0.5);
 
 	void boundBallVelocitiy(double maxVel);
+	void dampBallVelocitiy(double dampPower);
 
 	Eigen::VectorXd updateScoreBoard(std::string teamName = "");
 
 	double addSkillReward(int index, int skillIndex);
+
+	void initGoalState();
+
+	void setLinearActorState(int index, Eigen::VectorXd linearActorState);
+
+
+	Eigen::VectorXd normalizeNNState(Eigen::VectorXd state);
+	Eigen::VectorXd unNormalizeNNState(Eigen::VectorXd outSubgoal);
+
+	void updateState();
+
+	void setHindsightGoal(Eigen::VectorXd randomSchedulerState, Eigen::VectorXd randomSchedulerAction);	
+	Eigen::VectorXd getHindsightState(Eigen::VectorXd curState);
+	double getHindsightReward(Eigen::VectorXd curHindsightState, Eigen::VectorXd schedulerAction);
 
 public:
 	dart::simulation::WorldPtr mWorld;
@@ -117,7 +151,8 @@ public:
 
 	std::vector<GoalpostInfo> mGoalposts;
 	std::vector<Eigen::VectorXd> mActions;
-	std::vector<Eigen::VectorXd> mStates;
+	std::vector<Eigen::VectorXd> mSimpleStates;
+	std::vector<Eigen::VectorXd> mForces;
 
 	double floorDepth = -0.1;
 
@@ -139,6 +174,17 @@ public:
 
 	std::vector<bool> goalRewardPaid;
 
+	std::vector<Eigen::VectorXd> mStates;
+	std::vector<Eigen::VectorXd> mPrevStates;
+	std::vector<Eigen::VectorXd> mGoalStates;
+	std::vector<Eigen::VectorXd> mWGoalStates;
+
+	std::vector<Eigen::VectorXd> mSubgoalStates;
+	std::vector<Eigen::VectorXd> mWSubgoalStates;
+
+	std::vector<double> mSubGoalRewards;
+
+	Eigen::VectorXd mHindsightGoalState;
 };
 
 #endif

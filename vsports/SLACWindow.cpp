@@ -1,0 +1,530 @@
+#include "SLACWindow.h"
+#include "../render/GLfunctionsDART.h"
+#include "../model/SkelMaker.h"
+#include "../model/SkelHelper.h"
+#include "../pyvs/EnvironmentPython.h"
+#include <GL/glut.h>
+#include <iostream>
+using namespace dart::dynamics;
+using namespace dart::simulation;
+using namespace std;
+
+namespace p = boost::python;
+namespace np = boost::python::numpy;
+
+std::chrono::time_point<std::chrono::system_clock> time_check_s = std::chrono::system_clock::now();
+
+void time_check_start()
+{
+	time_check_s = std::chrono::system_clock::now();
+}
+
+void time_check_end()
+{
+	std::chrono::duration<double> elapsed_seconds;
+	elapsed_seconds = std::chrono::system_clock::now()-time_check_s;
+	std::cout<<elapsed_seconds.count()<<std::endl;
+}
+
+double floorDepth = -0.1;
+
+SLACWindow::
+SLACWindow()
+:SimWindow(),vsHardcodedAI_difficulty(4.0)
+{
+	mEnv = new Environment(30, 600, 2);
+	initCustomView();
+	initGoalpost();
+
+	mSubgoalCharacters.resize(1);
+	mSubgoalCharacters[0] = new Character2D("A_0_subgoal");
+
+	mm = p::import("__main__");
+	mns = mm.attr("__dict__");
+	sys_module = p::import("sys");
+
+	boost::python::str module_dir = "../pyvs";
+	sys_module.attr("path").attr("insert")(1, module_dir);
+	// p::exec("import os",mns);
+	// p::exec("import sys",mns);
+	// p::exec("import math",mns);
+	// p::exec("import sys",mns);
+
+	p::exec("import torch",mns);
+	p::exec("import torch.nn as nn",mns);
+	p::exec("import torch.optim as optim",mns);
+	p::exec("import torch.nn.functional as F",mns);
+	p::exec("import torchvision.transforms as T",mns);
+	p::exec("import numpy as np",mns);
+	p::exec("from Model import *",mns);
+}
+
+SLACWindow::
+SLACWindow(const std::string& nn_path)
+:SLACWindow()
+{
+	mIsNNLoaded = true;
+
+
+	p::str str = ("num_state = "+std::to_string(mEnv->getNumState())).c_str();
+	p::exec(str,mns);
+	str = ("num_action = "+std::to_string(mEnv->getNumAction())).c_str();
+	p::exec(str, mns);
+	// str = "use_cuda = torch.cuda.is_available()";
+	// p::exec(str, mns);
+
+
+	// nn_module[0] = p::eval("NoCNNSimulationNN(num_state, num_action).cuda()", mns);
+	// nn_module[1] = p::eval("NoCNNSimulationNN(num_state, num_action).cuda()", mns);
+
+	// load[0] = nn_module[0].attr("load");
+	// load[1] = nn_module[1].attr("load");
+
+	// reset_hidden[0] = nn_module[0].attr("reset_hidden"); 
+	// reset_hidden[1] = nn_module[1].attr("reset_hidden"); 
+	// load[0](nn_path);
+	// load[1](nn_path);
+	nn_sc_module = new boost::python::object[mEnv->mNumChars];
+	p::object *sc_load = new p::object[mEnv->mNumChars];
+	reset_sc_hidden = new boost::python::object[mEnv->mNumChars];
+
+	nn_la_module = new boost::python::object[mEnv->mNumChars];
+	p::object *la_load = new p::object[mEnv->mNumChars];
+	reset_la_hidden = new boost::python::object[mEnv->mNumChars];
+
+	for(int i=0;i<mEnv->mNumChars;i++)
+	{
+		nn_sc_module[i] = p::eval("SchedulerNN(num_state).cuda()", mns);
+		sc_load[i] = nn_sc_module[i].attr("load");
+		reset_sc_hidden[i] = nn_sc_module[i].attr("reset_hidden");
+		sc_load[i](nn_path+"_sc.pt");
+
+		nn_la_module[i] = p::eval("LActorNN(num_state, num_action).cuda()", mns);
+		la_load[i] = nn_la_module[i].attr("load");
+		reset_la_hidden[i] = nn_la_module[i].attr("reset_hidden");
+		la_load[i](nn_path+"_la.pt");
+	}
+	mActions.resize(2);
+	mSubgoalStates.resize(2);
+	mSubgoalStates[0].resize(mEnv->getNumState());
+	mSubgoalStates[0].setZero();
+}
+
+void
+SLACWindow::
+initCustomView()
+{
+	mCamera->eye = Eigen::Vector3d(3.60468, -4.29576, 1.87037);
+	mCamera->lookAt = Eigen::Vector3d(-0.0936473, 0.158113, 0.293854);
+	mCamera->up = Eigen::Vector3d(-0.132372, 0.231252, 0.963847);
+}
+
+void
+SLACWindow::
+initGoalpost()
+{
+	redGoalpostSkel = SkelHelper::makeGoalpost(Eigen::Vector3d(-4.0, 0.0, 0.25 + floorDepth), "red");
+	blueGoalpostSkel = SkelHelper::makeGoalpost(Eigen::Vector3d(4.0, 0.0, 0.25 + floorDepth), "blue");
+
+	mWorld->addSkeleton(redGoalpostSkel);
+	mWorld->addSkeleton(blueGoalpostSkel);
+}
+
+
+
+void
+SLACWindow::
+keyboard(unsigned char key, int x, int y)
+{
+	bool controlOn = false;
+	SkeletonPtr manualSkel = mEnv->getCharacter(0)->getSkeleton();
+
+	switch(key)
+	{
+		// case 'c':
+		// 	cout<<mCamera->eye.transpose()<<endl;
+		// 	cout<<mCamera->lookAt.transpose()<<endl;
+		// 	cout<<mCamera->up.transpose()<<endl;
+		// 	break;
+		case 'w':
+			if(controlOn)
+				manualSkel->setVelocities(Eigen::Vector2d(-3.0, 0.0));
+			break;
+		case 's':
+			if(controlOn)
+				manualSkel->setVelocities(Eigen::Vector2d(3.0, 0.0));
+			break;
+		case 'a':
+			if(controlOn)
+				manualSkel->setVelocities(Eigen::Vector2d(0.0, -3.0));
+			break;
+		case 'd':
+			if(controlOn)
+				manualSkel->setVelocities(Eigen::Vector2d(0.0, 3.0));
+			break;
+		case 'r':
+			mEnv->reset();
+			for(int i=0;i<2;i++){
+				reset_sc_hidden[i]();
+				reset_la_hidden[i]();
+			}
+
+
+			// reset_hidden[2]();
+			// reset_hidden[3]();
+			break;
+		case ']':
+			vsHardcodedAI_difficulty += 0.1;
+
+			if(vsHardcodedAI_difficulty>5.0)
+				vsHardcodedAI_difficulty = 5.0;
+			cout<<vsHardcodedAI_difficulty<<endl;
+			break;
+		case '[':
+			vsHardcodedAI_difficulty += -0.1;
+			if(vsHardcodedAI_difficulty<0.0)
+				vsHardcodedAI_difficulty = 0.0;
+			cout<<vsHardcodedAI_difficulty<<endl;
+			break;
+
+		default: SimWindow::keyboard(key, x, y);
+	}
+}
+
+void
+SLACWindow::
+timer(int value)
+{
+	if(mPlay)
+		step();
+	SimWindow::timer(value);
+}
+
+void
+SLACWindow::
+step()
+{
+	if(mEnv->isTerminalState())
+	{
+		// for(int i=0;i<4;i++)
+		// {
+		// 	for(int j=mEnv->getNumState()-8;j<mEnv->getNumState();j++)
+		// 	{
+		// 		cout<<mEnv->getState(i)[j]<<" ";
+		// 	}
+		// 	cout<<endl;
+		// }
+
+		sleep(1);
+		mEnv->reset();
+	}
+	// cout<<"????????"<<endl;
+	getSubgoalFromSchedulerNN(true);
+	getActionFromLActorNN(true);
+	// std::cout<<"step!"<<std::endl;
+	for(int i=0;i<mEnv->mNumChars;i++)
+	{
+		// cout<<mActions[i].transpose()<<endl;
+		// dart::collision::CollisionDetectorPtr detector = mEnv->mWorld->getConstraintSolver()->getCollisionDetector();
+		// auto wall_char_collisionGroup = detector->createCollisionGroup(mEnv->wallSkel->getBodyNodes(), 
+		// 	mEnv->getCharacter(i)->getSkeleton()->getRootBodyNode());
+		// bool collision = wall_char_collisionGroup->collide();
+		// if(collision)
+		// {
+		// 	mEnv->setAction(i, Eigen::VectorXd::Zero(mActions[i].size()));
+		// 	cout<<"collide!"<<endl;
+		// }
+		// else
+		mEnv->setAction(i, mActions[i]);
+		// cout<<i<<" "<<mActions[i][2]<<endl;
+	}
+
+	mEnv->mNumIterations = 100;
+	// int sim_per_control = mEnv->getSimulationHz()/mEnv->getControlHz();
+
+	mEnv->stepAtOnce();
+	// cout<<mEnv->getSchedulerReward(0)<<endl;
+	mEnv->getRewards();
+	// for(int i=0;i<sim_per_control;i++)
+	// {
+	// 	mEnv->step();
+	// }
+
+}
+
+void
+SLACWindow::
+getSubgoalFromSchedulerNN(bool vsHardcodedAI)
+{
+	p::object get_sc_action;
+	p::object get_la_action;
+
+	mSubgoalStates.clear();
+	mSubgoalStates.resize(2);
+	mWSubgoalStates.clear();
+	mWSubgoalStates.resize(2);
+
+	for(int i=0;i<mEnv->mNumChars;i++)
+	{
+		Eigen::VectorXd mSubgoalState(mEnv->getNumState());
+		Eigen::VectorXd mWSubgoalState(mEnv->getNumState());
+		Eigen::VectorXd state = mEnv->getSchedulerState(i);
+		// mEnv->getState(i);
+		// Eigen::VectorXd state = mEnv->mSimpleStates[i];
+		//change the i=1 agent
+		if(vsHardcodedAI && (i == 1))
+		{
+			// cout<<"i : "<<i<<endl;
+			// Eigen::VectorXd curBallRelaltionalP = mEnv->mSimpleStates[i].segment(ID_BALL_P,2);
+			// Eigen::VectorXd direction = curBallRelaltionalP.normalized();
+			// Eigen::VectorXd curVel = mEnv->mSimpleStates[i].segment(ID_V,2);
+			// mAction.segment(0, 2) = (direction*vsHardcodedAI_difficulty - curVel);
+
+			// for(int j=0;j<2;j++)
+			// {
+			// 	if(mAction[j] > 0.5)
+			// 		mAction[j] = 0.5;
+			// 	else if(mAction[j] < -0.5)
+			// 		mAction[j] = -0.5;
+
+			// 	mAction[j] = 0.0;
+			// }
+
+			// // mAction[2] = rand()%3-1;
+			// mAction[2] = 1.0;
+			// mAction[2] = 0;
+			// mActions.push_back(mAction);
+		}
+		else
+		{
+			get_sc_action = nn_sc_module[i].attr("get_action");
+			// get_la_action = nn_la_module[i].attr("get_action");
+			// cout<<"i : "<<i<<endl;
+			p::tuple shape = p::make_tuple(state.size());
+			np::dtype dtype = np::dtype::get_builtin<float>();
+			np::ndarray state_np = np::empty(shape, dtype);
+
+			// cout<<state.segment(0,6).transpose()<<endl;
+			// cout<<shape<<endl;
+			// cout<<"11111"<<endl;
+			float* dest = reinterpret_cast<float*>(state_np.get_data());
+			// cout<<"22222"<<endl;
+			for(int j=0;j<state.size();j++)
+			{
+				dest[j] = state[j];
+			}
+
+			// cout<<"33333"<<endl;
+			// time_check_start();
+
+			p::object temp = get_sc_action(state_np);
+			np::ndarray action_np = np::from_object(temp);
+			float* srcs = reinterpret_cast<float*>(action_np.get_data());
+			for(int j=0;j<mSubgoalState.rows();j++)
+			{
+				mSubgoalState[j] = srcs[j];
+				mWSubgoalState[j] = srcs[j+mSubgoalState.rows()];
+			}
+			// for(int i=0;i<mWSubgoalState.size();i++)
+			// {
+			// 	if(mWSubgoalState[i] < 0 )
+			// 		mWSubgoalState[i] = 0.0;
+			// 	if(mWSubgoalState[i] > 1.0 )
+			// 		mWSubgoalState[i] = 0.0;
+			// }
+			Eigen::VectorXd linearActorState(mSubgoalState.size()*2);
+			linearActorState.segment(0, mSubgoalState.size()) = mSubgoalState;
+			linearActorState.segment(mSubgoalState.size(), mSubgoalState.size()) = mWSubgoalState;
+
+			mEnv->setLinearActorState(0, linearActorState);
+			// cout<<mWSubgoalState.transpose()<<endl;
+			// cout<<i<<" "<<mAction[2]<<endl;
+			mSubgoalStates[i] = mEnv->unNormalizeNNState(mSubgoalState);
+
+		}
+	}
+}
+
+void
+SLACWindow::
+getActionFromLActorNN(bool vsHardcodedAI)
+{
+	// cout<<"getActionFromNN"<<endl;
+	p::object get_sc_action;
+	p::object get_la_action;
+	mActions.clear();
+	mActions.resize(2);
+	
+	for(int i=0;i<mEnv->mNumChars;i++)
+	{
+
+		Eigen::VectorXd mAction(mEnv->getNumAction());
+		Eigen::VectorXd state = mEnv->getState(i);
+
+		Eigen::VectorXd lactorState(state.size()*2);
+
+		// mEnv->getState(i);
+		// Eigen::VectorXd state = mEnv->mSimpleStates[i];
+		//change the i=1 agent
+		if(vsHardcodedAI && (i == 1))
+		{
+			// cout<<"i : "<<i<<endl;
+			// Eigen::VectorXd curBallRelaltionalP = mEnv->mSimpleStates[i].segment(ID_BALL_P,2);
+			// Eigen::VectorXd direction = curBallRelaltionalP.normalized();
+			// Eigen::VectorXd curVel = mEnv->mSimpleStates[i].segment(ID_V,2);
+			// mAction.segment(0, 2) = (direction*vsHardcodedAI_difficulty - curVel);
+
+			for(int j=0;j<2;j++)
+			{
+				// if(mAction[j] > 0.5)
+				// 	mAction[j] = 0.5;
+				// else if(mAction[j] < -0.5)
+				// 	mAction[j] = -0.5;
+
+				mAction[j] = 0.0;
+			}
+
+			// mAction[2] = rand()%3-1;
+			// mAction[2] = 1.0;
+			mAction[2] = 0;
+			mActions[i] = mAction;
+		}
+		else
+		{
+			// lactorState.segment(0, state.size()) = state;
+			// lactorState.segment(state.size(), state.size()) = mEnv->normalizeNNState(mSubgoalStates[i]);
+			lactorState = mEnv->getLinearActorState(0);
+			// cout<<lactorState.segment(state.size(), state.size()).segment(_ID_BALL_P, 2).transpose()<<endl;
+			// cout<<mSubgoalStates[i].segment(_ID_BALL_P, 2).transpose()<<endl;
+			// get_sc_action = nn_sc_module[i].attr("get_action");
+			get_la_action = nn_la_module[i].attr("get_action");
+			// cout<<"i : "<<i<<endl;
+			p::tuple shape = p::make_tuple(lactorState.size());
+			np::dtype dtype = np::dtype::get_builtin<float>();
+			np::ndarray state_np = np::empty(shape, dtype);
+
+			// cout<<state.segment(0,6).transpose()<<endl;
+			// cout<<shape<<endl;
+			// cout<<"11111"<<endl;
+			float* dest = reinterpret_cast<float*>(state_np.get_data());
+			// cout<<"22222"<<endl;
+			for(int j=0;j<lactorState.size();j++)
+			{
+				dest[j] = lactorState[j];
+			}
+
+			// cout<<"33333"<<endl;
+	// time_check_start();
+
+			p::object temp = get_la_action(state_np);
+			np::ndarray action_np = np::from_object(temp);
+			float* srcs = reinterpret_cast<float*>(action_np.get_data());
+			for(int j=0;j<mAction.rows();j++)
+			{
+				mAction[j] = srcs[j];
+			}
+			// cout<<i<<" "<<mAction[2]<<endl;
+			mActions[i] = mAction;
+
+		}
+	}
+	// cout<<endl;
+}
+
+
+void
+SLACWindow::
+display()
+{
+	glClearColor(0.85, 0.85, 1.0, 1.0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_DEPTH_TEST);
+	initLights();
+	mCamera->apply();
+
+	std::vector<Character2D*> chars = mEnv->getCharacters();
+
+	// exit(0);
+	// mEnv->getState_map(0);
+	// exit(0);
+
+	for(int i=0;i<chars.size();i++)
+	{
+		if(chars[i]->getTeamName() == "A")
+			GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
+		else
+			GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));
+
+
+	}
+	// GUI::drawSkeleton(chars[0]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
+	// GUI::drawSkeleton(chars[1]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));
+
+
+	// for(int i=0;i<2;i++)
+	// {
+	// 	GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
+	// }
+	// for(int i=2;i<4;i++)
+	// {
+	// 	GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));
+	// }
+	// mSubgoalCharacters[0]->getSkeleton()->setPositions(chars[0]->getSkeleton()->getPositions() + mEnv->mStates[0].segment(_ID_BALL_P,2) + mSubgoalStates[0].segment(_ID_BALL_P, 2));
+	mSubgoalCharacters[0]->getSkeleton()->setPositions(chars[0]->getSkeleton()->getPositions() - mSubgoalStates[0].segment(_ID_BALL_P, 2));
+	cout<< mSubgoalStates[0].segment(_ID_BALL_P, 2).transpose()<<endl;
+
+	GUI::drawSkeleton(mSubgoalCharacters[0]->getSkeleton(), Eigen::Vector3d(1.0, 0.5, 0.5));
+
+
+	GUI::drawSkeleton(mEnv->floorSkel, Eigen::Vector3d(0.5, 1.0, 0.5));
+	if(mEnv->mScoreBoard[0] == 1)
+		GUI::drawSkeleton(mEnv->ballSkel, Eigen::Vector3d(0.9, 0.3, 0.3));
+	else if(mEnv->mScoreBoard[0] == 0)
+		GUI::drawSkeleton(mEnv->ballSkel, Eigen::Vector3d(0.3, 0.3, 0.9));
+	else
+		GUI::drawSkeleton(mEnv->ballSkel, Eigen::Vector3d(0.1, 0.1, 0.1));
+
+	GUI::drawSkeleton(mEnv->wallSkel, Eigen::Vector3d(0.5,0.5,0.5));
+
+	// Not simulated just for see
+	GUI::drawSkeleton(redGoalpostSkel, Eigen::Vector3d(1.0, 1.0, 1.0));
+	GUI::drawSkeleton(blueGoalpostSkel, Eigen::Vector3d(1.0, 1.0, 1.0));
+
+	// std::string scoreString
+	// = "Red : "+to_string((int)(mEnv->mAccScore[0] + mEnv->mAccScore[1]))+" |Blue : "+to_string((int)(mEnv->mAccScore[2]+mEnv->mAccScore[3]));
+
+	std::string scoreString
+	= "Red : "+to_string((int)(mEnv->mAccScore[0]))+" |Blue : "+to_string((int)(mEnv->mAccScore[1]));
+
+
+	GUI::drawStringOnScreen(0.2, 0.8, scoreString, true, Eigen::Vector3d::Zero());
+
+	GUI::drawStringOnScreen(0.8, 0.8, to_string(mEnv->getElapsedTime()), true, Eigen::Vector3d::Zero());
+
+
+	// GUI::drawMapOnScreen(mEnv->mMapStates[0]->minimaps[0], 84, 84);
+
+
+	glutSwapBuffers();
+	if(mTakeScreenShot)
+	{
+		screenshot();
+	}
+	glutPostRedisplay();
+}
+
+void
+SLACWindow::
+mouse(int button, int state, int x, int y) 
+{
+	SimWindow::mouse(button, state, x, y);
+}
+
+
+void
+SLACWindow::
+motion(int x, int y)
+{
+	SimWindow::motion(x, y);
+}
+
