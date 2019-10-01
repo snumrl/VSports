@@ -10,15 +10,23 @@
 #define ID_KICKABLE 9
 // #define ID_GOALPOST 10
 
+// #define _ID_P 0
+// #define _ID_V 2
+// #define _ID_BALL_P 4
+// #define _ID_BALL_V 6
+// #define _ID_POSSESSION 8
+// #define _ID_KICKABLE 9
+// #define _ID_OTHERS 10
+// #define _ID_DISTANCE_WALL 14
+// #define _ID_GOALPOST_P 18
+
 #define _ID_P 0
 #define _ID_V 2
 #define _ID_BALL_P 4
 #define _ID_BALL_V 6
-#define _ID_POSSESSION 8
-#define _ID_KICKABLE 9
-#define _ID_OTHERS 10
-#define _ID_DISTANCE_WALL 14
-#define _ID_GOALPOST_P 18
+#define _ID_KICKABLE 8
+#define _ID_GOALPOST_P 9
+
 
 /*
 	p.rows() + v.rows() + relativeBallP.rows() + relativeBallV.rows() +
@@ -61,6 +69,7 @@ public:
 	void initGoalposts();
 	void initFloor();
 	void initBall();
+	void initPrevTargetPositions();
 
 	void step();
 
@@ -94,7 +103,7 @@ public:
 	void applyAction(int index);
 	// void setActions(std::vector<Eigen::VectorXd> as);
 
-	int getNumState(int index = 0){return getState(index).size();}
+	int getNumState(int index = 0){return getSchedulerState(index).size();}
 	int getNumAction(int index = 0){return getAction(index).rows();}
 
 	const dart::simulation::WorldPtr& getWorld(){return mWorld;}
@@ -185,6 +194,7 @@ public:
 	std::vector<double> mSubGoalRewards;
 
 	Eigen::VectorXd mHindsightGoalState;
+	std::vector<Eigen::VectorXd> mPrevTargetPositions;
 };
 
 #endif

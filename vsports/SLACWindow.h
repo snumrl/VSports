@@ -55,6 +55,8 @@ public:
 	boost::python::object *reset_la_hidden;
 	bool mIsNNLoaded;
 
+	bool controlOn;
+
 	std::vector<Character2D*> mSubgoalCharacters;
 };
 

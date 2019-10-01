@@ -49,7 +49,6 @@ SLACWindow()
 	// p::exec("import sys",mns);
 	// p::exec("import math",mns);
 	// p::exec("import sys",mns);
-
 	p::exec("import torch",mns);
 	p::exec("import torch.nn as nn",mns);
 	p::exec("import torch.optim as optim",mns);
@@ -57,6 +56,7 @@ SLACWindow()
 	p::exec("import torchvision.transforms as T",mns);
 	p::exec("import numpy as np",mns);
 	p::exec("from Model import *",mns);
+	controlOn = false;
 }
 
 SLACWindow::
@@ -92,9 +92,10 @@ SLACWindow(const std::string& nn_path)
 	p::object *la_load = new p::object[mEnv->mNumChars];
 	reset_la_hidden = new boost::python::object[mEnv->mNumChars];
 
+	// cout<<"33333333333"<<endl;
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_sc_module[i] = p::eval("SchedulerNN(num_state).cuda()", mns);
+		nn_sc_module[i] = p::eval("SchedulerNN(num_state, num_action).cuda()", mns);
 		sc_load[i] = nn_sc_module[i].attr("load");
 		reset_sc_hidden[i] = nn_sc_module[i].attr("reset_hidden");
 		sc_load[i](nn_path+"_sc.pt");
@@ -104,6 +105,7 @@ SLACWindow(const std::string& nn_path)
 		reset_la_hidden[i] = nn_la_module[i].attr("reset_hidden");
 		la_load[i](nn_path+"_la.pt");
 	}
+	// cout<<"3344444444"<<endl;
 	mActions.resize(2);
 	mSubgoalStates.resize(2);
 	mSubgoalStates[0].resize(mEnv->getNumState());
@@ -136,7 +138,6 @@ void
 SLACWindow::
 keyboard(unsigned char key, int x, int y)
 {
-	bool controlOn = false;
 	SkeletonPtr manualSkel = mEnv->getCharacter(0)->getSkeleton();
 
 	switch(key)
@@ -172,6 +173,9 @@ keyboard(unsigned char key, int x, int y)
 
 			// reset_hidden[2]();
 			// reset_hidden[3]();
+			break;
+		case 'l':
+			controlOn = !controlOn;
 			break;
 		case ']':
 			vsHardcodedAI_difficulty += 0.1;
@@ -220,7 +224,7 @@ step()
 	}
 	// cout<<"????????"<<endl;
 	getSubgoalFromSchedulerNN(true);
-	getActionFromLActorNN(true);
+	// getActionFromLActorNN(true);
 	// std::cout<<"step!"<<std::endl;
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
@@ -235,7 +239,11 @@ step()
 		// 	cout<<"collide!"<<endl;
 		// }
 		// else
-		mEnv->setAction(i, mActions[i]);
+		// if( i== 0)
+		if(!controlOn)
+			mEnv->setAction(i, mActions[i]);
+		else
+			mEnv->setAction(i, Eigen::Vector3d(0.0, 0.0, -1.0));
 		// cout<<i<<" "<<mActions[i][2]<<endl;
 	}
 
@@ -259,54 +267,72 @@ getSubgoalFromSchedulerNN(bool vsHardcodedAI)
 	p::object get_sc_action;
 	p::object get_la_action;
 
-	mSubgoalStates.clear();
-	mSubgoalStates.resize(2);
-	mWSubgoalStates.clear();
-	mWSubgoalStates.resize(2);
+	mActions.clear();
+	mActions.resize(2);
+	// mSubgoalStates.clear();
+	// mSubgoalStates.resize(2);
+	// mWSubgoalStates.clear();
+	// mWSubgoalStates.resize(2);
 
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		Eigen::VectorXd mSubgoalState(mEnv->getNumState());
-		Eigen::VectorXd mWSubgoalState(mEnv->getNumState());
+		// if(i!=0)
+		// 	continue;
+		// cout<<"############"<<endl;
+		Eigen::VectorXd mAction(mEnv->getNumAction());
+		// Eigen::VectorXd mSubgoalState(mEnv->getNumState());
+		// Eigen::VectorXd mWSubgoalState(mEnv->getNumState());
+
 		Eigen::VectorXd state = mEnv->getSchedulerState(i);
+		if(i==0)
+		{
+		// cout<<state.transpose()<<endl;
+			// mEnv->getCharacter(0)->getSkeleton()->setPositions(4.0 *(state.segment(0,2) + state.segment(13,2)));
+			// cout<<state.segment(13,2).transpose()<<endl;
+		}
 		// mEnv->getState(i);
 		// Eigen::VectorXd state = mEnv->mSimpleStates[i];
 		//change the i=1 agent
 		if(vsHardcodedAI && (i == 1))
 		{
+				// cout<<"0000"<<endl;
 			// cout<<"i : "<<i<<endl;
 			// Eigen::VectorXd curBallRelaltionalP = mEnv->mSimpleStates[i].segment(ID_BALL_P,2);
 			// Eigen::VectorXd direction = curBallRelaltionalP.normalized();
 			// Eigen::VectorXd curVel = mEnv->mSimpleStates[i].segment(ID_V,2);
 			// mAction.segment(0, 2) = (direction*vsHardcodedAI_difficulty - curVel);
 
-			// for(int j=0;j<2;j++)
-			// {
-			// 	if(mAction[j] > 0.5)
-			// 		mAction[j] = 0.5;
-			// 	else if(mAction[j] < -0.5)
-			// 		mAction[j] = -0.5;
+			for(int j=0;j<2;j++)
+			{
+				// if(mAction[j] > 0.5)
+				// 	mAction[j] = 0.5;
+				// else if(mAction[j] < -0.5)
+				// 	mAction[j] = -0.5;
 
-			// 	mAction[j] = 0.0;
-			// }
+				mAction[j] = 0.0;
+			}
+			// cout<<mAction.size()<<endl;
 
-			// // mAction[2] = rand()%3-1;
-			// mAction[2] = 1.0;
-			// mAction[2] = 0;
-			// mActions.push_back(mAction);
+			// mAction[2] = rand()%3-1;
+			mAction[2] = 1.0;
+			mAction[2] = -1.0;
+			mActions[i] = mAction;
 		}
 		else
 		{
+			// cout<<"111111"<<endl;
 			get_sc_action = nn_sc_module[i].attr("get_action");
 			// get_la_action = nn_la_module[i].attr("get_action");
 			// cout<<"i : "<<i<<endl;
 			p::tuple shape = p::make_tuple(state.size());
 			np::dtype dtype = np::dtype::get_builtin<float>();
 			np::ndarray state_np = np::empty(shape, dtype);
+			// cout<<"22222"<<endl;
 
 			// cout<<state.segment(0,6).transpose()<<endl;
 			// cout<<shape<<endl;
 			// cout<<"11111"<<endl;
+
 			float* dest = reinterpret_cast<float*>(state_np.get_data());
 			// cout<<"22222"<<endl;
 			for(int j=0;j<state.size();j++)
@@ -317,29 +343,34 @@ getSubgoalFromSchedulerNN(bool vsHardcodedAI)
 			// cout<<"33333"<<endl;
 			// time_check_start();
 
+			// p::object temp = get_sc_action(state_np);
+			// np::ndarray action_np = np::from_object(temp);
+			// float* srcs = reinterpret_cast<float*>(action_np.get_data());
+			// for(int j=0;j<mSubgoalState.rows();j++)
+			// {
+			// 	mSubgoalState[j] = srcs[j];
+			// 	mWSubgoalState[j] = srcs[j+mSubgoalState.rows()];
+			// }
+
+			// Eigen::VectorXd linearActorState(mSubgoalState.size()*2);
+			// linearActorState.segment(0, mSubgoalState.size()) = mSubgoalState;
+			// linearActorState.segment(mSubgoalState.size(), mSubgoalState.size()) = mWSubgoalState;
+
+			// mEnv->setLinearActorState(0, linearActorState);
+
+			// mSubgoalStates[i] = mEnv->unNormalizeNNState(mSubgoalState);
+			// cout<<"@@@@@@"<<endl;
 			p::object temp = get_sc_action(state_np);
 			np::ndarray action_np = np::from_object(temp);
 			float* srcs = reinterpret_cast<float*>(action_np.get_data());
-			for(int j=0;j<mSubgoalState.rows();j++)
+			for(int j=0;j<mAction.rows();j++)
 			{
-				mSubgoalState[j] = srcs[j];
-				mWSubgoalState[j] = srcs[j+mSubgoalState.rows()];
+				mAction[j] = srcs[j];
 			}
-			// for(int i=0;i<mWSubgoalState.size();i++)
-			// {
-			// 	if(mWSubgoalState[i] < 0 )
-			// 		mWSubgoalState[i] = 0.0;
-			// 	if(mWSubgoalState[i] > 1.0 )
-			// 		mWSubgoalState[i] = 0.0;
-			// }
-			Eigen::VectorXd linearActorState(mSubgoalState.size()*2);
-			linearActorState.segment(0, mSubgoalState.size()) = mSubgoalState;
-			linearActorState.segment(mSubgoalState.size(), mSubgoalState.size()) = mWSubgoalState;
+			cout<<i<<" "<<mAction[2]<<endl;	
+			mActions[i] = mAction;
 
-			mEnv->setLinearActorState(0, linearActorState);
-			// cout<<mWSubgoalState.transpose()<<endl;
-			// cout<<i<<" "<<mAction[2]<<endl;
-			mSubgoalStates[i] = mEnv->unNormalizeNNState(mSubgoalState);
+
 
 		}
 	}
@@ -406,12 +437,12 @@ getActionFromLActorNN(bool vsHardcodedAI)
 			// cout<<state.segment(0,6).transpose()<<endl;
 			// cout<<shape<<endl;
 			// cout<<"11111"<<endl;
-			float* dest = reinterpret_cast<float*>(state_np.get_data());
-			// cout<<"22222"<<endl;
-			for(int j=0;j<lactorState.size();j++)
-			{
-				dest[j] = lactorState[j];
-			}
+			// float* dest = reinterpret_cast<float*>(state_np.get_data());
+			// // cout<<"22222"<<endl;
+			// for(int j=0;j<lactorState.size();j++)
+			// {
+			// 	dest[j] = lactorState[j];
+			// }
 
 			// cout<<"33333"<<endl;
 	// time_check_start();
@@ -446,10 +477,13 @@ display()
 
 	// exit(0);
 	// mEnv->getState_map(0);
-	// exit(0);
+	// cout<<"00000000000)))
+	// <<"
 
 	for(int i=0;i<chars.size();i++)
 	{
+		if (i!=0)
+			continue;
 		if(chars[i]->getTeamName() == "A")
 			GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
 		else
@@ -469,11 +503,13 @@ display()
 	// {
 	// 	GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));
 	// }
-	// mSubgoalCharacters[0]->getSkeleton()->setPositions(chars[0]->getSkeleton()->getPositions() + mEnv->mStates[0].segment(_ID_BALL_P,2) + mSubgoalStates[0].segment(_ID_BALL_P, 2));
-	mSubgoalCharacters[0]->getSkeleton()->setPositions(chars[0]->getSkeleton()->getPositions() - mSubgoalStates[0].segment(_ID_BALL_P, 2));
-	cout<< mSubgoalStates[0].segment(_ID_BALL_P, 2).transpose()<<endl;
+	// Eigen::VectorXd mSchedulerState = mEnv->getSchedulerState(0);
+	// mSubgoalCharacters[0]->getSkeleton()->setPositions(chars[0]->getSkeleton()->getPositions() + 4.0 * mSchedulerState.segment(17,2));
+	
+	// mSubgoalCharacters[0]->getSkeleton()->setPositions(chars[0]->getSkeleton()->getPositions() - mSubgoalStates[0].segment(_ID_BALL_P, 2));
+	// cout<< mSubgoalStates[0].segment(_ID_BALL_P, 2).transpose()<<endl;
 
-	GUI::drawSkeleton(mSubgoalCharacters[0]->getSkeleton(), Eigen::Vector3d(1.0, 0.5, 0.5));
+	// GUI::drawSkeleton(mSubgoalCharacters[0]->getSkeleton(), Eigen::Vector3d(1.0, 0.5, 0.5));
 
 
 	GUI::drawSkeleton(mEnv->floorSkel, Eigen::Vector3d(0.5, 1.0, 0.5));
@@ -494,7 +530,7 @@ display()
 	// = "Red : "+to_string((int)(mEnv->mAccScore[0] + mEnv->mAccScore[1]))+" |Blue : "+to_string((int)(mEnv->mAccScore[2]+mEnv->mAccScore[3]));
 
 	std::string scoreString
-	= "Red : "+to_string((int)(mEnv->mAccScore[0]))+" |Blue : "+to_string((int)(mEnv->mAccScore[1]));
+	= "Red : "+to_string((int)(mEnv->mAccScore[0]));//+" |Blue : "+to_string((int)(mEnv->mAccScore[1]));
 
 
 	GUI::drawStringOnScreen(0.2, 0.8, scoreString, true, Eigen::Vector3d::Zero());

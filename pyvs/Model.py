@@ -32,13 +32,13 @@ def weights_init(m):
 
 # Current state, goal state -> (subgoal state - current state)* weight of state
 class SchedulerNN(nn.Module):
-	def __init__(self, num_states):
+	def __init__(self, num_states, num_actions):
 		super(SchedulerNN, self).__init__()
 
-		self.num_policyInput = num_states*2
+		self.num_policyInput = num_states
 
-		self.hidden_size = 512
-		self.num_layers = 2
+		self.hidden_size = 256
+		self.num_layers = 1
 
 		self.ss_rnn = nn.LSTM(self.num_policyInput, self.hidden_size, num_layers=self.num_layers)
 		self.cur_hidden = self.init_hidden(1)
@@ -54,7 +54,7 @@ class SchedulerNN(nn.Module):
 			nn.LeakyReLU(0.2, inplace=True),
 			nn.Linear(num_h2, num_h3),
 			nn.LeakyReLU(0.2, inplace=True),
-			nn.Linear(num_h3, num_states*2)
+			nn.Linear(num_h3, num_actions)
 		)
 		self.ss_value = nn.Sequential(
 			nn.Linear(self.hidden_size, num_h1),
@@ -67,7 +67,7 @@ class SchedulerNN(nn.Module):
 		)
 
 
-		self.log_std = nn.Parameter(-0.0 * torch.ones(num_states*2))
+		self.log_std = nn.Parameter(-1.0 * torch.ones(num_actions))
 
 		self.ss_rnn.apply(weights_init)
 		self.ss_policy.apply(weights_init)
@@ -97,6 +97,7 @@ class SchedulerNN(nn.Module):
 		self.cur_hidden = new_hidden
 
 		return p.loc.cpu().detach().numpy()
+		# return p.loc.cpu().detach().numpy()
 
 	def reset_hidden(self):
 		self.cur_hidden = self.init_hidden(1)
@@ -106,6 +107,86 @@ class SchedulerNN(nn.Module):
 		hidden = (Tensor(torch.zeros(self.num_layers, batch_size, self.hidden_size).cuda()),\
 				Tensor(torch.zeros(self.num_layers, batch_size, self.hidden_size).cuda()))
 		return hidden
+
+# Current state, goal state -> (subgoal state - current state)* weight of state
+class SchedulerNN1(nn.Module):
+	def __init__(self, num_states, num_actions):
+		super(SchedulerNN, self).__init__()
+
+		self.num_policyInput = num_states
+
+		self.hidden_size = 256
+		self.num_layers = 1
+
+		self.ss_rnn = nn.LSTM(self.num_policyInput, self.hidden_size, num_layers=self.num_layers)
+		self.cur_hidden = self.init_hidden(1)
+
+		num_h1 = 256
+		num_h2 = 256
+		num_h3 = 256
+
+		self.ss_policy = nn.Sequential(
+			nn.Linear(num_states, num_h1),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h1, num_h2),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h2, num_h3),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h3, num_actions)
+		)
+		self.ss_value = nn.Sequential(
+			nn.Linear(num_states, num_h1),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h1, num_h2),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h2, num_h3),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h3, 1)
+		)
+
+
+		self.log_std = nn.Parameter(-1.0 * torch.ones(num_actions))
+
+		self.ss_rnn.apply(weights_init)
+		self.ss_policy.apply(weights_init)
+		self.ss_value.apply(weights_init)
+
+	def forward(self,x, in_hidden):
+		x = x.cuda()
+
+		batch_size = x.size()[0];
+
+		# rnnOutput, out_hidden = self.ss_rnn(x.view(1, batch_size,-1), in_hidden)
+		# return MultiVariateNormal(self.ss_policy(x).unsqueeze(0),self.log_std.exp()), self.ss_value(x), in_hidden
+		return MultiVariateNormal(self.ss_policy(x).unsqueeze(0),self.log_std.exp()), self.ss_value(x), in_hidden
+# 
+	def load(self,path):
+		print('load scheduler nn {}'.format(path))
+		self.load_state_dict(torch.load(path))
+
+	def save(self,path):
+		print('save scheduler nn {}'.format(path))
+		torch.save(self.state_dict(),path)
+
+	def get_action(self,s):
+		ts = torch.tensor(s)
+
+		p, _v, new_hidden= self.forward(ts.unsqueeze(0), self.cur_hidden)
+
+		self.cur_hidden = new_hidden
+
+		return p.loc.cpu().detach().numpy()
+		# return p.loc.cpu().detach().numpy()
+
+	def reset_hidden(self):
+		self.cur_hidden = self.init_hidden(1)
+
+    # This method generates the first hidden state of zeros which we'll use in the forward pass
+	def init_hidden(self, batch_size):
+		hidden = (Tensor(torch.zeros(self.num_layers, batch_size, self.hidden_size).cuda()),\
+				Tensor(torch.zeros(self.num_layers, batch_size, self.hidden_size).cuda()))
+		return hidden
+
 
 
 # Current state to subgoal state
