@@ -140,9 +140,9 @@ public:
 
 	void updateState();
 
-	void setHindsightGoal(Eigen::VectorXd randomSchedulerState, Eigen::VectorXd randomSchedulerAction);	
+	void setHindsightGoal(Eigen::VectorXd randomSchedulerState);	
 	Eigen::VectorXd getHindsightState(Eigen::VectorXd curState);
-	double getHindsightReward(Eigen::VectorXd curHindsightState, Eigen::VectorXd schedulerAction);
+	double getHindsightReward(Eigen::VectorXd curHindsightState);
 
 public:
 	dart::simulation::WorldPtr mWorld;

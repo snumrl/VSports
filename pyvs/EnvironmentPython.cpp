@@ -203,9 +203,9 @@ getNumIterations()
 
 void 
 EnvironmentPython::
-setHindsightGoal(np::ndarray randomSchedulerState, np::ndarray randomSchedulerAction)
+setHindsightGoal(np::ndarray randomSchedulerState)
 {
-	mSlaves[0]->setHindsightGoal(toEigenVector(randomSchedulerState), toEigenVector(randomSchedulerAction));
+	mSlaves[0]->setHindsightGoal(toEigenVector(randomSchedulerState));
 }
 np::ndarray
 EnvironmentPython::
@@ -216,9 +216,9 @@ getHindsightState(np::ndarray curState)
 
 double 
 EnvironmentPython::
-getHindsightReward(np::ndarray curHindsightState, np::ndarray schedulerAction)
+getHindsightReward(np::ndarray curHindsightState)
 {
-	mSlaves[0]->getHindsightReward(toEigenVector(curHindsightState), toEigenVector(schedulerAction));
+	mSlaves[0]->getHindsightReward(toEigenVector(curHindsightState));
 }
 
 

@@ -86,9 +86,9 @@ class SLAC(object):
 		self.gamma = 0.997
 		self.lb = 0.95
 
-		self.buffer_size = 2*2048
-		self.batch_size = 256
-		self.trunc_size = 32
+		self.buffer_size = 4*2048
+		self.batch_size = 512
+		self.trunc_size = 64
 		self.burn_in_size = 16
 
 		self.scheduler_buffer = Buffer(30000)
@@ -536,7 +536,7 @@ class SLAC(object):
 
 
 
-	def optimizeSchedulerNN(self):
+	def optimizeSchedulerNN1(self):
 		all_rnn_replay_buffer= np.array(self.scheduler_buffer.buffer)
 		for j in range(self.num_epochs):
 			# Get truncated transitions. The transitions will be splited by size self.trunc_size
@@ -678,12 +678,17 @@ class SLAC(object):
 								if param.grad is not None:
 									param.grad.data.clamp_(-0.5, 0.5)
 							self.scheduler_optimizer.step()
+				# for param in self.scheduler_model[0].parameters():
+				# 	if param.grad is not None:
+				# 		param.grad.data.clamp_(-0.5, 0.5)
+				# self.scheduler_optimizer.step()
+				# self.scheduler_optimizer.zero_grad()
 
 			print('Optimizing scheduler nn : {}/{}'.format(j+1,self.num_epochs),end='\r')
 		print('')
 
 
-	def optimizeSchedulerNN1(self):
+	def optimizeSchedulerNN(self):
 		all_rnn_replay_buffer= np.array(self.scheduler_buffer.buffer)
 		for j in range(self.num_epochs):
 			# Get truncated transitions. The transitions will be splited by size self.trunc_size

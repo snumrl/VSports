@@ -43,9 +43,9 @@ public:
 	// For all slaves
 	void stepsAtOnce();
 
-	void setHindsightGoal(np::ndarray randomSchedulerState, np::ndarray randomSchedulerAction);	
+	void setHindsightGoal(np::ndarray randomSchedulerState);	
 	np::ndarray getHindsightState(np::ndarray curState);
-	double getHindsightReward(np::ndarray curHindsightState, np::ndarray schedulerAction);
+	double getHindsightReward(np::ndarray curHindsightState);
 
 private:
 	std::vector<Environment*> mSlaves;

@@ -31,7 +31,7 @@ def weights_init(m):
 
 
 # Current state, goal state -> (subgoal state - current state)* weight of state
-class SchedulerNN(nn.Module):
+class SchedulerNN1(nn.Module):
 	def __init__(self, num_states, num_actions):
 		super(SchedulerNN, self).__init__()
 
@@ -44,26 +44,42 @@ class SchedulerNN(nn.Module):
 		self.cur_hidden = self.init_hidden(1)
 
 		num_h1 = 256
-		num_h2 = 256
-		num_h3 = 256
+		# num_h2 = 256
+		# num_h3 = 256
+
+		# self.ss_policy = nn.Sequential(
+		# 	nn.Linear(self.hidden_size, num_h1),
+		# 	nn.LeakyReLU(0.2, inplace=True),
+		# 	nn.Linear(num_h1, num_h2),
+		# 	nn.LeakyReLU(0.2, inplace=True),
+		# 	nn.Linear(num_h2, num_h3),
+		# 	nn.LeakyReLU(0.2, inplace=True),
+		# 	nn.Linear(num_h3, num_actions)
+		# )
+		# self.ss_value = nn.Sequential(
+		# 	nn.Linear(self.hidden_size, num_h1),
+		# 	nn.LeakyReLU(0.2, inplace=True),
+		# 	nn.Linear(num_h1, num_h2),
+		# 	nn.LeakyReLU(0.2, inplace=True),
+		# 	nn.Linear(num_h2, num_h3),
+		# 	nn.LeakyReLU(0.2, inplace=True),
+		# 	nn.Linear(num_h3, 1)
+		# )
 
 		self.ss_policy = nn.Sequential(
 			nn.Linear(self.hidden_size, num_h1),
 			nn.LeakyReLU(0.2, inplace=True),
-			nn.Linear(num_h1, num_h2),
-			nn.LeakyReLU(0.2, inplace=True),
-			nn.Linear(num_h2, num_h3),
-			nn.LeakyReLU(0.2, inplace=True),
-			nn.Linear(num_h3, num_actions)
+			nn.Linear(num_h1, num_actions),
+			# nn.LeakyReLU(0.2, inplace=True),
+			# nn.Linear(num_h2, num_actions),
+
 		)
 		self.ss_value = nn.Sequential(
 			nn.Linear(self.hidden_size, num_h1),
 			nn.LeakyReLU(0.2, inplace=True),
-			nn.Linear(num_h1, num_h2),
-			nn.LeakyReLU(0.2, inplace=True),
-			nn.Linear(num_h2, num_h3),
-			nn.LeakyReLU(0.2, inplace=True),
-			nn.Linear(num_h3, 1)
+			nn.Linear(num_h1, 1),
+			# nn.LeakyReLU(0.2, inplace=True),
+			# nn.Linear(num_h2, 1),
 		)
 
 
@@ -109,7 +125,7 @@ class SchedulerNN(nn.Module):
 		return hidden
 
 # Current state, goal state -> (subgoal state - current state)* weight of state
-class SchedulerNN1(nn.Module):
+class SchedulerNN(nn.Module):
 	def __init__(self, num_states, num_actions):
 		super(SchedulerNN, self).__init__()
 
@@ -123,25 +139,25 @@ class SchedulerNN1(nn.Module):
 
 		num_h1 = 256
 		num_h2 = 256
-		num_h3 = 256
+		# num_h3 = 256
 
 		self.ss_policy = nn.Sequential(
 			nn.Linear(num_states, num_h1),
 			nn.LeakyReLU(0.2, inplace=True),
 			nn.Linear(num_h1, num_h2),
 			nn.LeakyReLU(0.2, inplace=True),
-			nn.Linear(num_h2, num_h3),
-			nn.LeakyReLU(0.2, inplace=True),
-			nn.Linear(num_h3, num_actions)
+			nn.Linear(num_h2, num_actions),
+			# nn.LeakyReLU(0.2, inplace=True),
+			# nn.Linear(num_h3, num_actions)
 		)
 		self.ss_value = nn.Sequential(
 			nn.Linear(num_states, num_h1),
 			nn.LeakyReLU(0.2, inplace=True),
 			nn.Linear(num_h1, num_h2),
 			nn.LeakyReLU(0.2, inplace=True),
-			nn.Linear(num_h2, num_h3),
-			nn.LeakyReLU(0.2, inplace=True),
-			nn.Linear(num_h3, 1)
+			nn.Linear(num_h2, 1),
+			# nn.LeakyReLU(0.2, inplace=True),
+			# nn.Linear(num_h3, 1)
 		)
 
 

@@ -367,7 +367,7 @@ getSubgoalFromSchedulerNN(bool vsHardcodedAI)
 			{
 				mAction[j] = srcs[j];
 			}
-			cout<<i<<" "<<mAction[2]<<endl;	
+			// cout<<i<<" "<<mAction[2]<<endl;	
 			mActions[i] = mAction;
 
 
@@ -505,7 +505,7 @@ display()
 	// }
 	// Eigen::VectorXd mSchedulerState = mEnv->getSchedulerState(0);
 	// mSubgoalCharacters[0]->getSkeleton()->setPositions(chars[0]->getSkeleton()->getPositions() + 4.0 * mSchedulerState.segment(17,2));
-	
+
 	// mSubgoalCharacters[0]->getSkeleton()->setPositions(chars[0]->getSkeleton()->getPositions() - mSubgoalStates[0].segment(_ID_BALL_P, 2));
 	// cout<< mSubgoalStates[0].segment(_ID_BALL_P, 2).transpose()<<endl;
 
