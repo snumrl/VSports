@@ -8,6 +8,7 @@ import time
 from collections import OrderedDict
 import numpy as np
 from IPython import embed
+import copy
 
 MultiVariateNormal = torch.distributions.Normal
 temp = MultiVariateNormal.log_prob
@@ -31,19 +32,19 @@ def weights_init(m):
 
 
 # Current state, goal state -> (subgoal state - current state)* weight of state
-class SchedulerNN1(nn.Module):
+class SchedulerNN(nn.Module):
 	def __init__(self, num_states, num_actions):
 		super(SchedulerNN, self).__init__()
 
 		self.num_policyInput = num_states
 
-		self.hidden_size = 256
+		self.hidden_size = 128
 		self.num_layers = 1
 
 		self.ss_rnn = nn.LSTM(self.num_policyInput, self.hidden_size, num_layers=self.num_layers)
 		self.cur_hidden = self.init_hidden(1)
 
-		num_h1 = 256
+		num_h1 = 128
 		# num_h2 = 256
 		# num_h3 = 256
 
@@ -94,11 +95,13 @@ class SchedulerNN1(nn.Module):
 
 		batch_size = x.size()[0];
 
-		rnnOutput, out_hidden = self.ss_rnn(x.view(1, batch_size,-1), in_hidden)
+		zero_hidden = self.init_hidden(batch_size);
+
+		rnnOutput, out_hidden = self.ss_rnn(x.view(1, batch_size,-1), zero_hidden)
 		return MultiVariateNormal(self.ss_policy(rnnOutput),self.log_std.exp()), self.ss_value(rnnOutput), out_hidden
 
 	def load(self,path):
-		print('load scheduler nn {}'.format(path))
+		# print('load scheduler nn {}'.format(path))
 		self.load_state_dict(torch.load(path))
 
 	def save(self,path):
@@ -111,6 +114,7 @@ class SchedulerNN1(nn.Module):
 		p, _v, new_hidden= self.forward(ts.unsqueeze(0), self.cur_hidden)
 
 		self.cur_hidden = new_hidden
+		# print("#####")
 
 		return p.loc.cpu().detach().numpy()
 		# return p.loc.cpu().detach().numpy()
@@ -125,7 +129,7 @@ class SchedulerNN1(nn.Module):
 		return hidden
 
 # Current state, goal state -> (subgoal state - current state)* weight of state
-class SchedulerNN(nn.Module):
+class SchedulerNN1(nn.Module):
 	def __init__(self, num_states, num_actions):
 		super(SchedulerNN, self).__init__()
 
@@ -137,8 +141,8 @@ class SchedulerNN(nn.Module):
 		self.ss_rnn = nn.LSTM(self.num_policyInput, self.hidden_size, num_layers=self.num_layers)
 		self.cur_hidden = self.init_hidden(1)
 
-		num_h1 = 256
-		num_h2 = 256
+		num_h1 = 128
+		num_h2 = 128
 		# num_h3 = 256
 
 		self.ss_policy = nn.Sequential(
@@ -177,7 +181,7 @@ class SchedulerNN(nn.Module):
 		return MultiVariateNormal(self.ss_policy(x).unsqueeze(0),self.log_std.exp()), self.ss_value(x), in_hidden
 # 
 	def load(self,path):
-		print('load scheduler nn {}'.format(path))
+		# print('load scheduler nn {}'.format(path))
 		self.load_state_dict(torch.load(path))
 
 	def save(self,path):
@@ -193,6 +197,35 @@ class SchedulerNN(nn.Module):
 
 		return p.loc.cpu().detach().numpy()
 		# return p.loc.cpu().detach().numpy()
+
+	def get_value_gradient(self,s):
+		delta = 0.01
+		value_gradient = [None]*len(s)
+		# print(s)
+		for i in range(len(s)):
+			positive_s = copy.deepcopy(s)
+			positive_s[i] += delta
+			negative_s = copy.deepcopy(s)
+			negative_s[i] += -delta
+			# print(positive_s)
+			# print(negative_s)
+			# print("############")
+
+			# print("1111")
+			_p, positive_v, new_hidden = self.forward(torch.tensor(positive_s).unsqueeze(0), self.cur_hidden)
+			# print("2222")
+			_p, negative_v, new_hidden = self.forward(torch.tensor(negative_s).unsqueeze(0), self.cur_hidden)
+			# print(positive_v[0],end=" ")
+			# print(negative_v[0])
+			# print("3333")
+			value_gradient[i] = (positive_v.cpu().detach().numpy()[0]-negative_v.cpu().detach().numpy()[0])/(delta*2.0)
+			# print(positive_v-negative_v)
+			# print("4444")
+
+		# value_gradient = s
+		# print(value_gradient)
+		return value_gradient
+
 
 	def reset_hidden(self):
 		self.cur_hidden = self.init_hidden(1)

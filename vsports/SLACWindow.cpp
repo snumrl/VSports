@@ -32,7 +32,7 @@ SLACWindow::
 SLACWindow()
 :SimWindow(),vsHardcodedAI_difficulty(4.0)
 {
-	mEnv = new Environment(30, 600, 2);
+	mEnv = new Environment(30, 600, 4);
 	initCustomView();
 	initGoalpost();
 
@@ -98,7 +98,11 @@ SLACWindow(const std::string& nn_path)
 		nn_sc_module[i] = p::eval("SchedulerNN(num_state, num_action).cuda()", mns);
 		sc_load[i] = nn_sc_module[i].attr("load");
 		reset_sc_hidden[i] = nn_sc_module[i].attr("reset_hidden");
-		sc_load[i](nn_path+"_sc.pt");
+		if(i== 0|| i==1 || true)
+			sc_load[i](nn_path+"_sc.pt");
+		else
+			sc_load[i]("../save/goalReward/max_sc.pt");
+
 
 		nn_la_module[i] = p::eval("LActorNN(num_state, num_action).cuda()", mns);
 		la_load[i] = nn_la_module[i].attr("load");
@@ -106,8 +110,8 @@ SLACWindow(const std::string& nn_path)
 		la_load[i](nn_path+"_la.pt");
 	}
 	// cout<<"3344444444"<<endl;
-	mActions.resize(2);
-	mSubgoalStates.resize(2);
+	mActions.resize(mEnv->mNumChars);
+	mSubgoalStates.resize(mEnv->mNumChars);
 	mSubgoalStates[0].resize(mEnv->getNumState());
 	mSubgoalStates[0].setZero();
 }
@@ -293,7 +297,7 @@ getSubgoalFromSchedulerNN(bool vsHardcodedAI)
 		// mEnv->getState(i);
 		// Eigen::VectorXd state = mEnv->mSimpleStates[i];
 		//change the i=1 agent
-		if(vsHardcodedAI && (i == 1))
+		if((vsHardcodedAI && (i == 1)) && false)
 		{
 				// cout<<"0000"<<endl;
 			// cout<<"i : "<<i<<endl;
@@ -367,13 +371,43 @@ getSubgoalFromSchedulerNN(bool vsHardcodedAI)
 			{
 				mAction[j] = srcs[j];
 			}
-			// cout<<i<<" "<<mAction[2]<<endl;	
+			if(i==0)
+				cout<<i<<" "<<mAction[2]<<endl;	
 			mActions[i] = mAction;
 
 
 
 		}
 	}
+}
+
+Eigen::VectorXd
+SLACWindow::
+getValueGradient(int index)
+{
+	p::object get_value_gradient;
+	get_value_gradient = nn_sc_module[0].attr("get_value_gradient");
+
+	Eigen::VectorXd state = mEnv->getState(index);
+	Eigen::VectorXd valueGradient(state.size());
+
+	p::tuple shape = p::make_tuple(state.size());
+	np::dtype dtype = np::dtype::get_builtin<float>();
+	np::ndarray state_np = np::empty(shape, dtype);
+	float* dest = reinterpret_cast<float*>(state_np.get_data());
+	for(int j=0;j<state.size();j++)
+	{
+		dest[j] = state[j];
+	}
+
+	p::object temp = get_value_gradient(state_np);
+	np::ndarray valueGradient_np = np::from_object(temp);
+	float* srcs = reinterpret_cast<float*>(valueGradient_np.get_data());
+	for(int j=0;j<valueGradient.rows();j++)
+	{
+		valueGradient[j] = srcs[j];
+	}
+	return valueGradient;
 }
 
 void
@@ -397,7 +431,7 @@ getActionFromLActorNN(bool vsHardcodedAI)
 		// mEnv->getState(i);
 		// Eigen::VectorXd state = mEnv->mSimpleStates[i];
 		//change the i=1 agent
-		if(vsHardcodedAI && (i == 1))
+		if(vsHardcodedAI && (i == 1) && false)
 		{
 			// cout<<"i : "<<i<<endl;
 			// Eigen::VectorXd curBallRelaltionalP = mEnv->mSimpleStates[i].segment(ID_BALL_P,2);
@@ -482,15 +516,15 @@ display()
 
 	for(int i=0;i<chars.size();i++)
 	{
-		if (i!=0)
-			continue;
+		// if (i!=0)
+		// 	continue;
 		if(chars[i]->getTeamName() == "A")
 			GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
 		else
 			GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));
 
-
 	}
+	// cout<<"1111"<<endl;
 	// GUI::drawSkeleton(chars[0]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
 	// GUI::drawSkeleton(chars[1]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));
 
@@ -521,16 +555,19 @@ display()
 		GUI::drawSkeleton(mEnv->ballSkel, Eigen::Vector3d(0.1, 0.1, 0.1));
 
 	GUI::drawSkeleton(mEnv->wallSkel, Eigen::Vector3d(0.5,0.5,0.5));
+	// cout<<"2222"<<endl;
 
 	// Not simulated just for see
 	GUI::drawSkeleton(redGoalpostSkel, Eigen::Vector3d(1.0, 1.0, 1.0));
 	GUI::drawSkeleton(blueGoalpostSkel, Eigen::Vector3d(1.0, 1.0, 1.0));
+	// cout<<"3333"<<endl;
 
 	// std::string scoreString
 	// = "Red : "+to_string((int)(mEnv->mAccScore[0] + mEnv->mAccScore[1]))+" |Blue : "+to_string((int)(mEnv->mAccScore[2]+mEnv->mAccScore[3]));
 
 	std::string scoreString
 	= "Red : "+to_string((int)(mEnv->mAccScore[0]));//+" |Blue : "+to_string((int)(mEnv->mAccScore[1]));
+	// cout<<"444444"<<endl;
 
 
 	GUI::drawStringOnScreen(0.2, 0.8, scoreString, true, Eigen::Vector3d::Zero());
@@ -538,7 +575,11 @@ display()
 	GUI::drawStringOnScreen(0.8, 0.8, to_string(mEnv->getElapsedTime()), true, Eigen::Vector3d::Zero());
 
 
-	// GUI::drawMapOnScreen(mEnv->mMapStates[0]->minimaps[0], 84, 84);
+	// drawValueGradient();
+
+	// cout<<"5555555"<<endl;
+
+
 
 
 	glutSwapBuffers();
@@ -548,6 +589,102 @@ display()
 	}
 	glutPostRedisplay();
 }
+
+std::string
+SLACWindow::
+indexToStateString(int index)
+{
+	switch(index)
+	{
+		case 0:
+			return "P_x";
+		case 1:
+			return "P_y";
+		case 2:
+			return "V_x";
+		case 3:
+			return "V_y";
+		case 4:
+			return "BP_x";
+		case 5:
+			return "BP_y";
+		case 6:
+			return "BV_x";
+		case 7:
+			return "BV_y";
+		case 8:
+			return "Kick";
+		case 9:
+			return "B_GP";
+		case 10:
+			return " ";
+		case 11:
+			return "B_GP";
+		case 12:
+			return " ";
+		case 13:
+			return "R_GP";
+		case 14:
+			return " ";
+		case 15:
+			return "R_GP";
+		case 16:
+			return " ";
+		default:
+			return "N";
+	}
+	return "N";
+}
+
+
+void
+SLACWindow::
+drawValueGradient()
+{
+	int numStates = mEnv->mStates[0].size();
+	// GUI::drawStringOnScreen(0.8, 0.8, to_string(mEnv->getElapsedTime()), true, Eigen::Vector3d::Zero());
+
+	// double leftOffset = 0.02;
+	// double rightOffset = 0.04;
+
+
+
+	glPushMatrix();
+	double boxSize = 1.0 / (numStates-1);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	gluLookAt(0.0,0.0,1.0,
+			0.0,0.0, 0.0,
+			0.0, 0.0 + 1.0,0.0);
+
+	glTranslated(-0.5, -0.5, 0.0);
+
+	GUI::drawValueGradientBox(mEnv->mStates[0], getValueGradient(0), boxSize);
+
+
+	glPopMatrix();
+
+	GLint w = glutGet(GLUT_WINDOW_WIDTH);
+	GLint h = glutGet(GLUT_WINDOW_HEIGHT);
+
+	for(int i=0;i<numStates;i++)
+	{
+		Eigen::Vector3d eyeToBox = Eigen::Vector3d(i * boxSize - 0.5, -0.5, 0.0);
+		double fovx = mCamera->fovy * w / h;
+
+		double boxAngleX = atan((eyeToBox[0] - boxSize/3.0)/(1.0 + boxSize)) / M_PI * 180.0;
+		double boxAngleY = atan((eyeToBox[1]+boxSize)/(1.0 + boxSize)) / M_PI * 180.0; 
+
+		// cout<<i<<endl;
+
+		GUI::drawStringOnScreen_small(0.5 + boxAngleX/fovx, 0.5  + boxAngleY/mCamera->fovy, indexToStateString(i), Eigen::Vector3d::Zero());
+
+	}
+
+
+}
+
 
 void
 SLACWindow::

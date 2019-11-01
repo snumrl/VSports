@@ -16,13 +16,16 @@ public:
 	std::string getTeamName() {return mName.substr(0,1);}
 
 	void setCollision(bool enabl = true);
-	void setDirection(Eigen::Vector2d direction) {mDirection = direction;}
+	void setDirection(Eigen::Vector2d direction) {mDirection = direction; mDirection.normalize();}
 	Eigen::Vector2d getDirection() {return mDirection;}
+	void directionStep(double timeStep = 1/600.0);
+	void applyDirectionForce(double dforce);
 
 protected:
 	dart::dynamics::SkeletonPtr mSkeleton;
 	std::string mName;
 	Eigen::Vector2d mDirection;
+	double thetaDot;
 };
 
 #endif

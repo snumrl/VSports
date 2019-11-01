@@ -355,7 +355,7 @@ step()
 		applyAction(i);
 	}
 
-	// handlePlayerContacts(0.5);
+	// handlePlayerContacts(0.7);
 
 	for(int i=0;i<mCharacters.size();i++)
 	{
@@ -445,7 +445,7 @@ getState(int index)
 		distanceWall << 4+ballP[0], 4-ballP[0], 3+ballP[1], 3-ballP[1];
 
 	Eigen::VectorXd ballPossession(1);
-	if(index == 0)
+	if(teamName == mGoalposts[0].first)
 	{
 		ballPossession[0] = mScoreBoard[0];
 	}
@@ -467,41 +467,39 @@ getState(int index)
 	// Do not count for cur Character
 	double distance[mCharacters.size()-1];
 	int distanceIndex[mCharacters.size()-1];
-	int count =0;
 
-	// We will get the other's position & velocities in sorted form.
-	for(int i=0;i<mCharacters.size();i++)
-	{
-		if(i != index)
-		{
-			distanceIndex[count] = i;
-			Eigen::Vector2d curP = mCharacters[i]->getSkeleton()->getPositions();
-			distance[count] = (curP-p).norm();
-			count++;
-		}
-	}
-	count = 0;
-	double min = DBL_MAX;
-	int minIndex = 0;
-	for(int i=0;i<mCharacters.size()-1;i++)
-	{
-		for(int j=i;j<mCharacters.size();j++)
-		{
-			if(distance[j]<min)
-			{
-				min = distance[j];
-				minIndex = j;
-			}
-		}
-		distance[minIndex] = distance[i];
-		distanceIndex[minIndex] = distanceIndex[i];
+	// // We will get the other's position & velocities in sorted form.
+	// for(int i=0;i<mCharacters.size();i++)
+	// {
+	// 	if(i != index)
+	// 	{
+	// 		distanceIndex[count] = i;
+	// 		Eigen::Vector2d curP = mCharacters[i]->getSkeleton()->getPositions();
+	// 		distance[count] = (curP-p).norm();
+	// 		count++;
+	// 	}
+	// }
+	// double min = DBL_MAX;
+	// int minIndex = 0;
+	// for(int i=0;i<mCharacters.size()-1;i++)
+	// {
+	// 	for(int j=i;j<mCharacters.size();j++)
+	// 	{
+	// 		if(distance[j]<min)
+	// 		{
+	// 			min = distance[j];
+	// 			minIndex = j;
+	// 		}
+	// 	}
+	// 	distance[minIndex] = distance[i];
+	// 	distanceIndex[minIndex] = distanceIndex[i];
 
-		distance[i] = min;
-		distanceIndex[i] = minIndex;
+	// 	distance[i] = min;
+	// 	distanceIndex[i] = minIndex;
 
-		min = distance[i+1];
-		minIndex = i+1;
-	}
+	// 	min = distance[i+1];
+	// 	minIndex = i+1;
+	// }
 
 	// Observation
 	
@@ -509,7 +507,7 @@ getState(int index)
 	int numOppTeam=0;
 	for(int i=0;i<mCharacters.size();i++)
 	{
-		if(teamName == mCharacters[i]->getName().substr(0,1))
+		if(teamName == mCharacters[i]->getTeamName())
 			numCurTeam++;
 		else
 			numOppTeam++;
@@ -517,43 +515,45 @@ getState(int index)
 
 	// Fill in the other agent's relational state in team+distance order
 	// 5 = positionDof(2) + velocityDof(2)
-	Eigen::VectorXd otherS((numCurTeam-1)*4 + numOppTeam*4);
-
-	for(int i=0;i<mCharacters.size()-1;i++)
+	// cout<<"Cur index : "<<index;
+	Eigen::VectorXd otherS((mCharacters.size() -1)*4);
+	int count = 0;
+	for(int i=0;i<mCharacters.size();i++)
 	{
-		if(mCharacters[distanceIndex[i]]->getName() == teamName)
+		if(mCharacters[i]->getName()!=character->getName())
 		{
-			SkeletonPtr skel = mCharacters[distanceIndex[i]]->getSkeleton();
+			// cout<<i<<endl;
+			SkeletonPtr skel = mCharacters[i]->getSkeleton();
 			otherS.segment(count*4,2) = skel->getPositions() - p;
 			otherS.segment(count*4+2,2) = skel->getVelocities() - v;
 			count++;
 		}
 	}
-	for(int i=0;i<mCharacters.size()-1;i++)
-	{
-		if(mCharacters[distanceIndex[i]]->getName() != teamName)
-		{
-			SkeletonPtr skel = mCharacters[distanceIndex[i]]->getSkeleton();
-			otherS.segment(count*4,2) = skel->getPositions() - p;
-			otherS.segment(count*4+2,2) = skel->getVelocities() - v;
-			count++;
-		}
-	}
+	// for(int i=0;i<mCharacters.size()-1;i++)
+	// {
+	// 	if(mCharacters[distanceIndex[i]]->getName() != teamName)
+	// 	{
+	// 		SkeletonPtr skel = mCharacters[distanceIndex[i]]->getSkeleton();
+	// 		otherS.segment(count*4,2) = skel->getPositions();
+	// 		otherS.segment(count*4+2,2) = skel->getVelocities();
+	// 		count++;
+	// 	}
+	// }
 
 	Eigen::VectorXd goalpostPositions(8);
 	if(teamName == mGoalposts[0].first)
 	{
-		goalpostPositions.segment(0,2) = mGoalposts[0].second.segment(0,2) + Eigen::Vector2d(0.0, 1.5/2.0) - ballP;
-		goalpostPositions.segment(2,2) = mGoalposts[0].second.segment(0,2) + Eigen::Vector2d(0.0, -1.5/2.0) - ballP;
-		goalpostPositions.segment(4,2) = mGoalposts[1].second.segment(0,2) + Eigen::Vector2d(0.0, -1.5/2.0) - ballP;
-		goalpostPositions.segment(6,2) = mGoalposts[1].second.segment(0,2) + Eigen::Vector2d(0.0, 1.5/2.0) - ballP;
+		goalpostPositions.segment(0,2) = mGoalposts[0].second.segment(0,2) + Eigen::Vector2d(0.0, 1.5/2.0) - p;
+		goalpostPositions.segment(2,2) = mGoalposts[0].second.segment(0,2) + Eigen::Vector2d(0.0, -1.5/2.0) - p;
+		goalpostPositions.segment(4,2) = mGoalposts[1].second.segment(0,2) + Eigen::Vector2d(0.0, -1.5/2.0) - p;
+		goalpostPositions.segment(6,2) = mGoalposts[1].second.segment(0,2) + Eigen::Vector2d(0.0, 1.5/2.0) - p;
 	}
 	else
 	{
-		goalpostPositions.segment(0,2) = mGoalposts[1].second.segment(0,2) + Eigen::Vector2d(0.0, -1.5/2.0) - ballP;
-		goalpostPositions.segment(2,2) = mGoalposts[1].second.segment(0,2) + Eigen::Vector2d(0.0, 1.5/2.0) - ballP;
-		goalpostPositions.segment(4,2) = mGoalposts[0].second.segment(0,2) + Eigen::Vector2d(0.0, 1.5/2.0) - ballP;
-		goalpostPositions.segment(6,2) = mGoalposts[0].second.segment(0,2) + Eigen::Vector2d(0.0, -1.5/2.0) - ballP;
+		goalpostPositions.segment(0,2) = mGoalposts[1].second.segment(0,2) + Eigen::Vector2d(0.0, -1.5/2.0) - p;
+		goalpostPositions.segment(2,2) = mGoalposts[1].second.segment(0,2) + Eigen::Vector2d(0.0, 1.5/2.0) - p;
+		goalpostPositions.segment(4,2) = mGoalposts[0].second.segment(0,2) + Eigen::Vector2d(0.0, 1.5/2.0) - p;
+		goalpostPositions.segment(6,2) = mGoalposts[0].second.segment(0,2) + Eigen::Vector2d(0.0, -1.5/2.0) - p;
 	}
 
 
@@ -583,27 +583,35 @@ getState(int index)
 	Eigen::VectorXd simpleGoalpostPositions(8);
 	if(teamName == mGoalposts[0].first)
 	{
-		simpleGoalpostPositions.segment(0,2) = mGoalposts[1].second.segment(0,2) + Eigen::Vector2d(0.0, 1.5/2.0) - ballP;
-		simpleGoalpostPositions.segment(2,2) = mGoalposts[1].second.segment(0,2) + Eigen::Vector2d(0.0, -1.5/2.0) - ballP;
-		simpleGoalpostPositions.segment(4,2) = mGoalposts[1].second.segment(0,2) + Eigen::Vector2d(0.0, 1.5/2.0) - p;
-		simpleGoalpostPositions.segment(6,2) = mGoalposts[1].second.segment(0,2) + Eigen::Vector2d(0.0, -1.5/2.0) - p;
-	}
+		simpleGoalpostPositions.segment(0,2) = mGoalposts[1].second.segment(0,2) + Eigen::Vector2d(0.0, -1.5/2.0) - p;
+		simpleGoalpostPositions.segment(2,2) = mGoalposts[1].second.segment(0,2) + Eigen::Vector2d(0.0, 1.5/2.0) - p;
+		simpleGoalpostPositions.segment(4,2) = mGoalposts[0].second.segment(0,2) + Eigen::Vector2d(0.0, 1.5/2.0) - p;
+		simpleGoalpostPositions.segment(6,2) = mGoalposts[0].second.segment(0,2) + Eigen::Vector2d(0.0, -1.5/2.0) - p;
 
-	Eigen::VectorXd distanceWall_char(4);
-	Eigen::VectorXd distanceWall_ball(4);
+	}
+	else
+	{
+		simpleGoalpostPositions.segment(0,2) = mGoalposts[0].second.segment(0,2) + Eigen::Vector2d(0.0, 1.5/2.0) - p;
+		simpleGoalpostPositions.segment(2,2) = mGoalposts[0].second.segment(0,2) + Eigen::Vector2d(0.0, -1.5/2.0) - p;
+		simpleGoalpostPositions.segment(4,2) = mGoalposts[1].second.segment(0,2) + Eigen::Vector2d(0.0, -1.5/2.0) - p;
+		simpleGoalpostPositions.segment(6,2) = mGoalposts[1].second.segment(0,2) + Eigen::Vector2d(0.0, 1.5/2.0) - p;
+
+	}
+	// Eigen::VectorXd distanceWall_char(4);
+	// Eigen::VectorXd distanceWall_ball(4);
 
 	// Ball's state
 
 	// std::string teamName = character->getName().substr(0,1);
-	if(teamName == mGoalposts[0].first)
-		distanceWall_char << 4-p[0], 4+p[0], 3-p[1], 3+p[1];
-	else	
-		distanceWall_char << 4+p[0], 4-p[0], 3+p[1], 3-p[1];
+	// if(teamName == mGoalposts[0].first)
+	// 	distanceWall_char << 4-p[0], 4+p[0], 3-p[1], 3+p[1];
+	// else	
+	// 	distanceWall_char << 4+p[0], 4-p[0], 3+p[1], 3-p[1];
 
-	if(teamName == mGoalposts[0].first)
-		distanceWall_ball << 4-ballP[0], 4+ballP[0], 3-ballP[1], 3+ballP[1];
-	else	
-		distanceWall_ball << 4+ballP[0], 4-ballP[0], 3+ballP[1], 3-ballP[1];
+	// if(teamName == mGoalposts[0].first)
+	// 	distanceWall_ball << 4-ballP[0], 4+ballP[0], 3-ballP[1], 3+ballP[1];
+	// else	
+	// 	distanceWall_ball << 4+ballP[0], 4-ballP[0], 3+ballP[1], 3-ballP[1];
 
 
 	Eigen::VectorXd state;
@@ -611,7 +619,8 @@ getState(int index)
 	// 	state.resize(p.rows() + v.rows() + relativeBallP.rows() + relativeBallV.rows() +
 	// 		ballPossession.rows() + kickable.rows() + otherS.rows() + distanceWall.rows() + goalpostPositions.rows());
 
-	state.resize(p.rows() + v.rows() + relativeBallP.rows() + relativeBallV.rows() + kickable.rows() + simpleGoalpostPositions.rows());
+	state.resize(p.rows() + v.rows() + ballP.rows() + ballV.rows() + kickable.rows() + simpleGoalpostPositions.rows()
+		+ otherS.rows());
 		// +distanceWall_char.rows());
 	
 
@@ -625,13 +634,13 @@ getState(int index)
 	{
 		state[count++] = reviseStateByTeam * v[i];
 	}
-	for(int i=0;i<relativeBallP.rows();i++)
+	for(int i=0;i<ballP.rows();i++)
 	{
-		state[count++] = reviseStateByTeam * relativeBallP[i];
+		state[count++] = reviseStateByTeam * (ballP[i] - p[i]);
 	}
-	for(int i=0;i<relativeBallV.rows();i++)
+	for(int i=0;i<ballV.rows();i++)
 	{
-		state[count++] = reviseStateByTeam *  relativeBallV[i];
+		state[count++] = reviseStateByTeam * (ballV[i] - v[i]);
 	}
 
 	// for(int i=0;i<ballPossession.rows();i++)
@@ -661,6 +670,12 @@ getState(int index)
 		state[count++] = reviseStateByTeam * simpleGoalpostPositions[i];
 	}
 
+	for(int i=0;i<otherS.rows();i++)
+	{
+		state[count++] = reviseStateByTeam * otherS[i];
+	}
+
+
 	// for(int i=0;i<distanceWall_char.rows();i++)
 	// {
 	// 	state[count++] = distanceWall_char[i]/4.0;
@@ -674,54 +689,56 @@ getState(int index)
 	return normalizeNNState(state);
 }
 
+
+
 Eigen::VectorXd
 Environment::
 getSchedulerState(int index)
 {
 	Eigen::VectorXd combinedState;
 	Eigen::VectorXd state = getState(index) ;
-	Eigen::VectorXd targetPosition(2);
-	double targetShooting;
-	combinedState.resize(state.size() + targetPosition.size());
+	// Eigen::VectorXd targetPosition(2);
+	// double targetShooting;
+	// combinedState.resize(state.size() + targetPosition.size());
 
-	Eigen::VectorXd p = mStates[index].segment(_ID_P,2);
-	Eigen::VectorXd ballP = p + mStates[index].segment(_ID_BALL_P,2);
-	Eigen::VectorXd centerOfGoalpost = ballP + (mStates[index].segment(_ID_GOALPOST_P, 2) + mStates[index].segment(_ID_GOALPOST_P+2, 2))/2.0;
-	// targetShooting = 0.5;
+	// Eigen::VectorXd p = mStates[index].segment(_ID_P,2);
+	// Eigen::VectorXd ballP = p + mStates[index].segment(_ID_BALL_P,2);
+	// Eigen::VectorXd centerOfGoalpost = ballP + (mStates[index].segment(_ID_GOALPOST_P, 2) + mStates[index].segment(_ID_GOALPOST_P+2, 2))/2.0;
+	// // targetShooting = 0.5;
 
-	Eigen::VectorXd tempVec = (centerOfGoalpost - p).normalized().dot((ballP - p)) *  (centerOfGoalpost - p).normalized();
-	double ballToLine = ((ballP - p) - tempVec).norm();
-	Eigen::VectorXd targetP = centerOfGoalpost + (ballP - centerOfGoalpost) + 0.3 * (ballP - centerOfGoalpost).normalized();
-	// targetP = centerOF
-	// targetPosition = targetP - p;
-	if (ballToLine >= 0.30)
-	{
-		// if(index == 0)
-		// 	cout<<0<<endl;
-		targetPosition = targetP - p;
-	}
-	else if( (ballP-centerOfGoalpost).norm()-0.20 >(p-centerOfGoalpost).norm()  )
-	{
-		// cout<<state[_ID_KICKABLE]<<endl;
-		// if(index == 0)
-		// 	cout<<1<<endl;
-		targetPosition = targetP - p;
-	}
-	else
-	{
-		// cout<<1<<endl;
-		// if(index == 0)
-		// 	cout<<2<<endl;
-		targetP = centerOfGoalpost + (ballP - centerOfGoalpost) - 0.3 * (ballP - centerOfGoalpost).normalized();
-		targetPosition = targetP - p;
-		// double curShooting = mActions[index][2];
-		// double targetShooting = 1.0;
+	// Eigen::VectorXd tempVec = (centerOfGoalpost - p).normalized().dot((ballP - p)) *  (centerOfGoalpost - p).normalized();
+	// double ballToLine = ((ballP - p) - tempVec).norm();
+	// Eigen::VectorXd targetP = centerOfGoalpost + (ballP - centerOfGoalpost) + 0.3 * (ballP - centerOfGoalpost).normalized();
+	// // targetP = centerOF
+	// // targetPosition = targetP - p;
+	// if (ballToLine >= 0.30)
+	// {
+	// 	// if(index == 0)
+	// 	// 	cout<<0<<endl;
+	// 	targetPosition = targetP - p;
+	// }
+	// else if( (ballP-centerOfGoalpost).norm()-0.20 >(p-centerOfGoalpost).norm()  )
+	// {
+	// 	// cout<<state[_ID_KICKABLE]<<endl;
+	// 	// if(index == 0)
+	// 	// 	cout<<1<<endl;
+	// 	targetPosition = targetP - p;
+	// }
+	// else
+	// {
+	// 	// cout<<1<<endl;
+	// 	// if(index == 0)
+	// 	// 	cout<<2<<endl;
+	// 	targetP = centerOfGoalpost + (ballP - centerOfGoalpost) - 0.3 * (ballP - centerOfGoalpost).normalized();
+	// 	targetPosition = targetP - p;
+	// 	// double curShooting = mActions[index][2];
+	// 	// double targetShooting = 1.0;
 
-		// reward = 1.0 + exp(-(targetP - p).norm()) + exp(-(targetShooting-curShooting));
-	}
-	// normalize the target position
-	// mPrevTargetPositions[index] = targetPosition;
-	combinedState << state, targetPosition/4.0;
+	// 	// reward = 1.0 + exp(-(targetP - p).norm()) + exp(-(targetShooting-curShooting));
+	// }
+	// // normalize the target position
+	// // mPrevTargetPositions[index] = targetPosition;
+	// combinedState << state, targetPosition/4.0;
 
 
 	// assert(state.size() == mGoalStates[index].size());
@@ -1054,36 +1071,6 @@ getLinearActorReward(int index)
 	return reward;
 }
 
-// double
-// Environment::
-// getSchedulerReward(int index)
-// {
-// 	double goalReward = 0.0;
-// 	Eigen::VectorXd weightedDistanceToGoal;
-// 	weightedDistanceToGoal = (mGoalStates[index]-(mSubgoalStates[index] + mPrevStates[index])).cwiseProduct(mWGoalStates[index]);
-	
-// 	// cout<<mGoalStates[index].segment(_ID_BALL_P, 2).transpose()<<endl;
-// 	// cout<<mSubgoalStates[index].segment(_ID_BALL_P, 2).transpose()<<endl;
-// 	// cout<<mWGoalStates[index].segment(_ID_BALL_P, 2).transpose()<<endl;
-// 	// cout<<weightedDistanceToGoal.segment(_ID_BALL_P,2).transpose()<<endl;
-// 	// cout<<endl;
-// 	if(weightedDistanceToGoal.norm() < 0.53)
-// 	{
-// 		// cout<<weightedDistanceToGoal.norm()<<endl;
-// 		goalReward = 4.0;
-// 		// cout<<"Player "<<index<<" reached goal state! "<<weightedDistanceToGoal.norm()<<endl;
-// 		// mIsTerminalState = true;
-// 	}
-
-// 	// check the state is properly linearly reaching the subgoal
-// 	double subgoalReachableReward = 0.0;
-
-// 	// subgoalReachableReward = 1.0 *mSubGoalRewards[index];
-
-// 	return goalReward + subgoalReachableReward;
-// }
-
-
 
 double
 Environment::
@@ -1092,11 +1079,11 @@ getSchedulerReward(int index)
 	double reward = 0.0;
 	Eigen::VectorXd p = mStates[index].segment(_ID_P,2);
 	Eigen::VectorXd ballP = p + mStates[index].segment(_ID_BALL_P,2);
-	Eigen::VectorXd centerOfGoalpost = ballP + (mStates[index].segment(_ID_GOALPOST_P, 2) + mStates[index].segment(_ID_GOALPOST_P+2, 2))/2.0;
+	Eigen::VectorXd centerOfGoalpost = p + (mStates[index].segment(_ID_GOALPOST_P, 2) + mStates[index].segment(_ID_GOALPOST_P+2, 2))/2.0;
 
-	Eigen::VectorXd tempVec = (centerOfGoalpost - p).normalized().dot((ballP - p)) *  (centerOfGoalpost - p).normalized();
-	double ballToLine = ((ballP - p) - tempVec).norm();
-	Eigen::VectorXd targetP = centerOfGoalpost + (ballP - centerOfGoalpost) + 0.3 * (ballP - centerOfGoalpost).normalized();
+	// Eigen::VectorXd tempVec = (centerOfGoalpost - p).normalized().dot((ballP - p)) *  (centerOfGoalpost - p).normalized();
+	// double ballToLine = ((ballP - p) - tempVec).norm();
+	// Eigen::VectorXd targetP = centerOfGoalpost + (ballP - centerOfGoalpost) + 0.3 * (ballP - centerOfGoalpost).normalized();
 	// reward = exp(-2.0 * (targetP - p).squaredNorm()) + 0.2 * exp(-(mActions[index].segment(0,2).squaredNorm()));
 	// if (ballToLine >= 0.30)
 	// {
@@ -1157,32 +1144,39 @@ getSchedulerReward(int index)
 	Eigen::Vector2d widthVector = Eigen::Vector2d::UnitX();
 	Eigen::Vector2d heightVector = Eigen::Vector2d::UnitY();
 
-	if(index==0)
+	// if(index==0)
+	// {
+	if(widthVector.dot(ballPosition)+ballRadius >= mGoalposts[1].second.x())
 	{
-		if(widthVector.dot(ballPosition)+ballRadius >= mGoalposts[1].second.x())
+		if(abs(heightVector.dot(ballPosition)) < goalpostSize/2.0)
 		{
-			if(abs(heightVector.dot(ballPosition)) < goalpostSize/2.0)
-			{
-				std::cout<<"Red Team GOALL!!"<<std::endl;
-				if(!goalRewardPaid[index])
-					reward += 200;
-				// goalRewardPaid[index] = true;
-				mIsTerminalState = true;
-			}
-		}
-		else if(widthVector.dot(ballPosition)-ballRadius < mGoalposts[0].second.x())
-		{
-			if(abs(heightVector.dot(ballPosition)) < goalpostSize/2.0)
-			{
-				// std::cout<<"Red Team GOALL!!"<<std::endl;
-				// if(!goalRewardPaid[index])
-				// 	reward += 10;
-				// goalRewardPaid[index] = true;
-				mIsTerminalState = true;
-			}
-		}
+			// std::cout<<"Red Team GOALL!!"<<std::endl;
+			// if(!goalRewardPaid[index])
 
+			if(mCharacters[index]->getTeamName() == "A")
+				reward += 200;
+			else
+				reward -= 200;
+			// goalRewardPaid[index] = true;
+			mIsTerminalState = true;
+		}
 	}
+	else if(widthVector.dot(ballPosition)-ballRadius < mGoalposts[0].second.x())
+	{
+		if(abs(heightVector.dot(ballPosition)) < goalpostSize/2.0)
+		{
+			// std::cout<<"Blue Team GOALL!!"<<std::endl;
+			// if(!goalRewardPaid[index])
+			if(mCharacters[index]->getTeamName() == "A")
+				reward -= 200;
+			else
+				reward += 200;
+			// goalRewardPaid[index] = true;
+			mIsTerminalState = true;
+		}
+	}
+
+	// }
 
 	return reward * 0.1;
 }
@@ -1202,6 +1196,7 @@ Environment::
 setHindsightGoal(Eigen::VectorXd randomSchedulerState)
 {
 	// int numStates = randomSchedulerState.size()/2;
+	mIsTerminalState = false;
 
 	mHindsightGoalState = unNormalizeNNState(randomSchedulerState);
 	Eigen::VectorXd ballPosition = mHindsightGoalState.segment(_ID_P,2) + mHindsightGoalState.segment(_ID_BALL_P,2);
@@ -1222,8 +1217,10 @@ setHindsightGoal(Eigen::VectorXd randomSchedulerState)
 	hindsightGoalpostPosition_1 += newGoalpostCenter;
 	hindsightGoalpostPosition_2 += newGoalpostCenter;
 
-	Eigen::VectorXd originalGoalpostPosition_1 = randomSchedulerState.segment(_ID_P, 2) + randomSchedulerState.segment(_ID_GOALPOST_P+4,2);
-	Eigen::VectorXd originalGoalpostPosition_2 = randomSchedulerState.segment(_ID_P, 2) + randomSchedulerState.segment(_ID_GOALPOST_P+4,2);
+	// cout<<(hindsightGoalpostPosition_1-hindsightGoalpostPosition_2).norm()<<endl;
+
+	Eigen::VectorXd originalGoalpostPosition_1 = mHindsightGoalState.segment(_ID_P, 2) + mHindsightGoalState.segment(_ID_GOALPOST_P+4,2);
+	Eigen::VectorXd originalGoalpostPosition_2 = mHindsightGoalState.segment(_ID_P, 2) + mHindsightGoalState.segment(_ID_GOALPOST_P+6,2);
 
 	Eigen::VectorXd diffGoalpostPosition_1 = hindsightGoalpostPosition_1 - originalGoalpostPosition_1;
 	Eigen::VectorXd diffGoalpostPosition_2 = hindsightGoalpostPosition_2 - originalGoalpostPosition_2;
@@ -1232,6 +1229,28 @@ setHindsightGoal(Eigen::VectorXd randomSchedulerState)
 	diffGoalpostPosition<<diffGoalpostPosition_1,diffGoalpostPosition_2,diffGoalpostPosition_1,diffGoalpostPosition_2;
 
 	mHindsightGoalState.segment(_ID_GOALPOST_P, 8) += diffGoalpostPosition;
+
+
+
+	// Eigen::VectorXd hgp2_to_ball = curBallPosition - mHindsightGoalState;
+	// Eigen::VectorXd hgp2_to_hgp1 = hindsightGoalpostPosition_1 - mHindsightGoalState;
+
+	// double goalpostSize = 1.5;
+	// double ballRadius = 0.1;
+
+	// double horizontalDistance = hgp2_to_hgp1.normalized().dot(hgp2_to_ball);
+	// double verticalDistance = (hgp2_to_ball - hgp2_to_hgp1.normalized() * hgp2_to_hgp1.normalized().dot(hgp2_to_ball)).norm();
+
+	// if(horizontalDistance>=0 && horizontalDistance<=1.5)
+	// {
+	// 	if(abs(verticalDistance)<=ballRadius)
+	// 	{
+	// 		goalReward += 20.0;
+	// 		cout<<"YEEEE"<<endl;
+	// 		mIsTerminalState = true;
+	// 	}
+	// }
+
 
 }
 
@@ -1250,10 +1269,10 @@ getHindsightState(Eigen::VectorXd curState)
 	Eigen::VectorXd hindsightGoalpostPosition_1 = mHindsightGoalState.segment(_ID_P, 2) + mHindsightGoalState.segment(_ID_GOALPOST_P+4,2);
 	Eigen::VectorXd hindsightGoalpostPosition_2 = mHindsightGoalState.segment(_ID_P, 2) + mHindsightGoalState.segment(_ID_GOALPOST_P+6,2);
 
-	Eigen::VectorXd originalGoalpostPosition_1 = curState.segment(_ID_P, 2) + curState.segment(_ID_GOALPOST_P+4,2);
-	Eigen::VectorXd originalGoalpostPosition_2 = curState.segment(_ID_P, 2) + curState.segment(_ID_GOALPOST_P+4,2);
+	Eigen::VectorXd originalGoalpostPosition_1 = hindsightState.segment(_ID_P, 2) + hindsightState.segment(_ID_GOALPOST_P+4,2);
+	Eigen::VectorXd originalGoalpostPosition_2 = hindsightState.segment(_ID_P, 2) + hindsightState.segment(_ID_GOALPOST_P+6,2);
 
-	cout<<originalGoalpostPosition_1 - mGoalposts[1].second.segment(0,2)<<endl;
+	// cout<<originalGoalpostPosition_1 - mGoalposts[1].second.segment(0,2)<<endl;
 
 	Eigen::VectorXd diffGoalpostPosition_1 = hindsightGoalpostPosition_1 - originalGoalpostPosition_1;
 	Eigen::VectorXd diffGoalpostPosition_2 = hindsightGoalpostPosition_2 - originalGoalpostPosition_2;
@@ -1272,12 +1291,14 @@ double
 Environment::
 getHindsightReward(Eigen::VectorXd curHindsightState)
 {
+
+	Eigen::VectorXd hindsightState = unNormalizeNNState(curHindsightState);
 	double goalReward = 0.0;
 
 	Eigen::VectorXd hindsightGoalpostPosition_1 = mHindsightGoalState.segment(_ID_P, 2) + mHindsightGoalState.segment(_ID_GOALPOST_P+4,2);
 	Eigen::VectorXd hindsightGoalpostPosition_2 = mHindsightGoalState.segment(_ID_P, 2) + mHindsightGoalState.segment(_ID_GOALPOST_P+6,2);
 
-	Eigen::VectorXd curBallPosition = curHindsightState.segment(_ID_P, 2) + curHindsightState.segment(_ID_BALL_P, 2);
+	Eigen::VectorXd curBallPosition = hindsightState.segment(_ID_P, 2) + hindsightState.segment(_ID_BALL_P, 2);
 
 
 	Eigen::VectorXd hgp2_to_ball = curBallPosition - hindsightGoalpostPosition_2;
@@ -1294,6 +1315,7 @@ getHindsightReward(Eigen::VectorXd curHindsightState)
 		if(abs(verticalDistance)<=ballRadius)
 		{
 			goalReward += 20.0;
+			// cout<<"YEEEE"<<endl;
 			mIsTerminalState = true;
 		}
 	}
@@ -1419,6 +1441,11 @@ setAction(int index, const Eigen::VectorXd& a)
 	// if(index == 0)
 	// 	mActions[index][2] = 1.0;
 
+	if(index != 0)
+	{
+		mActions[index][2] = -1;
+	}
+
 	Eigen::VectorXd applyingForce = mActions[index].segment(0,2);
 	// applyingForce /= applyingForce.norm();
 
@@ -1445,7 +1472,7 @@ bool
 Environment::
 isTerminalState()
 {
-	if(mTimeElapsed>8.0)
+	if(mTimeElapsed>12.0)
 	{
 		// cout<<"Time overed"<<endl;
 		mIsTerminalState = true;
@@ -1459,12 +1486,12 @@ Environment::
 reset()
 {
 	Eigen::VectorXd ballPosition = ballSkel->getPositions();
-	ballPosition[0] = 6.0 * (rand()/(double)RAND_MAX ) - 6.0/2.0;
-	ballPosition[1] = 4.5 * (rand()/(double)RAND_MAX ) - 4.5/2.0;
+	ballPosition[0] = 4.0 * (rand()/(double)RAND_MAX ) - 4.0/2.0;
+	ballPosition[1] = 3.0 * (rand()/(double)RAND_MAX ) - 3.0/2.0;
 	ballSkel->setPositions(ballPosition);
 	Eigen::VectorXd ballVel = ballSkel->getVelocities();
-	ballVel[0] = 10.0 * (rand()/(double)RAND_MAX ) - 5.0;
-	ballVel[1] = 10.0 * (rand()/(double)RAND_MAX ) - 5.0;
+	ballVel[0] = 8.0 * (rand()/(double)RAND_MAX ) - 4.0;
+	ballVel[1] = 8.0 * (rand()/(double)RAND_MAX ) - 4.0;
 	ballSkel->setVelocities(ballVel);
 
 	for(int i=0;i<mNumChars;i++)
@@ -1659,8 +1686,9 @@ Environment::
 normalizeNNState(Eigen::VectorXd state)
 {
 	Eigen::VectorXd normalizedState = state;
+	int numState = normalizedState.size();
 	normalizedState.segment(0, 8) = state.segment(0,8)/8.0;
-	normalizedState.segment(9, 8) = state.segment(9, 8)/8.0;
+	normalizedState.segment(9, numState-9) = state.segment(9, numState-9)/8.0;
 	return normalizedState;
 }
 
@@ -1670,8 +1698,9 @@ Environment::
 unNormalizeNNState(Eigen::VectorXd outSubgoal)
 {
 	Eigen::VectorXd scaledSubgoal = outSubgoal;
+	int numState = scaledSubgoal.size();
 	scaledSubgoal.segment(0, 8) = outSubgoal.segment(0,8)*8.0;
-	scaledSubgoal.segment(9, 8) = outSubgoal.segment(9, 8)*8.0;
+	scaledSubgoal.segment(9, numState-9) = outSubgoal.segment(9, numState-9)*8.0;
 	return scaledSubgoal;
 }
 

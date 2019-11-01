@@ -27,6 +27,13 @@ public:
 
 	void getActionFromLActorNN(bool vsHardcodedAI = false);
 	void getSubgoalFromSchedulerNN(bool vsHardcodedAI = false);
+
+	void drawValueGradient();
+
+	std::string indexToStateString(int index);
+
+	Eigen::VectorXd getValueGradient(int index);
+
 	double vsHardcodedAI_difficulty;
 
 	dart::dynamics::SkeletonPtr makeGoalpost(Eigen::Vector3d position, std::string label);

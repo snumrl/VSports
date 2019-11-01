@@ -10,6 +10,7 @@ Character2D(const std::string& name)
 	this->mSkeleton = dart::dynamics::Skeleton::create(mName);
 	setDefaultShape(Eigen::Vector3d(1.0, 0.0, 0.0));
 	setCollision(false);
+	thetaDot = 0.0;
 }
 
 const dart::dynamics::SkeletonPtr&
@@ -52,4 +53,25 @@ setCollision(bool enable)
 	{
 		mSkeleton->getSkeleton()->getBodyNode(i)->setCollidable(enable);
 	}
+}
+
+void
+Character2D::
+applyDirectionForce(double dforce)
+{
+	thetaDot += dforce/10.0;
+	Eigen::Matrix2d rotation2dMatrix;
+	rotation2dMatrix << cos(thetaDot), -sin(thetaDot),
+						sin(thetaDot), cos(thetaDot);
+	mDirection = rotation2dMatrix * mDirection;
+}
+
+void
+Character2D::
+directionStep(double timeStep)
+{
+	Eigen::Matrix2d rotation2dMatrix;
+	rotation2dMatrix << cos(thetaDot * timeStep), -sin(thetaDot * timeStep),
+						sin(thetaDot * timeStep), cos(thetaDot * timeStep);
+	mDirection = rotation2dMatrix * mDirection;
 }

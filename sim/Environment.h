@@ -82,6 +82,7 @@ public:
 
 	// For DeepRL
 	// Eigen::VectorXd getState(int index);
+	Eigen::VectorXd getState1(int index);
 	Eigen::VectorXd getState(int index);
 	Eigen::VectorXd getSchedulerState(int index);
 	Eigen::VectorXd getLinearActorState(int index);

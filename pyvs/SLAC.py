@@ -69,11 +69,11 @@ class SLAC(object):
 		np.random.seed(seed = int(time.time()))
 		self.env = Env(600)
 		self.num_slaves = 8
-		self.num_agents = 2
+		self.num_agents = 4
 		self.num_state = self.env.getNumState()
 		self.num_action = self.env.getNumAction()
 
-		self.num_epochs = 4
+		self.num_epochs = 2
 		self.num_evaluation = 0
 		self.num_tuple_so_far = 0
 		self.num_episode = 0
@@ -87,9 +87,10 @@ class SLAC(object):
 		self.lb = 0.95
 
 		self.buffer_size = 4*2048
-		self.batch_size = 512
-		self.trunc_size = 64
-		self.burn_in_size = 16
+		self.batch_size = 128
+		self.trunc_size = 32
+		self.burn_in_size = 8
+		self.bptt_size = 8;
 
 		self.scheduler_buffer = Buffer(30000)
 		self.lactor_buffer = Buffer(30000)
@@ -167,6 +168,7 @@ class SLAC(object):
 
 
 	def computeTDandGAE(self):
+		# self.total_scheduler_episodes = self.total_scheduler_episodes + self.total_scheduler_hindsight_episodes
 
 		'''Scheduler'''
 		self.scheduler_buffer.clear()
@@ -197,6 +199,34 @@ class SLAC(object):
 					rnn_replay_buffer.push(states[i], actions[i], logprobs[i], TD[i], advantages[i], hiddens[i][0], hiddens[i][1])
 				self.scheduler_buffer.push(rnn_replay_buffer)
 
+		# for epi in self.total_scheduler_hindsight_episodes:
+		# 	data = epi.getData()
+		# 	size = len(data)
+		# 	if size == 0:
+		# 		continue
+		# 	states, actions, rewards, values, logprobs, hiddens = zip(*data)
+		# 	values = np.concatenate((values, np.zeros(1)), axis=0)
+		# 	advantages = np.zeros(size)
+		# 	ad_t = 0
+
+		# 	epi_return = 0.0
+		# 	for i in reversed(range(len(data))):
+		# 		epi_return += rewards[i]
+		# 		delta = rewards[i] + values[i+1] * self.gamma - values[i]
+		# 		ad_t = delta + self.gamma * self.lb * ad_t
+		# 		advantages[i] = ad_t
+
+		# 	if not np.isnan(epi_return):
+		# 		TD = values[:size] + advantages
+
+		# 		rnn_replay_buffer = RNNReplayBuffer(4000)
+		# 		for i in range(size):
+		# 			rnn_replay_buffer.push(states[i], actions[i], logprobs[i], TD[i], advantages[i], hiddens[i][0], hiddens[i][1])
+		# 		self.scheduler_buffer.push(rnn_replay_buffer)
+		
+
+		# print(len(self.total_scheduler_hindsight_episodes))
+		# print(len(self.total_scheduler_episodes))
 		''' Linear Actor '''
 		# self.lactor_buffer.clear()
 		# self.lactor_sum_return = 0.0
@@ -242,6 +272,7 @@ class SLAC(object):
 
 	def generateTransitions(self):
 		self.total_scheduler_episodes = []
+		self.total_scheduler_hindsight_episodes = []
 		self.total_lactor_episodes = []
 
 		scheduler_states = [None]*self.num_slaves*self.num_agents
@@ -283,7 +314,8 @@ class SLAC(object):
 		learningTeam = random.randrange(0,2)
 		'''Fixed to team 0'''
 		learningTeam = 0
-		teamDic = {0: 0, 1: 1}
+		# teamDic = {0: 0, 1: 1}
+		teamDic = {0: 0, 1: 1, 2: 1, 3: 1}
 
 		local_step = 0
 		counter = 0
@@ -295,6 +327,31 @@ class SLAC(object):
 
 			useHardCoded = True
 
+			if not useHardCoded:
+				if self.num_evaluation > 20:
+					curEvalNum = self.num_evaluation//20
+
+					# clipedRandomNormal = 0
+					# while clipedRandomNormal <= 0.5:
+					# 	clipedRandomNormal = np.random.normal(curEvalNum, curEvalNum/2,1)[0]
+					# 	if clipedRandomNormal > curEvalNum :
+					# 		clipedRandomNormal = 2*curEvalNum - clipedRandomNormal;
+
+					randomHistoryIndex = random.randrange(0,curEvalNum+1)
+
+					for i in range(self.num_slaves):
+						# prevPath = "../nn/"+clipedRandomNormal+".pt";
+
+						for j in range(self.num_agents):
+							if teamDic[j] != learningTeam:
+								self.loadModel(str(20 * randomHistoryIndex), i*self.num_agents+j)
+						# self.loadModel("current", i*self.num_agents+1)
+				else :
+					for i in range(self.num_slaves):
+						for j in range(self.num_agents):
+							if teamDic[j] != learningTeam:
+								self.loadModel("0",i*self.num_agents+1)
+
 
 			''' Scheduler Part '''
 			for i in range(self.num_slaves):
@@ -302,17 +359,17 @@ class SLAC(object):
 				scheduler_v_slave = []
 				scheduler_hiddens_slave = []
 				for j in range(self.num_agents):
-					# if not useHardCoded:
-						# if teamDic[j] == learningTeam:
-						# 	scheduler_a_dist_slave_agent,scheduler_v_slave_agent, scheduler_hiddens_slave_agent = self.scheduler_model[0].forward(\
-						# 		Tensor([scheduler_states[i*self.num_agents+j]]),(Tensor(scheduler_hiddens[i*self.num_agents+j][0]), Tensor(scheduler_hiddens[i*self.num_agents+j][1])), self.env.getNumIterations())
-						# else :
-						# 	scheduler_a_dist_slave_agent,scheduler_v_slave_agent, scheduler_hiddens_slave_agent = self.scheduler_model[i*self.num_agents+1].forward(\
-						# 		Tensor([scheduler_states[i*self.num_agents+j]]),(Tensor(scheduler_hiddens[i*self.num_agents+j][0]), Tensor(scheduler_hiddens[i*self.num_agents+j][1])), self.env.getNumIterations())
-						# scheduler_a_dist_slave.append(scheduler_a_dist_slave_agent)
-						# scheduler_v_slave.append(scheduler_v_slave_agent)
-						# scheduler_hiddens_slave.append((scheduler_hiddens_slave_agent[0].cpu().detach().numpy(), scheduler_hiddens_slave_agent[1].cpu().detach().numpy()))
-						# scheduler_actions[i*self.num_agents+j] = scheduler_a_dist_slave[j].sample().cpu().detach().numpy()[0][0];		
+					if not useHardCoded:
+						if teamDic[j] == learningTeam:
+							scheduler_a_dist_slave_agent,scheduler_v_slave_agent, scheduler_hiddens_slave_agent = self.scheduler_model[0].forward(\
+								Tensor([scheduler_states[i*self.num_agents+j]]),(Tensor(scheduler_hiddens[i*self.num_agents+j][0]), Tensor(scheduler_hiddens[i*self.num_agents+j][1])))
+						else :
+							scheduler_a_dist_slave_agent,scheduler_v_slave_agent, scheduler_hiddens_slave_agent = self.scheduler_model[i*self.num_agents+1].forward(\
+								Tensor([scheduler_states[i*self.num_agents+j]]),(Tensor(scheduler_hiddens[i*self.num_agents+j][0]), Tensor(scheduler_hiddens[i*self.num_agents+j][1])))
+						scheduler_a_dist_slave.append(scheduler_a_dist_slave_agent)
+						scheduler_v_slave.append(scheduler_v_slave_agent)
+						scheduler_hiddens_slave.append((scheduler_hiddens_slave_agent[0].cpu().detach().numpy(), scheduler_hiddens_slave_agent[1].cpu().detach().numpy()))
+						scheduler_actions[i*self.num_agents+j] = scheduler_a_dist_slave[j].sample().cpu().detach().numpy()[0][0];		
 
 					if useHardCoded :
 						if teamDic[j] == learningTeam:
@@ -477,13 +534,11 @@ class SLAC(object):
 		self.total_scheduler_hindsight_episodes = []
 		for episode_index in range(len(self.total_scheduler_episodes)):
 			scheduler_episode = self.total_scheduler_episodes[episode_index];
-			lactor_episode = self.total_lactor_episodes[episode_index];
 			data = scheduler_episode.getData()
-			lactor_data = lactor_episode.getData()
 			len_episode = len(data)
 			if len_episode == 0:
 				continue
-			hindsight_goal_per_episode = 4
+			hindsight_goal_per_episode = 2
 			random_segment_point = []
 			for i in range(hindsight_goal_per_episode):
 				rand_num = random.randrange(0, len_episode)
@@ -491,22 +546,22 @@ class SLAC(object):
 					random_segment_point.append(rand_num)
 			random_segment_point.sort()
 
+			# print(random_segment_point)
+			# print("##################")
 			index_count = 0
-			self.env.setHindsightGoal(data[random_segment_point[index_count]].s, data[random_segment_point[index_count]].a)
+
+			self.env.setHindsightGoal(data[random_segment_point[index_count]].s)
 
 			scheduler_hindsight_episodes =RNNEpisodeBuffer()
+			timeStepCount = 0
 			for timeStep in range(len_episode):
 				# if timeStep <= random_segment_point[index_count]:
-				cur_state = data[timeStep].s
-				cur_action = data[timeStep].a
-				cur_hidden = data[timeStep].hidden
-				cur_logprob = data[timeStep].logprob
+				cur_state = data[timeStepCount].s
+				cur_action = data[timeStepCount].a
+				cur_hidden = data[timeStepCount].hidden
+				cur_logprob = data[timeStepCount].logprob
 				hindsight_state = self.env.getHindsightState(cur_state)
-				hindsight_reward = self.env.getHindsightReward(cur_state, cur_action)
-
-				hindsight_lactor_reward = lactor_data[timeStep].r
-
-				hindsight_reward += hindsight_lactor_reward
+				hindsight_reward = self.env.getHindsightReward(cur_state)
 
 				# print(Tensor(hindsight_state).size())
 				_,hindsight_v_slave_agent, hindsight_hidden= self.scheduler_model[0].forward(\
@@ -517,18 +572,22 @@ class SLAC(object):
 				scheduler_hindsight_episodes.push(hindsight_state, cur_action,\
 						hindsight_reward, hindsight_value, cur_logprob, (hindsight_hidden[0].cpu().detach().numpy(), hindsight_hidden[1].cpu().detach().numpy()))
 
-				if timeStep == random_segment_point[index_count]:
+				if (timeStepCount == random_segment_point[index_count]) or (self.env.isTerminalState(0) is True):
+					# print(timeStepCount)
+					timeStepCount = random_segment_point[index_count]
 					index_count += 1
 					if index_count < len(random_segment_point):
 						# print(index_count)
-						self.env.setHindsightGoal(data[random_segment_point[index_count]].s, data[random_segment_point[index_count]].a)
+						self.env.setHindsightGoal(data[random_segment_point[index_count]].s)
 					else:
-						break;
+						break
+				timeStepCount += 1
+
 			self.total_scheduler_hindsight_episodes.append(scheduler_hindsight_episodes)
 
 		# print(len(self.total_scheduler_episodes))
 
-		self.total_scheduler_episodes = self.total_scheduler_episodes + self.total_scheduler_hindsight_episodes
+		# self.total_scheduler_episodes = self.total_scheduler_episodes + self.total_scheduler_hindsight_episodes
 
 		# print(len(self.total_scheduler_episodes))
 			# print(random_segment_point)
@@ -536,7 +595,7 @@ class SLAC(object):
 
 
 
-	def optimizeSchedulerNN1(self):
+	def optimizeSchedulerNN(self):
 		all_rnn_replay_buffer= np.array(self.scheduler_buffer.buffer)
 		for j in range(self.num_epochs):
 			# Get truncated transitions. The transitions will be splited by size self.trunc_size
@@ -549,135 +608,142 @@ class SLAC(object):
 					segmented_transitions = np.array(rnn_replay_buffer.buffer)[i*self.trunc_size:(i+1)*self.trunc_size]
 					all_segmented_transitions.append(segmented_transitions)
 					# zero padding
-					if (i+2)*self.trunc_size > rnn_replay_buffer_size :
-						segmented_transitions = [RNNTransition(None,None,None,None,None,None,None) for x in range(self.trunc_size)]
-						segmented_transitions[:rnn_replay_buffer_size - (i+1)*self.trunc_size] = \
-							np.array(rnn_replay_buffer.buffer)[(i+1)*self.trunc_size:rnn_replay_buffer_size]
-						all_segmented_transitions.append(segmented_transitions)
+					# if (i+2)*self.trunc_size > rnn_replay_buffer_size :
+						# segmented_transitions = [RNNTransition(None,None,None,None,None,None,None) for x in range(self.trunc_size)]
+						# segmented_transitions[:rnn_replay_buffer_size - (i+1)*self.trunc_size] = \
+						# 	np.array(rnn_replay_buffer.buffer)[(i+1)*self.trunc_size:rnn_replay_buffer_size]
+						# all_segmented_transitions.append(segmented_transitions)
 
 			# Shuffle the segmented transition (order of episodes)
-			np.random.shuffle(all_segmented_transitions)
+
+			for timeOffset in range(self.bptt_size):
+				np.random.shuffle(all_segmented_transitions)
 
 
-			# We will get loss with trunc_size in a batch. And then we use the mean value.
-			for i in range(len(all_segmented_transitions)//self.batch_size):
-				batch_segmented_transitions = all_segmented_transitions[i*self.batch_size:(i+1)*self.batch_size]
+				# We will get loss with trunc_size in a batch. And then we use the mean value.
+				for i in range(len(all_segmented_transitions)//self.batch_size):
+					batch_segmented_transitions = all_segmented_transitions[i*self.batch_size:(i+1)*self.batch_size]
 
-				non_None_batch_list = [[] for x in range(self.trunc_size)]
-
-
-				loss_list = [Tensor([0])] * self.trunc_size
-				hidden_list = [None]*self.trunc_size
-
-				a_dist_list = [None]*self.trunc_size
-				v_list = [None]*self.trunc_size
-				loss = Tensor(torch.zeros(1).cuda())
-
-				for timeStep in range(self.trunc_size):
-
-					non_None_batch_segmented_transitions = []
-
-					# Make non-None list of batch_segmented_transitions
-					if timeStep == 0:
-						for k in range(self.batch_size):
-							if RNNTransition(*batch_segmented_transitions[k][timeStep]).s is not None :
-								non_None_batch_segmented_transitions.append(batch_segmented_transitions[k][timeStep])
-								non_None_batch_list[timeStep].append(k)
-					else :
-						for k in non_None_batch_list[timeStep-1]:
-							if RNNTransition(*batch_segmented_transitions[k][timeStep]).s is not None :
-								non_None_batch_segmented_transitions.append(batch_segmented_transitions[k][timeStep])
-								non_None_batch_list[timeStep].append(k)
-
-					batch = RNNTransition(*zip(*non_None_batch_segmented_transitions))
-
-					stack_s = np.vstack(batch.s).astype(np.float32)
-					stack_a = np.vstack(batch.a).astype(np.float32)
-					stack_lp = np.vstack(batch.logprob).astype(np.float32)
-					stack_td = np.vstack(batch.TD).astype(np.float32)
-					stack_gae = np.vstack(batch.GAE).astype(np.float32)
-					stack_hidden_h = np.vstack(batch.hidden_h).astype(np.float32)
-					stack_hidden_c = np.vstack(batch.hidden_c).astype(np.float32)
+					non_None_batch_list = [[] for x in range(self.trunc_size)]
 
 
-					num_layers =self.scheduler_model[0].num_layers
-					stack_hidden = [Tensor(np.reshape(stack_hidden_h, (num_layers,len(non_None_batch_list[timeStep]),-1))), 
-										Tensor(np.reshape(stack_hidden_c, (num_layers,len(non_None_batch_list[timeStep]),-1)))]
-					# stack_hidden = [None,None]
+					loss_list = [Tensor([0])] * self.trunc_size
+					hidden_list = [None]*self.trunc_size
+
+					a_dist_list = [None]*self.trunc_size
+					v_list = [None]*self.trunc_size
+					loss = Tensor(torch.zeros(1).cuda())
+
+					for timeStep in range(self.trunc_size):
+
+						non_None_batch_segmented_transitions = []
+
+						# Make non-None list of batch_segmented_transitions
+						if timeStep == 0:
+							for k in range(self.batch_size):
+								if RNNTransition(*batch_segmented_transitions[k][timeStep]).s is not None :
+									non_None_batch_segmented_transitions.append(batch_segmented_transitions[k][timeStep])
+									non_None_batch_list[timeStep].append(k)
+
+						else :
+							for k in non_None_batch_list[timeStep-1]:
+								if RNNTransition(*batch_segmented_transitions[k][timeStep]).s is not None :
+									non_None_batch_segmented_transitions.append(batch_segmented_transitions[k][timeStep])
+									non_None_batch_list[timeStep].append(k)
+
+						print(len(non_None_batch_list[timeStep]))
+
+						batch = RNNTransition(*zip(*non_None_batch_segmented_transitions))
+
+						stack_s = np.vstack(batch.s).astype(np.float32)
+						stack_a = np.vstack(batch.a).astype(np.float32)
+						stack_lp = np.vstack(batch.logprob).astype(np.float32)
+						stack_td = np.vstack(batch.TD).astype(np.float32)
+						stack_gae = np.vstack(batch.GAE).astype(np.float32)
+						stack_hidden_h = np.vstack(batch.hidden_h).astype(np.float32)
+						stack_hidden_c = np.vstack(batch.hidden_c).astype(np.float32)
 
 
-					if timeStep >= 1:
-						batch_count = 0
-						for k in non_None_batch_list[timeStep]:
-							for l in range(len(non_None_batch_list[timeStep-1])) :
-								if non_None_batch_list[timeStep-1][l] == k:
-									for t in range(num_layers):
-										stack_hidden[0][t][batch_count] = hidden_list[timeStep-1][0][t][l]
-										stack_hidden[1][t][batch_count] = hidden_list[timeStep-1][1][t][l]
-									batch_count += 1
+						num_layers =self.scheduler_model[0].num_layers
+						stack_hidden = [Tensor(np.reshape(stack_hidden_h, (num_layers,len(non_None_batch_list[timeStep]),-1))), 
+											Tensor(np.reshape(stack_hidden_c, (num_layers,len(non_None_batch_list[timeStep]),-1)))]
+						# stack_hidden = [None,None]
 
 
-					# stack_hidden = list(self.model[0].init_hidden(len(non_None_batch_list[timeStep])))
+						if timeStep >= 1:
+							batch_count = 0
+							for k in non_None_batch_list[timeStep]:
+								for l in range(len(non_None_batch_list[timeStep-1])) :
+									if non_None_batch_list[timeStep-1][l] == k:
+										for t in range(num_layers):
+											stack_hidden[0][t][batch_count] = hidden_list[timeStep-1][0][t][l]
+											stack_hidden[1][t][batch_count] = hidden_list[timeStep-1][1][t][l]
+										batch_count += 1
+
+
+						# print(non_None_batch_list[timeStep])
+
+						# stack_hidden = list(self.model[0].init_hidden(len(non_None_batch_list[timeStep])))
 
 
 
-					if timeStep % 16 == 0:
-						stack_hidden[0] = stack_hidden[0].detach()
-						stack_hidden[1] = stack_hidden[1].detach()
-						loss = Tensor(torch.zeros(1).cuda())
+						if (timeStep - timeOffset) % self.bptt_size == 0 or True:
+							stack_hidden[0] = stack_hidden[0].detach()
+							stack_hidden[1] = stack_hidden[1].detach()
+							loss = Tensor(torch.zeros(1).cuda())
 
-					a_dist,v,cur_stack_hidden = self.scheduler_model[0].forward(Tensor(stack_s), stack_hidden)	
+						a_dist,v,cur_stack_hidden = self.scheduler_model[0].forward(Tensor(stack_s), stack_hidden)	
 
-					hidden_list[timeStep] = list(cur_stack_hidden)
+						hidden_list[timeStep] = list(cur_stack_hidden)
 
-					# print(timeStep)
-					if timeStep >= self.burn_in_size :
-						loss_critic = ((v-Tensor(stack_td)).pow(2)).mean()
+						# print(timeStep)
+						if (timeStep - timeOffset) >= self.burn_in_size :
+							loss_critic = ((v-Tensor(stack_td)).pow(2)).mean()
 
-						'''Actor Loss'''
-						ratio = torch.exp(a_dist.log_prob(Tensor(stack_a))-Tensor(stack_lp))
-						stack_gae = (stack_gae-stack_gae.mean())/(stack_gae.std()+1E-5)
-						stack_gae = Tensor(stack_gae)
-						surrogate1 = ratio * stack_gae
-						surrogate2 = torch.clamp(ratio, min=1.0-self.clip_ratio, max=1.0+self.clip_ratio) * stack_gae
-						# print(ratio.mean(), end=" ")
-						# print(surrogate1.mean(), end= " ")
-						# print(surrogate2.mean())
-						# print(surrogate1.mean(), end=" ")
-						# print(surrogate2.mean())
-						loss_actor = - torch.min(surrogate1, surrogate2).mean()
-						# loss_actor = - surrogate2.mean()
+							'''Actor Loss'''
+							ratio = torch.exp(a_dist.log_prob(Tensor(stack_a))-Tensor(stack_lp))
+							stack_gae = (stack_gae-stack_gae.mean())/(stack_gae.std()+1E-5)
+							stack_gae = Tensor(stack_gae)
+							surrogate1 = ratio * stack_gae
+							surrogate2 = torch.clamp(ratio, min=1.0-self.clip_ratio, max=1.0+self.clip_ratio) * stack_gae
+							# print(ratio.mean(), end=" ")
+							# print(surrogate1.mean(), end= " ")
+							# print(surrogate2.mean())
+							# print(surrogate1.mean(), end=" ")
+							# print(surrogate2.mean())
+							loss_actor = - torch.min(surrogate1, surrogate2).mean()
+							# loss_actor = - surrogate2.mean()
 
-						'''Entropy Loss'''
-						loss_entropy = - self.w_entropy * a_dist.entropy().mean()
+							'''Entropy Loss'''
+							loss_entropy = - self.w_entropy * a_dist.entropy().mean()
 
-						self.scheduler_loss_actor = loss_actor.cpu().detach().numpy().tolist()
-						self.scheduler_loss_critic = loss_critic.cpu().detach().numpy().tolist()
+							self.scheduler_loss_actor = loss_actor.cpu().detach().numpy().tolist()
+							self.scheduler_loss_critic = loss_critic.cpu().detach().numpy().tolist()
 
-						loss += loss_actor + loss_entropy + loss_critic
+							loss = loss_actor + loss_entropy + loss_critic
 
-						if timeStep % 16 == 15:
-							self.scheduler_optimizer.zero_grad()
+							if (timeStep - timeOffset) % self.bptt_size == self.bptt_size-1 or True:
+								self.scheduler_optimizer.zero_grad()
 
-							# start = time.time()
-							loss.backward(retain_graph=True)
-							# print("time :", time.time() - start)
+								# start = time.time()
+								loss.backward(retain_graph=True)
+								# print("time :", time.time() - start)
 
-							for param in self.scheduler_model[0].parameters():
-								if param.grad is not None:
-									param.grad.data.clamp_(-0.5, 0.5)
-							self.scheduler_optimizer.step()
-						elif timeStep == (self.trunc_size-1):
-							self.scheduler_optimizer.zero_grad()
+								for param in self.scheduler_model[0].parameters():
+									if param.grad is not None:
+										param.grad.data.clamp_(-0.5, 0.5)
+								self.scheduler_optimizer.step()
+							elif timeStep  == (self.trunc_size-1):
+								self.scheduler_optimizer.zero_grad()
 
-							# start = time.time()
-							loss.backward(retain_graph=True)
-							# print("time :", time.time() - start)
+								# start = time.time()
+								loss.backward(retain_graph=True)
+								# print("time :", time.time() - start)
 
-							for param in self.scheduler_model[0].parameters():
-								if param.grad is not None:
-									param.grad.data.clamp_(-0.5, 0.5)
-							self.scheduler_optimizer.step()
+								for param in self.scheduler_model[0].parameters():
+									if param.grad is not None:
+										param.grad.data.clamp_(-0.5, 0.5)
+								self.scheduler_optimizer.step()
 				# for param in self.scheduler_model[0].parameters():
 				# 	if param.grad is not None:
 				# 		param.grad.data.clamp_(-0.5, 0.5)
@@ -688,7 +754,7 @@ class SLAC(object):
 		print('')
 
 
-	def optimizeSchedulerNN(self):
+	def optimizeSchedulerNN1(self):
 		all_rnn_replay_buffer= np.array(self.scheduler_buffer.buffer)
 		for j in range(self.num_epochs):
 			# Get truncated transitions. The transitions will be splited by size self.trunc_size

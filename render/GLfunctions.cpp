@@ -4,6 +4,9 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include "GL/glut.h"
+#include <math.h>
+
+using namespace std;
 
 static GLUquadricObj *quadObj;
 static void initQuadObj(void)
@@ -151,6 +154,38 @@ GUI::drawStringOnScreen(float _x, float _y, const std::string &_s, bool _bigFont
 }
 
 void
+GUI::drawStringOnScreen_small(float _x, float _y, const std::string &_s, const Eigen::Vector3d& color)
+{
+	glColor3f(color[0], color[1], color[2]);
+
+	// draws text on the screen
+	GLint oldMode;
+	glGetIntegerv(GL_MATRIX_MODE, &oldMode);
+	glMatrixMode(GL_PROJECTION);
+
+	glPushMatrix();
+	glLoadIdentity();
+	gluOrtho2D(0.0, 1.0, 0.0, 1.0);
+
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+	glRasterPos2f(_x, _y);
+
+	unsigned int length = _s.length();
+	for(unsigned int c =0; c<length; c++)	
+	{
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, _s.at(c));
+	}
+	glPopMatrix();
+
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glMatrixMode(oldMode);
+}
+
+
+void
 GUI::drawMapOnScreen(Eigen::VectorXd minimap, int numRows, int numCols)
 {
 	// draws text on the screen
@@ -207,4 +242,68 @@ GUI::drawMapOnScreen(Eigen::VectorXd minimap, int numRows, int numCols)
 	glEnable(GL_LIGHTING);
 	glPopMatrix();
 	glMatrixMode(oldMode);
+}
+
+Eigen::Vector3d degreeToRgb(double degree)
+{
+	Eigen::Vector3d r(1.0, 0.0, 0.0);
+	Eigen::Vector3d g(0.0, 1.0, 0.0);
+	Eigen::Vector3d b(0.0, 0.0, 1.0);
+
+	degree = abs(degree);
+	// std::cout<<degree<<" "<<std::abs(degree)<<std::endl;
+
+	if(degree>=1.0)
+		degree = 1.0;
+
+
+	Eigen::Vector3d resultRgb;
+
+
+	int option = 1;
+
+	if(option == 0)
+	{
+		if(degree<=1.0/2.0)
+		{
+			double iFactor = degree * 2.0;
+			resultRgb = degree * g + (1.0 - degree) * b;
+		}
+		else
+		{
+			double iFactor = (degree-1.0/2.0) * 2.0;
+			resultRgb = degree * r + (1.0 - degree) * g;
+		}
+	}
+	
+	else if(option == 1)
+	{
+		resultRgb = Eigen::Vector3d::Ones()*degree;
+	}
+	
+
+
+	return resultRgb;
+}
+
+void 
+GUI::drawValueGradientBox(Eigen::VectorXd states, Eigen::VectorXd valueGradient, double boxSize)
+{
+	assert(states.size() == valueGradient.size());
+	int stateSize = states.size();
+
+	Eigen::Vector3d boxSizeVector(boxSize, boxSize, boxSize);
+		// std::cout<<valueGradient.transpose()<<std::endl;
+
+	for(int i=0;i<stateSize;i++)
+	{
+		glPushMatrix();
+		Eigen::Vector3d color = degreeToRgb(valueGradient[i]/10.0);
+		glColor3f(color[0], color[1], color[2]);
+		glTranslated(boxSize*i, 0, 0);
+		drawCube(boxSizeVector);
+		glPopMatrix();
+	}
+
+
 }
