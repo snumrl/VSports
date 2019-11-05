@@ -38,14 +38,14 @@ class SchedulerNN(nn.Module):
 
 		self.num_policyInput = num_states
 
-		self.hidden_size = 128
+		self.hidden_size = 64
 		self.num_layers = 1
 
 		self.ss_rnn = nn.LSTM(self.num_policyInput, self.hidden_size, num_layers=self.num_layers)
 		self.cur_hidden = self.init_hidden(1)
 
-		num_h1 = 128
-		# num_h2 = 256
+		num_h1 = 64
+		num_h2 = 64
 		# num_h3 = 256
 
 		# self.ss_policy = nn.Sequential(
@@ -70,17 +70,17 @@ class SchedulerNN(nn.Module):
 		self.ss_policy = nn.Sequential(
 			nn.Linear(self.hidden_size, num_h1),
 			nn.LeakyReLU(0.2, inplace=True),
-			nn.Linear(num_h1, num_actions),
-			# nn.LeakyReLU(0.2, inplace=True),
-			# nn.Linear(num_h2, num_actions),
+			nn.Linear(num_h1, num_h2),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h2, num_actions),
 
 		)
 		self.ss_value = nn.Sequential(
 			nn.Linear(self.hidden_size, num_h1),
 			nn.LeakyReLU(0.2, inplace=True),
-			nn.Linear(num_h1, 1),
-			# nn.LeakyReLU(0.2, inplace=True),
-			# nn.Linear(num_h2, 1),
+			nn.Linear(num_h1, num_h2),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h2, 1),
 		)
 
 

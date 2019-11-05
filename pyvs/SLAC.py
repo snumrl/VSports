@@ -608,11 +608,11 @@ class SLAC(object):
 					segmented_transitions = np.array(rnn_replay_buffer.buffer)[i*self.trunc_size:(i+1)*self.trunc_size]
 					all_segmented_transitions.append(segmented_transitions)
 					# zero padding
-					# if (i+2)*self.trunc_size > rnn_replay_buffer_size :
-						# segmented_transitions = [RNNTransition(None,None,None,None,None,None,None) for x in range(self.trunc_size)]
-						# segmented_transitions[:rnn_replay_buffer_size - (i+1)*self.trunc_size] = \
-						# 	np.array(rnn_replay_buffer.buffer)[(i+1)*self.trunc_size:rnn_replay_buffer_size]
-						# all_segmented_transitions.append(segmented_transitions)
+					if (i+2)*self.trunc_size > rnn_replay_buffer_size :
+						segmented_transitions = [RNNTransition(None,None,None,None,None,None,None) for x in range(self.trunc_size)]
+						segmented_transitions[:rnn_replay_buffer_size - (i+1)*self.trunc_size] = \
+							np.array(rnn_replay_buffer.buffer)[(i+1)*self.trunc_size:rnn_replay_buffer_size]
+						all_segmented_transitions.append(segmented_transitions)
 
 			# Shuffle the segmented transition (order of episodes)
 
@@ -651,7 +651,7 @@ class SLAC(object):
 									non_None_batch_segmented_transitions.append(batch_segmented_transitions[k][timeStep])
 									non_None_batch_list[timeStep].append(k)
 
-						print(len(non_None_batch_list[timeStep]))
+						# print(len(non_None_batch_list[timeStep]))
 
 						batch = RNNTransition(*zip(*non_None_batch_segmented_transitions))
 
@@ -687,7 +687,7 @@ class SLAC(object):
 
 
 
-						if (timeStep - timeOffset) % self.bptt_size == 0 or True:
+						if (timeStep - timeOffset) % self.bptt_size == 0:
 							stack_hidden[0] = stack_hidden[0].detach()
 							stack_hidden[1] = stack_hidden[1].detach()
 							loss = Tensor(torch.zeros(1).cuda())
@@ -722,7 +722,7 @@ class SLAC(object):
 
 							loss = loss_actor + loss_entropy + loss_critic
 
-							if (timeStep - timeOffset) % self.bptt_size == self.bptt_size-1 or True:
+							if (timeStep - timeOffset) % self.bptt_size == self.bptt_size-1:
 								self.scheduler_optimizer.zero_grad()
 
 								# start = time.time()
