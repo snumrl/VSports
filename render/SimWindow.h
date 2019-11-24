@@ -3,7 +3,7 @@
 #include "Camera.h"
 #include "GLUTWindow.h"
 #include <string>
-#include <dart/dart.hpp>
+#include "dart/simulation/simulation.hpp"
 
 class SimWindow : public GUI::GLUTWindow
 {

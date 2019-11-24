@@ -1,9 +1,9 @@
 #include "GLfunctions.h"
 #include <assimp/cimport.h>
 #include <iostream>
-#include <GL/gl.h>
-#include <GL/glu.h>
-#include "GL/glut.h"
+// #include <GL/gl.h>
+// #include <GL/glu.h>
+#include <GL/glut.h>
 #include <math.h>
 
 using namespace std;
@@ -85,6 +85,20 @@ drawTriangle(const Eigen::Vector3d& p0,const Eigen::Vector3d& p1,const Eigen::Ve
 	glVertex3d(p0[0], p0[1], p0[2]);
 	glVertex3d(p1[0], p1[1], p1[2]);
 	glVertex3d(p2[0], p2[1], p2[2]);
+	glEnd();
+}
+
+void
+GUI::
+drawSquare(double width, double height)
+{
+	glColor3f(1.0, 1.0, 1.0);
+	glBegin(GL_POLYGON);
+	glNormal3f(0.0, 0.0, 1.0);
+	glVertex3f(width, height, 0);
+	glVertex3f(-width, height, 0);
+	glVertex3f(-width, -height, 0);
+	glVertex3f(width, -height, 0);
 	glEnd();
 }
 
@@ -306,4 +320,44 @@ GUI::drawValueGradientBox(Eigen::VectorXd states, Eigen::VectorXd valueGradient,
 	}
 
 
+}
+void 
+GUI::drawSoccerLine(double x, double y)
+{
+	glBegin(GL_LINES);
+	double floorDepth = -0.09;
+	glVertex3f(0.0, y/2.0, floorDepth);
+	glVertex3f(0.0, -y/2.0, floorDepth);
+	glEnd();
+
+	glBegin(GL_LINE_STRIP);
+	glVertex3f(x/2.0, 20.15/15.0, floorDepth);
+	glVertex3f(x/2.0-16.5/15.0, 20.15/15.0, floorDepth);
+	glVertex3f(x/2.0-16.5/15.0, -20.15/15.0, floorDepth);
+	glVertex3f(x/2.0, -20.15/15.0, floorDepth);
+	glEnd();
+
+	glBegin(GL_LINE_STRIP);
+	glVertex3f(-x/2.0, 20.15/15.0, floorDepth);
+	glVertex3f(-x/2.0+16.5/15.0, 20.15/15.0, floorDepth);
+	glVertex3f(-x/2.0+16.5/15.0, -20.15/15.0, floorDepth);
+	glVertex3f(-x/2.0, -20.15/15.0, floorDepth);
+	glEnd();
+
+
+	//penalty area
+
+
+	glEnd();
+
+	double radius = 9.15/15.0;
+
+	glBegin(GL_LINE_LOOP);
+	for(double i=0;i<360;i+=10.0)
+	{
+		double circleX = radius * cos(i/360 * 2 * M_PI);
+		double circleY = radius * sin(i/360 * 2 * M_PI);
+		glVertex3d(circleX, circleY, floorDepth);
+	}
+	glEnd();
 }

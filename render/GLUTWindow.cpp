@@ -32,6 +32,7 @@ initWindow(int _w, int _h, char* _name)
 	glutDisplayFunc(displayEvent);
 	glutReshapeFunc(reshapeEvent);
 	glutKeyboardFunc(keyboardEvent);
+	glutKeyboardUpFunc(keyboardUpEvent);
 	glutMouseFunc(mouseEvent);
 	glutMotionFunc(motionEvent);
 	glutTimerFunc(mDisplayTimeout, timerEvent, 0);
@@ -65,6 +66,12 @@ GLUTWindow::
 keyboardEvent(unsigned char key, int x, int y)
 {
 	current()->keyboard(key, x, y);
+}
+void
+GLUTWindow::
+keyboardUpEvent(unsigned char key, int x, int y)
+{
+	current()->keyboardUp(key, x, y);
 }
 
 void

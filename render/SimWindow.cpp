@@ -110,12 +110,12 @@ void
 SimWindow::
 timer(int value)
 {
-	if(mPlay)
-	{
-		mWorld->step();
-	}
+	// if(mPlay)
+	// {
+	// 	// mWorld->step();
+	// }
 	glutTimerFunc(mDisplayTimeout, timerEvent, 1);
-	glutPostRedisplay();
+	// glutPostRedisplay();
 }
 
 void 

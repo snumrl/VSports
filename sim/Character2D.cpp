@@ -10,7 +10,6 @@ Character2D(const std::string& name)
 	this->mSkeleton = dart::dynamics::Skeleton::create(mName);
 	setDefaultShape(Eigen::Vector3d(1.0, 0.0, 0.0));
 	setCollision(false);
-	thetaDot = 0.0;
 }
 
 const dart::dynamics::SkeletonPtr&
@@ -36,6 +35,15 @@ setDefaultShape(const Eigen::Vector3d& color)
 	SkelMaker::makeWeldJointBody(mName + "_headJoint", mSkeleton, mSkeleton->getRootBodyNode(), 
 		SHAPE_TYPE::BALL, Eigen::Vector3d::UnitX() * 0.10, 
 		pb2jT, Eigen::Isometry3d::Identity());
+
+	Eigen::Isometry3d j2pbT;
+
+	pb2jT.setIdentity();
+	j2pbT.setIdentity();
+	j2pbT.translation() += Eigen::Vector3d(-0.10, 0.0, 0.0);
+	SkelMaker::makeRevoluteJointBody(mName + "_arrowJoint", mSkeleton, mSkeleton->getRootBodyNode(), 
+		SHAPE_TYPE::BALL, Eigen::Vector3d::UnitX() * 0.04, 
+		pb2jT, j2pbT);
 }
 
 void 
@@ -55,23 +63,24 @@ setCollision(bool enable)
 	}
 }
 
-void
-Character2D::
-applyDirectionForce(double dforce)
-{
-	thetaDot += dforce/10.0;
-	Eigen::Matrix2d rotation2dMatrix;
-	rotation2dMatrix << cos(thetaDot), -sin(thetaDot),
-						sin(thetaDot), cos(thetaDot);
-	mDirection = rotation2dMatrix * mDirection;
-}
+// void
+// Character2D::
+// applyDirectionForce(double dforce)
+// {
+// 	thetaDot += dforce/10.0;
+// 	Eigen::Matrix2d rotation2dMatrix;
+// 	rotation2dMatrix << cos(thetaDot), -sin(thetaDot),
+// 						sin(thetaDot), cos(thetaDot);
+// 	mDirection = rotation2dMatrix * mDirection;
+// 	mSkeleton->setPosition(3, mDirection);
+// }
 
-void
-Character2D::
-directionStep(double timeStep)
-{
-	Eigen::Matrix2d rotation2dMatrix;
-	rotation2dMatrix << cos(thetaDot * timeStep), -sin(thetaDot * timeStep),
-						sin(thetaDot * timeStep), cos(thetaDot * timeStep);
-	mDirection = rotation2dMatrix * mDirection;
-}
+// void
+// Character2D::
+// directionStep(double timeStep)
+// {
+// 	Eigen::Matrix2d rotation2dMatrix;
+// 	rotation2dMatrix << cos(thetaDot * timeStep), -sin(thetaDot * timeStep),
+// 						sin(thetaDot * timeStep), cos(thetaDot * timeStep);
+// 	mDirection = rotation2dMatrix * mDirection;
+// }

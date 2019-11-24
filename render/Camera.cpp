@@ -1,5 +1,6 @@
 #include "Camera.h"
 #include <GL/glut.h>
+#include <iostream>
 using namespace GUI;
 
 Camera::
@@ -59,6 +60,8 @@ void
 Camera::
 rotate(int x,int y,int prev_x,int prev_y)
 {
+	// std::cout<<x<<" "<<prev_x<<std::endl;
+	// std::cout<<y<<" "<<prev_y<<std::endl;
 	GLint w = glutGet(GLUT_WINDOW_WIDTH);
 	GLint h = glutGet(GLUT_WINDOW_HEIGHT);
 
@@ -75,7 +78,8 @@ rotate(int x,int y,int prev_x,int prev_y)
 	rotMat.block<3,1>(0,1) = basisY_Vec;
 	rotMat.block<3,1>(0,2) = basisZ_Vec;
 
-	rotVec = rotMat * rotVec.normalized();
+	if(rotVec.norm() != 0)
+		rotVec = rotMat * rotVec.normalized();
 
 
 	// rotVec = UnProject(rotVec);

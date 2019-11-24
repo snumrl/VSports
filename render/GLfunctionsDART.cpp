@@ -6,7 +6,8 @@ void
 GUI::
 drawSkeleton(
 		const dart::dynamics::SkeletonPtr& skel,
-		const Eigen::Vector3d& color)
+		const Eigen::Vector3d& color,
+		bool wireFrame)
 {
 	for(int i=0;i<skel->getNumBodyNodes();i++)
 	{
@@ -14,7 +15,7 @@ drawSkeleton(
 		auto shapeNodes = bn->getShapeNodesWith<VisualAspect>();
 
 		auto T = shapeNodes[0]->getTransform();
-		drawShape(T,shapeNodes[0]->getShape().get(),color);
+		drawShape(T,shapeNodes[0]->getShape().get(),color, wireFrame);
 	}
 
 }
@@ -24,7 +25,8 @@ void
 GUI::
 drawShape(const Eigen::Isometry3d& T,
 	const dart::dynamics::Shape* shape,
-	const Eigen::Vector3d& color)
+	const Eigen::Vector3d& color,
+	bool wireFrame)
 {
 	glEnable(GL_LIGHTING);
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
@@ -35,14 +37,20 @@ drawShape(const Eigen::Isometry3d& T,
 	if(shape->is<SphereShape>())
 	{
 		const auto* sphere = dynamic_cast<const SphereShape*>(shape);
-		glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+		if(wireFrame)
+			glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+		else
+			glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
 		GUI::drawSphere(sphere->getRadius());
 
 	}
 	else if (shape->is<BoxShape>())
 	{
 		const auto* box = dynamic_cast<const BoxShape*>(shape);
-		glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
+		if(wireFrame)
+			glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+		else
+			glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
     	GUI::drawCube(box->getSize());
 	}
 	glPopMatrix();
