@@ -21,10 +21,9 @@ AgentEnvWindow(int index, Environment* env)
 :SimWindow(), mIndex(index)
 {
 	mEnv = env;
-	initWindow(96, 72, "Agent 0 view");
+	initWindow(84, 84, "Agent 0 view");
 	setAgentView();
 	initGoalpost();
-
 }
 
 void
@@ -53,7 +52,6 @@ initWindow(int _w, int _h, char* _name)
 	// glfw.window_hint(glfw.VISIBLE, false);
 	// glut.
 }
-
 
 
 void

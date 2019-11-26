@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 2.8.6)
 project(pyvs)
+set(CMAKE_CXX_COMPILER /usr/bin/g++-7)
 
 add_compile_options(-fPIC)
-add_compile_options(-std=gnu++11)
+#add_compile_options(-std=gnu++11)
 add_compile_options(-Wdeprecated-declarations)
 add_compile_options(-DHAVE_CSTDDEF)
 

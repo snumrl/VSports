@@ -2,11 +2,13 @@
 #include <omp.h>
 #include "dart/math/math.hpp"
 #include <iostream>
+#include <GL/glut.h>
 
 EnvironmentPython::
 EnvironmentPython(int simulationHz)
 	:mNumSlaves(8)
 {
+
 	dart::math::seedRand();
 	omp_set_num_threads(mNumSlaves);
 	for(int i=0;i<mNumSlaves;i++)
@@ -221,6 +223,16 @@ getNumIterations()
 // 	mSlaves[0]->getHindsightReward(toEigenVector(curHindsightState));
 // }
 
+class GlutInitClass
+{
+public:
+	GlutInitClass(){
+		int argc = 1;
+		char *argv[1] = {(char*)"Something"};
+		glutInit(&argc, argv);
+	}
+};
+
 
 
 using namespace boost::python;
@@ -253,4 +265,7 @@ BOOST_PYTHON_MODULE(pyvs)
 		// .def("setHindsightGoal",&EnvironmentPython::setHindsightGoal)
 		// .def("getHindsightState",&EnvironmentPython::getHindsightState)
 		// .def("getHindsightReward",&EnvironmentPython::getHindsightReward);
+
+	class_<GlutInitClass>("GlutInitClass", init<>());
+
 }
