@@ -22,4 +22,4 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 file(GLOB srcs "*.h" "*.cpp" "../render/*.cpp" "../render/*.h")
 
 add_library(sim ${srcs})
-target_link_libraries(sim ${DART_LIBRARIES} ${EIGEN_LIBRARIES} ${Boost_LIBRARIES})
+target_link_libraries(sim ${DART_LIBRARIES} ${EIGEN_LIBRARIES} ${Boost_LIBRARIES} -lEGL -lGLESv2)

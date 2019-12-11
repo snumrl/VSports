@@ -24,16 +24,16 @@ int main(int argc, char** argv)
 	{
 		simwindow = new IntWindow();
 	}
-	else if(argc==2)
-		simwindow = new IntWindow(argv[1]);
+	else if(argc==3)
+		simwindow = new IntWindow(argv[1], argv[2]);
 	// else if(argc==3)
 	// 	simwindow = new MultiSocWindow(argv);
 
 
 	// glfwInit(&argc, argv);
 	simwindow->initWindow(1000, 1000, "Render");
-	AgentWindow* agentWindow = new AgentWindow(0,simwindow->mEnv);
-	agentWindow->initWindow(96, 72, "Render");
+	// AgentWindow* agentWindow = new AgentWindow(0,simwindow->mEnv);
+	// agentWindow->initWindow(400, 300, "Render");
 
 	// simwindow->initWindow(1000, 1000, "Render2");
 	simwindow->initialize();

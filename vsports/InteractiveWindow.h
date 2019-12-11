@@ -10,7 +10,7 @@
 class IntWindow : public SimWindow{
 public:
 	IntWindow();
-	IntWindow(const std::string& nn_path);
+	IntWindow(const std::string& nn_path1, const std::string& nn_path2);
 	void initWindow(int _w, int _h, char* _name) override;
 
 	void keyboard(unsigned char key, int x, int y) override;
@@ -32,7 +32,7 @@ public:
 
 	void applyKeyEvent();
 
-	void getActionFromNN(bool vsHardcodedAI = false);
+	void getActionFromNN(int index);
 
 	void drawValueGradient();
 

@@ -5,15 +5,15 @@
 #include <GL/glut.h>
 
 EnvironmentPython::
-EnvironmentPython(int simulationHz)
+EnvironmentPython(int numAgent)
 	:mNumSlaves(8)
 {
 
 	dart::math::seedRand();
-	omp_set_num_threads(mNumSlaves);
+	// omp_set_num_threads(mNumSlaves);
 	for(int i=0;i<mNumSlaves;i++)
 	{
-		mSlaves.push_back(new Environment(30, simulationHz, 2));
+		mSlaves.push_back(new Environment(30, 600, numAgent));
 	}
 	mNumState = mSlaves[0]->getNumState();
 	mNumAction = mSlaves[0]->getNumAction();
@@ -84,7 +84,17 @@ getState(int id, int index)
 	// exit(0);
 	return toNumPyArray(mSlaves[id]->getState(index));
 }
-
+np::ndarray
+EnvironmentPython::
+getLocalState(int id, int index)
+{
+	// std::cout<<"getState in wrapper"<<std::endl;
+	// mSlaves[id]->getState(index);
+	// std::cout<<"I got state"<<std::endl;
+	// std::cout<< toNumPyArray(mSlaves[id]->getState(index)).shape(0)<<std::endl;
+	// exit(0);
+	return toNumPyArray(mSlaves[id]->getLocalState(index));
+}
 // np::ndarray
 // EnvironmentPython::
 // getSchedulerState(int id, int index)
@@ -135,6 +145,13 @@ getReward(int id, int index)
 	return mSlaves[id]->getReward(index);
 }
 
+np::ndarray
+EnvironmentPython::
+getHardcodedAction(int id, int index)
+{
+	return toNumPyArray(mSlaves[id]->getActionFromBTree(index));
+}
+
 // double
 // EnvironmentPython::
 // getSchedulerReward(int id, int index)
@@ -162,7 +179,7 @@ EnvironmentPython::
 stepsAtOnce()
 {
 	int num = getSimulationHz()/getControlHz();
-#pragma omp parallel for
+// #pragma omp parallel for
 	for(int id=0;id<mNumSlaves;++id)
 	{
 		// for(int j=0;j<num;j++)
@@ -250,6 +267,7 @@ BOOST_PYTHON_MODULE(pyvs)
 		.def("reset",&EnvironmentPython::reset)
 		.def("isTerminalState",&EnvironmentPython::isTerminalState)
 		.def("getState",&EnvironmentPython::getState)
+		.def("getLocalState",&EnvironmentPython::getLocalState)
 		// .def("getSchedulerState",&EnvironmentPython::getSchedulerState)
 		// .def("getLinearActorState",&EnvironmentPython::getLinearActorState)
 		.def("setAction",&EnvironmentPython::setAction)
@@ -257,9 +275,11 @@ BOOST_PYTHON_MODULE(pyvs)
 		// .def("getSchedulerReward",&EnvironmentPython::getSchedulerReward)
 		// .def("getLinearActorReward",&EnvironmentPython::getLinearActorReward)
 		.def("stepsAtOnce",&EnvironmentPython::stepsAtOnce)
+		.def("stepAtOnce",&EnvironmentPython::stepAtOnce)
 		.def("step",&EnvironmentPython::step)
 		.def("resets",&EnvironmentPython::resets)
 		.def("getNumIterations",&EnvironmentPython::getNumIterations)
+		.def("getHardcodedAction",&EnvironmentPython::getHardcodedAction)
 		// .def("setLinearActorState",&EnvironmentPython::setLinearActorState)
 		.def("endOfIteration",&EnvironmentPython::endOfIteration);
 		// .def("setHindsightGoal",&EnvironmentPython::setHindsightGoal)

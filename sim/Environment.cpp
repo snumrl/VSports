@@ -30,8 +30,11 @@ mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0)
 	initFloor();
 	initBall();
 	getNumState();
-	mWorld->getConstraintSolver()->removeAllConstraints();
-	mWindow = new AgentEnvWindow(0, this);
+	// cout<<"11111"<<endl;
+	// mWorld->getConstraintSolver()->removeAllConstraints();
+	// cout<<"2222"<<endl;
+	// mWindow = new AgentEnvWindow(0, this);
+	// cout<<"3333"<<endl;
 }
 
 	// Create A team, B team players.
@@ -75,8 +78,10 @@ initCharacters()
 		touch.setZero();
 		mAccScore.resize(mNumChars);
 		mAccScore.setZero();
-		mAction.resize(zeroVel.rows()+touch.rows());
-		mAction << zeroVel, touch;
+		// mAction.resize(zeroVel.rows()+touch.rows());
+		// mAction << zeroVel, touch;
+		mAction.resize(5);
+		mAction.setZero();
 		mActions.push_back(mAction);
 	}
 
@@ -208,7 +213,7 @@ handleBallContact(int index, double radius, double me)
 	SkeletonPtr skel = mCharacters[index]->getSkeleton();
 	double ballDistance = (ballSkel->getPositions() - skel->getPositions().segment(0,2)).norm();
 
-	double kickPower = mActions[index][3];
+	double kickPower = mActions[index][4];
 
 	// if(kickPower>=1)
 	// 	kickPower = 1;
@@ -306,7 +311,7 @@ Environment::
 dampBallVelocitiy(double dampPower)
 {
 	Eigen::VectorXd ballForce = ballSkel->getForces();
-	ballForce -= dampPower*ballSkel->getVelocities();
+	ballForce -= 1.0*dampPower*ballSkel->getVelocities();
 	ballSkel->setForces(ballForce);
 }
 
@@ -321,8 +326,9 @@ step()
 	{
 		applyAction(i);
 	}
+	// cout<<"11111111!"<<endl;
 
-	// handlePlayerContacts(0.7);
+	handlePlayerContacts(0.7);
 
 	for(int i=0;i<mCharacters.size();i++)
 	{
@@ -338,8 +344,10 @@ step()
 
 	handleWallContact(ballSkel, 0.08, 0.8);
 
-	boundBallVelocitiy(8.0);
-	dampBallVelocitiy(2.0);
+	boundBallVelocitiy(5.0);
+	dampBallVelocitiy(2.5);
+
+	// cout<<mCharacters[0]->getSkeleton()->getForces().transpose()<<endl;
 
 	mWorld->step();
 }
@@ -349,12 +357,16 @@ void
 Environment::
 stepAtOnce()
 {
+	// cout<<"Start"<<endl;
 	int sim_per_control = this->getSimulationHz()/this->getControlHz();
 	for(int i=0;i<sim_per_control;i++)
 	{
 		this->step();
 	}
-	mWindow->display();
+	// getRewards();
+	// cout<<"Here?"<<endl;
+	// mWindow->display();
+	// cout<<"end"<<endl;
 }
 
 
@@ -362,6 +374,7 @@ Eigen::VectorXd
 Environment::
 getState(int index)
 {
+	// cout<<"getState "<<index<<" start"<<endl;
 	// Character's state
 	Eigen::Vector2d p,v;
 	Character2D* character = mCharacters[index];
@@ -387,7 +400,7 @@ getState(int index)
 
 
 	Eigen::VectorXd kickable(1);
-	if(relativeBallP.norm()<0.15+0.08)
+	if(relativeBallP.norm()<0.30)
 	{
 		kickable[0] = 1;
 	}
@@ -414,12 +427,30 @@ getState(int index)
 	{
 		if(mCharacters[i]->getName()!=character->getName())
 		{
-			SkeletonPtr skel = mCharacters[i]->getSkeleton();
-			otherS.segment(count*4,2) = skel->getPositions().segment(0,2) - p;
-			otherS.segment(count*4+2,2) = skel->getVelocities().segment(0,2) - v;
-			count++;
+			if(mCharacters[i]->getTeamName()==character->getTeamName())
+			{
+				SkeletonPtr skel = mCharacters[i]->getSkeleton();
+				otherS.segment(count*4,2) = skel->getPositions().segment(0,2) - p;
+				otherS.segment(count*4+2,2) = skel->getVelocities().segment(0,2) - v;
+				count++;
+			}
 		}
 	}
+
+	for(int i=0;i<mCharacters.size();i++)
+	{
+		if(mCharacters[i]->getName()!=character->getName())
+		{
+			if(mCharacters[i]->getTeamName()!=character->getTeamName())
+			{
+				SkeletonPtr skel = mCharacters[i]->getSkeleton();
+				otherS.segment(count*4,2) = skel->getPositions().segment(0,2) - p;
+				otherS.segment(count*4+2,2) = skel->getVelocities().segment(0,2) - v;
+				count++;
+			}
+		}
+	}
+
 
 
 	double reviseStateByTeam = -1;
@@ -446,11 +477,18 @@ getState(int index)
 		simpleGoalpostPositions.segment(6,2) = mGoalposts[1].second.segment(0,2) + Eigen::Vector2d(0.0, 1.5/2.0) - p;
 
 	}
+	Eigen::Vector2d facing;
+	double facingAngle = character->getSkeleton()->getPosition(2);
+	facingAngle = M_PI * (1-reviseStateByTeam)/2.0 + facingAngle;
+	facing[0] = sin(facingAngle);
+	facing[1] = cos(facingAngle);
 
+
+	// cout<<index<<" "<<facing.transpose()<<endl;
 	Eigen::VectorXd state;
 
 	state.resize(p.rows() + v.rows() + ballP.rows() + ballV.rows() + kickable.rows() + simpleGoalpostPositions.rows()
-		+ otherS.rows());
+		+ otherS.rows() + facing.rows());
 
 	count = 0;
 	for(int i=0;i<p.rows();i++)
@@ -483,12 +521,63 @@ getState(int index)
 	{
 		state[count++] = reviseStateByTeam * otherS[i];
 	}
-
+	for(int i=0;i<facing.rows();i++)
+	{
+		state[count++] = facing[i];
+	}
 	mStates[index] = state;
+	// cout<<"getState end"<<endl;
 	return normalizeNNState(state);
 }
 
+Eigen::Vector2d
+rotate2DVector(Eigen::Vector2d vec, double theta)
+{	
+	Eigen::Matrix2d rot;
+	rot << cos(theta), -sin(theta), sin(theta), cos(theta);
+	return rot * vec;
+}
 
+Eigen::VectorXd
+Environment::
+getLocalState(int index)
+{
+	getState(index);
+	double theta = atan2(mStates[index][_ID_FACING_SIN], mStates[index][_ID_FACING_COS]);
+	Eigen::VectorXd localState = mStates[index];
+
+
+	if(mNumChars == 4)
+	{
+		localState.segment(_ID_BALL_P, 2) = rotate2DVector(localState.segment(_ID_BALL_P, 2), -theta);
+		localState.segment(_ID_BALL_V, 2) = rotate2DVector(localState.segment(_ID_BALL_V, 2), -theta);
+		localState.segment(_ID_GOALPOST_P, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P, 2), -theta);
+		localState.segment(_ID_GOALPOST_P+2, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+2, 2), -theta);
+		localState.segment(_ID_GOALPOST_P+4, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+4, 2), -theta);
+		localState.segment(_ID_GOALPOST_P+6, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+6, 2), -theta);
+		localState.segment(_ID_ALLY_P, 2) = rotate2DVector(localState.segment(_ID_ALLY_P, 2), -theta);
+		localState.segment(_ID_ALLY_V, 2) = rotate2DVector(localState.segment(_ID_ALLY_V, 2), -theta);
+		localState.segment(_ID_OP_DEF_P, 2) = rotate2DVector(localState.segment(_ID_OP_DEF_P, 2), -theta);
+		localState.segment(_ID_OP_DEF_V, 2) = rotate2DVector(localState.segment(_ID_OP_DEF_V, 2), -theta);
+		localState.segment(_ID_OP_ATK_P, 2) = rotate2DVector(localState.segment(_ID_OP_ATK_P, 2), -theta);
+		localState.segment(_ID_OP_ATK_V, 2) = rotate2DVector(localState.segment(_ID_OP_ATK_V, 2), -theta);
+
+	}
+	else if(mNumChars == 2)
+	{
+		localState.segment(_ID_BALL_P, 2) = rotate2DVector(localState.segment(_ID_BALL_P, 2), -theta);
+		localState.segment(_ID_BALL_V, 2) = rotate2DVector(localState.segment(_ID_BALL_V, 2), -theta);
+		localState.segment(_ID_GOALPOST_P, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P, 2), -theta);
+		localState.segment(_ID_GOALPOST_P+2, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+2, 2), -theta);
+		localState.segment(_ID_GOALPOST_P+4, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+4, 2), -theta);
+		localState.segment(_ID_GOALPOST_P+6, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+6, 2), -theta);
+		localState.segment(_ID_OP_DEF_P, 2) = rotate2DVector(localState.segment(_ID_OP_DEF_P, 2), -theta);
+		localState.segment(_ID_OP_DEF_V, 2) = rotate2DVector(localState.segment(_ID_OP_DEF_V, 2), -theta);
+	}
+
+
+	return normalizeNNState(localState);
+}
 
 double
 Environment::
@@ -531,12 +620,15 @@ getReward(int index)
 	Eigen::Vector2d widthVector = Eigen::Vector2d::UnitX();
 	Eigen::Vector2d heightVector = Eigen::Vector2d::UnitY();
 
-
-
+	// if(index == 0)
+	// 	cout<<p.transpose()<<endl;
+	// cout<<0<<endl;
 	if(widthVector.dot(ballPosition)+ballRadius >= mGoalposts[1].second.x())
 	{
+	// cout<<1<<endl;
 		if(abs(heightVector.dot(ballPosition)) < goalpostSize/2.0)
 		{
+	// cout<<2<<endl;
 			// std::cout<<"Red Team GOALL!!"<<std::endl;
 			// if(!goalRewardPaid[index])
 
@@ -585,12 +677,13 @@ getRewards()
 	std::vector<double> rewards;
 	for(int i=0;i<mNumChars;i++)
 	{
-		// getLinearActorReward(i);
-		if (i==0)
-		{
-			// rewards.push_back();
-			mAccScore[i] += getReward(i);
-		}
+		// // getLinearActorReward(i);
+		// if (i==0)
+		// {
+		// 	// rewards.push_back();
+		// 	mAccScore[i] += getReward(i);
+		// }
+		mAccScore[i] += getReward(i);
 
 	}
 
@@ -601,8 +694,10 @@ void
 Environment::
 applyAction(int index)
 {
+	// cout<<index<<endl;
 	// double maxVel = 4.0;
 	SkeletonPtr skel = mCharacters[index]->getSkeleton();
+	// cout<<mForces[index].transpose()<<endl;
 	skel->setForces(mForces[index]);
 
 	double reviseStateByTeam = -1;
@@ -612,11 +707,23 @@ applyAction(int index)
 		reviseStateByTeam = 1;
 
 	Eigen::VectorXd vel = reviseStateByTeam * skel->getVelocities();
+	// cout<<vel.transpose()<<endl;
 
-	if (vel.norm() > maxVel)
-		vel = vel/vel.norm() * maxVel;
+	if (vel.segment(0,2).norm() > maxVel)
+		vel.segment(0,2) = vel.segment(0,2)/vel.segment(0,2).norm() * maxVel;
+	vel[2] = 0;
 	skel->setVelocities(reviseStateByTeam * vel);
 }
+
+double
+directionToTheta(Eigen::Vector2d direction)
+{
+	if(direction.norm() == 0)
+		return 0;
+	direction.normalize();
+	return atan2(direction[1], direction[0]);
+}
+
 
 void 
 Environment::
@@ -624,6 +731,9 @@ setAction(int index, const Eigen::VectorXd& a)
 {
 	bool isNanOccured = false;
 	// double maxVel = 4.0;
+	// if(index==0)
+	// 	cout<<a.transpose()<<endl;
+	// cout<<a.transpose()<<endl;
 
 	for(int i=0;i<a.size();i++)
 	{
@@ -646,9 +756,9 @@ setAction(int index, const Eigen::VectorXd& a)
 	// 		mActions[index][i] = -1.0;
 	// }
 
-	if(mActions[index].segment(0,3).norm()>1.0)
+	if(mActions[index].segment(0,2).norm()>1.0)
 	{
-		mActions[index].segment(0,3) /= mActions[index].segment(0,2).norm();
+		mActions[index].segment(0,2) /= mActions[index].segment(0,2).norm();
 	}
 
 	// if(index == 0)
@@ -659,9 +769,13 @@ setAction(int index, const Eigen::VectorXd& a)
 	// 	mActions[index][3] = -1;
 	// }
 
-	Eigen::VectorXd applyingForce = mActions[index].segment(0,3);
 
 	// applyingForce /= applyingForce.norm();
+	// if(index == 1)
+	// {
+	// 	mActions[index][4] = -1;
+	// 	mActions[index].segment(0,2).setZero();
+	// }
 
 	SkeletonPtr skel = mCharacters[index]->getSkeleton();
 	
@@ -669,9 +783,28 @@ setAction(int index, const Eigen::VectorXd& a)
 	if( mCharacters[index]->getTeamName() == mGoalposts[0].first)
 		reviseStateByTeam = 1;
 
-	// Eigen::VectorXd vel = reviseStateByTeam * skel->getVelocities();
+	Eigen::VectorXd applyingForce = mActions[index].segment(0,3);
+
+	// change action with respect to the viewing direction
+	if(mActions[index].segment(2,2).norm() !=0)
+		mActions[index].segment(2,2).normalize();
+	else
+		mActions[index].segment(2,2) = Eigen::Vector2d(0.0, 1.0);
+
+	double curFacingAngle = atan2(mStates[index][_ID_FACING_SIN], mStates[index][_ID_FACING_COS]);
+
+	double facingAngle = curFacingAngle + atan2(mActions[index][2], mActions[index][3]);
+
+	applyingForce.segment(0,2) = rotate2DVector(mActions[index].segment(0,2), curFacingAngle);
+	// applyingForce.segment(0,2) = rotate2DVector(mActions[index].segment(0,2), 0);
+	applyingForce[2] = 0.0;
+
+	skel->setPosition(2, facingAngle + M_PI*(1-reviseStateByTeam)/2.0 );
+	// skel->setPosition(2, 0 + M_PI*(1-reviseStateByTeam)/2.0 );
 
 	mForces[index] = 200.0*reviseStateByTeam*applyingForce;
+	// cout<<mForces[index].transpose()<<endl;
+	// skel->setPosition(2, directionToTheta(skel->getVelocities().segment(0,2)));
 }
 
 
@@ -693,33 +826,84 @@ Environment::
 reset()
 {
 	Eigen::VectorXd ballPosition = ballSkel->getPositions();
-	ballPosition[0] = 4.0 * (rand()/(double)RAND_MAX ) - 4.0/2.0;
-	ballPosition[1] = 3.0 * (rand()/(double)RAND_MAX ) - 3.0/2.0;
+	ballPosition[0] = 2.0 * (rand()/(double)RAND_MAX ) - 2.0/2.0;
+	ballPosition[1] = 1.5 * (rand()/(double)RAND_MAX ) - 1.5/2.0;
 	ballSkel->setPositions(ballPosition);
 	Eigen::VectorXd ballVel = ballSkel->getVelocities();
-	ballVel[0] = 8.0 * (rand()/(double)RAND_MAX ) - 4.0;
-	ballVel[1] = 8.0 * (rand()/(double)RAND_MAX ) - 4.0;
+	ballVel[0] = 4.0 * (rand()/(double)RAND_MAX ) - 2.0;
+	ballVel[1] = 4.0 * (rand()/(double)RAND_MAX ) - 2.0;
 	ballSkel->setVelocities(ballVel);
 
-	for(int i=0;i<mNumChars;i++)
+
+	if(mNumChars == 4)
 	{
-		SkeletonPtr skel = mCharacters[i]->getSkeleton();
-		Eigen::VectorXd skelPosition = skel->getPositions();
-		skelPosition[0] = 6.0 * (rand()/(double)RAND_MAX ) - 6.0/2.0;
-		skelPosition[1] = 4.5 * (rand()/(double)RAND_MAX ) - 4.5/2.0;
-		skelPosition[2] = 2.0 * M_PI * (rand()/(double)RAND_MAX );
-		skel->setPositions(skelPosition);
-		Eigen::VectorXd skelVel = skel->getVelocities();
-		skelVel[0] = 3.0 * (rand()/(double)RAND_MAX ) - 1.5;
-		skelVel[1] = 3.0 * (rand()/(double)RAND_MAX ) - 1.5;
-		skelVel[2] = 0.0;
-		skel->setVelocities(skelVel);
-		// if(i == 0 && rand()%2 == 0)
-		// {
-		// 	ballSkel->setPositions(skelPosition);
-		// 	ballSkel->setVelocities(skelVel);
-		// }
+		for(int i=0;i<mNumChars;i++)
+		{
+			SkeletonPtr skel = mCharacters[i]->getSkeleton();
+			Eigen::VectorXd skelPosition = skel->getPositions();
+			if(i < 2)
+			{
+				skelPosition[0] = -2.0 * (rand()/(double)RAND_MAX ) - 1.0;
+				skelPosition[1] = 2.5 * (rand()/(double)RAND_MAX ) - 2.5/2;
+				skelPosition[2] = 2.0 * M_PI * (rand()/(double)RAND_MAX );
+				// cout<<skelPosition[0]<<endl;
+			}
+			else
+			{
+				skelPosition[0] = 2.0 * (rand()/(double)RAND_MAX ) + 1.0;
+				skelPosition[1] = 2.5 * (rand()/(double)RAND_MAX ) - 2.5/2;
+				skelPosition[2] = 2.0 * M_PI * (rand()/(double)RAND_MAX );
+				// cout<<skelPosition[0]<<endl;
+			}
+
+			skel->setPositions(skelPosition);
+			Eigen::VectorXd skelVel = skel->getVelocities();
+			skelVel[0] = 3.0 * (rand()/(double)RAND_MAX ) - 1.5;
+			skelVel[1] = 3.0 * (rand()/(double)RAND_MAX ) - 1.5;
+			skelVel[2] = 0.0;
+			skel->setVelocities(skelVel);
+			// if(i == 0 && rand()%2 == 0)
+			// {
+			// 	ballSkel->setPositions(skelPosition);
+			// 	ballSkel->setVelocities(skelVel);
+			// }
+		}
 	}
+	else if(mNumChars == 2)
+	{
+		for(int i=0;i<mNumChars;i++)
+		{
+			SkeletonPtr skel = mCharacters[i]->getSkeleton();
+			Eigen::VectorXd skelPosition = skel->getPositions();
+			if(i < 1)
+			{
+				skelPosition[0] = -2.0 * (rand()/(double)RAND_MAX ) - 1.0;
+				skelPosition[1] = 2.5 * (rand()/(double)RAND_MAX ) - 2.5/2;
+				skelPosition[2] = 2.0 * M_PI * (rand()/(double)RAND_MAX );
+				// cout<<skelPosition[0]<<endl;
+			}
+			else
+			{
+				skelPosition[0] = 2.0 * (rand()/(double)RAND_MAX ) + 1.0;
+				skelPosition[1] = 2.5 * (rand()/(double)RAND_MAX ) - 2.5/2;
+				skelPosition[2] = 2.0 * M_PI * (rand()/(double)RAND_MAX );
+				// cout<<skelPosition[0]<<endl;
+			}
+
+			skel->setPositions(skelPosition);
+			Eigen::VectorXd skelVel = skel->getVelocities();
+			skelVel[0] = 3.0 * (rand()/(double)RAND_MAX ) - 1.5;
+			skelVel[1] = 3.0 * (rand()/(double)RAND_MAX ) - 1.5;
+			skelVel[2] = 0.0;
+			skel->setVelocities(skelVel);
+			// if(i == 0 && rand()%2 == 0)
+			// {
+			// 	ballSkel->setPositions(skelPosition);
+			// 	ballSkel->setVelocities(skelVel);
+			// }
+		}
+	}
+	
 
 
 	mIsTerminalState = false;
@@ -790,7 +974,7 @@ normalizeNNState(Eigen::VectorXd state)
 	Eigen::VectorXd normalizedState = state;
 	int numState = normalizedState.size();
 	normalizedState.segment(0, 8) = state.segment(0,8)/8.0;
-	normalizedState.segment(9, numState-9) = state.segment(9, numState-9)/8.0;
+	normalizedState.segment(9, numState-11) = state.segment(9, numState-11)/8.0;
 	return normalizedState;
 }
 
@@ -802,7 +986,7 @@ unNormalizeNNState(Eigen::VectorXd outSubgoal)
 	Eigen::VectorXd scaledSubgoal = outSubgoal;
 	int numState = scaledSubgoal.size();
 	scaledSubgoal.segment(0, 8) = outSubgoal.segment(0,8)*8.0;
-	scaledSubgoal.segment(9, numState-9) = outSubgoal.segment(9, numState-9)*8.0;
+	scaledSubgoal.segment(9, numState-11) = outSubgoal.segment(9, numState-11)*8.0;
 	return scaledSubgoal;
 }
 
@@ -829,8 +1013,45 @@ setVState(int index, Eigen::VectorXd latentState)
 
 bool isNotCloseToBall(Eigen::VectorXd curState)
 {
-	return curState.segment(_ID_BALL_P,2).norm() >= 0.05;
+	return curState.segment(_ID_BALL_P,2).norm() >= 0.15;
 }
+
+bool isNotCloseToBall_soft(Eigen::VectorXd curState)
+{
+	return curState.segment(_ID_BALL_P,2).norm() >= 0.35;
+}
+
+
+Eigen::VectorXd
+genActionNoise(int numRows)
+{
+	Eigen::VectorXd actionNoise(numRows);
+	// std::default_random_engine generator;
+	std::random_device rd{};
+    std::mt19937 gen{rd()};
+	std::normal_distribution<double> distribution1(0.0, 0.0);
+	for(int i=0;i<2;i++)
+	{
+		actionNoise[i] = distribution1(gen);
+	}
+
+	std::normal_distribution<double> distribution2(0.0, 0.0);
+	for(int i=2;i<4;i++)
+	{
+		actionNoise[i] = distribution2(gen);
+	}
+	
+	std::normal_distribution<double> distribution3(0.0, 0.0);
+	for(int i=4;i<5;i++)
+	{
+		actionNoise[i] = distribution3(gen);
+	}
+	actionNoise.setZero();
+	// cout<<actionNoise.transpose()<<endl;
+	return actionNoise;
+}
+
+double hardcodedShootingPower = 0.3;
 
 Eigen::VectorXd
 actionCloseToBall(Eigen::VectorXd curState)
@@ -840,10 +1061,24 @@ actionCloseToBall(Eigen::VectorXd curState)
 
 	if(targetVel.norm() !=0)
 		targetVel = targetVel.normalized()*4.0;
-	Eigen::VectorXd action(4);
+	Eigen::VectorXd action(5);
 	action.setZero();
 	action.segment(0,2) = targetVel - curVel;
 
+	// Eigen::Vector2d direction = targetVel - curVel;
+	// direction.normalize();
+	// action[2] = directionToTheta(direction);
+
+	double curFacingAngle = atan2(curState[_ID_FACING_SIN], curState[_ID_FACING_COS]);
+
+	double facingAngle = directionToTheta(curState.segment(_ID_V,2));
+	action[2] = sin(facingAngle - curFacingAngle);
+	action[3] = cos(facingAngle - curFacingAngle);
+
+	action.segment(0,2) = rotate2DVector(action.segment(0,2), -curFacingAngle);
+	action.segment(0,2).normalize();
+	action[4] = -hardcodedShootingPower;
+	action += genActionNoise(action.size());;
 	return action;
 }
 
@@ -855,12 +1090,22 @@ actionCloseToBallWithShooting(Eigen::VectorXd curState)
 
 	if(targetVel.norm() !=0)
 		targetVel = targetVel.normalized()*4.0;
-	Eigen::VectorXd action(4);
+	Eigen::VectorXd action(5);
 	action.setZero();
 	action.segment(0,2) = targetVel - curVel;
 
-	action[3] = 1.0;
+	double curFacingAngle = atan2(curState[_ID_FACING_SIN], curState[_ID_FACING_COS]);
 
+	double facingAngle = directionToTheta(curState.segment(_ID_V,2));
+	action[2] = sin(facingAngle - curFacingAngle);
+	action[3] = cos(facingAngle - curFacingAngle);
+
+	action.segment(0,2) = rotate2DVector(action.segment(0,2), -curFacingAngle);
+	action.segment(0,2).normalize();
+
+	action[4] = hardcodedShootingPower;
+
+	action += genActionNoise(action.size());;
 	return action;
 }
 bool isNotVelHeadingGoal(Eigen::VectorXd curState)
@@ -884,11 +1129,20 @@ actionVelHeadingGoal(Eigen::VectorXd curState)
 
 	if(targetVel.norm() !=0)
 		targetVel = targetVel.normalized()*4.0;
-	Eigen::VectorXd action(4);
+	Eigen::VectorXd action(5);
 	action.setZero();
 	action.segment(0,2) = targetVel- curVel;
 
-	action[3] = 0.0;
+	double curFacingAngle = atan2(curState[_ID_FACING_SIN], curState[_ID_FACING_COS]);
+
+	double facingAngle = directionToTheta(curState.segment(_ID_V,2));
+	action[2] = sin(facingAngle - curFacingAngle);
+	action[3] = cos(facingAngle - curFacingAngle);
+	action.segment(0,2) = rotate2DVector(action.segment(0,2), -curFacingAngle);
+	action.segment(0,2).normalize();
+
+	action[4] = -hardcodedShootingPower;
+	action += genActionNoise(action.size());;
 	return action;
 }
 
@@ -919,11 +1173,21 @@ actionBallHeadingGoal(Eigen::VectorXd curState)
 
 	if(targetVel.norm() !=0)
 		targetVel = targetVel.normalized()*4.0;
-	Eigen::VectorXd action(4);
+	Eigen::VectorXd action(5);
 	action.setZero();
 	action.segment(0,2) = targetVel - curVel;
 
-	action[3] = 1.0;
+	double curFacingAngle = atan2(curState[_ID_FACING_SIN], curState[_ID_FACING_COS]);
+
+	double facingAngle = directionToTheta(curState.segment(_ID_V,2));
+	action[2] = sin(facingAngle - curFacingAngle);
+	action[3] = cos(facingAngle - curFacingAngle);
+
+	action.segment(0,2) = rotate2DVector(action.segment(0,2), -curFacingAngle);
+	action.segment(0,2).normalize();
+
+	action[4] = hardcodedShootingPower;
+	action += genActionNoise(action.size());;
 	return action;
 }
 
@@ -940,11 +1204,16 @@ bool isNotBallInPenalty(Eigen::VectorXd curState)
 	return ballPosition[0] >= -2.0;
 }
 
-Eigen::VectorXd actionNotBallInPenalty(Eigen::VectorXd curState)
+Eigen::VectorXd actionBallInPenalty(Eigen::VectorXd curState)
 {
 	Eigen::VectorXd targetPosition = curState.segment(_ID_P,2);
-	targetPosition[0] = 4.0 * (rand()/(double)RAND_MAX );
-	targetPosition[1] = 3.0 * (rand()/(double)RAND_MAX ) - 6.0/2.0;
+	// targetPosition[0] = 4.0 * (rand()/(double)RAND_MAX );
+	// targetPosition[1] = 3.0 * (rand()/(double)RAND_MAX ) - 6.0/2.0;
+
+	Eigen::VectorXd oppAttackerPosition = curState.segment(_ID_P,2) + curState.segment(_ID_OP_ATK_P, 2);
+	double oppAttackerDirection = oppAttackerPosition[1];
+	oppAttackerDirection /= abs(oppAttackerDirection);
+	targetPosition[1] = -oppAttackerDirection*3.0;
 
 	Eigen::VectorXd targetVel = targetPosition - curState.segment(_ID_P,2);
 
@@ -952,12 +1221,24 @@ Eigen::VectorXd actionNotBallInPenalty(Eigen::VectorXd curState)
 
 	if(targetVel.norm() !=0)
 		targetVel = targetVel.normalized()*4.0;
-	Eigen::VectorXd action(4);
+	Eigen::VectorXd action(5);
 	action.setZero();
 	action.segment(0,2) = targetVel - curVel;
 
+	double curFacingAngle = atan2(curState[_ID_FACING_SIN], curState[_ID_FACING_COS]);
+
+	double facingAngle = directionToTheta(curState.segment(_ID_V,2));
+	action[2] = sin(facingAngle - curFacingAngle);
+	action[3] = cos(facingAngle - curFacingAngle);
+
+	action.segment(0,2) = rotate2DVector(action.segment(0,2), -curFacingAngle);
+	action.segment(0,2).normalize();
+	action[4] = -hardcodedShootingPower;
+	action += genActionNoise(action.size());;
 	return action;
 }
+
+double closeFactor = 0.4;
 
 bool isNotPlayerOnBallToGoal(Eigen::VectorXd curState)
 {
@@ -966,11 +1247,11 @@ bool isNotPlayerOnBallToGoal(Eigen::VectorXd curState)
 	Eigen::VectorXd centerOfGoalpost = p + (curState.segment(_ID_GOALPOST_P+4, 2) + curState.segment(_ID_GOALPOST_P+6, 2))/2.0;
 
 	Eigen::VectorXd goalpostToBall = (ballP - centerOfGoalpost);
-	if(goalpostToBall.norm() > 0.5)
-		goalpostToBall = goalpostToBall.normalized() * 0.5;
+	if(goalpostToBall.norm() > closeFactor)
+		goalpostToBall = goalpostToBall.normalized() * closeFactor;
 	Eigen::VectorXd targetPosition = centerOfGoalpost + goalpostToBall;
 
-	return (targetPosition - p).norm() >= 0.5;
+	return (targetPosition - p).norm() >= 0.5 || (ballP - targetPosition).norm() > 1.5;
 }
 bool isPlayerOnBallToGoal(Eigen::VectorXd curState)
 {
@@ -979,8 +1260,8 @@ bool isPlayerOnBallToGoal(Eigen::VectorXd curState)
 	Eigen::VectorXd centerOfGoalpost = p + (curState.segment(_ID_GOALPOST_P+4, 2) + curState.segment(_ID_GOALPOST_P+6, 2))/2.0;
 
 	Eigen::VectorXd goalpostToBall = (ballP - centerOfGoalpost);
-	if(goalpostToBall.norm() > 0.5)
-		goalpostToBall = goalpostToBall.normalized() * 0.5;
+	if(goalpostToBall.norm() > closeFactor)
+		goalpostToBall = goalpostToBall.normalized() * closeFactor;
 	Eigen::VectorXd targetPosition = centerOfGoalpost + goalpostToBall;
 
 	return (targetPosition - p).norm() < 1.5 && (ballP - targetPosition).norm() < 1.5;
@@ -993,21 +1274,33 @@ Eigen::VectorXd actionPlayerOnBallToGoal(Eigen::VectorXd curState)
 	Eigen::VectorXd centerOfGoalpost = p + (curState.segment(_ID_GOALPOST_P+4, 2) + curState.segment(_ID_GOALPOST_P+6, 2))/2.0;
 
 	Eigen::VectorXd goalpostToBall = (ballP - centerOfGoalpost);
-	if(goalpostToBall.norm() > 0.5)
-		goalpostToBall = goalpostToBall.normalized() * 0.5;
+	if(goalpostToBall.norm() > closeFactor)
+		goalpostToBall = goalpostToBall.normalized() * closeFactor;
 	Eigen::VectorXd targetPosition = centerOfGoalpost + goalpostToBall;
 
-		Eigen::VectorXd targetVel = targetPosition - curState.segment(_ID_P,2);
+	Eigen::VectorXd targetVel = targetPosition - curState.segment(_ID_P,2);
 
 	Eigen::VectorXd curVel = curState.segment(_ID_V, 2);
 
-	if(targetVel.norm() !=0)
-		targetVel = targetVel.normalized()*4.0;
-	Eigen::VectorXd action(4);
+	// if(targetVel.norm() !=0)
+	targetVel = targetVel*4.0;
+	
+	Eigen::VectorXd action(5);
 	action.setZero();
 	action.segment(0,2) = targetVel - curVel;
+	action.segment(0,2).normalize();
+
+	double curFacingAngle = atan2(curState[_ID_FACING_SIN], curState[_ID_FACING_COS]);
+
+	double facingAngle = 0.0;
+	action[2] = sin(facingAngle - curFacingAngle);
+	action[3] = cos(facingAngle - curFacingAngle);
+
+	action.segment(0,2) = rotate2DVector(action.segment(0,2), -curFacingAngle);
+	action[4] = -hardcodedShootingPower;
 	// action[3] = 1.0;
 
+	action += genActionNoise(action.size());;
 	return action;
 }
 
@@ -1015,65 +1308,91 @@ bool isNotVelHeadingPlayer(Eigen::VectorXd curState)
 {
 	Eigen::VectorXd p = curState.segment(_ID_P, 2);
 	Eigen::VectorXd v = curState.segment(_ID_V, 2);
-	Eigen::VectorXd agentToGoalpost = (curState.segment(_ID_GOALPOST_P, 2) + curState.segment(_ID_GOALPOST_P+2, 2))/2.0;
+	Eigen::VectorXd targetVel = curState.segment(_ID_ALLY_P, 2);
 
-	double cosTheta =  v.normalized().dot(agentToGoalpost.normalized());
+	double cosTheta =  v.normalized().dot(targetVel.normalized());
 	
-	return cosTheta < 0.9 && curState.segment(_ID_BALL_P,2).norm() < 0.23;
+	return cosTheta <= 1.0 && curState.segment(_ID_BALL_P,2).norm() < 0.40;
 }
 Eigen::VectorXd
 actionVelHeadingPlayer(Eigen::VectorXd curState)
 {
 	Eigen::VectorXd p = curState.segment(_ID_P,2);
 	Eigen::VectorXd ballP = p + curState.segment(_ID_BALL_P,2);
-	Eigen::VectorXd targetVel = (curState.segment(_ID_GOALPOST_P, 2) + curState.segment(_ID_GOALPOST_P+2, 2))/2.0;
+	Eigen::VectorXd targetVel = curState.segment(_ID_ALLY_P, 2);
 
 	Eigen::VectorXd curVel = curState.segment(_ID_V,2);
 
 	if(targetVel.norm() !=0)
 		targetVel = targetVel.normalized()*4.0;
-	Eigen::VectorXd action(4);
+	Eigen::VectorXd action(5);
 	action.setZero();
 	action.segment(0,2) = targetVel- curVel;
 
-	action[3] = 1.0;
+
+	Eigen::VectorXd v = curState.segment(_ID_V, 2);
+	Eigen::VectorXd allyP = curState.segment(_ID_ALLY_P, 2);
+
+	double cosTheta =  v.normalized().dot(allyP.normalized());
+
+	double curFacingAngle = atan2(curState[_ID_FACING_SIN], curState[_ID_FACING_COS]);
+
+	double facingAngle = directionToTheta(curState.segment(_ID_V,2));
+	action[2] = sin(facingAngle - curFacingAngle);
+	action[3] = cos(facingAngle - curFacingAngle);
+
+	action.segment(0,2) = rotate2DVector(action.segment(0,2), -curFacingAngle);
+	action.segment(0,2).normalize();
+
+	action[4] = -hardcodedShootingPower;
+	if(cosTheta>0.95)
+		action[4] = hardcodedShootingPower;
+	action += genActionNoise(action.size());;
 	return action;
 }
 
-bool isNotBallHeadingPlayer(Eigen::VectorXd curState)
-{
-	Eigen::VectorXd p = curState.segment(_ID_P,2);
-	Eigen::VectorXd ballP = p + curState.segment(_ID_BALL_P,2);
-	Eigen::VectorXd centerOfGoalpost = p + (curState.segment(_ID_GOALPOST_P, 2) + curState.segment(_ID_GOALPOST_P+2, 2))/2.0;
+// bool isNotBallHeadingPlayer(Eigen::VectorXd curState)
+// {
+// 	Eigen::VectorXd p = curState.segment(_ID_P,2);
+// 	Eigen::VectorXd ballP = p + curState.segment(_ID_BALL_P,2);
+// 	Eigen::VectorXd allyP = p + curState.segment(_ID_ALLY_P, 2);
 
 
-	Eigen::VectorXd v =curState.segment(_ID_V, 2);
-	Eigen::VectorXd ballV = v + curState.segment(_ID_BALL_V, 2);
+// 	Eigen::VectorXd v =curState.segment(_ID_V, 2);
+// 	Eigen::VectorXd ballV = v + curState.segment(_ID_BALL_V, 2);
 
-	Eigen::VectorXd ballToGoalpost = centerOfGoalpost - ballP;
+// 	Eigen::VectorXd ballToAlly = allyP - ballP;
 
-	double cosTheta =  ballV.normalized().dot(ballToGoalpost.normalized());
+// 	double cosTheta =  ballV.normalized().dot(ballToAlly.normalized());
 	
-	return cosTheta < 0.9 && curState.segment(_ID_BALL_P,2).norm() < 0.23;
-}
-Eigen::VectorXd
-actionBallHeadingPlayer(Eigen::VectorXd curState)
-{
-	Eigen::VectorXd p = curState.segment(_ID_P,2);
-	Eigen::VectorXd ballP = p + curState.segment(_ID_BALL_P,2);
-	Eigen::VectorXd targetVel = (curState.segment(_ID_GOALPOST_P, 2) + curState.segment(_ID_GOALPOST_P+2, 2))/2.0;
+// 	return cosTheta < 0.95 && curState.segment(_ID_BALL_P,2).norm() < 0.23;
+// }
+// Eigen::VectorXd
+// actionBallHeadingPlayer(Eigen::VectorXd curState)
+// {
+// 	Eigen::VectorXd p = curState.segment(_ID_P,2);
+// 	Eigen::VectorXd ballP = p + curState.segment(_ID_BALL_P,2);
+// 	Eigen::VectorXd targetVel = (curState.segment(_ID_ALLY_P, 2) + curState.segment(_ID_ALLY_P+2, 2))/2.0;
 
-	Eigen::VectorXd curVel = curState.segment(_ID_V,2);
+// 	Eigen::VectorXd curVel = curState.segment(_ID_V,2);
 
-	if(targetVel.norm() !=0)
-		targetVel = targetVel.normalized()*4.0;
-	Eigen::VectorXd action(4);
-	action.setZero();
-	action.segment(0,2) = targetVel - curVel;
+// 	if(targetVel.norm() !=0)
+// 		targetVel = targetVel.normalized()*4.0;
+// 	Eigen::VectorXd action(5);
+// 	action.setZero();
+// 	action.segment(0,2) = targetVel - curVel;
 
-	action[3] = 1.0;
-	return action;
-}
+// 	Eigen::VectorXd v =curState.segment(_ID_V, 2);
+// 	Eigen::VectorXd ballV = v + curState.segment(_ID_BALL_V, 2);
+// 	Eigen::VectorXd allyP = p + (curState.segment(_ID_ALLY_P, 2) + curState.segment(_ID_ALLY_P+2, 2))/2.0;
+
+// 	Eigen::VectorXd ballToAlly = allyP - ballP;
+
+// 	double cosTheta =  ballV.normalized().dot(ballToAlly.normalized());
+// 	if(cosTheta<0.95)
+// 		action[3] = 1.0;
+// 	return action;
+// }
 
 
 
@@ -1129,7 +1448,7 @@ BNode* attackerPlayer()
 		attackerWNode->setConditionFunction(isBallInPenalty);
 
 			BNode* attackerENode = new BNode("Position_Excecution", BNType::EXECUTION, attackerWNode);
-			attackerENode->setActionFunction(actionNotBallInPenalty);
+			attackerENode->setActionFunction(actionBallInPenalty);
 
 		BNode* attackerIFNode = new BNode("Position_While_false", BNType::IF, attackerSNode);
 		attackerIFNode->setConditionFunction(isNotBallInPenalty);
@@ -1172,22 +1491,22 @@ BNode* defenderPlayer()
 			BNode* defenderENode = new BNode("Position_Excecution", BNType::EXECUTION, defenderWNode);
 			defenderENode->setActionFunction(actionPlayerOnBallToGoal);
 
-		BNode* defenderIFNode = new BNode("Position_While_false", BNType::IF, defenderSNode);
+		BNode* defenderIFNode = new BNode("Position_IF_FALSE", BNType::IF, defenderSNode);
 		defenderIFNode->setConditionFunction(isPlayerOnBallToGoal);
 
 			BNode* passSNode = new BNode("Pass_Sequence", BNType::SEQUENCE, defenderIFNode);
 
 				BNode* followWNode = new BNode("Follow_While", BNType::WHILE, passSNode);
-				followWNode->setConditionFunction(isNotCloseToBall);
+				followWNode->setConditionFunction(isNotCloseToBall_soft);
 
 					BNode* followENode = new BNode("Follow_Execution", BNType::EXECUTION, followWNode);
-					followENode->setActionFunction(actionCloseToBallWithShooting);
+					followENode->setActionFunction(actionCloseToBall);
 
-				// BNode* passVelWNode = new BNode("PassVel_While", BNType::WHILE, passSNode);
-				// passVelWNode->setConditionFunction(isNotVelHeadingPlayer);
+				BNode* passVelWNode = new BNode("PassVel_While", BNType::WHILE, passSNode);
+				passVelWNode->setConditionFunction(isNotVelHeadingPlayer);
 
-				// 	BNode* velENode = new BNode("PassVel_Exceution", BNType::EXECUTION, passVelWNode);
-				// 	velENode->setActionFunction(actionVelHeadingPlayer);
+					BNode* velENode = new BNode("PassVel_Exceution", BNType::EXECUTION, passVelWNode);
+					velENode->setActionFunction(actionVelHeadingPlayer);
 
 				// BNode* passWNode = new BNode("Pass_While", BNType::WHILE, passSNode);
 				// passWNode->setConditionFunction(isNotBallHeadingPlayer);
@@ -1207,17 +1526,22 @@ initBehaviorTree()
 	if(mNumChars == 4)
 	{
 		mBTs[0] = defenderPlayer();
-		mBTs[1] = defenderPlayer();
+		mBTs[1] = attackerPlayer();
 
-		// mBTs[2] = defenderPlayer();
-		// mBTs[3] = attackerPlayer();
+		// mBTs[0] = basicPlayer();
+		// mBTs[1] = basicPlayer();
+
 
 		mBTs[2] = defenderPlayer();
 		mBTs[3] = attackerPlayer();
+
+		// mBTs[2] = basicPlayer();
+		// mBTs[3] = basicPlayer();
 	}
 	if(mNumChars == 2)
 	{
 		mBTs[0] = basicPlayer();
+		mBTs[1] = basicPlayer();
 		// mBTs[1] = attackerPlayer();
 
 	}
@@ -1227,9 +1551,21 @@ Eigen::VectorXd
 Environment::
 getActionFromBTree(int index)
 {
-	Eigen::VectorXd state = getState(index);
-	return mBTs[index]->getActionFromBTree(unNormalizeNNState(state));
+	// Eigen::VectorXd state = getState(index);
+	// cout<<mStates[index].size()<<endl;
+	return mBTs[index]->getActionFromBTree(mStates[index]);
 }
+
+// void
+// Environment::
+// setHardcodedAction(int index)
+// {
+// 	for(int i=0;i<4;i++)
+// 	{
+// 		setAction(i, getActionFromBTree(i));
+// 	}
+// }
+
 
 // std::vector<int> 
 // Environment::

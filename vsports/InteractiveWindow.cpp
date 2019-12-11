@@ -64,20 +64,23 @@ IntWindow::
 IntWindow()
 :SimWindow(), mIsNNLoaded(false)
 {
-	mEnv = new Environment(30, 600, 2);
+	mEnv = new Environment(30, 600, 4);
 	initCustomView();
 	initGoalpost();
 
+	// cout<<"1111"<<endl;
 	mm = p::import("__main__");
 	mns = mm.attr("__dict__");
 	sys_module = p::import("sys");
+	// cout<<"222222"<<endl;
 
 	boost::python::str module_dir = "../pyvs";
 	sys_module.attr("path").attr("insert")(1, module_dir);
-	// p::exec("import os",mns);
-	// p::exec("import sys",mns);
-	// p::exec("import math",mns);
-	// p::exec("import sys",mns);
+	p::exec("import os",mns);
+	p::exec("import sys",mns);
+	p::exec("import math",mns);
+	p::exec("import sys",mns);
+	// cout<<"3333333"<<endl;
 	p::exec("import torch",mns);
 	p::exec("import torch.nn as nn",mns);
 	p::exec("import torch.optim as optim",mns);
@@ -85,11 +88,13 @@ IntWindow()
 	p::exec("import torchvision.transforms as T",mns);
 	p::exec("import numpy as np",mns);
 	p::exec("from Model import *",mns);
+	// cout<<"444444"<<endl;
 	controlOn = false;
 	mActions.resize(mEnv->mNumChars);
 	for(int i=0;i<mActions.size();i++)
 	{
-		mActions[i] = Eigen::Vector4d(0.0, 0.0, 0.0, 0.0);
+		mActions[i] = Eigen::VectorXd(6);
+		mActions[i].setZero();
 	}
 // GLenum err = glewInit();
 // if (err != GLEW_OK)
@@ -101,7 +106,7 @@ IntWindow()
 }
 
 IntWindow::
-IntWindow(const std::string& nn_path)
+IntWindow(const std::string& nn_path1, const std::string& nn_path2)
 :IntWindow()
 {
 	mIsNNLoaded = true;
@@ -122,10 +127,12 @@ IntWindow(const std::string& nn_path)
 
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_sc_module[i] = p::eval("SchedulerNN(num_state, num_action).cuda()", mns);
+		nn_sc_module[i] = p::eval("SimulationNN(num_state, num_action).cuda()", mns);
 		sc_load[i] = nn_sc_module[i].attr("load");
-		reset_sc_hidden[i] = nn_sc_module[i].attr("reset_hidden");
-		sc_load[i](nn_path+".pt");
+		if(i%2==0)
+			sc_load[i](nn_path1);
+		else
+			sc_load[i](nn_path2);
 		// if(i== 0|| i==1 || true)
 		// 	sc_load[i](nn_path+".pt");
 		// else
@@ -204,6 +211,7 @@ keyboard(unsigned char key, int x, int y)
 	switch(key)
 	{
 		case 'c':
+			mTakeScreenShot = true;
 			// cout<<mCamera->eye.transpose()<<endl;
 			// cout<<mCamera->lookAt.transpose()<<endl;
 			// cout<<mCamera->up.transpose()<<endl;
@@ -278,6 +286,8 @@ timer(int value)
 	if(mPlay)
 		step();
 	// display();
+	// glutSwapBuffers();
+	glutPostRedisplay();
 	SimWindow::timer(value);
 }
 
@@ -329,31 +339,86 @@ step()
 		sleep(1);
 		mEnv->reset();
 	}
+	// cout<<mEnv->getLocalState(1).segment(_ID_BALL_P,2).transpose()<<endl;
 
 	if(mIsNNLoaded)
-		getActionFromNN(true);
+	{
+
+
+		// if(mEnv->mNumChars == 4)
+		// {
+		// 	for(int i=0;i<2;i++)
+		// 	{
+		// 		mEnv->getState(i);
+		// 		mActions[i] = mEnv->getActionFromBTree(i);
+
+		// 	}
+		// }
+		if(mEnv->mNumChars == 2)
+		{
+			getActionFromNN(0);
+			mEnv->getState(1);
+			mActions[1] = mEnv->getActionFromBTree(1);
+
+		}
+
+
+
+		if(mEnv->mNumChars == 4)
+		{
+
+		getActionFromNN(0);
+		getActionFromNN(1);
+
+		getActionFromNN(2);
+		getActionFromNN(3);
+
+			// for(int i=2;i<4;i++)
+			// {
+			// 	mEnv->getState(i);
+			// 	mActions[i] = mEnv->getActionFromBTree(i);
+
+			// }
+		}
+
+	}
+
+
+	else
+	{
+		if(mEnv->mNumChars == 4)
+		{
+			for(int i=0;i<4;i++)
+			{
+				mEnv->getState(i);
+				mActions[i] = mEnv->getActionFromBTree(i);
+
+			}
+		// 			cout<<mEnv->getLocalState(1).transpose()<<endl;
+		// cout<<mEnv->getLocalState(2).transpose()<<endl;
+		// cout<<(mEnv->getLocalState(1)-mEnv->getLocalState(2)).transpose()<<endl;
+		// cout<<"##############"<<endl;
+		}
+
+		else if(mEnv->mNumChars == 2)
+		{
+
+			for(int i=0;i<2;i++)
+			{
+				mEnv->getState(i);
+				mActions[i] = mEnv->getActionFromBTree(i);
+			}
+
+		}
+	}
 	// cout<<"step in intWindow"<<endl;
 
 
 	// applyKeyEvent();
-	if(mEnv->mNumChars == 4)
-	{
-		// mActions[0] = mEnv->getActionFromBTree(0);
-		mActions[1] = mEnv->getActionFromBTree(1);
-		mActions[2] = mEnv->getActionFromBTree(2);
-		mActions[3] = mEnv->getActionFromBTree(3);
-	}
-	else if(mEnv->mNumChars == 2)
-	{
-		// mActions[0] = mEnv->getActionFromBTree(0);
-		// mActions[1] = mEnv->getActionFromBTree(1);
-	}
-	// cout<<mActions[1].transpose()<<endl;
+
 
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		mEnv->getState(i);
-		// mActions[i] = Eigen::Vector4d(0.0, 0.0, 0.0, 0.0);
 		mEnv->setAction(i, mActions[i]);
 	}
 
@@ -367,60 +432,38 @@ step()
 
 void
 IntWindow::
-getActionFromNN(bool vsHardcodedAI)
+getActionFromNN(int index)
 {
-	p::object get_sc_action;
-	p::object get_la_action;
+	p::object get_action;
 
-	mActions.clear();
-	mActions.resize(2);
+	Eigen::VectorXd state = mEnv->getLocalState(index);
 
-	for(int i=0;i<mEnv->mNumChars;i++)
+	Eigen::VectorXd mAction(mEnv->getNumAction());
+
+	get_action = nn_sc_module[index].attr("get_action");
+
+	p::tuple shape = p::make_tuple(state.size());
+	np::dtype dtype = np::dtype::get_builtin<float>();
+	np::ndarray state_np = np::empty(shape, dtype);
+
+	float* dest = reinterpret_cast<float*>(state_np.get_data());
+	for(int j=0;j<state.size();j++)
 	{
-		Eigen::VectorXd state = mEnv->getState(i);
-
-		Eigen::VectorXd mAction(mEnv->getNumAction());
-		if((vsHardcodedAI && (i == 1)))
-		{
-
-			for(int j=0;j<3;j++)
-			{
-				mAction[j] = 0.0;
-			}
-
-			mAction[3] = 1.0;
-			mAction[3] = -1.0;
-			mActions[i] = mAction;
-		}
-		else
-		{
-			get_sc_action = nn_sc_module[i].attr("get_action");
-
-			p::tuple shape = p::make_tuple(state.size());
-			np::dtype dtype = np::dtype::get_builtin<float>();
-			np::ndarray state_np = np::empty(shape, dtype);
-
-			float* dest = reinterpret_cast<float*>(state_np.get_data());
-			for(int j=0;j<state.size();j++)
-			{
-				dest[j] = state[j];
-			}
-
-			p::object temp = get_sc_action(state_np);
-			np::ndarray action_np = np::from_object(temp);
-			float* srcs = reinterpret_cast<float*>(action_np.get_data());
-			for(int j=0;j<mAction.rows();j++)
-			{
-				mAction[j] = srcs[j];
-			}
-			// if(i==0)
-			// 	cout<<i<<" "<<mAction[2]<<endl;	
-			mActions[i] = mAction;
-
-
-
-		}
+		dest[j] = state[j];
 	}
+
+	p::object temp = get_action(state_np);
+	np::ndarray action_np = np::from_object(temp);
+	float* srcs = reinterpret_cast<float*>(action_np.get_data());
+	for(int j=0;j<mAction.rows();j++)
+	{
+		mAction[j] = srcs[j];
+	}
+	// cout<<"Here?"<<endl;
+	mActions[index] = mAction;
+	// cout<<"NO"
+
+
 }
 
 Eigen::VectorXd
@@ -471,9 +514,21 @@ display()
 		// if (i!=0)
 		// 	continue;
 		if(chars[i]->getTeamName() == "A")
-			GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
-		// else
-		// 	GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));
+		{
+			// if(i==0)
+			// 	continue;
+			if(mActions[i][4]>=0)
+				GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.8, 0.8));
+			else
+				GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
+		}
+		else
+		{
+			if(mActions[i][4]>=0)
+				GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(0.8, 0.8, 1.0));
+			else
+				GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));
+		}
 
 	}
 
@@ -511,7 +566,7 @@ display()
 	{
 		screenshot();
 	}
-	glutPostRedisplay();
+	// glutPostRedisplay();
 }
 
 std::string
