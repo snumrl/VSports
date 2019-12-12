@@ -629,7 +629,7 @@ getReward(int index)
 		if(abs(heightVector.dot(ballPosition)) < goalpostSize/2.0)
 		{
 	// cout<<2<<endl;
-			// std::cout<<"Red Team GOALL!!"<<std::endl;
+			std::cout<<"Red Team GOALL!!"<<std::endl;
 			// if(!goalRewardPaid[index])
 
 			if(mCharacters[index]->getTeamName() == "A")
@@ -644,7 +644,7 @@ getReward(int index)
 	{
 		if(abs(heightVector.dot(ballPosition)) < goalpostSize/2.0)
 		{
-			// std::cout<<"Blue Team GOALL!!"<<std::endl;
+			std::cout<<"Blue Team GOALL!!"<<std::endl;
 			// if(!goalRewardPaid[index])
 			if(mCharacters[index]->getTeamName() == "A")
 				reward -= 200;

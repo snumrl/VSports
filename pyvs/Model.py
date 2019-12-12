@@ -34,8 +34,6 @@ class SimulationNN(nn.Module):
 	def __init__(self, num_states, num_actions):
 		super(SimulationNN, self).__init__()
 
-		self.num_policyInput = num_states
-
 		num_h1 = 128
 		num_h2 = 128
 		# num_h3 = 256
@@ -78,10 +76,12 @@ class SimulationNN(nn.Module):
 		return p.cpu().detach().numpy()
 
 
+
+
 # Current state, goal state -> (subgoal state - current state)* weight of state
-class SchedulerNN(nn.Module):
+class ActorCriticNN(nn.Module):
 	def __init__(self, num_states, num_actions):
-		super(SchedulerNN, self).__init__()
+		super(ActorCriticNN, self).__init__()
 
 		self.num_policyInput = num_states
 
