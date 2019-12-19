@@ -96,6 +96,7 @@ IntWindow()
 		mActions[i] = Eigen::VectorXd(6);
 		mActions[i].setZero();
 	}
+	this->vsHardcoded = false;
 // GLenum err = glewInit();
 // if (err != GLEW_OK)
 //   cout<<"Not ok with glew"<<endl; // or handle the error in a nicer way
@@ -106,7 +107,48 @@ IntWindow()
 }
 
 IntWindow::
-IntWindow(const std::string& nn_path1, const std::string& nn_path2)
+IntWindow(const std::string& nn_path0, const std::string& nn_path1)
+:IntWindow()
+{
+	this->vsHardcoded = true;
+	mIsNNLoaded = true;
+
+
+	p::str str = ("num_state = "+std::to_string(mEnv->getNumState())).c_str();
+	p::exec(str,mns);
+	str = ("num_action = "+std::to_string(mEnv->getNumAction())).c_str();
+	p::exec(str, mns);
+
+	nn_module = new boost::python::object[mEnv->mNumChars];
+	p::object *load = new p::object[mEnv->mNumChars];
+	reset_hidden = new boost::python::object[mEnv->mNumChars];
+
+	for(int i=0;i<mEnv->mNumChars;i++)
+	{
+		nn_module[i] = p::eval("ActorCriticNN(num_state, num_action).cuda()", mns);
+		load[i] = nn_module[i].attr("load");
+
+	}
+	load[0](nn_path0);
+	load[1](nn_path1);
+	load[2](nn_path0);
+	load[3](nn_path1);
+
+
+	reset_hidden[0] = nn_module[0].attr("reset_hidden");
+	reset_hidden[1] = nn_module[1].attr("reset_hidden");
+	reset_hidden[2] = nn_module[2].attr("reset_hidden");
+	reset_hidden[3] = nn_module[3].attr("reset_hidden");
+
+	// cout<<"3344444444"<<endl;
+	// mActions.resize(mEnv->mNumChars);
+	// for(int i=0;i<mActions.size();i++)
+	// {
+	// 	mActions[i] = Eigen::Vector4d(0.0, 0.0, 0.0, 0.0);
+	// }
+}
+IntWindow::
+IntWindow(const std::string& nn_path0, const std::string& nn_path1, const std::string& nn_path2, const std::string& nn_path3)
 :IntWindow()
 {
 	mIsNNLoaded = true;
@@ -117,27 +159,21 @@ IntWindow(const std::string& nn_path1, const std::string& nn_path2)
 	str = ("num_action = "+std::to_string(mEnv->getNumAction())).c_str();
 	p::exec(str, mns);
 
-	nn_sc_module = new boost::python::object[mEnv->mNumChars];
-	p::object *sc_load = new p::object[mEnv->mNumChars];
-	reset_sc_hidden = new boost::python::object[mEnv->mNumChars];
+	nn_module = new boost::python::object[mEnv->mNumChars];
+	p::object *load = new p::object[mEnv->mNumChars];
+	reset_hidden = new boost::python::object[mEnv->mNumChars];
 
-	nn_la_module = new boost::python::object[mEnv->mNumChars];
-	p::object *la_load = new p::object[mEnv->mNumChars];
-	reset_la_hidden = new boost::python::object[mEnv->mNumChars];
 
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_sc_module[i] = p::eval("SimulationNN(num_state, num_action).cuda()", mns);
-		sc_load[i] = nn_sc_module[i].attr("load");
-		if(i%2==0)
-			sc_load[i](nn_path1);
-		else
-			sc_load[i](nn_path2);
-		// if(i== 0|| i==1 || true)
-		// 	sc_load[i](nn_path+".pt");
-		// else
-		// 	sc_load[i]("../save/goalReward/max.pt");
+		nn_module[i] = p::eval("ActorCriticNN(num_state, num_action).cuda()", mns);
+		load[i] = nn_module[i].attr("load");
 	}
+
+	load[0](nn_path0);
+	load[1](nn_path1);
+	load[2](nn_path2);
+	load[3](nn_path3);
 	// cout<<"3344444444"<<endl;
 	// mActions.resize(mEnv->mNumChars);
 	// for(int i=0;i<mActions.size();i++)
@@ -145,7 +181,6 @@ IntWindow(const std::string& nn_path1, const std::string& nn_path2)
 	// 	mActions[i] = Eigen::Vector4d(0.0, 0.0, 0.0, 0.0);
 	// }
 }
-
 void
 IntWindow::
 initialize()
@@ -236,9 +271,9 @@ keyboard(unsigned char key, int x, int y)
 			break;
 		case 'r':
 			mEnv->reset();
-			// for(int i=0;i<2;i++){
-			// 	reset_sc_hidden[i]();
-			// }
+			for(int i=0;i<4;i++){
+				reset_hidden[i]();
+			}
 
 
 			// reset_hidden[2]();
@@ -367,18 +402,26 @@ step()
 		if(mEnv->mNumChars == 4)
 		{
 
-		getActionFromNN(0);
-		getActionFromNN(1);
+			getActionFromNN(0);
+			getActionFromNN(1);
+			if(vsHardcoded)
+			{
+				for(int i=2;i<4;i++)
+				{
+					mEnv->getState(i);
+					mActions[i] = mEnv->getActionFromBTree(i);
 
-		getActionFromNN(2);
-		getActionFromNN(3);
+				}
+			}
+			else
+			{
+				getActionFromNN(2);
+				getActionFromNN(3);
+			}
 
-			// for(int i=2;i<4;i++)
-			// {
-			// 	mEnv->getState(i);
-			// 	mActions[i] = mEnv->getActionFromBTree(i);
 
-			// }
+
+
 		}
 
 	}
@@ -440,7 +483,7 @@ getActionFromNN(int index)
 
 	Eigen::VectorXd mAction(mEnv->getNumAction());
 
-	get_action = nn_sc_module[index].attr("get_action");
+	get_action = nn_module[index].attr("get_action");
 
 	p::tuple shape = p::make_tuple(state.size());
 	np::dtype dtype = np::dtype::get_builtin<float>();
@@ -471,7 +514,7 @@ IntWindow::
 getValueGradient(int index)
 {
 	p::object get_value_gradient;
-	get_value_gradient = nn_sc_module[0].attr("get_value_gradient");
+	get_value_gradient = nn_module[0].attr("get_value_gradient");
 
 	Eigen::VectorXd state = mEnv->getState(index);
 	Eigen::VectorXd valueGradient(state.size());
@@ -531,6 +574,11 @@ display()
 		}
 
 	}
+
+	// cout<<mEnv->getLocalState(0).segment(_ID_GOALPOST_P+4, 2).transpose()<<endl;
+	// cout<<mEnv->getLocalState(0).segment(_ID_GOALPOST_P+6, 2).transpose()<<endl;
+	// cout<<endl;
+
 
 	GUI::drawSkeleton(mEnv->floorSkel, Eigen::Vector3d(0.5, 1.0, 0.5));
 

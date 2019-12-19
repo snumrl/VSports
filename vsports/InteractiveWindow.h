@@ -10,7 +10,8 @@
 class IntWindow : public SimWindow{
 public:
 	IntWindow();
-	IntWindow(const std::string& nn_path1, const std::string& nn_path2);
+	IntWindow(const std::string& nn_path0, const std::string& nn_path2);
+	IntWindow(const std::string& nn_path0, const std::string& nn_path1, const std::string& nn_path2, const std::string& nn_path3);
 	void initWindow(int _w, int _h, char* _name) override;
 
 	void keyboard(unsigned char key, int x, int y) override;
@@ -62,10 +63,8 @@ public:
 	std::vector<Eigen::VectorXd> mActions;
 
 	boost::python::object mm,mns,sys_module;
-	boost::python::object *nn_sc_module;
-	boost::python::object *nn_la_module;
-	boost::python::object *reset_sc_hidden;
-	boost::python::object *reset_la_hidden;
+	boost::python::object *nn_module;
+	boost::python::object *reset_hidden;
 	bool mIsNNLoaded;
 
 	bool controlOn;
@@ -75,6 +74,8 @@ public:
 	unsigned int programID;
 
 	unsigned int vertexbuffer;
+
+	bool vsHardcoded;
 };
 
 #endif

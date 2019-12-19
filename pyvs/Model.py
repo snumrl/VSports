@@ -38,8 +38,14 @@ class SimulationNN(nn.Module):
 		num_h2 = 128
 		# num_h3 = 256
 
-		self.ss_policy = nn.Sequential(
-			nn.Linear(num_states, num_h1),
+		self.num_policyInput = num_states
+		self.hidden_size = 128
+		self.num_layers = 1
+
+		self.rnn = nn.LSTM(self.num_policyInput, self.hidden_size, num_layers=self.num_layers)
+
+		self.policy = nn.Sequential(
+			nn.Linear(self.hidden_size, num_h1),
 			nn.LeakyReLU(0.2, inplace=True),
 			nn.Linear(num_h1, num_h2),
 			nn.LeakyReLU(0.2, inplace=True),
@@ -47,18 +53,22 @@ class SimulationNN(nn.Module):
 			# nn.LeakyReLU(0.2, inplace=True),
 			# nn.Linear(num_h3, num_actions)
 		)
+		self.reset_hidden();
 
-		self.log_std = nn.Parameter(-1.0 * torch.ones(num_actions))
+		# self.log_std = nn.Parameter(-1.0 * torch.ones(num_actions))
 
-		self.ss_policy.apply(weights_init)
+		self.policy.apply(weights_init)
+		self.rnn.apply(weights_init)
 
-	def forward(self,x):
+	def forward(self,x, in_hidden):
 		x = x.cuda()
 
 		batch_size = x.size()[0];
 
-		# return MultiVariateNormal(self.ss_policy(x).unsqueeze(0),self.log_std.exp())
-		return self.ss_policy(x)
+		rnnOutput, out_hidden = self.rnn(x.view(1, batch_size,-1), in_hidden)
+		return self.policy(rnnOutput).unsqueeze(0),out_hidden
+		# return MultiVariateNormal(self.policy(x).unsqueeze(0),self.log_std.exp())
+		# return self.policy(x)
 	def load(self,path):
 		print('load policy nn {}'.format(path))
 		self.load_state_dict(torch.load(path))
@@ -68,13 +78,25 @@ class SimulationNN(nn.Module):
 		torch.save(self.state_dict(),path)
 
 	def get_action(self,s):
+		# print("HERE")
 		ts = torch.tensor(s)
 
-		p = self.forward(ts.unsqueeze(0))
+		p, new_hidden = self.forward(ts.unsqueeze(0), self.cur_hidden)
+		self.cur_hidden = new_hidden
+
 
 		# return p.loc.cpu().detach().numpy()
+		# print(p)
 		return p.cpu().detach().numpy()
 
+	def reset_hidden(self):
+		self.cur_hidden = self.init_hidden(1)
+
+    # This method generates the first hidden state of zeros which we'll use in the forward pass
+	def init_hidden(self, batch_size):
+		hidden = (Tensor(torch.zeros(self.num_layers, batch_size, self.hidden_size).cuda()),\
+				Tensor(torch.zeros(self.num_layers, batch_size, self.hidden_size).cuda()))
+		return hidden
 
 
 
@@ -85,18 +107,18 @@ class ActorCriticNN(nn.Module):
 
 		self.num_policyInput = num_states
 
-		self.hidden_size = 256
+		self.hidden_size = 128
 		self.num_layers = 1
 
-		self.ss_rnn = nn.LSTM(self.num_policyInput, self.hidden_size, num_layers=self.num_layers)
+		self.rnn = nn.LSTM(self.num_policyInput, self.hidden_size, num_layers=self.num_layers)
 		self.cur_hidden = self.init_hidden(1)
 
 		num_h1 = 128
 		num_h2 = 128
 		# num_h3 = 256
 
-		self.ss_policy = nn.Sequential(
-			nn.Linear(num_states, num_h1),
+		self.policy = nn.Sequential(
+			nn.Linear(self.hidden_size, num_h1),
 			nn.LeakyReLU(0.2, inplace=True),
 			nn.Linear(num_h1, num_h2),
 			nn.LeakyReLU(0.2, inplace=True),
@@ -104,8 +126,8 @@ class ActorCriticNN(nn.Module):
 			# nn.LeakyReLU(0.2, inplace=True),
 			# nn.Linear(num_h3, num_actions)
 		)
-		self.ss_value = nn.Sequential(
-			nn.Linear(num_states, num_h1),
+		self.value = nn.Sequential(
+			nn.Linear(self.hidden_size, num_h1),
 			nn.LeakyReLU(0.2, inplace=True),
 			nn.Linear(num_h1, num_h2),
 			nn.LeakyReLU(0.2, inplace=True),
@@ -115,26 +137,27 @@ class ActorCriticNN(nn.Module):
 		)
 
 
-		self.log_std = nn.Parameter(-1.0 * torch.ones(num_actions))
+		# self.log_std = nn.Parameter(-1.0 * torch.ones(num_actions))
+		self.log_std = nn.Parameter(Tensor([-1, -1, -2, -2, -2]))
 
-		self.ss_rnn.apply(weights_init)
-		self.ss_policy.apply(weights_init)
-		self.ss_value.apply(weights_init)
+		self.rnn.apply(weights_init)
+		self.policy.apply(weights_init)
+		self.value.apply(weights_init)
 
 	def forward(self,x, in_hidden):
 		x = x.cuda()
 
 		batch_size = x.size()[0];
 
-		# rnnOutput, out_hidden = self.ss_rnn(x.view(1, batch_size,-1), in_hidden)
-		# return MultiVariateNormal(self.ss_policy(x).unsqueeze(0),self.log_std.exp()), self.ss_value(x), in_hidden
-		return MultiVariateNormal(self.ss_policy(x).unsqueeze(0),self.log_std.exp()), self.ss_value(x), in_hidden
+		rnnOutput, out_hidden = self.rnn(x.view(1, batch_size,-1), in_hidden)
+		# return MultiVariateNormal(self.policy(x).unsqueeze(0),self.log_std.exp()), self.value(x), in_hidden
+		return MultiVariateNormal(self.policy(rnnOutput).unsqueeze(0),self.log_std.exp()), self.value(rnnOutput), out_hidden
 	def load(self,path):
-		# print('load scheduler nn {}'.format(path))
+		# print('load nn {}'.format(path))
 		self.load_state_dict(torch.load(path))
 
 	def save(self,path):
-		print('save scheduler nn {}'.format(path))
+		print('save nn {}'.format(path))
 		torch.save(self.state_dict(),path)
 
 	def get_action(self,s):
@@ -144,8 +167,8 @@ class ActorCriticNN(nn.Module):
 
 		self.cur_hidden = new_hidden
 
+		# return p.sample().cpu().detach().numpy()
 		return p.loc.cpu().detach().numpy()
-		# return p.loc.cpu().detach().numpy()
 
 	def get_value_gradient(self,s):
 		delta = 0.01

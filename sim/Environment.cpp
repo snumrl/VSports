@@ -400,7 +400,7 @@ getState(int index)
 
 
 	Eigen::VectorXd kickable(1);
-	if(relativeBallP.norm()<0.30)
+	if(relativeBallP.norm()<0.25)
 	{
 		kickable[0] = 1;
 	}
@@ -633,9 +633,9 @@ getReward(int index)
 			// if(!goalRewardPaid[index])
 
 			if(mCharacters[index]->getTeamName() == "A")
-				reward += 200;
+				reward += 1;
 			else
-				reward -= 200;
+				reward -= 1;
 			// goalRewardPaid[index] = true;
 			mIsTerminalState = true;
 		}
@@ -647,9 +647,9 @@ getReward(int index)
 			std::cout<<"Blue Team GOALL!!"<<std::endl;
 			// if(!goalRewardPaid[index])
 			if(mCharacters[index]->getTeamName() == "A")
-				reward -= 200;
+				reward -= 1;
 			else
-				reward += 200;
+				reward += 1;
 			// goalRewardPaid[index] = true;
 			mIsTerminalState = true;
 		}
@@ -729,6 +729,7 @@ void
 Environment::
 setAction(int index, const Eigen::VectorXd& a)
 {
+	// cout<<a.transpose()<<endl;
 	bool isNanOccured = false;
 	// double maxVel = 4.0;
 	// if(index==0)

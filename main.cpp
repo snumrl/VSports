@@ -1,6 +1,7 @@
 // #include "vsports/SimpleSocWindow.h"
 // #include "vsports/MultiSocWindow.h"
 #include "vsports/InteractiveWindow.h"
+#include "vsports/ImitationWindow.h"
 #include "vsports/AgentWindow.h"
 #include <GL/glut.h>
 // #include <GL/glew.h>
@@ -19,23 +20,43 @@ int main(int argc, char** argv)
 
 	glutInit(&argc, argv);
 
-	IntWindow* simwindow;
+	// SimWindow* simwindow;
 	if(argc == 1)
 	{
-		simwindow = new IntWindow();
+		IntWindow* simwindow = new IntWindow();
+		simwindow->initWindow(1000, 1000, "Render");
+		simwindow->initialize();
 	}
 	else if(argc==3)
-		simwindow = new IntWindow(argv[1], argv[2]);
+	{
+		IntWindow* simwindow = new IntWindow(argv[1], argv[2]);
+		simwindow->initWindow(1000, 1000, "Render");
+		simwindow->initialize();
+	}
+
+	else if(argc==5)
+	{
+		IntWindow* simwindow = new IntWindow(argv[1], argv[2], argv[3], argv[4]);
+		simwindow->initWindow(1000, 1000, "Render");
+		simwindow->initialize();
+	}
+	else if(argc == 4)
+	{
+		ImitationWindow* simwindow = new ImitationWindow(argv[1], argv[2]);
+		simwindow->initWindow(1000, 1000, "Render");
+		simwindow->initialize();
+	}
+
+
 	// else if(argc==3)
 	// 	simwindow = new MultiSocWindow(argv);
 
 
 	// glfwInit(&argc, argv);
-	simwindow->initWindow(1000, 1000, "Render");
 	// AgentWindow* agentWindow = new AgentWindow(0,simwindow->mEnv);
 	// agentWindow->initWindow(400, 300, "Render");
 
 	// simwindow->initWindow(1000, 1000, "Render2");
-	simwindow->initialize();
+
 	glutMainLoop();
 }
