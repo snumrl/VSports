@@ -93,7 +93,7 @@ IntWindow()
 	mActions.resize(mEnv->mNumChars);
 	for(int i=0;i<mActions.size();i++)
 	{
-		mActions[i] = Eigen::VectorXd(6);
+		mActions[i] = Eigen::VectorXd(4);
 		mActions[i].setZero();
 	}
 	this->vsHardcoded = false;
@@ -121,7 +121,7 @@ IntWindow(const std::string& nn_path0, const std::string& nn_path1)
 
 	nn_module = new boost::python::object[mEnv->mNumChars];
 	p::object *load = new p::object[mEnv->mNumChars];
-	reset_hidden = new boost::python::object[mEnv->mNumChars];
+	// reset_hidden = new boost::python::object[mEnv->mNumChars];
 
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
@@ -135,10 +135,10 @@ IntWindow(const std::string& nn_path0, const std::string& nn_path1)
 	load[3](nn_path1);
 
 
-	reset_hidden[0] = nn_module[0].attr("reset_hidden");
-	reset_hidden[1] = nn_module[1].attr("reset_hidden");
-	reset_hidden[2] = nn_module[2].attr("reset_hidden");
-	reset_hidden[3] = nn_module[3].attr("reset_hidden");
+	// reset_hidden[0] = nn_module[0].attr("reset_hidden");
+	// reset_hidden[1] = nn_module[1].attr("reset_hidden");
+	// reset_hidden[2] = nn_module[2].attr("reset_hidden");
+	// reset_hidden[3] = nn_module[3].attr("reset_hidden");
 
 	// cout<<"3344444444"<<endl;
 	// mActions.resize(mEnv->mNumChars);
@@ -161,7 +161,7 @@ IntWindow(const std::string& nn_path0, const std::string& nn_path1, const std::s
 
 	nn_module = new boost::python::object[mEnv->mNumChars];
 	p::object *load = new p::object[mEnv->mNumChars];
-	reset_hidden = new boost::python::object[mEnv->mNumChars];
+	// reset_hidden = new boost::python::object[mEnv->mNumChars];
 
 
 	for(int i=0;i<mEnv->mNumChars;i++)
@@ -174,6 +174,12 @@ IntWindow(const std::string& nn_path0, const std::string& nn_path1, const std::s
 	load[1](nn_path1);
 	load[2](nn_path2);
 	load[3](nn_path3);
+
+
+	// reset_hidden[0] = nn_module[0].attr("reset_hidden");
+	// reset_hidden[1] = nn_module[1].attr("reset_hidden");
+	// reset_hidden[2] = nn_module[2].attr("reset_hidden");
+	// reset_hidden[3] = nn_module[3].attr("reset_hidden");
 	// cout<<"3344444444"<<endl;
 	// mActions.resize(mEnv->mNumChars);
 	// for(int i=0;i<mActions.size();i++)
@@ -271,9 +277,9 @@ keyboard(unsigned char key, int x, int y)
 			break;
 		case 'r':
 			mEnv->reset();
-			for(int i=0;i<4;i++){
-				reset_hidden[i]();
-			}
+			// for(int i=0;i<4;i++){
+			// 	reset_hidden[i]();
+			// }
 
 
 			// reset_hidden[2]();
@@ -392,7 +398,7 @@ step()
 		if(mEnv->mNumChars == 2)
 		{
 			getActionFromNN(0);
-			mEnv->getState(1);
+			mEnv->getLocalState(1);
 			mActions[1] = mEnv->getActionFromBTree(1);
 
 		}
@@ -408,7 +414,7 @@ step()
 			{
 				for(int i=2;i<4;i++)
 				{
-					mEnv->getState(i);
+					mEnv->getLocalState(i);
 					mActions[i] = mEnv->getActionFromBTree(i);
 
 				}
@@ -433,7 +439,7 @@ step()
 		{
 			for(int i=0;i<4;i++)
 			{
-				mEnv->getState(i);
+				mEnv->getLocalState(i);
 				mActions[i] = mEnv->getActionFromBTree(i);
 
 			}
@@ -448,7 +454,7 @@ step()
 
 			for(int i=0;i<2;i++)
 			{
-				mEnv->getState(i);
+				mEnv->getLocalState(i);
 				mActions[i] = mEnv->getActionFromBTree(i);
 			}
 
@@ -560,14 +566,14 @@ display()
 		{
 			// if(i==0)
 			// 	continue;
-			if(mActions[i][4]>=0)
+			if(mActions[i][3]>=0)
 				GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.8, 0.8));
 			else
 				GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
 		}
 		else
 		{
-			if(mActions[i][4]>=0)
+			if(mActions[i][3]>=0)
 				GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(0.8, 0.8, 1.0));
 			else
 				GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));
@@ -599,10 +605,12 @@ display()
 	= "Red : "+to_string((int)(mEnv->mAccScore[0]));//+" |Blue : "+to_string((int)(mEnv->mAccScore[1]));
 	// cout<<"444444"<<endl;
 
+	// cout<<mEnv->getCharacters()[0]->getSkeleton()->getVelocities().transpose()<<endl;
 
 	GUI::drawStringOnScreen(0.2, 0.8, scoreString, true, Eigen::Vector3d::Zero());
 
 	GUI::drawStringOnScreen(0.8, 0.8, to_string(mEnv->getElapsedTime()), true, Eigen::Vector3d::Zero());
+	drawValue();
 
 	// cout<<"5555555"<<endl;
 
@@ -708,8 +716,91 @@ drawValueGradient()
 
 	}
 
+}
+
+double
+IntWindow::
+getValue(int index)
+{
+	p::object get_value;
+	get_value = nn_module[index].attr("get_value");
+
+	Eigen::VectorXd state = mEnv->getState(index);
+	Eigen::VectorXd value(1);
+
+	p::tuple shape = p::make_tuple(state.size());
+	np::dtype dtype = np::dtype::get_builtin<float>();
+	np::ndarray state_np = np::empty(shape, dtype);
+	float* dest = reinterpret_cast<float*>(state_np.get_data());
+	for(int j=0;j<state.size();j++)
+	{
+		dest[j] = state[j];
+	}
+
+	p::object temp = get_value(state_np);
+	np::ndarray value_np = np::from_object(temp);
+	float* srcs = reinterpret_cast<float*>(value_np.get_data());
+	for(int j=0;j<value.rows();j++)
+	{
+		value[j] = srcs[j];
+	}
+	return value[0];
+}
+
+void
+IntWindow::
+drawValue()
+{
+	int numChars = mEnv->mNumChars;
+	// int numStates = mEnv->mStates[0].size();
+	// GUI::drawStringOnScreen(0.8, 0.8, to_string(mEnv->getElapsedTime()), true, Eigen::Vector3d::Zero());
+
+	// double leftOffset = 0.02;
+	// double rightOffset = 0.04;
+
+	Eigen::VectorXd values(numChars);
+
+	for(int i=0;i<numChars;i++)
+	{
+		values[i] = getValue(i);
+	}
+
+
+	glPushMatrix();
+	double boxSize = 1.0 / (numChars-1) / 4;
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	gluLookAt(0.0,0.0,1.0,
+			0.0,0.0, 0.0,
+			0.0, 0.0 + 1.0,0.0);
+
+	glTranslated(-0.5, -0.5, 0.0);
+
+	GUI::drawValueBox(values, boxSize);
+
+
+	glPopMatrix();
+
+	GLint w = glutGet(GLUT_WINDOW_WIDTH);
+	GLint h = glutGet(GLUT_WINDOW_HEIGHT);
+
+	for(int i=0;i<numChars;i++)
+	{
+		Eigen::Vector3d eyeToBox = Eigen::Vector3d(i * boxSize - 0.5, -0.5, 0.0);
+		double fovx = mCamera->fovy * w / h;
+
+		double boxAngleX = atan((eyeToBox[0] - boxSize/3.0)/(1.0 + boxSize)) / M_PI * 180.0;
+		double boxAngleY = atan((eyeToBox[1]+boxSize)/(1.0 + boxSize)) / M_PI * 180.0; 
+
+		// cout<<i<<endl;
+
+		// GUI::drawStringOnScreen_small(0.5 + boxAngleX/fovx, 0.5  + boxAngleY/mCamera->fovy, indexToStateString(i), Eigen::Vector3d::Zero());
+
+	}
 
 }
+
 
 
 void

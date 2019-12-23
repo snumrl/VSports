@@ -23,7 +23,7 @@ int main(int argc, char** argv)
 	// SimWindow* simwindow;
 	if(argc == 1)
 	{
-		IntWindow* simwindow = new IntWindow();
+		ImitationWindow* simwindow = new ImitationWindow();
 		simwindow->initWindow(1000, 1000, "Render");
 		simwindow->initialize();
 	}

@@ -34,8 +34,12 @@ public:
 	void applyKeyEvent();
 
 	void getActionFromNN(int index);
+	void getValueFromNN(int index);
 
 	void drawValueGradient();
+	void drawValue();
+
+	double getValue(int index);
 
 	std::string indexToStateString(int index);
 
@@ -64,7 +68,7 @@ public:
 
 	boost::python::object mm,mns,sys_module;
 	boost::python::object *nn_module;
-	boost::python::object *reset_hidden;
+	// boost::python::object *reset_hidden;
 	bool mIsNNLoaded;
 
 	bool controlOn;

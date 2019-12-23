@@ -20,7 +20,9 @@ import torchvision.transforms as T
 import numpy as np
 from pyvs import Env
 from IPython import embed
+import json
 from Model import *
+
 use_cuda = torch.cuda.is_available()
 FloatTensor = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
@@ -28,7 +30,7 @@ ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
 Tensor = FloatTensor
 
 
-RNNEpisode = namedtuple('RNNEpisode', ('s','a','r','value','logprob','hidden'))
+RNNEpisode = namedtuple('RNNEpisode', ('s','a','r','value','logprob'))
 
 class RNNEpisodeBuffer(object):
 	def __init__(self):
@@ -40,7 +42,7 @@ class RNNEpisodeBuffer(object):
 	def getData(self):
 		return self.data
 
-RNNTransition = namedtuple('RNNTransition',('s','a','logprob','TD','GAE','hidden_h','hidden_c'))
+RNNTransition = namedtuple('RNNTransition',('s','a','logprob','TD','GAE'))
 
 class RNNReplayBuffer(object):
 	def __init__(self, buff_size = 10000):
@@ -80,9 +82,9 @@ class SLAC(object):
 
 		self.num_epochs = 2
 		self.num_evaluation = 0
-		self.num_tuple_so_far = 0
-		self.num_episode = 0
-		self.num_tuple = 0
+		self.num_tuple_so_far = [0, 0]
+		# self.num_episode = [0, 0]
+		self.num_tuple = [0, 0]
 
 		self.num_simulation_Hz = self.env.getSimulationHz()
 		self.num_control_Hz = self.env.getControlHz()
@@ -92,10 +94,10 @@ class SLAC(object):
 		self.lb = 0.95
 
 		self.buffer_size = 8*1024
-		self.batch_size = 64
-		self.trunc_size = 40
-		self.burn_in_size = 10
-		self.bptt_size = 10
+		self.batch_size = 512
+		# self.trunc_size = 40
+		# self.burn_in_size = 10
+		# self.bptt_size = 10
 
 		self.buffer = [ [None] for i in range(2)]
 		self.buffer[0] = Buffer(30000)
@@ -148,9 +150,7 @@ class SLAC(object):
 		for i in range(2):
 			self.policy[i].load(path+"_"+str(i)+".pt")
 			self.model[i].policy.load_state_dict(self.policy[i].policy.state_dict())
-			self.model[i].rnn.load_state_dict(self.policy[i].rnn.state_dict())
 		self.saveModel()
-			# self.model[i].ss_policy = self.policy[i].ss_policy
 
 
 	def saveModel(self):
@@ -177,19 +177,11 @@ class SLAC(object):
 		rewards = [None]*self.num_slaves*self.num_agents
 		logprobs = [None]*self.num_slaves*self.num_agents
 		values = [None]*self.num_slaves*self.num_agents
-		'''hiddens : (hidden ,cell) tuple''' 
-		hiddens = [None]*self.num_slaves*self.num_agents
-		hiddens_forward = [None]*self.num_slaves*self.num_agents
 		terminated = [False]*self.num_slaves*self.num_agents
 
 		for i in range(self.num_slaves):
 			for j in range(self.num_agents):
 				states[i*self.num_agents+j] = self.env.getLocalState(i,j)
-				hiddens[i*self.num_agents+j] = self.model[j%2].init_hidden(1)
-				hiddens[i*self.num_agents+j] = (hiddens[i*self.num_agents+j][0].cpu().detach().numpy(), \
-												hiddens[i*self.num_agents+j][1].cpu().detach().numpy())
-				hiddens_forward[i*self.num_agents+j] = self.model[j%2].init_hidden(1)
-
 
 		learningTeam = random.randrange(0,2)
 		'''Fixed to team 0'''
@@ -202,7 +194,7 @@ class SLAC(object):
 
 		vsHardcodedFlags = [0]*self.num_slaves
 		for i in range(self.num_slaves):
-			if random.randrange(0,4) == 0:
+			if random.randrange(0,3) == 0:
 				vsHardcodedFlags[i] = 1
 		# print(vsHardcodedFlags)
 
@@ -243,27 +235,24 @@ class SLAC(object):
 			for i in range(self.num_slaves):
 				a_dist_slave = []
 				v_slave = []
-				hiddens_slave = []
 				for j in range(self.num_agents):
 					if vsHardcodedFlags[i] == False:
 						if teamDic[j] == learningTeam:
-							a_dist_slave_agent,v_slave_agent, hiddens_slave_agent = self.model[j%2].forward(\
-								Tensor([states[i*self.num_agents+j]]),(Tensor(hiddens[i*self.num_agents+j][0]), Tensor(hiddens[i*self.num_agents+j][1])))
+							a_dist_slave_agent,v_slave_agent = self.model[j%2].forward(\
+								Tensor([states[i*self.num_agents+j]]))
 						else :
-							a_dist_slave_agent,v_slave_agent, hiddens_slave_agent = self.model[i*self.num_agents+j].forward(\
-								Tensor([states[i*self.num_agents+j]]),(Tensor(hiddens[i*self.num_agents+j][0]), Tensor(hiddens[i*self.num_agents+j][1])))
+							a_dist_slave_agent,v_slave_agent = self.model[i*self.num_agents+j].forward(\
+								Tensor([states[i*self.num_agents+j]]))
 						a_dist_slave.append(a_dist_slave_agent)
 						v_slave.append(v_slave_agent)
-						hiddens_slave.append((hiddens_slave_agent[0].cpu().detach().numpy(), hiddens_slave_agent[1].cpu().detach().numpy()))
 						actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy().squeeze().squeeze().squeeze();
 
 					else :
 						if teamDic[j] == learningTeam:
-							a_dist_slave_agent,v_slave_agent, hiddens_slave_agent = self.model[j%2].forward(\
-								Tensor([states[i*self.num_agents+j]]),(Tensor(hiddens[i*self.num_agents+j][0]), Tensor(hiddens[i*self.num_agents+j][1])))
+							a_dist_slave_agent,v_slave_agent = self.model[j%2].forward(\
+								Tensor([states[i*self.num_agents+j]]))
 							a_dist_slave.append(a_dist_slave_agent)
 							v_slave.append(v_slave_agent)
-							hiddens_slave.append((hiddens_slave_agent[0].cpu().detach().numpy(), hiddens_slave_agent[1].cpu().detach().numpy()))
 							actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy().squeeze().squeeze().squeeze();		
 						else :
 							actions[i*self.num_agents+j] = self.env.getHardcodedAction(i, j);
@@ -275,7 +264,6 @@ class SLAC(object):
 						logprobs[i*self.num_agents+j] = a_dist_slave[j].log_prob(Tensor(actions[i*self.num_agents+j]))\
 							.cpu().detach().numpy().reshape(-1)[0];
 						values[i*self.num_agents+j] = v_slave[j].cpu().detach().numpy().reshape(-1)[0];
-						hiddens_forward[i*self.num_agents+j] = hiddens_slave[j]
 
 
 				''' Set the Linear Actor state with scheduler action '''
@@ -315,7 +303,7 @@ class SLAC(object):
 					for k in range(self.num_agents):
 						if teamDic[k] == learningTeam:
 							self.episodes[i][k].push(states[i*self.num_agents+k], actions[i*self.num_agents+k],\
-								rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k], hiddens[i*self.num_agents+k])
+								rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k])
 
 							local_step += 1
 
@@ -323,7 +311,7 @@ class SLAC(object):
 					for k in range(self.num_agents):
 						if teamDic[k] == learningTeam:
 							self.episodes[i][k].push(states[i*self.num_agents+k], actions[i*self.num_agents+k],\
-								rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k], hiddens[i*self.num_agents+k])
+								rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k])
 							# print(str(i)+" "+str(k)+" "+str(rewards[i*self.num_agents+k]))
 							self.total_episodes[k%2].append(self.episodes[i][k])
 							self.episodes[i][k] = RNNEpisodeBuffer()
@@ -344,7 +332,6 @@ class SLAC(object):
 			for i in range(self.num_slaves):
 				for j in range(self.num_agents):
 					states[i*self.num_agents+j] = self.env.getLocalState(i,j)
-					hiddens[i*self.num_agents+j] = hiddens_forward[i*self.num_agents+j]
 
 
 		self.env.endOfIteration()
@@ -364,7 +351,7 @@ class SLAC(object):
 				# print(size)
 				if size == 0:
 					continue
-				states, actions, rewards, values, logprobs, hiddens = zip(*data)
+				states, actions, rewards, values, logprobs = zip(*data)
 				values = np.concatenate((values, np.zeros(1)), axis=0)
 				advantages = np.zeros(size)
 				ad_t = 0
@@ -380,17 +367,27 @@ class SLAC(object):
 					self.sum_return += epi_return
 					TD = values[:size] + advantages
 
+
 					rnn_replay_buffer = RNNReplayBuffer(4000)
 					for i in range(size):
-						rnn_replay_buffer.push(states[i], actions[i], logprobs[i], TD[i], advantages[i], hiddens[i][0], hiddens[i][1])
+
+						# if TD[i] >= 0.1 or TD[i] <= -0.1:
+						# 	rnn_replay_buffer.push(states[i], actions[i], logprobs[i], TD[i], advantages[i])
+
+						# elif random.randrange(0,3) == 0:
+						rnn_replay_buffer.push(states[i], actions[i], logprobs[i], TD[i], advantages[i])
+						# x = rnn_replay_buffer[i]
+						# j = json.dumps(x._asdict())
+						# print(j)
+						# exit(0)
 					self.buffer[index].push(rnn_replay_buffer)
 
 			''' counting numbers(w.r.t scheduler) '''
 			self.num_episode = len(self.total_episodes[index])
-			self.num_tuple = 0
+			self.num_tuple[index] = 0
 			for rnn_replay_buffer in self.buffer[index].buffer:
-				self.num_tuple += len(rnn_replay_buffer.buffer)
-			self.num_tuple_so_far += self.num_tuple
+				self.num_tuple[index] += len(rnn_replay_buffer.buffer)
+			self.num_tuple_so_far[index] += self.num_tuple[index]
 
 	def optimizeSchedulerNN(self):
 		for i in range(2):
@@ -403,128 +400,74 @@ class SLAC(object):
 				all_segmented_transitions = []
 				for rnn_replay_buffer in all_rnn_replay_buffer:
 					rnn_replay_buffer_size = len(rnn_replay_buffer.buffer)
-					for i in range(rnn_replay_buffer_size//self.trunc_size):
-						segmented_transitions = np.array(rnn_replay_buffer.buffer)[i*self.trunc_size:(i+1)*self.trunc_size]
-						all_segmented_transitions.append(segmented_transitions)
-						# zero padding
-						if (i+2)*self.trunc_size > rnn_replay_buffer_size :
-							segmented_transitions = [RNNTransition(None,None,None,None,None,None,None) for x in range(self.trunc_size)]
-							segmented_transitions[:rnn_replay_buffer_size - (i+1)*self.trunc_size] = \
-								np.array(rnn_replay_buffer.buffer)[(i+1)*self.trunc_size:rnn_replay_buffer_size]
-							all_segmented_transitions.append(segmented_transitions)
+
+				# We will fill the remainder with 0.
+				# for i in range(rnn_replay_buffer_size//self.trunc_size):
+				# 	segmented_transitions = np.array(rnn_replay_buffer.buffer)[i*self.trunc_size:(i+1)*self.trunc_size]
+				# 	all_segmented_transitions.append(segmented_transitions)
+				# 	# zero padding
+				# 	if (i+2)*self.trunc_size > rnn_replay_buffer_size :
+				# 		segmented_transitions = [RNNTransition(None,None,None,None,None,None,None) for x in range(self.trunc_size)]
+				# 		segmented_transitions[:rnn_replay_buffer_size - (i+1)*self.trunc_size] = \
+				# 			np.array(rnn_replay_buffer.buffer)[(i+1)*self.trunc_size:rnn_replay_buffer_size]
+				# 		all_segmented_transitions.append(segmented_transitions)
+
+					for i in range(rnn_replay_buffer_size):
+						all_segmented_transitions.append(rnn_replay_buffer.buffer[i])
+
+				np.random.shuffle(all_segmented_transitions)
+				for i in range(len(all_segmented_transitions)//self.batch_size):
+					batch_segmented_transitions = all_segmented_transitions[i*self.batch_size:(i+1)*self.batch_size]
+
+					loss = Tensor(torch.zeros(1).cuda())
+
+					batch = RNNTransition(*zip(*batch_segmented_transitions))
+
+					stack_s = np.vstack(batch.s).astype(np.float32)
+					stack_a = np.vstack(batch.a).astype(np.float32)
+					stack_lp = np.vstack(batch.logprob).astype(np.float32)
+					stack_td = np.vstack(batch.TD).astype(np.float32)
+					stack_gae = np.vstack(batch.GAE).astype(np.float32)
+
+					num_layers = self.model[buff_index].num_layers
+
+					a_dist,v = self.model[buff_index].forward(Tensor(stack_s))	
+					
+					# hidden_list[timeStep] = list(cur_stack_hidden)
 
 
-				for offset in range(self.bptt_size):
+					loss_critic = ((v-Tensor(stack_td)).pow(2)).mean()
 
-					np.random.shuffle(all_segmented_transitions)
-					for i in range(len(all_segmented_transitions)//self.batch_size):
-						batch_segmented_transitions = all_segmented_transitions[i*self.batch_size:(i+1)*self.batch_size]
+					'''Actor Loss'''
+					ratio = torch.exp(a_dist.log_prob(Tensor(stack_a))-Tensor(stack_lp))
+					stack_gae = (stack_gae-stack_gae.mean())/(stack_gae.std()+1E-5)
+					stack_gae = Tensor(stack_gae)
+					surrogate1 = ratio * stack_gae
+					surrogate2 = torch.clamp(ratio, min=1.0-self.clip_ratio, max=1.0+self.clip_ratio) * stack_gae
 
-						non_None_batch_list = [[] for x in range(self.trunc_size)]
+					loss_actor = - torch.min(surrogate1, surrogate2).mean()
+					# loss_actor = - surrogate2.mean()
 
-						loss_list = [Tensor([0])] * self.trunc_size
-						hidden_list = [None]*self.trunc_size
+					'''Entropy Loss'''
+					loss_entropy = - self.w_entropy * a_dist.entropy().mean()
 
-						a_dist_list = [None]*self.trunc_size
-						v_list = [None]*self.trunc_size
-						loss = Tensor(torch.zeros(1).cuda())
+					self.loss_actor[buff_index] = loss_actor.cpu().detach().numpy().tolist()
+					self.loss_critic[buff_index] = loss_critic.cpu().detach().numpy().tolist()
 
+					loss = loss_actor + loss_critic + loss_entropy
+					self.optimizer[buff_index].zero_grad()
 
-						for timeStep in range(self.trunc_size-offset):
-							timeStep += offset;
+					# print(str(timeStep)+" "+str(offset))
+					# start = time.time()
+					loss.backward(retain_graph=True)
+					# print("time :", time.time() - start)
 
-							non_None_batch_segmented_transitions = []
-
-							# Make non-None list of batch_segmented_transitions
-							if timeStep == offset:
-								for k in range(self.batch_size):
-									if RNNTransition(*batch_segmented_transitions[k][timeStep]).s is not None :
-										non_None_batch_segmented_transitions.append(batch_segmented_transitions[k][timeStep])
-										non_None_batch_list[timeStep].append(k)
-							else :
-								for k in non_None_batch_list[timeStep-1]:
-									if RNNTransition(*batch_segmented_transitions[k][timeStep]).s is not None :
-										non_None_batch_segmented_transitions.append(batch_segmented_transitions[k][timeStep])
-										non_None_batch_list[timeStep].append(k)
-
-
-
-							batch = RNNTransition(*zip(*non_None_batch_segmented_transitions))
-
-							stack_s = np.vstack(batch.s).astype(np.float32)
-							stack_a = np.vstack(batch.a).astype(np.float32)
-							stack_lp = np.vstack(batch.logprob).astype(np.float32)
-							stack_td = np.vstack(batch.TD).astype(np.float32)
-							stack_gae = np.vstack(batch.GAE).astype(np.float32)
-							stack_hidden_h = np.vstack(batch.hidden_h).astype(np.float32)
-							stack_hidden_c = np.vstack(batch.hidden_c).astype(np.float32)
-
-							num_layers =self.model[buff_index].num_layers
-
-							stack_hidden = [Tensor(np.reshape(stack_hidden_h, (self.model[buff_index].num_layers,len(non_None_batch_list[timeStep]),-1))), 
-											Tensor(np.reshape(stack_hidden_c, (self.model[buff_index].num_layers,len(non_None_batch_list[timeStep]),-1)))]
-								
-							if timeStep > offset:
-								batch_count = 0
-								for k in non_None_batch_list[timeStep]:
-									for l in range(len(non_None_batch_list[timeStep-1])) :
-										if non_None_batch_list[timeStep-1][l] == k:
-											for m in range(self.model[buff_index].num_layers):
-												# print(stack_hidden)
-												# print(hidden_list)
-												stack_hidden[0][m][batch_count] = hidden_list[timeStep-1][0][m][l]
-												stack_hidden[1][m][batch_count] = hidden_list[timeStep-1][1][m][l]
-											batch_count += 1
-
-
-
-
-
-							if timeStep % 10 == offset:
-								stack_hidden[0] = stack_hidden[0].detach()
-								stack_hidden[1] = stack_hidden[1].detach()
-								loss = Tensor(torch.zeros(1).cuda())
-
-
-							a_dist,v,cur_stack_hidden = self.model[buff_index].forward(Tensor(stack_s), stack_hidden)	
-							
-							hidden_list[timeStep] = list(cur_stack_hidden)
-
-							if timeStep >= self.burn_in_size+offset :
-
-								loss_critic = ((v-Tensor(stack_td)).pow(2)).mean()
-
-								'''Actor Loss'''
-								ratio = torch.exp(a_dist.log_prob(Tensor(stack_a))-Tensor(stack_lp))
-								stack_gae = (stack_gae-stack_gae.mean())/(stack_gae.std()+1E-5)
-								stack_gae = Tensor(stack_gae)
-								surrogate1 = ratio * stack_gae
-								surrogate2 = torch.clamp(ratio, min=1.0-self.clip_ratio, max=1.0+self.clip_ratio) * stack_gae
-
-								loss_actor = - torch.min(surrogate1, surrogate2).mean()
-								# loss_actor = - surrogate2.mean()
-
-								'''Entropy Loss'''
-								loss_entropy = - self.w_entropy * a_dist.entropy().mean()
-
-								self.loss_actor[buff_index] = loss_actor.cpu().detach().numpy().tolist()
-								self.loss_critic[buff_index] = loss_critic.cpu().detach().numpy().tolist()
-
-								loss = loss_actor + loss_critic + loss_entropy
-								self.optimizer[buff_index].zero_grad()
-
-								if timeStep % 10 == (offset + 9)%10:
-									# print(str(timeStep)+" "+str(offset))
-									# start = time.time()
-									loss.backward(retain_graph=True)
-									# print("time :", time.time() - start)
-
-									for param in self.model[buff_index].parameters():
-										if param.grad is not None:
-											param.grad.data.clamp_(-0.5, 0.5)
-									self.optimizer[buff_index].step()
-									self.sum_loss_actor[buff_index] += self.loss_actor[buff_index]*self.batch_size/self.num_epochs
-									self.sum_loss_critic[buff_index] += self.loss_critic[buff_index]*self.batch_size/self.num_epochs
+					for param in self.model[buff_index].parameters():
+						if param.grad is not None:
+							param.grad.data.clamp_(-0.5, 0.5)
+					self.optimizer[buff_index].step()
+					self.sum_loss_actor[buff_index] += self.loss_actor[buff_index]*self.batch_size/self.num_epochs
+					self.sum_loss_critic[buff_index] += self.loss_critic[buff_index]*self.batch_size/self.num_epochs
 
 				print('Optimizing scheduler nn : {}/{}'.format(j+1,self.num_epochs),end='\r')
 		print('')
@@ -556,8 +499,9 @@ class SLAC(object):
 		s = s - h*3600 - m*60
 		if self.num_episode is 0:
 			self.num_episode = 1
-		if self.num_tuple is 0:
-			self.num_tuple = 1
+		for i in range(2):
+			if self.num_tuple[i]is 0:
+				self.num_tuple[i] = 1
 		if self.max_return < self.sum_return/self.num_episode:
 			self.max_return = self.sum_return/self.num_episode
 			self.max_return_epoch = self.num_evaluation
@@ -565,19 +509,22 @@ class SLAC(object):
 
 		print('# {} === {}h:{}m:{}s ==='.format(self.num_evaluation,h,m,s))
 		print('||--------------ActorCriticNN------------------')
-		print('||Avg Loss Actor 0         : {:.4f}'.format(self.sum_loss_actor[0]/self.num_tuple))
-		print('||Avg Loss Actor 1         : {:.4f}'.format(self.sum_loss_actor[1]/self.num_tuple))
-		print('||Avg Loss Critic 0        : {:.4f}'.format(self.sum_loss_critic[0]/self.num_tuple))
-		print('||Avg Loss Critic 1        : {:.4f}'.format(self.sum_loss_critic[1]/self.num_tuple))
+		print('||Avg Loss Actor 0         : {:.4f}'.format(self.sum_loss_actor[0]/self.num_tuple[0]))
+		print('||Avg Loss Actor 1         : {:.4f}'.format(self.sum_loss_actor[1]/self.num_tuple[1]))
+		print('||Avg Loss Critic 0        : {:.4f}'.format(self.sum_loss_critic[0]/self.num_tuple[0]))
+		print('||Avg Loss Critic 1        : {:.4f}'.format(self.sum_loss_critic[1]/self.num_tuple[1]))
 		# print('||Loss Actor               : {:.4f}'.format(self.loss_actor))
 		# print('||Loss Critic              : {:.4f}'.format(self.loss_critic))
 		print('||Noise                    : {:.3f}'.format(self.model[0].log_std.exp().mean()))		
-		print('||Num Transition So far    : {}'.format(self.num_tuple_so_far))
-		print('||Num Transition           : {}'.format(self.num_tuple))
+		print('||Num Transition So far 0  : {}'.format(self.num_tuple_so_far[0]))
+		print('||Num Transition 0         : {}'.format(self.num_tuple[0]))
+		print('||Num Transition So far 1  : {}'.format(self.num_tuple_so_far[1]))
+		print('||Num Transition 1         : {}'.format(self.num_tuple[1]))
 		print('||Num Episode              : {}'.format(self.num_episode))
 		print('||Avg Return per episode   : {:.3f}'.format(self.sum_return/self.num_episode))
-		print('||Avg Reward per transition: {:.3f}'.format(self.sum_return/self.num_tuple))
-		print('||Avg Step per episode     : {:.1f}'.format(self.num_tuple/self.num_episode))
+		# print('||Avg Reward per transition: {:.3f}'.format(self.sum_return/self.num_tuple))
+		print('||Avg Step per episode 0   : {:.1f}'.format(self.num_tuple[0]/self.num_episode))
+		print('||Avg Step per episode 1   : {:.1f}'.format(self.num_tuple[1]/self.num_episode))
 		print('||Max Avg Retun So far     : {:.3f} at #{}'.format(self.max_return,self.max_return_epoch))
 
 		self.rewards.append(self.sum_return/self.num_episode)

@@ -258,43 +258,55 @@ GUI::drawMapOnScreen(Eigen::VectorXd minimap, int numRows, int numCols)
 	glMatrixMode(oldMode);
 }
 
-Eigen::Vector3d degreeToRgb(double degree)
+Eigen::Vector3d degreeToRgb(double degree, bool forValue)
 {
 	Eigen::Vector3d r(1.0, 0.0, 0.0);
 	Eigen::Vector3d g(0.0, 1.0, 0.0);
 	Eigen::Vector3d b(0.0, 0.0, 1.0);
-
-	degree = abs(degree);
-	// std::cout<<degree<<" "<<std::abs(degree)<<std::endl;
-
-	if(degree>=1.0)
-		degree = 1.0;
-
-
 	Eigen::Vector3d resultRgb;
 
-
-	int option = 1;
-
-	if(option == 0)
+	if(forValue)
 	{
-		if(degree<=1.0/2.0)
-		{
-			double iFactor = degree * 2.0;
-			resultRgb = degree * g + (1.0 - degree) * b;
-		}
-		else
-		{
-			double iFactor = (degree-1.0/2.0) * 2.0;
-			resultRgb = degree * r + (1.0 - degree) * g;
-		}
-	}
-	
-	else if(option == 1)
-	{
+		if(degree>1.0)
+			degree = 1.0;
+		if(degree<-1.0)
+			degree= -1.0;
+
+		degree = degree/2.0+0.5;
 		resultRgb = Eigen::Vector3d::Ones()*degree;
 	}
-	
+	else
+	{
+		degree = abs(degree);
+		// std::cout<<degree<<" "<<std::abs(degree)<<std::endl;
+
+		if(degree>=1.0)
+			degree = 1.0;
+
+
+		int option = 1;
+
+		if(option == 0)
+		{
+			if(degree<=1.0/2.0)
+			{
+				double iFactor = degree * 2.0;
+				resultRgb = degree * g + (1.0 - degree) * b;
+			}
+			else
+			{
+				double iFactor = (degree-1.0/2.0) * 2.0;
+				resultRgb = degree * r + (1.0 - degree) * g;
+			}
+		}
+		
+		else if(option == 1)
+		{
+			resultRgb = Eigen::Vector3d::Ones()*degree;
+		}
+		
+
+	}
 
 
 	return resultRgb;
@@ -318,8 +330,25 @@ GUI::drawValueGradientBox(Eigen::VectorXd states, Eigen::VectorXd valueGradient,
 		drawCube(boxSizeVector);
 		glPopMatrix();
 	}
+}
 
+void 
+GUI::drawValueBox(Eigen::VectorXd value, double boxSize)
+{
+	int valueSize = value.size();
 
+	Eigen::Vector3d boxSizeVector(boxSize, boxSize, boxSize);
+		// std::cout<<valueGradient.transpose()<<std::endl;
+
+	for(int i=0;i<valueSize;i++)
+	{
+		glPushMatrix();
+		Eigen::Vector3d color = degreeToRgb(value[i]/1.0, true);
+		glColor3f(color[0], color[1], color[2]);
+		glTranslated(boxSize*i, 0, 0);
+		drawCube(boxSizeVector);
+		glPopMatrix();
+	}
 }
 void 
 GUI::drawSoccerLine(double x, double y)

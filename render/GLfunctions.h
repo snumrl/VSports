@@ -27,11 +27,12 @@ namespace GUI
 	void drawMapOnScreen(Eigen::VectorXd minimap, int numRows, int numCols);
 
 	void drawValueGradientBox(Eigen::VectorXd states, Eigen::VectorXd valueGradient, double boxSize = 0.2);
+	void drawValueBox(Eigen::VectorXd value, double boxSize = 0.2);
 
 	void drawSquare(double width, double height);
 	void drawSoccerLine(double x, double y);
 };
 
-Eigen::Vector3d degreeToRgb(double degree);
+Eigen::Vector3d degreeToRgb(double degree, bool forValue = false);
 
 #endif

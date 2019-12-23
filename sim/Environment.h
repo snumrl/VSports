@@ -15,8 +15,9 @@
 #define _ID_OP_DEF_V 23
 #define _ID_OP_ATK_P 25
 #define _ID_OP_ATK_V 27
-#define _ID_FACING_SIN 29
-#define _ID_FACING_COS 30
+#define _ID_FACING_V 29
+// #define _ID_FACING_SIN 29
+// #define _ID_FACING_COS 30
 
 // #define _ID_P 0
 // #define _ID_V 2
@@ -135,12 +136,15 @@ public:
 	int mNumIterations;
 
 	std::vector<Eigen::VectorXd> mStates;
+	std::vector<Eigen::VectorXd> mLocalStates;
 	std::vector<Eigen::VectorXd> mVStates;
 
 	std::vector<BNode*> mBTs;
 	double maxVel = 2.0;
 
+	std::vector<double> mFacingVels;
 	// AgentEnvWindow* mWindow;
 };
-
+double getFacingAngleFromLocalState(Eigen::VectorXd curState);
+Eigen::VectorXd localStateToOriginState(Eigen::VectorXd localState, int mNumChars=4);
 #endif

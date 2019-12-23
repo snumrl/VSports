@@ -92,7 +92,7 @@ ImitationWindow()
 	mActions.resize(mEnv->mNumChars);
 	for(int i=0;i<mActions.size();i++)
 	{
-		mActions[i] = Eigen::VectorXd(6);
+		mActions[i] = Eigen::VectorXd(4);
 		mActions[i].setZero();
 	}
 	this->vsHardcoded = false;
@@ -120,7 +120,7 @@ ImitationWindow(const std::string& nn_path0, const std::string& nn_path1)
 
 	nn_module = new boost::python::object[mEnv->mNumChars];
 	p::object *load = new p::object[mEnv->mNumChars];
-	reset_hidden = new boost::python::object[mEnv->mNumChars];
+	// reset_hidden = new boost::python::object[mEnv->mNumChars];
 
 
 	for(int i=0;i<mEnv->mNumChars;i++)
@@ -134,10 +134,10 @@ ImitationWindow(const std::string& nn_path0, const std::string& nn_path1)
 	load[2](nn_path0);
 	load[3](nn_path1);
 
-	reset_hidden[0] = nn_module[0].attr("reset_hidden");
-	reset_hidden[1] = nn_module[1].attr("reset_hidden");
-	reset_hidden[2] = nn_module[2].attr("reset_hidden");
-	reset_hidden[3] = nn_module[3].attr("reset_hidden");
+	// reset_hidden[0] = nn_module[0].attr("reset_hidden");
+	// reset_hidden[1] = nn_module[1].attr("reset_hidden");
+	// reset_hidden[2] = nn_module[2].attr("reset_hidden");
+	// reset_hidden[3] = nn_module[3].attr("reset_hidden");
 
 
 
@@ -240,9 +240,9 @@ keyboard(unsigned char key, int x, int y)
 		// 	break;
 		case 'r':
 			mEnv->reset();
-			for(int i=0;i<4;i++){
-				reset_hidden[i]();
-			}
+			// for(int i=0;i<4;i++){
+			// 	reset_hidden[i]();
+			// }
 
 
 			// reset_hidden[2]();
@@ -340,8 +340,10 @@ step()
 {
 	if(mEnv->isTerminalState())
 	{
+		// cout<<"Here?"<<endl;
 		sleep(1);
 		mEnv->reset();
+		// cout<<"THere?"<<endl;
 	}
 	// cout<<mEnv->getLocalState(1).segment(_ID_BALL_P,2).transpose()<<endl;
 
@@ -361,7 +363,7 @@ step()
 		if(mEnv->mNumChars == 2)
 		{
 			getActionFromNN(0);
-			mEnv->getState(1);
+			mEnv->getLocalState(1);
 			mActions[1] = mEnv->getActionFromBTree(1);
 
 		}
@@ -376,7 +378,7 @@ step()
 			{
 				for(int i=2;i<4;i++)
 				{
-					mEnv->getState(i);
+					mEnv->getLocalState(i);
 					mActions[i] = mEnv->getActionFromBTree(i);
 
 				}
@@ -401,10 +403,13 @@ step()
 		{
 			for(int i=0;i<4;i++)
 			{
-				mEnv->getState(i);
+				mEnv->getLocalState(i);
 				mActions[i] = mEnv->getActionFromBTree(i);
+				// cout<<mEnv->mLocalStates[i].transpose()<<endl;
 
 			}
+			// cout<<mEnv->mLocalStates[1].segment(_ID_V,2).transpose()<<endl;
+			// cout<<mActions[1].transpose()<<endl;
 		// 			cout<<mEnv->getLocalState(1).transpose()<<endl;
 		// cout<<mEnv->getLocalState(2).transpose()<<endl;
 		// cout<<(mEnv->getLocalState(1)-mEnv->getLocalState(2)).transpose()<<endl;
@@ -416,7 +421,7 @@ step()
 
 			for(int i=0;i<2;i++)
 			{
-				mEnv->getState(i);
+				mEnv->getLocalState(i);
 				mActions[i] = mEnv->getActionFromBTree(i);
 			}
 
@@ -435,10 +440,10 @@ step()
 
 	mEnv->stepAtOnce();
 	mEnv->getRewards();
-	for(int i=0;i<mActions.size();i++)
-	{
-		mActions[i].segment(0,3) = Eigen::Vector3d(0.0, 0.0, 0.0);
-	}
+	// for(int i=0;i<mActions.size();i++)
+	// {
+	// 	mActions[i].segment(0,3) = Eigen::Vector3d(0.0, 0.0, 0.0);
+	// }
 }
 
 void
@@ -528,14 +533,14 @@ display()
 		{
 			// if(i==0)
 			// 	continue;
-			if(mActions[i][4]>=0)
+			if(mActions[i][3]>=0)
 				GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.8, 0.8));
 			else
 				GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
 		}
 		else
 		{
-			if(mActions[i][4]>=0)
+			if(mActions[i][3]>=0)
 				GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(0.8, 0.8, 1.0));
 			else
 				GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));
