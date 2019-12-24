@@ -70,7 +70,7 @@ class SLAC(object):
 	def __init__(self):
 		np.random.seed(seed = int(time.time()))
 		self.num_slaves = 8
-		self.num_agents = 4
+		self.num_agents = 6
 		self.env = Env(self.num_agents)
 		self.num_state = self.env.getNumState()
 		self.num_action = self.env.getNumAction()
@@ -93,7 +93,7 @@ class SLAC(object):
 		self.gamma = 0.997
 		self.lb = 0.95
 
-		self.buffer_size = 8*1024
+		self.buffer_size = 16*1024
 		self.batch_size = 512
 		# self.trunc_size = 40
 		# self.burn_in_size = 10
@@ -132,6 +132,8 @@ class SLAC(object):
 
 		self.rewards = []
 
+		self.winRate = []
+
 		self.sum_return = 0.0
 
 		self.max_return = 0.0
@@ -140,11 +142,12 @@ class SLAC(object):
 		self.tic = time.time()
 
 		self.episodes = [[RNNEpisodeBuffer() for y in range(self.num_agents)] for x in range(self.num_slaves)]
+		self.indexToNetDic = {0:0, 1:1, 2:1,3:0,4:1,5:1}
 
 		self.env.resets()
 
 	def loadModel(self,path,index):
-		self.model[index].load('../nn/'+path+'_'+str(index%2)+'.pt')
+		self.model[index].load('../nn/'+path+'_'+str(self.indexToNetDic[index%self.num_agents])+'.pt')
 
 	def loadPolicy(self,path):
 		for i in range(2):
@@ -187,7 +190,7 @@ class SLAC(object):
 		'''Fixed to team 0'''
 		learningTeam = 0
 		# teamDic = {0: 0, 1: 1}
-		teamDic = {0: 0, 1: 0, 2: 1, 3: 1}
+		teamDic = {0: 0, 1: 0, 2: 0, 3: 1, 4: 1, 5: 1}
 
 		local_step = 0
 		counter = 0
@@ -238,7 +241,7 @@ class SLAC(object):
 				for j in range(self.num_agents):
 					if vsHardcodedFlags[i] == False:
 						if teamDic[j] == learningTeam:
-							a_dist_slave_agent,v_slave_agent = self.model[j%2].forward(\
+							a_dist_slave_agent,v_slave_agent = self.model[self.indexToNetDic[j]].forward(\
 								Tensor([states[i*self.num_agents+j]]))
 						else :
 							a_dist_slave_agent,v_slave_agent = self.model[i*self.num_agents+j].forward(\
@@ -249,7 +252,7 @@ class SLAC(object):
 
 					else :
 						if teamDic[j] == learningTeam:
-							a_dist_slave_agent,v_slave_agent = self.model[j%2].forward(\
+							a_dist_slave_agent,v_slave_agent = self.model[self.indexToNetDic[j]].forward(\
 								Tensor([states[i*self.num_agents+j]]))
 							a_dist_slave.append(a_dist_slave_agent)
 							v_slave.append(v_slave_agent)
@@ -292,7 +295,7 @@ class SLAC(object):
 				if nan_occur is True:
 					for k in range(self.num_agents):
 						if teamDic[k] == learningTeam:
-							self.total_episodes[k%2].append(self.episodes[i][k])
+							self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
 							self.episodes[i][k] = RNNEpisodeBuffer()
 
 					self.env.reset(i)
@@ -313,7 +316,7 @@ class SLAC(object):
 							self.episodes[i][k].push(states[i*self.num_agents+k], actions[i*self.num_agents+k],\
 								rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k])
 							# print(str(i)+" "+str(k)+" "+str(rewards[i*self.num_agents+k]))
-							self.total_episodes[k%2].append(self.episodes[i][k])
+							self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
 							self.episodes[i][k] = RNNEpisodeBuffer()
 
 					self.env.reset(i)
@@ -322,7 +325,7 @@ class SLAC(object):
 				for i in range(self.num_slaves):
 					for k in range(self.num_agents):
 						if teamDic[k] == learningTeam:
-							self.total_episodes[k%2].append(self.episodes[i][k])
+							self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
 							self.episodes[i][k] = RNNEpisodeBuffer()
 
 					self.env.reset(i)
@@ -472,6 +475,78 @@ class SLAC(object):
 				print('Optimizing scheduler nn : {}/{}'.format(j+1,self.num_epochs),end='\r')
 		print('')
 
+	def evaluateModel(self):
+		num_play = 0
+		num_win = 0
+
+		local_step = [0]*self.num_slaves
+
+		while num_play<100:
+
+			for i in range(self.num_slaves):
+				a_dist_slave = []
+				v_slave = []
+				for j in range(self.num_agents):
+					if teamDic[j] == learningTeam:
+						a_dist_slave_agent,v_slave_agent = self.model[self.indexToNetDic[j]].forward(\
+							Tensor([states[i*self.num_agents+j]]))
+						a_dist_slave.append(a_dist_slave_agent)
+						actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy().squeeze().squeeze().squeeze();		
+					else :
+						actions[i*self.num_agents+j] = self.env.getHardcodedAction(i, j);
+
+				for j in range(self.num_agents):
+					if teamDic[j] == learningTeam:
+						logprobs[i*self.num_agents+j] = a_dist_slave[j].log_prob(Tensor(actions[i*self.num_agents+j]))\
+							.cpu().detach().numpy().reshape(-1)[0];
+
+				for j in range(self.num_agents):
+					self.env.setAction(actions[i*self.num_agents+j], i, j);
+
+			self.env.stepsAtOnce()
+
+			for i in range(self.num_slaves):
+				nan_occur = False
+				terminated_state = True
+				for k in range(self.num_agents):
+					if teamDic[k] == learningTeam:
+						rewards[i*self.num_agents+k] = self.env.getReward(i, k) 
+						if np.any(np.isnan(rewards[i*self.num_agents+k])):
+							nan_occur = True
+						if np.any(np.isnan(states[i*self.num_agents+k])) or np.any(np.isnan(actions[i*self.num_agents+k])):
+							nan_occur = True
+
+				if (nan_occur is True)
+					self.env.reset(i)
+					local_step[i] = 0
+
+				elif terminated_state is True:
+					if rewards[i*self.num_agents+0] == 1:
+						num_win += 1
+					num_play += 1
+					self.env.reset(i)
+					local_step[i] = 0
+
+				elif local_step[i]>30*10:
+					num_play += 1
+					num_win += 0.5
+					self.env.reset(i)
+					local_step[i] = 0
+
+				else
+					local_step[i] += 1
+
+			# get the updated state and updated hidden
+			for i in range(self.num_slaves):
+				for j in range(self.num_agents):
+					states[i*self.num_agents+j] = self.env.getLocalState(i,j)
+
+		for i in range(self.num_slaves):
+			self.env.reset(i)
+
+		return num_win/100
+
+
 
 	def optimizeModel(self):
 		self.computeTDandGAE()
@@ -506,6 +581,8 @@ class SLAC(object):
 			self.max_return = self.sum_return/self.num_episode
 			self.max_return_epoch = self.num_evaluation
 
+		if self.num_evaluation%3 == 0:
+			self.winRate.append(self.evaluateModel())
 
 		print('# {} === {}h:{}m:{}s ==='.format(self.num_evaluation,h,m,s))
 		print('||--------------ActorCriticNN------------------')
@@ -526,13 +603,15 @@ class SLAC(object):
 		print('||Avg Step per episode 0   : {:.1f}'.format(self.num_tuple[0]/self.num_episode))
 		print('||Avg Step per episode 1   : {:.1f}'.format(self.num_tuple[1]/self.num_episode))
 		print('||Max Avg Retun So far     : {:.3f} at #{}'.format(self.max_return,self.max_return_epoch))
+		print('||Current Win Rate         : {:.3f}'.format(self.winRate[-1]))
+
 
 		self.rewards.append(self.sum_return/self.num_episode)
 		
 		self.saveModel()
 		
 		print('=============================================')
-		return np.array(self.rewards)
+		return np.array(self.rewards), np.array(self.winRate[-1])
 
 
 import matplotlib
@@ -599,6 +678,7 @@ if __name__=="__main__":
 	# for i in range(ppo.max_iteration-5):
 	for i in range(5000000):
 		slac.train()
-		rewards = slac.evaluate()
-		plot(rewards, graph_name + ' scheduler reward',0,False)
+		rewards, winRate = slac.evaluate()
+		plot(rewards, graph_name + ' reward',0,False)
+		plot(winRate, graph_name + ' Winrate',1,False)
 

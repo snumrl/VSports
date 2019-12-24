@@ -83,7 +83,7 @@ class ImitationLearning(object):
 	def __init__(self):
 		np.random.seed(seed = int(time.time()))
 		self.num_slaves = 8
-		self.num_agents = 4
+		self.num_agents = 6
 		self.env = Env(self.num_agents)
 		self.num_state = self.env.getNumState()
 		self.num_action = self.env.getNumAction()
@@ -100,7 +100,7 @@ class ImitationLearning(object):
 
 		self.lb = 0.95
 
-		self.buffer_size = 8*1024
+		self.buffer_size = 16*1024
 		self.batch_size = 512
 
 		self.buffer = Buffer(30000)
@@ -143,6 +143,7 @@ class ImitationLearning(object):
 		self.episodes = [[HumanEpisodeBuffer() for y in range(self.num_agents)] for x in range(self.num_slaves)]
 
 		self.env.resets()
+		self.indexToNetDic = {0:0, 1:1, 2:1,3:0,4:1,5:1}
 
 
 
@@ -157,7 +158,7 @@ class ImitationLearning(object):
 
 
 	def loadModel(self,path,index):
-		self.model[index].load('../nn/'+path+'_'+str(index)+'.pt')
+		self.model[index].load('../nn/'+path+'_'+str(self.indexToNetDic[index])+'.pt')
 
 
 	# def getHardcodedAction(self, slave_index, agent_index):
@@ -248,11 +249,12 @@ class ImitationLearning(object):
 		replay_buffer[0] = HumanEpisodeBuffer()
 		replay_buffer[1] = HumanEpisodeBuffer()
 
+
 		for i in range(self.num_slaves):
 			for j in range(self.num_agents):
 				data = self.episodes[i][j].getData()
 				for k in range(len(data)):
-					replay_buffer[j%2].data.append(data[k])
+					replay_buffer[self.indexToNetDic[j]].data.append(data[k])
 
 		self.num_tuple = self.batch_size * (len(replay_buffer[0].getData())//self.batch_size)
 		# print(len(replay_buffer))
@@ -357,8 +359,8 @@ class ImitationLearning(object):
 			self.num_episode = 1
 		if self.num_tuple is 0:
 			self.num_tuple = 1
-		if self.min_return > self.sum_loss[0]/self.num_tuple:
-			self.min_return = self.sum_loss[0]/self.num_tuple
+		if self.min_return > self.sum_loss[1]/(self.num_tuple*2):
+			self.min_return = self.sum_loss[1]/(self.num_tuple*2)
 			self.min_return_epoch = self.num_evaluation
 
 		# if self.min_return > self.sum_loss[0]/self.num_tuple:
@@ -371,14 +373,14 @@ class ImitationLearning(object):
 		print('||--------------SimulationNN------------------')
 		# print('||Loss Actor               : {:.4f}'.format(self.loss_actor))
 		# print('||Loss Critic              : {:.4f}'.format(self.loss_critic))
-		print('||Loss Imitation-DEF              : {:.4f}'.format(self.loss_imitation[0]))
-		print('||Loss Imitation-ATK              : {:.4f}'.format(self.loss_imitation[1]))
+		print('||Loss Imitation-DEF           : {:.4f}'.format(self.loss_imitation[0]))
+		print('||Loss Imitation-ATK           : {:.4f}'.format(self.loss_imitation[1]))
 		# print('||Noise                    : {:.3f}'.format(self.model[0].log_std.exp().mean()))		
-		print('||Num Transition So far    : {}'.format(self.num_tuple_so_far))
-		print('||Num Transition           : {}'.format(self.num_tuple))
-		print('||Num Episode              : {}'.format(self.num_episode))
-		print('||Avg Avg Loss tuple-DEF   : {:.3f}'.format(1.0 * self.sum_loss[0]/self.num_tuple))
-		print('||Avg Avg Loss tuple-ATK   : {:.3f}'.format(1.0 * self.sum_loss[1]/self.num_tuple))
+		print('||Num Transition-ATK So far    : {}'.format(self.num_tuple_so_far*2))
+		print('||Num Transition-ATK           : {}'.format(self.num_tuple*2))
+		print('||Num Episode                  : {}'.format(self.num_episode))
+		print('||Avg Avg Loss tuple-DEF       : {:.3f}'.format(1.0 * self.sum_loss[0]/self.num_tuple))
+		print('||Avg Avg Loss tuple-ATK       : {:.3f}'.format(1.0 * self.sum_loss[1]/(self.num_tuple*2)))
 		# print('||Avg Reward per transition: {:.3f}'.format(self.sum_return/self.num_tuple))
 		# print('||Avg Step per episode     : {:.1f}'.format(self.num_tuple/self.num_episode))
 		# print('||MIN Avg Loss So far     : {:.3f} at #{}'.format(self.min_loss,self.max_return_epoch))
@@ -386,15 +388,15 @@ class ImitationLearning(object):
 		# print('||Loss Actor               : {:.4f}'.format(self.lactor_loss_actor))
 		# print('||Loss Critic              : {:.4f}'.format(self.lactor_loss_critic))
 		# print('||Noise                    : {:.3f}'.format(self.lactor_model[0].log_std.exp().mean()))		
-		print('||Num Transition So far    : {}'.format(self.num_tuple_so_far))
-		print('||Num Transition           : {}'.format(self.num_tuple))
+		# print('||Num Transition So far    : {}'.format(self.num_tuple_so_far))
+		# print('||Num Transition           : {}'.format(self.num_tuple))
 		# print('||Num Episode              : {}'.format(self.num_episode))
 		# print('||Avg Return per episode   : {:.3f}'.format(self.lactor_sum_return/self.num_episode))
 		# print('||Avg Reward per transition: {:.3f}'.format(self.lactor_sum_return/self.num_tuple))
 		# print('||Avg Step per episode     : {:.1f}'.format(self.num_tuple/self.num_episode))
-		print('||Min Avg Loss DEF So far     : {:.3f} at #{}'.format(self.min_return, self.min_return_epoch))
+		print('||Min Avg Loss ATK So far      : {:.3f} at #{}'.format(self.min_return, self.min_return_epoch))
 		self.losses[0].append(1.0 * self.sum_loss[0]/self.num_tuple)
-		self.losses[1].append(1.0 * self.sum_loss[1]/self.num_tuple)
+		self.losses[1].append(1.0 * self.sum_loss[1]/(self.num_tuple*2))
 		# self.lactor_rewards.append(self.lactor_sum_return/self.num_episode)
 		
 		self.saveModel()

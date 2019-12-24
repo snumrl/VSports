@@ -64,7 +64,7 @@ IntWindow::
 IntWindow()
 :SimWindow(), mIsNNLoaded(false)
 {
-	mEnv = new Environment(30, 600, 4);
+	mEnv = new Environment(30, 600, 6);
 	initCustomView();
 	initGoalpost();
 
@@ -131,9 +131,10 @@ IntWindow(const std::string& nn_path0, const std::string& nn_path1)
 	}
 	load[0](nn_path0);
 	load[1](nn_path1);
-	load[2](nn_path0);
-	load[3](nn_path1);
-
+	load[2](nn_path1);
+	load[3](nn_path0);
+	load[4](nn_path1);
+	load[5](nn_path1);
 
 	// reset_hidden[0] = nn_module[0].attr("reset_hidden");
 	// reset_hidden[1] = nn_module[1].attr("reset_hidden");
@@ -172,8 +173,10 @@ IntWindow(const std::string& nn_path0, const std::string& nn_path1, const std::s
 
 	load[0](nn_path0);
 	load[1](nn_path1);
-	load[2](nn_path2);
-	load[3](nn_path3);
+	load[2](nn_path1);
+	load[3](nn_path0);
+	load[4](nn_path1);
+	load[5](nn_path1);
 
 
 	// reset_hidden[0] = nn_module[0].attr("reset_hidden");
@@ -424,42 +427,63 @@ step()
 				getActionFromNN(2);
 				getActionFromNN(3);
 			}
-
-
-
-
 		}
+
+		if(mEnv->mNumChars == 6)
+		{
+
+			getActionFromNN(0);
+			getActionFromNN(1);
+			getActionFromNN(2);
+			if(vsHardcoded)
+			{
+				for(int i=3;i<6;i++)
+				{
+					mEnv->getLocalState(i);
+					mActions[i] = mEnv->getActionFromBTree(i);
+
+				}
+			}
+			else
+			{
+				getActionFromNN(3);
+				getActionFromNN(4);
+				getActionFromNN(5);
+			}
+		}
+
 
 	}
 
 
-	else
-	{
-		if(mEnv->mNumChars == 4)
-		{
-			for(int i=0;i<4;i++)
-			{
-				mEnv->getLocalState(i);
-				mActions[i] = mEnv->getActionFromBTree(i);
+	// else
+	// {
+	// 	if(mEnv->mNumChars == 4)
+	// 	{
+	// 		for(int i=0;i<4;i++)
+	// 		{
+	// 			mEnv->getLocalState(i);
+	// 			mActions[i] = mEnv->getActionFromBTree(i);
 
-			}
-		// 			cout<<mEnv->getLocalState(1).transpose()<<endl;
-		// cout<<mEnv->getLocalState(2).transpose()<<endl;
-		// cout<<(mEnv->getLocalState(1)-mEnv->getLocalState(2)).transpose()<<endl;
-		// cout<<"##############"<<endl;
-		}
+	// 		}
+	// 	// 			cout<<mEnv->getLocalState(1).transpose()<<endl;
+	// 	// cout<<mEnv->getLocalState(2).transpose()<<endl;
+	// 	// cout<<(mEnv->getLocalState(1)-mEnv->getLocalState(2)).transpose()<<endl;
+	// 	// cout<<"##############"<<endl;
+	// 	}
 
-		else if(mEnv->mNumChars == 2)
-		{
+	// 	else if(mEnv->mNumChars == 2)
+	// 	{
 
-			for(int i=0;i<2;i++)
-			{
-				mEnv->getLocalState(i);
-				mActions[i] = mEnv->getActionFromBTree(i);
-			}
+	// 		for(int i=0;i<2;i++)
+	// 		{
+	// 			mEnv->getLocalState(i);
+	// 			mActions[i] = mEnv->getActionFromBTree(i);
+	// 		}
 
-		}
-	}
+	// 	}
+	// }
+	
 	// cout<<"step in intWindow"<<endl;
 
 
