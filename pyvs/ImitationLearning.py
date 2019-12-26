@@ -198,7 +198,7 @@ class ImitationLearning(object):
 				nan_occur = False
 				terminated_state = True
 				for k in range(self.num_agents):
-					self.env.getReward(i, k)
+					self.env.getReward(i, k, True)
 					if np.any(np.isnan(states[i*self.num_agents+k])) or np.any(np.isnan(actions[i*self.num_agents+k])):
 						nan_occur = True
 

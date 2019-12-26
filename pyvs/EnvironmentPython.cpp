@@ -13,7 +13,7 @@ EnvironmentPython(int numAgent)
 	// omp_set_num_threads(mNumSlaves);
 	for(int i=0;i<mNumSlaves;i++)
 	{
-		mSlaves.push_back(new Environment(30, 600, numAgent));
+		mSlaves.push_back(new Environment(30, 180, numAgent));
 	}
 	mNumState = mSlaves[0]->getNumState();
 	mNumAction = mSlaves[0]->getNumAction();
@@ -140,9 +140,9 @@ setAction(np::ndarray np_array, int id, int index)
 
 double
 EnvironmentPython::
-getReward(int id, int index)
+getReward(int id, int index, int verbose)
 {
-	return mSlaves[id]->getReward(index);
+	return mSlaves[id]->getReward(index, verbose);
 }
 
 np::ndarray

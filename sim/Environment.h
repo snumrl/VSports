@@ -20,6 +20,7 @@
 #define _ID_OP_ATK2_P 33
 #define _ID_OP_ATK2_V 35
 #define _ID_FACING_V 37
+#define _ID_SLOWED 38
 
 
 // #define _ID_P 0
@@ -80,7 +81,7 @@ public:
 	Eigen::VectorXd getState(int index);
 	Eigen::VectorXd getLocalState(int index);
 
-	double getReward(int index);
+	double getReward(int index, bool verbose = true);
 	std::vector<double> getRewards();
 
 	Eigen::VectorXd getAction(int index){return mActions[index];}
@@ -160,9 +161,12 @@ public:
 	std::vector<Eigen::VectorXd> mVStates;
 
 	std::vector<BNode*> mBTs;
-	double maxVel = 1.5;
+	double maxVel = 1.0;
 
 	std::vector<double> mFacingVels;
+
+	std::vector<int> mKicked;
+	double mSlowDuration;
 	// AgentEnvWindow* mWindow;
 };
 double getFacingAngleFromLocalState(Eigen::VectorXd curState);

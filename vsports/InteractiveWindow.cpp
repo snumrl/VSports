@@ -64,7 +64,7 @@ IntWindow::
 IntWindow()
 :SimWindow(), mIsNNLoaded(false)
 {
-	mEnv = new Environment(30, 600, 6);
+	mEnv = new Environment(30, 180, 6);
 	initCustomView();
 	initGoalpost();
 
@@ -483,7 +483,7 @@ step()
 
 	// 	}
 	// }
-	
+
 	// cout<<"step in intWindow"<<endl;
 
 
@@ -605,7 +605,7 @@ display()
 
 	}
 
-	// cout<<mEnv->getLocalState(0).segment(_ID_GOALPOST_P+4, 2).transpose()<<endl;
+	// cout<<mEnv->getLocalState(1)[_ID_SLOWED]<<endl;
 	// cout<<mEnv->getLocalState(0).segment(_ID_GOALPOST_P+6, 2).transpose()<<endl;
 	// cout<<endl;
 
@@ -630,6 +630,7 @@ display()
 	// cout<<"444444"<<endl;
 
 	// cout<<mEnv->getCharacters()[0]->getSkeleton()->getVelocities().transpose()<<endl;
+	// cout<<mActions[1][3]<<endl;
 
 	GUI::drawStringOnScreen(0.2, 0.8, scoreString, true, Eigen::Vector3d::Zero());
 

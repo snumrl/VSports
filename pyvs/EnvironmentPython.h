@@ -29,7 +29,7 @@ public:
 	np::ndarray getLocalState(int id, int index);
 	void setAction(np::ndarray np_array, int id, int index);
 	void setActions(np::ndarray np_array);
-	double getReward(int id, int index);
+	double getReward(int id, int index, int verbose);
 	double getNumIterations();
 
 	void endOfIteration();

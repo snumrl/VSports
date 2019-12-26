@@ -22,7 +22,7 @@ using namespace dart::constraint;
 Environment::
 Environment(int control_Hz, int simulation_Hz, int numChars)
 :mControlHz(control_Hz), mSimulationHz(simulation_Hz), mNumChars(numChars), mWorld(std::make_shared<dart::simulation::World>()),
-mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0)
+mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180)
 {
 	srand((unsigned int)time(0));
 	initCharacters();
@@ -30,6 +30,10 @@ mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0)
 	initFloor();
 	initBall();
 	getNumState();
+
+	mWorld->setTimeStep(1.0/mSimulationHz);
+
+	// cout<<mWorld->getTimeStep()<<endl;
 	// cout<<"11111"<<endl;
 	// mWorld->getConstraintSolver()->removeAllConstraints();
 	// cout<<"2222"<<endl;
@@ -91,6 +95,7 @@ initCharacters()
 	mForces.resize(mNumChars);
 	mBTs.resize(mNumChars);
 	mFacingVels.resize(mNumChars);
+	mKicked.resize(mNumChars);
 	for(int i=0;i<mNumChars;i++)
 	{
 		mFacingVels[i] = 0.0;
@@ -239,14 +244,20 @@ handleBallContact(int index, double radius, double me)
 
 	// if(kickPower>=1)
 	// 	kickPower = 1;
+	if(kickPower > 1.0)
+		kickPower = 1.0;
 
 	if(kickPower > 0)
 	{
-		kickPower = 1.0;
+		kickPower += 0.5;
+		// kickPower = 0.5;
+		mKicked[index] = mSlowDuration;
 		// kickPower = 1.0/(exp(-kickPower)+1);
 		// cout<<"Kicked!"<<endl;
 		// kickPower = 1.0;
-		ballSkel->setVelocities(skel->getVelocities().segment(0,2)*(2.0+me)*(1.0*kickPower));
+		Eigen::VectorXd direction = skel->getVelocities().segment(0,2).normalized();
+		ballSkel->setVelocities(direction*(1.0+me)*(1.0*kickPower));
+		// ballSkel->setVelocities(skel->getVelocities().segment(0,2).normalized());
 	}
 
 }
@@ -313,16 +324,16 @@ handlePlayerContacts(double me)
 
 void 
 Environment::
-boundBallVelocitiy(double maxVel)
+boundBallVelocitiy(double ballMaxVel)
 {
 	Eigen::VectorXd ballVel = ballSkel->getVelocities();
 	// cout<<"ballVel size: "<<ballVel.size()<<endl;
 	for(int i=0;i<ballVel.size();i++)
 	{
 		// cout<<"i:"<<i<<endl;
-		if(abs(ballVel[i])>maxVel)
+		if(abs(ballVel[i])>ballMaxVel)
 		{
-			ballVel[i] = ballVel[i]/abs(ballVel[i])*maxVel;
+			ballVel[i] = ballVel[i]/abs(ballVel[i])*ballMaxVel;
 		}
 	}
 	ballSkel->setVelocities(ballVel);	
@@ -360,14 +371,21 @@ step()
 		if(mStates[i][_ID_KICKABLE] == 1)
 		{
 			// cout<<"here right?"<<endl;
-			handleBallContact(i, 0.12, 2.0);
+			// if(mKicked[i]<=0.5)
+				handleBallContact(i, 0.12, 1.5);
 		}
 	}
 
 	handleWallContact(ballSkel, 0.08, 0.8);
 
-	boundBallVelocitiy(5.0);
-	dampBallVelocitiy(2.5);
+	boundBallVelocitiy(4.0);
+	dampBallVelocitiy(1.0);
+	// cout<<ballSkel->getVelocities().norm()<<endl;
+
+	for(int i=0;i<mCharacters.size();i++)
+	{
+		mKicked[i] = max(0, mKicked[i]-1);
+	}
 
 	// cout<<mCharacters[0]->getSkeleton()->getForces().transpose()<<endl;
 
@@ -501,6 +519,9 @@ getState(int index)
 	}
 	Eigen::VectorXd facingVel(1);
 	facingVel[0] = mFacingVels[index];
+
+	Eigen::VectorXd slowed(1);
+	slowed[0] = mKicked[index]/mSlowDuration;
 	// cout<<facingVel[0]<<endl;
 
 	// double facingAngle = character->getSkeleton()->getPosition(2);
@@ -513,7 +534,7 @@ getState(int index)
 	Eigen::VectorXd state;
 
 	state.resize(p.rows() + v.rows() + ballP.rows() + ballV.rows() + kickable.rows() + simpleGoalpostPositions.rows()
-		+ otherS.rows()+facingVel.rows());
+		+ otherS.rows()+facingVel.rows()+slowed.rows());
 
 	count = 0;
 	for(int i=0;i<p.rows();i++)
@@ -549,6 +570,10 @@ getState(int index)
 	for(int i=0;i<facingVel.rows();i++)
 	{
 		state[count++] = facingVel[i];
+	}
+	for(int i=0;i<slowed.rows();i++)
+	{
+		state[count++] = slowed[i];
 	}
 	// cout<<"get State : "<<state[_ID_FACING_V]<<endl;
 	mStates[index] = state;
@@ -644,7 +669,7 @@ getLocalState(int index)
 
 double
 Environment::
-getReward(int index)
+getReward(int index, bool verbose)
 {
 	double reward = 0.0;
 	Eigen::VectorXd p = mStates[index].segment(_ID_P,2);
@@ -692,7 +717,8 @@ getReward(int index)
 		if(abs(heightVector.dot(ballPosition)) < goalpostSize/2.0)
 		{
 	// cout<<2<<endl;
-			std::cout<<"Red Team GOALL!!"<<std::endl;
+			if(verbose)
+				std::cout<<"Red Team GOALL!!"<<std::endl;
 			// if(!goalRewardPaid[index])
 
 			if(mCharacters[index]->getTeamName() == "A")
@@ -707,7 +733,8 @@ getReward(int index)
 	{
 		if(abs(heightVector.dot(ballPosition)) < goalpostSize/2.0)
 		{
-			std::cout<<"Blue Team GOALL!!"<<std::endl;
+			if(verbose)
+				std::cout<<"Blue Team GOALL!!"<<std::endl;
 			// if(!goalRewardPaid[index])
 			if(mCharacters[index]->getTeamName() == "A")
 				reward -= 1;
@@ -767,8 +794,12 @@ applyAction(int index)
 	Eigen::VectorXd vel = skel->getVelocities();
 	// cout<<vel.transpose()<<endl;
 
-	if (vel.segment(0,2).norm() > maxVel)
-		vel.segment(0,2) = vel.segment(0,2)/vel.segment(0,2).norm() * maxVel;
+	double curMaxvel = maxVel;
+	if(mKicked[index]>0)
+		curMaxvel = (1-0.8*sqrt(mKicked[index]/mSlowDuration))*maxVel;
+
+	if (vel.segment(0,2).norm() > curMaxvel)
+		vel.segment(0,2) = vel.segment(0,2)/vel.segment(0,2).norm() * curMaxvel;
 	// cout<<vel[2]<<" ";
 	// if (vel.segment(2,1).norm() > 20.0)
 	// 	vel.segment(2,1) = vel.segment(2,1)/vel.segment(2,1).norm() * 20.0;
@@ -782,7 +813,7 @@ applyAction(int index)
 		mFacingVels[index] = -maxFacingVel;
 	skel->setPosition(2, skel->getPosition(2)+mFacingVels[index]/mSimulationHz);
 	mFacingVels[index] += 300.0*mActions[index][2]/mSimulationHz;
-	mFacingVels[index] -= 0.02*mFacingVels[index];
+	mFacingVels[index] -= 0.04*mFacingVels[index];
 	// mStates[index][mFacingVels]
 	// if(index == 0)
 	// {
@@ -880,7 +911,7 @@ setAction(int index, const Eigen::VectorXd& a)
 	// skel->setPosition(2, facingAngle + M_PI*(1-reviseStateByTeam)/2.0 );
 	// skel->setPosition(2, 0 + M_PI*(1-reviseStateByTeam)/2.0 );
 
-	mForces[index] = 200.0*reviseStateByTeam*applyingForce;
+	mForces[index] = 100.0*reviseStateByTeam*applyingForce;
 	// cout<<mForces[index].transpose()<<endl;
 	// skel->setPosition(2, directionToTheta(skel->getVelocities().segment(0,2)));
 }
@@ -890,7 +921,7 @@ bool
 Environment::
 isTerminalState()
 {
-	if(mTimeElapsed>10000.0)
+	if(mTimeElapsed>900.0)
 	{
 		// cout<<"Time overed"<<endl;
 		mIsTerminalState = true;
@@ -1055,7 +1086,7 @@ normalizeNNState(Eigen::VectorXd state)
 	Eigen::VectorXd normalizedState = state;
 	int numState = normalizedState.size();
 	normalizedState.segment(0, 8) = state.segment(0,8)/8.0;
-	normalizedState.segment(9, numState-9) = state.segment(9, numState-9)/8.0;
+	normalizedState.segment(9, numState-10) = state.segment(9, numState-10)/8.0;
 	// cout<<"Normalie NN state : "<<normalizedState[_ID_FACING_V]<<endl;
 	return normalizedState;
 }
@@ -1068,7 +1099,7 @@ unNormalizeNNState(Eigen::VectorXd outSubgoal)
 	Eigen::VectorXd scaledSubgoal = outSubgoal;
 	int numState = scaledSubgoal.size();
 	scaledSubgoal.segment(0, 8) = outSubgoal.segment(0,8)*8.0;
-	scaledSubgoal.segment(9, numState-9) = outSubgoal.segment(9, numState-9)*8.0;
+	scaledSubgoal.segment(9, numState-10) = outSubgoal.segment(9, numState-10)*8.0;
 	return scaledSubgoal;
 }
 
@@ -1100,7 +1131,7 @@ bool isNotCloseToBall(Eigen::VectorXd curState)
 
 bool isNotCloseToBall_soft(Eigen::VectorXd curState)
 {
-	return curState.segment(_ID_BALL_P,2).norm() >= 0.35;
+	return curState.segment(_ID_BALL_P,2).norm() >= 0.25;
 }
 
 
@@ -1206,7 +1237,7 @@ double getFacingAngleFromLocalState(Eigen::VectorXd localState)
 	return -atan2(goalToGoal[1], goalToGoal[0]);
 }
 
-double hardcodedShootingPower = 0.3;
+double hardcodedShootingPower = 0.7;
 double controlHz = 30.0;
 double torqueScale = 0.4;
 
@@ -1389,14 +1420,14 @@ bool isBallInPenalty(Eigen::VectorXd localState)
 	Eigen::VectorXd curState = localStateToOriginState(localState);
 	Eigen::VectorXd ballPosition = curState.segment(_ID_P,2) + curState.segment(_ID_BALL_P,2);
 
-	return ballPosition[0] < -2.0;
+	return ballPosition[0] < -3.0;
 }
 bool isNotBallInPenalty(Eigen::VectorXd localState)
 {
 	Eigen::VectorXd curState = localStateToOriginState(localState);
 	Eigen::VectorXd ballPosition = curState.segment(_ID_P,2) + curState.segment(_ID_BALL_P,2);
 
-	return ballPosition[0] >= -2.0;
+	return ballPosition[0] >= -3.0;
 }
 
 Eigen::VectorXd actionBallInPenalty(Eigen::VectorXd localState)
@@ -1477,9 +1508,10 @@ bool isPlayerOnBallToGoal(Eigen::VectorXd localState)
 
 	Eigen::VectorXd goalpostToBall = (ballP - centerOfGoalpost);
 	double d_goalpostToP = (p - centerOfGoalpost).norm();
-	if(goalpostToBall.norm() > d_goalpostToP)
-		goalpostToBall = goalpostToBall.normalized() * d_goalpostToP;
-	Eigen::VectorXd targetPosition = centerOfGoalpost + goalpostToBall;
+	Eigen::VectorXd goalpostToTarget;// = goalpostToBall;
+	// if(goalpostToBall.norm() > d_goalpostToP)
+	goalpostToTarget = goalpostToBall.normalized() * d_goalpostToP;
+	Eigen::VectorXd targetPosition = centerOfGoalpost + goalpostToTarget;
 
 	return (targetPosition - p).norm() < 0.3 && (ballP - centerOfGoalpost).norm() < 1.8;
 }

@@ -63,7 +63,7 @@ ImitationWindow::
 ImitationWindow()
 :SimWindow(), mIsNNLoaded(false)
 {
-	mEnv = new Environment(30, 600, 6);
+	mEnv = new Environment(30, 180, 6);
 	initCustomView();
 	initGoalpost();
 
@@ -347,6 +347,8 @@ step()
 		mEnv->reset();
 		// cout<<"THere?"<<endl;
 	}
+	// cout<<mEnv->mWorld->getTimeStep()<<endl;
+
 	// cout<<mEnv->getLocalState(1).segment(_ID_BALL_P,2).transpose()<<endl;
 
 	if(mIsNNLoaded)

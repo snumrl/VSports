@@ -93,7 +93,7 @@ class SLAC(object):
 		self.gamma = 0.997
 		self.lb = 0.95
 
-		self.buffer_size = 16*1024
+		self.buffer_size = 32*1024
 		self.batch_size = 512
 		# self.trunc_size = 40
 		# self.burn_in_size = 10
@@ -154,6 +154,7 @@ class SLAC(object):
 			self.policy[i].load(path+"_"+str(i)+".pt")
 			self.model[i].policy.load_state_dict(self.policy[i].policy.state_dict())
 		self.saveModel()
+		self.winRate.append(self.evaluateModel())
 
 
 	def saveModel(self):
@@ -286,7 +287,7 @@ class SLAC(object):
 				terminated_state = True
 				for k in range(self.num_agents):
 					if teamDic[k] == learningTeam:
-						rewards[i*self.num_agents+k] = self.env.getReward(i, k) 
+						rewards[i*self.num_agents+k] = self.env.getReward(i, k, True) 
 						if np.any(np.isnan(rewards[i*self.num_agents+k])):
 							nan_occur = True
 						if np.any(np.isnan(states[i*self.num_agents+k])) or np.any(np.isnan(actions[i*self.num_agents+k])):
@@ -480,8 +481,19 @@ class SLAC(object):
 		num_win = 0
 
 		local_step = [0]*self.num_slaves
+		teamDic = {0: 0, 1: 0, 2: 0, 3: 1, 4: 1, 5: 1}
+		learningTeam = 0
 
-		while num_play<100:
+		states = [None]*self.num_slaves*self.num_agents
+		actions = [None]*self.num_slaves*self.num_agents
+		rewards = [None]*self.num_slaves*self.num_agents
+		values = [None]*self.num_slaves*self.num_agents
+		terminated = [False]*self.num_slaves*self.num_agents
+		for i in range(self.num_slaves):
+			for j in range(self.num_agents):
+				states[i*self.num_agents+j] = self.env.getLocalState(i,j)
+
+		while num_play<20:
 
 			for i in range(self.num_slaves):
 				a_dist_slave = []
@@ -496,11 +508,6 @@ class SLAC(object):
 						actions[i*self.num_agents+j] = self.env.getHardcodedAction(i, j);
 
 				for j in range(self.num_agents):
-					if teamDic[j] == learningTeam:
-						logprobs[i*self.num_agents+j] = a_dist_slave[j].log_prob(Tensor(actions[i*self.num_agents+j]))\
-							.cpu().detach().numpy().reshape(-1)[0];
-
-				for j in range(self.num_agents):
 					self.env.setAction(actions[i*self.num_agents+j], i, j);
 
 			self.env.stepsAtOnce()
@@ -510,31 +517,33 @@ class SLAC(object):
 				terminated_state = True
 				for k in range(self.num_agents):
 					if teamDic[k] == learningTeam:
-						rewards[i*self.num_agents+k] = self.env.getReward(i, k) 
+						rewards[i*self.num_agents+k] = self.env.getReward(i, k, False) 
 						if np.any(np.isnan(rewards[i*self.num_agents+k])):
 							nan_occur = True
 						if np.any(np.isnan(states[i*self.num_agents+k])) or np.any(np.isnan(actions[i*self.num_agents+k])):
 							nan_occur = True
 
-				if (nan_occur is True)
+				if nan_occur is True:
 					self.env.reset(i)
 					local_step[i] = 0
 
-				elif terminated_state is True:
+				if self.env.isTerminalState(i) is False:
+					terminated_state = False
+					local_step[i] += 1
+				else:
 					if rewards[i*self.num_agents+0] == 1:
 						num_win += 1
 					num_play += 1
 					self.env.reset(i)
 					local_step[i] = 0
 
-				elif local_step[i]>30*10:
+				if local_step[i]>30*20:
 					num_play += 1
 					num_win += 0.5
 					self.env.reset(i)
 					local_step[i] = 0
 
-				else
-					local_step[i] += 1
+			print('Fighting with Hardcoded agent : {}/{}'.format(num_play,20),end='\r')
 
 			# get the updated state and updated hidden
 			for i in range(self.num_slaves):
@@ -544,7 +553,11 @@ class SLAC(object):
 		for i in range(self.num_slaves):
 			self.env.reset(i)
 
-		return num_win/100
+
+		print("")
+		print('Win rate of {}\'th nn : {}'.format(self.num_evaluation, num_win/20.0))
+
+		return num_win/20.0
 
 
 
@@ -581,7 +594,7 @@ class SLAC(object):
 			self.max_return = self.sum_return/self.num_episode
 			self.max_return_epoch = self.num_evaluation
 
-		if self.num_evaluation%3 == 0:
+		if self.num_evaluation%20 == 0:
 			self.winRate.append(self.evaluateModel())
 
 		print('# {} === {}h:{}m:{}s ==='.format(self.num_evaluation,h,m,s))
@@ -611,7 +624,7 @@ class SLAC(object):
 		self.saveModel()
 		
 		print('=============================================')
-		return np.array(self.rewards), np.array(self.winRate[-1])
+		return np.array(self.rewards), np.array(self.winRate)
 
 
 import matplotlib
@@ -637,6 +650,32 @@ def plot(y,title,num_fig=1,ylim=True):
 	
 	plt.plot(temp_y,'r')
 
+	# plt.show()
+	if ylim:
+		plt.ylim([0,1])
+
+	fig.canvas.draw()
+	fig.canvas.flush_events()
+
+def plot_winrate(y,title,num_fig=1,ylim=True):
+	temp_y = np.zeros(y.shape)
+	if y.shape[0]>5:
+		temp_y[0] = y[0]
+		temp_y[1] = 0.5*(y[0] + y[1])
+		temp_y[2] = 0.3333*(y[0] + y[1] + y[2])
+		temp_y[3] = 0.25*(y[0] + y[1] + y[2] + y[3])
+		for i in range(4,y.shape[0]):
+			temp_y[i] = np.sum(y[i-4:i+1])*0.2
+
+	fig = plt.figure(num_fig)
+	plt.clf()
+	plt.title(title)
+	plt.plot(y,'b')
+	
+	# plt.plot(temp_y,'r')
+	plt.axhline(y=0.0, color='r', linewidth=1)
+	plt.axhline(y=0.5, color='r', linewidth=1)
+	plt.axhline(y=1.0, color='r', linewidth=1)
 	# plt.show()
 	if ylim:
 		plt.ylim([0,1])
@@ -679,6 +718,6 @@ if __name__=="__main__":
 	for i in range(5000000):
 		slac.train()
 		rewards, winRate = slac.evaluate()
-		plot(rewards, graph_name + ' reward',0,False)
-		plot(winRate, graph_name + ' Winrate',1,False)
+		plot(rewards, graph_name + 'Reward',0,False)
+		plot_winrate(winRate, graph_name + 'vs Hardcoded Winrate',1,False)
 
