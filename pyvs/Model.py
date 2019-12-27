@@ -47,6 +47,7 @@ class SimulationNN(nn.Module):
 			nn.Linear(num_h1, num_h2),
 			nn.LeakyReLU(0.2, inplace=True),
 			nn.Linear(num_h2, num_actions),
+			nn.Tanh()
 			# nn.LeakyReLU(0.2, inplace=True),
 			# nn.Linear(num_h3, num_actions)
 		)
@@ -102,6 +103,7 @@ class ActorCriticNN(nn.Module):
 			nn.Linear(num_h1, num_h2),
 			nn.LeakyReLU(0.2, inplace=True),
 			nn.Linear(num_h2, num_actions),
+			nn.Tanh()
 			# nn.LeakyReLU(0.2, inplace=True),
 			# nn.Linear(num_h3, num_actions)
 		)
@@ -117,7 +119,7 @@ class ActorCriticNN(nn.Module):
 
 
 		# self.log_std = nn.Parameter(-1.0 * torch.ones(num_actions))
-		self.log_std = nn.Parameter(Tensor([-0, -0, -2, -2]))
+		self.log_std = nn.Parameter(Tensor([1, 1, 0, -2]))
 
 		# self.rnn.apply(weights_init)
 		self.policy.apply(weights_init)
@@ -145,6 +147,7 @@ class ActorCriticNN(nn.Module):
 		p, _v= self.forward(ts.unsqueeze(0))
 
 		# self.cur_hidden = new_hidden
+		# print(p.loc.cpu().detach().numpy())
 
 		# return p.sample().cpu().detach().numpy()
 		return p.loc.cpu().detach().numpy()

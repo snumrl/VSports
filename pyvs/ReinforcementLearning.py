@@ -93,15 +93,15 @@ class SLAC(object):
 		self.gamma = 0.997
 		self.lb = 0.95
 
-		self.buffer_size = 32*1024
+		self.buffer_size = 48*1024
 		self.batch_size = 512
 		# self.trunc_size = 40
 		# self.burn_in_size = 10
 		# self.bptt_size = 10
 
 		self.buffer = [ [None] for i in range(2)]
-		self.buffer[0] = Buffer(30000)
-		self.buffer[1] = Buffer(30000)
+		self.buffer[0] = Buffer(100000)
+		self.buffer[1] = Buffer(100000)
 
 		self.model = [None]*self.num_slaves*self.num_agents
 		for i in range(self.num_slaves*self.num_agents):
@@ -143,6 +143,8 @@ class SLAC(object):
 
 		self.episodes = [[RNNEpisodeBuffer() for y in range(self.num_agents)] for x in range(self.num_slaves)]
 		self.indexToNetDic = {0:0, 1:1, 2:1,3:0,4:1,5:1}
+
+		self.filecount = 0
 
 		self.env.resets()
 
@@ -198,12 +200,16 @@ class SLAC(object):
 
 		vsHardcodedFlags = [0]*self.num_slaves
 		for i in range(self.num_slaves):
-			if random.randrange(0,3) == 0:
+			randomNumber = random.randrange(0,100)
+			# History
+			if randomNumber < 5:
 				vsHardcodedFlags[i] = 1
-		# print(vsHardcodedFlags)
+			# Hardcoding
+			elif randomNumber < 10:
+				vsHardcodedFlags[i] = 2
+			# else : self-play
 
-		# print(vsHardcodedFlags)
-
+		print(vsHardcodedFlags)
 		while True:
 			counter += 1
 			if counter%10 == 0:
@@ -240,7 +246,14 @@ class SLAC(object):
 				a_dist_slave = []
 				v_slave = []
 				for j in range(self.num_agents):
-					if vsHardcodedFlags[i] == False:
+					if vsHardcodedFlags[i] == 0:
+						a_dist_slave_agent,v_slave_agent = self.model[self.indexToNetDic[j]].forward(\
+								Tensor([states[i*self.num_agents+j]]))
+						a_dist_slave.append(a_dist_slave_agent)
+						v_slave.append(v_slave_agent)
+						actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy().squeeze().squeeze().squeeze();					
+
+					elif vsHardcodedFlags[i] == 1:
 						if teamDic[j] == learningTeam:
 							a_dist_slave_agent,v_slave_agent = self.model[self.indexToNetDic[j]].forward(\
 								Tensor([states[i*self.num_agents+j]]))
@@ -260,11 +273,9 @@ class SLAC(object):
 							actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy().squeeze().squeeze().squeeze();		
 						else :
 							actions[i*self.num_agents+j] = self.env.getHardcodedAction(i, j);
-							# print(actions[i*self.num_agents+j])
-				# print(actions[i*self.num_agents+j])
 
 				for j in range(self.num_agents):
-					if teamDic[j] == learningTeam:
+					if teamDic[j] == learningTeam or vsHardcodedFlags[i] == 0:
 						logprobs[i*self.num_agents+j] = a_dist_slave[j].log_prob(Tensor(actions[i*self.num_agents+j]))\
 							.cpu().detach().numpy().reshape(-1)[0];
 						values[i*self.num_agents+j] = v_slave[j].cpu().detach().numpy().reshape(-1)[0];
@@ -286,8 +297,9 @@ class SLAC(object):
 				nan_occur = False
 				terminated_state = True
 				for k in range(self.num_agents):
-					if teamDic[k] == learningTeam:
+					if teamDic[k] == learningTeam or vsHardcodedFlags[i] == 0:
 						rewards[i*self.num_agents+k] = self.env.getReward(i, k, True) 
+						# print(rewards[i*self.num_agents+k], end=' ')
 						if np.any(np.isnan(rewards[i*self.num_agents+k])):
 							nan_occur = True
 						if np.any(np.isnan(states[i*self.num_agents+k])) or np.any(np.isnan(actions[i*self.num_agents+k])):
@@ -295,7 +307,7 @@ class SLAC(object):
 
 				if nan_occur is True:
 					for k in range(self.num_agents):
-						if teamDic[k] == learningTeam:
+						if teamDic[k] == learningTeam or vsHardcodedFlags[i] == 0:
 							self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
 							self.episodes[i][k] = RNNEpisodeBuffer()
 
@@ -305,7 +317,7 @@ class SLAC(object):
 				if self.env.isTerminalState(i) is False:
 					terminated_state = False
 					for k in range(self.num_agents):
-						if teamDic[k] == learningTeam:
+						if teamDic[k] == learningTeam or vsHardcodedFlags[i] == 0:
 							self.episodes[i][k].push(states[i*self.num_agents+k], actions[i*self.num_agents+k],\
 								rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k])
 
@@ -313,7 +325,7 @@ class SLAC(object):
 
 				if terminated_state is True:
 					for k in range(self.num_agents):
-						if teamDic[k] == learningTeam:
+						if teamDic[k] == learningTeam or vsHardcodedFlags[i] == 0:
 							self.episodes[i][k].push(states[i*self.num_agents+k], actions[i*self.num_agents+k],\
 								rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k])
 							# print(str(i)+" "+str(k)+" "+str(rewards[i*self.num_agents+k]))
@@ -325,7 +337,7 @@ class SLAC(object):
 			if local_step >= self.buffer_size:
 				for i in range(self.num_slaves):
 					for k in range(self.num_agents):
-						if teamDic[k] == learningTeam:
+						if teamDic[k] == learningTeam or vsHardcodedFlags[i] == 0:
 							self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
 							self.episodes[i][k] = RNNEpisodeBuffer()
 
@@ -372,7 +384,7 @@ class SLAC(object):
 					TD = values[:size] + advantages
 
 
-					rnn_replay_buffer = RNNReplayBuffer(4000)
+					rnn_replay_buffer = RNNReplayBuffer(10000)
 					for i in range(size):
 
 						# if TD[i] >= 0.1 or TD[i] <= -0.1:
@@ -385,6 +397,36 @@ class SLAC(object):
 						# print(j)
 						# exit(0)
 					self.buffer[index].push(rnn_replay_buffer)
+					# x = rnn_replay_buffer
+					# i = 0
+					# while i < size:
+					# 	if abs(x.buffer[i].TD) > 0.15:
+					# 		startTime = max(0, i-60)
+					# 		endTime = min(size-1, i+60)
+
+					# 		# j = json.dumps(x._asdict())
+					# 		f = open("../data/high_TD_episode_"+str(self.filecount)+".txt", 'w')
+					# 		f.write(str(endTime-startTime+1))
+					# 		f.write("\n")
+
+					# 		for line in range(startTime, endTime+1):
+					# 			for line_s in range(len(x.buffer[line].s)):
+					# 				f.write(str(x.buffer[line].s[line_s]))
+					# 				f.write(" ")
+					# 			# f.write(str(x.buffer[line].s))
+					# 			# f.write(" ")
+					# 			f.write(str(x.buffer[line].TD))
+					# 			f.write("\n")
+					# 		# print(j)
+
+					# 		self.filecount += 1
+					# 		if self.filecount == 30:
+					# 			exit(0)
+					# 		f.close()
+					# 		self.buffer[index].push(rnn_replay_buffer)
+					# 		i = endTime
+					# 	i+=1
+
 
 			''' counting numbers(w.r.t scheduler) '''
 			self.num_episode = len(self.total_episodes[index])
@@ -538,6 +580,7 @@ class SLAC(object):
 					local_step[i] = 0
 
 				if local_step[i]>30*20:
+				# if local_step[i]>1:
 					num_play += 1
 					num_win += 0.5
 					self.env.reset(i)

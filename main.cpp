@@ -1,6 +1,7 @@
 // #include "vsports/SimpleSocWindow.h"
 // #include "vsports/MultiSocWindow.h"
 #include "vsports/InteractiveWindow.h"
+#include "vsports/EpisodeReplayWindow.h"
 #include "vsports/ImitationWindow.h"
 #include "vsports/AgentWindow.h"
 #include <GL/glut.h>
@@ -42,9 +43,19 @@ int main(int argc, char** argv)
 	}
 	else if(argc == 4)
 	{
-		ImitationWindow* simwindow = new ImitationWindow(argv[1], argv[2]);
-		simwindow->initWindow(1000, 1000, "Render");
-		simwindow->initialize();
+		if(strcmp(argv[1], "-r")==0)
+		{
+			EpiWindow* simwindow = new EpiWindow(argv[2], argv[3]);
+			simwindow->initWindow(1000, 1000, "Render");
+			simwindow->initialize();
+		}
+		else
+		{
+			ImitationWindow* simwindow = new ImitationWindow(argv[1], argv[2]);
+			simwindow->initWindow(1000, 1000, "Render");
+			simwindow->initialize();
+		}
+		
 	}
 
 

@@ -717,8 +717,11 @@ getReward(int index, bool verbose)
 		if(abs(heightVector.dot(ballPosition)) < goalpostSize/2.0)
 		{
 	// cout<<2<<endl;
+				// cout<<index<<" ";
 			if(verbose)
+			{
 				std::cout<<"Red Team GOALL!!"<<std::endl;
+			}
 			// if(!goalRewardPaid[index])
 
 			if(mCharacters[index]->getTeamName() == "A")
@@ -734,7 +737,10 @@ getReward(int index, bool verbose)
 		if(abs(heightVector.dot(ballPosition)) < goalpostSize/2.0)
 		{
 			if(verbose)
+			{
+				// cout<<index<<" ";
 				std::cout<<"Blue Team GOALL!!"<<std::endl;
+			}
 			// if(!goalRewardPaid[index])
 			if(mCharacters[index]->getTeamName() == "A")
 				reward -= 1;
