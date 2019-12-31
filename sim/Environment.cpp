@@ -1898,3 +1898,89 @@ getActionFromBTree(int index)
 // {
 
 // }
+
+void
+Environment::
+reconEnvFromState(int index, Eigen::VectorXd curLocalState)
+{
+	Eigen::VectorXd curState = localStateToOriginState(curLocalState);
+
+	Eigen::Vector2d p = curState.segment(_ID_P, 2);
+	Eigen::Vector2d v = curState.segment(_ID_V, 2);
+	Eigen::Vector2d temp;
+
+	if(index%3 == 0)
+	{
+		this->getCharacter(0)->getSkeleton()->setPosition(0, 8.0*curState[_ID_P]);
+		this->getCharacter(0)->getSkeleton()->setPosition(1, 8.0*curState[_ID_P+1]);
+
+		this->getCharacter(0)->getSkeleton()->setVelocity(0, 8.0*curState[_ID_V]);
+		this->getCharacter(0)->getSkeleton()->setVelocity(1, 8.0*curState[_ID_V+1]);
+
+		temp = curState.segment(_ID_ALLY1_P, 2);
+		this->getCharacter(1)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
+		this->getCharacter(1)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
+
+		temp = curState.segment(_ID_ALLY1_V, 2);
+		this->getCharacter(1)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
+		this->getCharacter(1)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
+	}
+	else
+	{
+
+		this->getCharacter(1)->getSkeleton()->setPosition(0, 8.0*curState[_ID_P]);
+		this->getCharacter(1)->getSkeleton()->setPosition(1, 8.0*curState[_ID_P+1]);
+
+		this->getCharacter(1)->getSkeleton()->setVelocity(0, 8.0*curState[_ID_V]);
+		this->getCharacter(1)->getSkeleton()->setVelocity(1, 8.0*curState[_ID_V+1]);
+
+		temp = curState.segment(_ID_ALLY1_P, 2);
+		this->getCharacter(0)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
+		this->getCharacter(0)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
+
+		temp = curState.segment(_ID_ALLY1_V, 2);
+		this->getCharacter(0)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
+		this->getCharacter(0)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
+	}
+
+	temp = curState.segment(_ID_ALLY2_P, 2);
+	this->getCharacter(2)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
+	this->getCharacter(2)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
+
+	temp = curState.segment(_ID_ALLY2_V, 2);
+	this->getCharacter(2)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
+	this->getCharacter(2)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
+
+	temp = curState.segment(_ID_OP_DEF_P, 2);
+	this->getCharacter(3)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
+	this->getCharacter(3)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
+
+	temp = curState.segment(_ID_OP_DEF_V, 2);
+	this->getCharacter(3)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
+	this->getCharacter(3)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
+
+	temp = curState.segment(_ID_OP_ATK1_P, 2);
+	this->getCharacter(4)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
+	this->getCharacter(4)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
+
+	temp = curState.segment(_ID_OP_ATK1_V, 2);
+	this->getCharacter(4)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
+	this->getCharacter(4)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
+
+
+	temp = curState.segment(_ID_OP_ATK2_P, 2);
+	this->getCharacter(5)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
+	this->getCharacter(5)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
+
+	temp = curState.segment(_ID_OP_ATK2_V, 2);
+	this->getCharacter(5)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
+	this->getCharacter(5)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
+
+	temp = curState.segment(_ID_BALL_P, 2);
+	this->ballSkel->setPosition(0, 8.0*(p+temp)[0]);
+	this->ballSkel->setPosition(1, 8.0*(p+temp)[1]);
+
+	temp = curState.segment(_ID_BALL_V, 2);
+	this->ballSkel->setVelocity(0, 8.0*(v+temp)[0]);
+	this->ballSkel->setVelocity(1, 8.0*(v+temp)[1]);
+}

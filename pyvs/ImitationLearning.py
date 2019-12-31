@@ -5,6 +5,8 @@ import os
 import sys
 import copy
 from datetime import datetime
+from os.path import join, exists
+from os import mkdir
 
 import collections
 from collections import namedtuple
@@ -27,6 +29,10 @@ LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
 ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
 Tensor = FloatTensor
 
+nndir = "../nn"
+
+if not exists(nndir):
+	mkdir(nndir)
 
 RNNEpisode = namedtuple('RNNEpisode', ('s','a','r','value','logprob','hidden'))
 

@@ -119,19 +119,21 @@ class ActorCriticNN(nn.Module):
 
 
 		# self.log_std = nn.Parameter(-1.0 * torch.ones(num_actions))
-		self.log_std = nn.Parameter(Tensor([1, 1, 0, -2]))
+		self.log_std = nn.Parameter(Tensor([-1, -1, -2, -2]))
 
 		# self.rnn.apply(weights_init)
 		self.policy.apply(weights_init)
 		self.value.apply(weights_init)
 
-	def forward(self,x):
+	def forward(self,x,num_eval):
 		x = x.cuda()
 
 		batch_size = x.size()[0];
 
+		self.log_std = nn.Parameter(Tensor([-1, -1, -2, -2]))
+		k = np.exp(-0.01*num_eval)
 		# rnnOutput, out_hidden = self.rnn(x.view(1, batch_size,-1), in_hidden)
-		return MultiVariateNormal(self.policy(x).unsqueeze(0),self.log_std.exp()), self.value(x)
+		return MultiVariateNormal(self.policy(x).unsqueeze(0),k*self.log_std.exp()), self.value(x)
 		# return MultiVariateNormal(self.policy(rnnOutput).unsqueeze(0),self.log_std.exp()), self.value(rnnOutput), out_hidden
 	def load(self,path):
 		# print('load nn {}'.format(path))
@@ -144,18 +146,18 @@ class ActorCriticNN(nn.Module):
 	def get_action(self,s):
 		ts = torch.tensor(s)
 
-		p, _v= self.forward(ts.unsqueeze(0))
+		p, _v= self.forward(ts.unsqueeze(0),0)
 
 		# self.cur_hidden = new_hidden
 		# print(p.loc.cpu().detach().numpy())
 
-		# return p.sample().cpu().detach().numpy()
-		return p.loc.cpu().detach().numpy()
+		return p.sample().cpu().detach().numpy()
+		# return p.loc.cpu().detach().numpy()
 
 	def get_value(self, s):
 		ts = torch.tensor(s)
 
-		_p, v= self.forward(ts.unsqueeze(0))
+		_p, v= self.forward(ts.unsqueeze(0),0)
 
 		# self.cur_hidden = new_hidden
 
@@ -201,3 +203,126 @@ class ActorCriticNN(nn.Module):
 	# 	return hidden
 
 
+
+class RandomNN(nn.Module):
+	def __init__(self, num_states, num_features):
+		super(RandomNN, self).__init__()
+
+		self.num_policyInput = num_states
+
+		num_h1 = 128
+		num_h2 = 128
+
+		self.network = nn.Sequential(
+			nn.Linear(self.num_policyInput, num_h1),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h1, num_h2),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h2, num_features),
+		)
+
+		self.network.apply(weights_init)
+
+	def forward(self,x):
+		x = x.cuda()
+
+		batch_size = x.size()[0];
+
+		return self.network(x)
+
+	def load(self,path):
+		print('load random network nn {}'.format(path))
+		self.load_state_dict(torch.load(path))
+
+	def save(self,path):
+		print('save random network nn {}'.format(path))
+		torch.save(self.state_dict(),path)
+
+	def get_feature(self,s):
+		ts = torch.tensor(s)
+
+		p = self.forward(ts.unsqueeze(0))
+
+		# return p.loc.cpu().detach().numpy()
+		return p.cpu().detach().numpy()
+
+class ExplorationNN(nn.Module):
+	def __init__(self, num_states, num_actions):
+		super(ExplorationNN, self).__init__()
+
+		self.num_policyInput = num_states
+
+		self.hidden_size = 128
+		self.num_layers = 1
+
+		# self.rnn = nn.LSTM(self.num_policyInput, self.hidden_size, num_layers=self.num_layers)
+		# self.cur_hidden = self.init_hidden(1)
+
+		num_h1 = 128
+		num_h2 = 128
+		# num_h3 = 256
+
+		self.policy = nn.Sequential(
+			nn.Linear(self.num_policyInput, num_h1),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h1, num_h2),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h2, num_actions),
+			nn.Tanh()
+			# nn.LeakyReLU(0.2, inplace=True),
+			# nn.Linear(num_h3, num_actions)
+		)
+		self.value = nn.Sequential(
+			nn.Linear(self.num_policyInput, num_h1),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h1, num_h2),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h2, 1),
+			# nn.LeakyReLU(0.2, inplace=True),
+			# nn.Linear(num_h3, 1)
+		)
+
+
+		# self.log_std = nn.Parameter(-1.0 * torch.ones(num_actions))
+		self.log_std = nn.Parameter(Tensor([-1, -1, -2, -2]))
+
+		# self.rnn.apply(weights_init)
+		self.policy.apply(weights_init)
+		self.value.apply(weights_init)
+
+	def forward(self,x):
+		x = x.cuda()
+
+		batch_size = x.size()[0];
+
+		# rnnOutput, out_hidden = self.rnn(x.view(1, batch_size,-1), in_hidden)
+		return MultiVariateNormal(self.policy(x).unsqueeze(0),self.log_std.exp()), self.value(x)
+		# return MultiVariateNormal(self.policy(rnnOutput).unsqueeze(0),self.log_std.exp()), self.value(rnnOutput), out_hidden
+	def load(self,path):
+		# print('load nn {}'.format(path))
+		self.load_state_dict(torch.load(path))
+
+	def save(self,path):
+		print('save nn {}'.format(path))
+		torch.save(self.state_dict(),path)
+
+	def get_action(self,s):
+		ts = torch.tensor(s)
+
+		p, _v= self.forward(ts.unsqueeze(0))
+
+		# self.cur_hidden = new_hidden
+		# print(p.loc.cpu().detach().numpy())
+
+		return p.sample().cpu().detach().numpy()
+		# return p.loc.cpu().detach().numpy()
+
+	def get_value(self, s):
+		ts = torch.tensor(s)
+
+		_p, v= self.forward(ts.unsqueeze(0))
+
+		# self.cur_hidden = new_hidden
+
+		# return p.sample().cpu().detach().numpy()
+		return v.cpu().detach().numpy()[0]

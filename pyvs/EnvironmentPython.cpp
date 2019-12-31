@@ -219,6 +219,12 @@ getNumIterations()
 	return mSlaves[0]->mNumIterations;
 }
 
+void 
+EnvironmentPython::
+reconEnvFromState(int id, int index, np::ndarray curLocalState)
+{
+	mSlaves[id]->reconEnvFromState(index, toEigenVector(curLocalState));
+}
 
 // void 
 // EnvironmentPython::
@@ -280,6 +286,7 @@ BOOST_PYTHON_MODULE(pyvs)
 		.def("resets",&EnvironmentPython::resets)
 		.def("getNumIterations",&EnvironmentPython::getNumIterations)
 		.def("getHardcodedAction",&EnvironmentPython::getHardcodedAction)
+		.def("reconEnvFromState",&EnvironmentPython::reconEnvFromState)
 		// .def("setLinearActorState",&EnvironmentPython::setLinearActorState)
 		.def("endOfIteration",&EnvironmentPython::endOfIteration);
 		// .def("setHindsightGoal",&EnvironmentPython::setHindsightGoal)

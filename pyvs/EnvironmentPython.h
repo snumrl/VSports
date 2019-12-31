@@ -36,6 +36,7 @@ public:
 
 	np::ndarray getHardcodedAction(int id, int index);
 
+	void reconEnvFromState(int id, int index, np::ndarray curLocalState);
 
 	// For all slaves
 	void stepsAtOnce();

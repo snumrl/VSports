@@ -167,6 +167,8 @@ public:
 
 	std::vector<int> mKicked;
 	double mSlowDuration;
+
+	void reconEnvFromState(int index, Eigen::VectorXd curLocalState);
 	// AgentEnvWindow* mWindow;
 };
 double getFacingAngleFromLocalState(Eigen::VectorXd curState);
