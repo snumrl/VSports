@@ -10,7 +10,8 @@
 class IntWindow : public SimWindow{
 public:
 	IntWindow();
-	IntWindow(const std::string& nn_path0, const std::string& nn_path2);
+	IntWindow(const std::string& nn_path0, const std::string& nn_path1);
+	IntWindow(const std::string& nn_path0, const std::string& nn_path1, const std::string& nn_path2);
 	IntWindow(const std::string& nn_path0, const std::string& nn_path1, const std::string& nn_path2, const std::string& nn_path3);
 	void initWindow(int _w, int _h, char* _name) override;
 
@@ -34,12 +35,17 @@ public:
 	void applyKeyEvent();
 
 	void getActionFromNN(int index);
+
+	void updateActionNoise(int index);
+
 	void getValueFromNN(int index);
 
 	void drawValueGradient();
 	void drawValue();
 
 	double getValue(int index);
+
+	double getRNDFeatureDiff(int index);
 
 	std::string indexToStateString(int index);
 
@@ -66,8 +72,14 @@ public:
 	std::vector<Eigen::VectorXd> mWSubgoalStates;
 	std::vector<Eigen::VectorXd> mActions;
 
+	std::vector<Eigen::VectorXd> mActionNoises;
+
 	boost::python::object mm,mns,sys_module;
 	boost::python::object *nn_module;
+
+	// boost::python::object mm,mns,sys_module;
+	boost::python::object target_rnd_nn_module;
+	boost::python::object predictor_rnd_nn_module;
 	// boost::python::object *reset_hidden;
 	bool mIsNNLoaded;
 
@@ -80,6 +92,9 @@ public:
 	unsigned int vertexbuffer;
 
 	bool vsHardcoded;
+
+
+	int actionCount;
 };
 
 #endif

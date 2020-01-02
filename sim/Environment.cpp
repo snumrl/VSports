@@ -354,14 +354,14 @@ Environment::
 step()
 {
 	mTimeElapsed += 1.0 / (double)mSimulationHz;
-
+	
 	for(int i=0;i<mCharacters.size();i++)
 	{
 		applyAction(i);
 	}
 	// cout<<"11111111!"<<endl;
 
-	handlePlayerContacts(0.7);
+	// handlePlayerContacts(0.7);
 
 	for(int i=0;i<mCharacters.size();i++)
 	{
@@ -643,18 +643,18 @@ getLocalState(int index)
 	// 	localState.segment(_ID_OP_ATK_V, 2) = rotate2DVector(localState.segment(_ID_OP_ATK_V, 2), -facingAngle);
 
 	// }
-	// else if(mNumChars == 2)
-	// {
-	// 	localState.segment(_ID_V, 2) = rotate2DVector(localState.segment(_ID_V, 2), -facingAngle);
-	// 	localState.segment(_ID_BALL_P, 2) = rotate2DVector(localState.segment(_ID_BALL_P, 2), -facingAngle);
-	// 	localState.segment(_ID_BALL_V, 2) = rotate2DVector(localState.segment(_ID_BALL_V, 2), -facingAngle);
-	// 	localState.segment(_ID_GOALPOST_P, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P, 2), -facingAngle);
-	// 	localState.segment(_ID_GOALPOST_P+2, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+2, 2), -facingAngle);
-	// 	localState.segment(_ID_GOALPOST_P+4, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+4, 2), -facingAngle);
-	// 	localState.segment(_ID_GOALPOST_P+6, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+6, 2), -facingAngle);
-	// 	localState.segment(_ID_OP_DEF_P, 2) = rotate2DVector(localState.segment(_ID_OP_DEF_P, 2), -facingAngle);
-	// 	localState.segment(_ID_OP_DEF_V, 2) = rotate2DVector(localState.segment(_ID_OP_DEF_V, 2), -facingAngle);
-	// }
+	else if(mNumChars == 2)
+	{
+		localState.segment(_ID_V, 2) = rotate2DVector(localState.segment(_ID_V, 2), -facingAngle);
+		localState.segment(_ID_BALL_P, 2) = rotate2DVector(localState.segment(_ID_BALL_P, 2), -facingAngle);
+		localState.segment(_ID_BALL_V, 2) = rotate2DVector(localState.segment(_ID_BALL_V, 2), -facingAngle);
+		localState.segment(_ID_GOALPOST_P, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P, 2), -facingAngle);
+		localState.segment(_ID_GOALPOST_P+2, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+2, 2), -facingAngle);
+		localState.segment(_ID_GOALPOST_P+4, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+4, 2), -facingAngle);
+		localState.segment(_ID_GOALPOST_P+6, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+6, 2), -facingAngle);
+		localState.segment(_ID_OP_P, 2) = rotate2DVector(localState.segment(_ID_OP_P, 2), -facingAngle);
+		localState.segment(_ID_OP_V, 2) = rotate2DVector(localState.segment(_ID_OP_V, 2), -facingAngle);
+	}
 	// cout<<"get localState : "<<localState[_ID_FACING_V]<<endl;
 
 	mLocalStates[index] = localState;
@@ -662,7 +662,7 @@ getLocalState(int index)
 
 
 
-	Eigen::VectorXd genState = localStateToOriginState(mLocalStates[index]);
+	Eigen::VectorXd genState = localStateToOriginState(mLocalStates[index], 2);
 	// cout<<(genState - mStates[index]).transpose()<<endl;
 	return normalizeNNState(localState);
 }
@@ -682,22 +682,29 @@ getReward(int index, bool verbose)
 
 	Eigen::VectorXd ballToGoalpost = centerOfGoalpost - ballP;
 
+
 	// reward = 0.1 * exp(-(p-ballP).norm());
+	// reward = 0.1 * v.dot((ballP-p).normalized());
 
 	// reward -= 3.0 * exp(-1/ballToGoalpost.norm());
 
 	if(ballV.norm()>0 && ballToGoalpost.norm()>0)
 	{
-		// double cosTheta =  ballV.normalized().dot(ballToGoalpost.normalized());
-		// reward += ballV.norm()* exp(-2.0 * acos(cosTheta));
+		double cosTheta =  ballV.normalized().dot(ballToGoalpost.normalized());
+		reward += ballV.norm()* exp(-2.0 * acos(cosTheta));
 
 		// Eigen::VectorXd nextP = ballP + ballV * 1.0 / 30;
 		// Eigen::VectorXd diff = (nextP - ballP) - (p - ballP);
 		// reward = 0.1 * exp(-(p-ballP).norm());
 		// reward += ballV.dot(ballToGoalpost.normalized());
 	}
+	// cout<<reward<<endl;
 	// else
 	// 	reward += 0;
+
+	// double effort = pow(mActions[index].segment(0,2).norm(),2) + pow(mActions[index][2],2) + pow(mActions[index][3],2);
+
+
 
 
 
@@ -725,9 +732,9 @@ getReward(int index, bool verbose)
 			// if(!goalRewardPaid[index])
 
 			if(mCharacters[index]->getTeamName() == "A")
-				reward += 1;
+				reward += 200;
 			else
-				reward -= 1;
+				reward -= 200;
 			// goalRewardPaid[index] = true;
 			mIsTerminalState = true;
 		}
@@ -743,9 +750,9 @@ getReward(int index, bool verbose)
 			}
 			// if(!goalRewardPaid[index])
 			if(mCharacters[index]->getTeamName() == "A")
-				reward -= 1;
+				reward -= 200;
 			else
-				reward += 1;
+				reward += 200;
 			// goalRewardPaid[index] = true;
 			mIsTerminalState = true;
 		}
@@ -818,7 +825,8 @@ applyAction(int index)
 	else if(mFacingVels[index] < -maxFacingVel)
 		mFacingVels[index] = -maxFacingVel;
 	skel->setPosition(2, skel->getPosition(2)+mFacingVels[index]/mSimulationHz);
-	mFacingVels[index] += 300.0*mActions[index][2]/mSimulationHz;
+	// cout<<mActions[index][2]<<endl;
+	mFacingVels[index] += 100.0*mActions[index][2]/mSimulationHz;
 	mFacingVels[index] -= 0.04*mFacingVels[index];
 	// mStates[index][mFacingVels]
 	// if(index == 0)
@@ -868,10 +876,12 @@ setAction(int index, const Eigen::VectorXd& a)
 	{
 		mActions[index].segment(0,2) /= mActions[index].segment(0,2).norm();
 	}
+	// cout<<mActions[index][2]<<" ";
 	if(mActions[index].segment(2,1).norm()>1.0)
 	{
 		mActions[index].segment(2,1) /= mActions[index].segment(2,1).norm();
 	}
+	// cout<<mActions[index][2]<<endl;
 
 
 
@@ -927,7 +937,7 @@ bool
 Environment::
 isTerminalState()
 {
-	if(mTimeElapsed>900.0)
+	if(mTimeElapsed>15.0)
 	{
 		// cout<<"Time overed"<<endl;
 		mIsTerminalState = true;
@@ -945,8 +955,9 @@ reset()
 	ballPosition[1] = 1.5 * (rand()/(double)RAND_MAX ) - 1.5/2.0;
 	ballSkel->setPositions(ballPosition);
 	Eigen::VectorXd ballVel = ballSkel->getVelocities();
-	ballVel[0] = 4.0 * (rand()/(double)RAND_MAX ) - 2.0;
-	ballVel[1] = 4.0 * (rand()/(double)RAND_MAX ) - 2.0;
+	// ballVel[0] = 4.0 * (rand()/(double)RAND_MAX ) - 2.0;
+	// ballVel[1] = 4.0 * (rand()/(double)RAND_MAX ) - 2.0;
+	ballVel.setZero();
 	ballSkel->setVelocities(ballVel);
 
 	if(mNumChars >= 4)
@@ -1091,6 +1102,7 @@ normalizeNNState(Eigen::VectorXd state)
 {
 	Eigen::VectorXd normalizedState = state;
 	int numState = normalizedState.size();
+
 	normalizedState.segment(0, 8) = state.segment(0,8)/8.0;
 	normalizedState.segment(9, numState-10) = state.segment(9, numState-10)/8.0;
 	// cout<<"Normalie NN state : "<<normalizedState[_ID_FACING_V]<<endl;
@@ -1185,7 +1197,6 @@ Eigen::VectorXd localStateToOriginState(Eigen::VectorXd localState, int mNumChar
 		originState.segment(_ID_GOALPOST_P+2, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+2, 2), facingAngle);
 		originState.segment(_ID_GOALPOST_P+4, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+4, 2), facingAngle);
 		originState.segment(_ID_GOALPOST_P+6, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+6, 2), facingAngle);
-		// cout<<(originState.segment(_ID_GOALPOST_P, 2) + originState.segment(_ID_P, 2)).transpose()<<endl;
 		originState.segment(_ID_ALLY1_P, 2) = rotate2DVector(localState.segment(_ID_ALLY1_P, 2), facingAngle);
 		originState.segment(_ID_ALLY1_V, 2) = rotate2DVector(localState.segment(_ID_ALLY1_V, 2), facingAngle);
 		originState.segment(_ID_ALLY2_P, 2) = rotate2DVector(localState.segment(_ID_ALLY2_P, 2), facingAngle);
@@ -1219,18 +1230,18 @@ Eigen::VectorXd localStateToOriginState(Eigen::VectorXd localState, int mNumChar
 	// 	originState.segment(_ID_OP_ATK_V, 2) = rotate2DVector(localState.segment(_ID_OP_ATK_V, 2), facingAngle);
 
 	// }
-	// else if(mNumChars == 2)
-	// {
-	// 	originState.segment(_ID_V, 2) = rotate2DVector(localState.segment(_ID_V, 2), facingAngle);
-	// 	originState.segment(_ID_BALL_P, 2) = rotate2DVector(localState.segment(_ID_BALL_P, 2), facingAngle);
-	// 	originState.segment(_ID_BALL_V, 2) = rotate2DVector(localState.segment(_ID_BALL_V, 2), facingAngle);
-	// 	originState.segment(_ID_GOALPOST_P, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P, 2), facingAngle);
-	// 	originState.segment(_ID_GOALPOST_P+2, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+2, 2), facingAngle);
-	// 	originState.segment(_ID_GOALPOST_P+4, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+4, 2), facingAngle);
-	// 	originState.segment(_ID_GOALPOST_P+6, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+6, 2), facingAngle);
-	// 	originState.segment(_ID_OP_DEF_P, 2) = rotate2DVector(localState.segment(_ID_OP_DEF_P, 2), facingAngle);
-	// 	originState.segment(_ID_OP_DEF_V, 2) = rotate2DVector(localState.segment(_ID_OP_DEF_V, 2), facingAngle);
-	// }
+	else if(mNumChars == 2)
+	{
+		originState.segment(_ID_V, 2) = rotate2DVector(localState.segment(_ID_V, 2), facingAngle);
+		originState.segment(_ID_BALL_P, 2) = rotate2DVector(localState.segment(_ID_BALL_P, 2), facingAngle);
+		originState.segment(_ID_BALL_V, 2) = rotate2DVector(localState.segment(_ID_BALL_V, 2), facingAngle);
+		originState.segment(_ID_GOALPOST_P, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P, 2), facingAngle);
+		originState.segment(_ID_GOALPOST_P+2, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+2, 2), facingAngle);
+		originState.segment(_ID_GOALPOST_P+4, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+4, 2), facingAngle);
+		originState.segment(_ID_GOALPOST_P+6, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+6, 2), facingAngle);
+		originState.segment(_ID_OP_P, 2) = rotate2DVector(localState.segment(_ID_OP_P, 2), facingAngle);
+		originState.segment(_ID_OP_V, 2) = rotate2DVector(localState.segment(_ID_OP_V, 2), facingAngle);
+	}
 
 	return originState;
 }
@@ -1903,78 +1914,101 @@ void
 Environment::
 reconEnvFromState(int index, Eigen::VectorXd curLocalState)
 {
-	Eigen::VectorXd curState = localStateToOriginState(curLocalState);
+	Eigen::VectorXd curState = localStateToOriginState(curLocalState, mNumChars);
 
 	Eigen::Vector2d p = curState.segment(_ID_P, 2);
 	Eigen::Vector2d v = curState.segment(_ID_V, 2);
 	Eigen::Vector2d temp;
 
-	if(index%3 == 0)
+	if(mNumChars == 6)
 	{
+
+		if(index%3 == 0)
+		{
+			this->getCharacter(0)->getSkeleton()->setPosition(0, 8.0*curState[_ID_P]);
+			this->getCharacter(0)->getSkeleton()->setPosition(1, 8.0*curState[_ID_P+1]);
+
+			this->getCharacter(0)->getSkeleton()->setVelocity(0, 8.0*curState[_ID_V]);
+			this->getCharacter(0)->getSkeleton()->setVelocity(1, 8.0*curState[_ID_V+1]);
+
+			temp = curState.segment(_ID_ALLY1_P, 2);
+			this->getCharacter(1)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
+			this->getCharacter(1)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
+
+			temp = curState.segment(_ID_ALLY1_V, 2);
+			this->getCharacter(1)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
+			this->getCharacter(1)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
+		}
+		else
+		{
+
+			this->getCharacter(1)->getSkeleton()->setPosition(0, 8.0*curState[_ID_P]);
+			this->getCharacter(1)->getSkeleton()->setPosition(1, 8.0*curState[_ID_P+1]);
+
+			this->getCharacter(1)->getSkeleton()->setVelocity(0, 8.0*curState[_ID_V]);
+			this->getCharacter(1)->getSkeleton()->setVelocity(1, 8.0*curState[_ID_V+1]);
+
+			temp = curState.segment(_ID_ALLY1_P, 2);
+			this->getCharacter(0)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
+			this->getCharacter(0)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
+
+			temp = curState.segment(_ID_ALLY1_V, 2);
+			this->getCharacter(0)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
+			this->getCharacter(0)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
+		}
+
+		temp = curState.segment(_ID_ALLY2_P, 2);
+		this->getCharacter(2)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
+		this->getCharacter(2)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
+
+		temp = curState.segment(_ID_ALLY2_V, 2);
+		this->getCharacter(2)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
+		this->getCharacter(2)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
+
+		temp = curState.segment(_ID_OP_DEF_P, 2);
+		this->getCharacter(3)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
+		this->getCharacter(3)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
+
+		temp = curState.segment(_ID_OP_DEF_V, 2);
+		this->getCharacter(3)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
+		this->getCharacter(3)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
+
+		temp = curState.segment(_ID_OP_ATK1_P, 2);
+		this->getCharacter(4)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
+		this->getCharacter(4)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
+
+		temp = curState.segment(_ID_OP_ATK1_V, 2);
+		this->getCharacter(4)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
+		this->getCharacter(4)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
+
+
+		temp = curState.segment(_ID_OP_ATK2_P, 2);
+		this->getCharacter(5)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
+		this->getCharacter(5)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
+
+		temp = curState.segment(_ID_OP_ATK2_V, 2);
+		this->getCharacter(5)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
+		this->getCharacter(5)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
+	}
+	else if(mNumChars == 2)
+	{
+
 		this->getCharacter(0)->getSkeleton()->setPosition(0, 8.0*curState[_ID_P]);
 		this->getCharacter(0)->getSkeleton()->setPosition(1, 8.0*curState[_ID_P+1]);
 
 		this->getCharacter(0)->getSkeleton()->setVelocity(0, 8.0*curState[_ID_V]);
 		this->getCharacter(0)->getSkeleton()->setVelocity(1, 8.0*curState[_ID_V+1]);
 
-		temp = curState.segment(_ID_ALLY1_P, 2);
+		temp = curState.segment(_ID_OP_P, 2);
 		this->getCharacter(1)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
 		this->getCharacter(1)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
 
-		temp = curState.segment(_ID_ALLY1_V, 2);
+		temp = curState.segment(_ID_OP_V, 2);
 		this->getCharacter(1)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
 		this->getCharacter(1)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
-	}
-	else
-	{
 
-		this->getCharacter(1)->getSkeleton()->setPosition(0, 8.0*curState[_ID_P]);
-		this->getCharacter(1)->getSkeleton()->setPosition(1, 8.0*curState[_ID_P+1]);
-
-		this->getCharacter(1)->getSkeleton()->setVelocity(0, 8.0*curState[_ID_V]);
-		this->getCharacter(1)->getSkeleton()->setVelocity(1, 8.0*curState[_ID_V+1]);
-
-		temp = curState.segment(_ID_ALLY1_P, 2);
-		this->getCharacter(0)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
-		this->getCharacter(0)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
-
-		temp = curState.segment(_ID_ALLY1_V, 2);
-		this->getCharacter(0)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
-		this->getCharacter(0)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
 	}
 
-	temp = curState.segment(_ID_ALLY2_P, 2);
-	this->getCharacter(2)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
-	this->getCharacter(2)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
-
-	temp = curState.segment(_ID_ALLY2_V, 2);
-	this->getCharacter(2)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
-	this->getCharacter(2)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
-
-	temp = curState.segment(_ID_OP_DEF_P, 2);
-	this->getCharacter(3)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
-	this->getCharacter(3)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
-
-	temp = curState.segment(_ID_OP_DEF_V, 2);
-	this->getCharacter(3)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
-	this->getCharacter(3)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
-
-	temp = curState.segment(_ID_OP_ATK1_P, 2);
-	this->getCharacter(4)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
-	this->getCharacter(4)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
-
-	temp = curState.segment(_ID_OP_ATK1_V, 2);
-	this->getCharacter(4)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
-	this->getCharacter(4)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
-
-
-	temp = curState.segment(_ID_OP_ATK2_P, 2);
-	this->getCharacter(5)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
-	this->getCharacter(5)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
-
-	temp = curState.segment(_ID_OP_ATK2_V, 2);
-	this->getCharacter(5)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
-	this->getCharacter(5)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
 
 	temp = curState.segment(_ID_BALL_P, 2);
 	this->ballSkel->setPosition(0, 8.0*(p+temp)[0]);

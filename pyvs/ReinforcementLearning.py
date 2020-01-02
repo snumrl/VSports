@@ -74,7 +74,7 @@ class Buffer(object):
 	def clear(self):
 		self.buffer.clear()
 
-class SLAC(object):
+class RL(object):
 	def __init__(self):
 		np.random.seed(seed = int(time.time()))
 		self.num_slaves = 8
@@ -902,7 +902,7 @@ def plot_winrate(y,title,num_fig=1,ylim=True):
 
 import argparse
 if __name__=="__main__":
-	slac = SLAC()
+	rl = RL()
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-m','--model',help='model path')
 	parser.add_argument('-p','--policy',help='pretrained pollicy path')
@@ -914,26 +914,26 @@ if __name__=="__main__":
 	graph_name = ''
 	
 	if args.model is not None:
-		for k in range(slac.num_agents):
-			slac.loadModel(args.model, k)
+		for k in range(rl.num_agents):
+			rl.loadModel(args.model, k)
 
 	if args.name is not None:
 		graph_name = args.name
 
 	if args.policy is not None:
-		slac.loadPolicy(args.policy)
+		rl.loadPolicy(args.policy)
 	if args.iteration is not None:
-		slac.num_evaluation = int(args.iteration)
+		rl.num_evaluation = int(args.iteration)
 		for i in range(int(args.iteration)):
-			slac.env.endOfIteration()
+			rl.env.endOfIteration()
 
 	else:
-		slac.saveModel()
-	print('num states: {}, num actions: {}'.format(slac.env.getNumState(),slac.env.getNumAction()))
+		rl.saveModel()
+	print('num states: {}, num actions: {}'.format(rl.env.getNumState(),rl.env.getNumAction()))
 	# for i in range(ppo.max_iteration-5):
 	for i in range(5000000):
-		slac.train()
-		rewards, winRate = slac.evaluate()
+		rl.train()
+		rewards, winRate = rl.evaluate()
 		plot(rewards, graph_name + 'Reward',0,False)
 		plot_winrate(winRate, graph_name + 'vs Hardcoded Winrate',1,False)
 

@@ -37,9 +37,19 @@ int main(int argc, char** argv)
 
 	else if(argc==5)
 	{
-		IntWindow* simwindow = new IntWindow(argv[1], argv[2], argv[3], argv[4]);
-		simwindow->initWindow(1000, 1000, "Render");
-		simwindow->initialize();
+		if(strcmp(argv[1], "-rnd")==0)
+		{
+			IntWindow* simwindow = new IntWindow(argv[2], argv[3], argv[4]);
+			simwindow->initWindow(1000, 1000, "Render");
+			simwindow->initialize();
+		}
+		else
+		{
+			IntWindow* simwindow = new IntWindow(argv[1], argv[2], argv[3], argv[4]);
+			simwindow->initWindow(1000, 1000, "Render");
+			simwindow->initialize();
+		}
+
 	}
 	else if(argc == 4)
 	{

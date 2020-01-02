@@ -3,12 +3,12 @@
 #include "Character2D.h"
 #include "BehaviorTree.h"
 
-#define _ID_P 0
-#define _ID_V 2
-#define _ID_BALL_P 4
-#define _ID_BALL_V 6
-#define _ID_KICKABLE 8
-#define _ID_GOALPOST_P 9
+// #define _ID_P 0
+// #define _ID_V 2
+// #define _ID_BALL_P 4
+// #define _ID_BALL_V 6
+// #define _ID_KICKABLE 8
+// #define _ID_GOALPOST_P 9
 #define _ID_ALLY1_P 17
 #define _ID_ALLY1_V 19
 #define _ID_ALLY2_P 21
@@ -19,8 +19,8 @@
 #define _ID_OP_ATK1_V 31
 #define _ID_OP_ATK2_P 33
 #define _ID_OP_ATK2_V 35
-#define _ID_FACING_V 37
-#define _ID_SLOWED 38
+// #define _ID_FACING_V 37
+// #define _ID_SLOWED 38
 
 
 // #define _ID_P 0
@@ -39,23 +39,17 @@
 
 
 
+#define _ID_P 0
+#define _ID_V 2
+#define _ID_BALL_P 4
+#define _ID_BALL_V 6
+#define _ID_KICKABLE 8
+#define _ID_GOALPOST_P 9
+#define _ID_OP_P 17
+#define _ID_OP_V 19
+#define _ID_FACING_V 21
+#define _ID_SLOWED 22
 
-// #define _ID_P 0
-// #define _ID_V 2
-// #define _ID_BALL_P 4
-// #define _ID_BALL_V 6
-// #define _ID_KICKABLE 8
-// #define _ID_GOALPOST_P 9
-// #define _ID_OP_DEF_P 17
-// #define _ID_OP_DEF_V 19
-// #define _ID_FACING_SIN 21
-// #define _ID_FACING_COS 22
-
-// // dummy for 1 agent
-// #define _ID_ALLY_P 17
-// #define _ID_ALLY_V 19
-// #define _ID_OP_ATK_P 25
-// #define _ID_OP_ATK_V 27
 
 typedef std::pair<std::string, Eigen::Vector3d> GoalpostInfo;
 class AgentEnvWindow;

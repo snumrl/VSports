@@ -12,6 +12,7 @@
 #include <glm/glm.hpp>
 using namespace glm;
 #include <iostream>
+#include <random>
 using namespace dart::dynamics;
 using namespace dart::simulation;
 using namespace std;
@@ -64,8 +65,9 @@ IntWindow::
 IntWindow()
 :SimWindow(), mIsNNLoaded(false)
 {
-	mEnv = new Environment(30, 180, 6);
-	initCustomView();
+	mEnv = new Environment(30, 180, 2);
+ 	// srand (time(NULL));	
+ 	initCustomView();
 	initGoalpost();
 
 	// cout<<"1111"<<endl;
@@ -91,10 +93,13 @@ IntWindow()
 	// cout<<"444444"<<endl;
 	controlOn = false;
 	mActions.resize(mEnv->mNumChars);
+	mActionNoises.resize(mEnv->mNumChars);
 	for(int i=0;i<mActions.size();i++)
 	{
 		mActions[i] = Eigen::VectorXd(4);
+		mActionNoises[i] = Eigen::VectorXd(4);
 		mActions[i].setZero();
+		mActionNoises[i].setZero();
 	}
 	this->vsHardcoded = false;
 // GLenum err = glewInit();
@@ -129,12 +134,92 @@ IntWindow(const std::string& nn_path0, const std::string& nn_path1)
 		load[i] = nn_module[i].attr("load");
 
 	}
-	load[0](nn_path0);
-	load[1](nn_path1);
-	load[2](nn_path1);
-	load[3](nn_path0);
-	load[4](nn_path1);
-	load[5](nn_path1);
+	if(mEnv->mNumChars == 6)
+	{
+		load[0](nn_path0);
+		load[1](nn_path1);
+		load[2](nn_path1);
+		load[3](nn_path0);
+		load[4](nn_path1);
+		load[5](nn_path1);
+	}
+	else if(mEnv->mNumChars == 2)
+	{
+		load[0](nn_path0);
+		actionCount = 0;
+		// load[1](nn_path1);
+	}
+
+
+
+	target_rnd_nn_module = p::eval("RandomNN(num_state, 5).cuda()", mns);
+	p::object target_rnd_load = target_rnd_nn_module.attr("load");
+
+	predictor_rnd_nn_module = p::eval("RandomNN(num_state, 5).cuda()", mns);
+	p::object predictor_rnd_load = predictor_rnd_nn_module.attr("load");
+
+	// reset_hidden[0] = nn_module[0].attr("reset_hidden");
+	// reset_hidden[1] = nn_module[1].attr("reset_hidden");
+	// reset_hidden[2] = nn_module[2].attr("reset_hidden");
+	// reset_hidden[3] = nn_module[3].attr("reset_hidden");
+
+	// cout<<"3344444444"<<endl;
+	// mActions.resize(mEnv->mNumChars);
+	// for(int i=0;i<mActions.size();i++)
+	// {
+	// 	mActions[i] = Eigen::Vector4d(0.0, 0.0, 0.0, 0.0);
+	// }
+}
+
+
+IntWindow::
+IntWindow(const std::string& nn_path0, const std::string& nn_path1, const std::string& nn_path2)
+:IntWindow()
+{
+	this->vsHardcoded = true;
+	mIsNNLoaded = true;
+
+
+	p::str str = ("num_state = "+std::to_string(mEnv->getNumState())).c_str();
+	p::exec(str,mns);
+	str = ("num_action = "+std::to_string(mEnv->getNumAction())).c_str();
+	p::exec(str, mns);
+
+	nn_module = new boost::python::object[mEnv->mNumChars];
+	p::object *load = new p::object[mEnv->mNumChars];
+	// reset_hidden = new boost::python::object[mEnv->mNumChars];
+
+	for(int i=0;i<mEnv->mNumChars;i++)
+	{
+		nn_module[i] = p::eval("ActorCriticNN(num_state, num_action).cuda()", mns);
+		load[i] = nn_module[i].attr("load");
+
+	}
+	if(mEnv->mNumChars == 6)
+	{
+		load[0](nn_path0);
+		load[1](nn_path1);
+		load[2](nn_path1);
+		load[3](nn_path0);
+		load[4](nn_path1);
+		load[5](nn_path1);
+	}
+	else if(mEnv->mNumChars == 2)
+	{
+		load[0](nn_path0);
+		actionCount = 0;
+		// load[1](nn_path1);
+	}
+
+
+
+	target_rnd_nn_module = p::eval("RandomNN(num_state, 5).cuda()", mns);
+	p::object target_rnd_load = target_rnd_nn_module.attr("load");
+	target_rnd_load("../nn/target_rnd.pt");
+
+	predictor_rnd_nn_module = p::eval("RandomNN(num_state, 5).cuda()", mns);
+	p::object predictor_rnd_load = predictor_rnd_nn_module.attr("load");
+	predictor_rnd_load(nn_path2);
 
 	// reset_hidden[0] = nn_module[0].attr("reset_hidden");
 	// reset_hidden[1] = nn_module[1].attr("reset_hidden");
@@ -339,9 +424,10 @@ void
 IntWindow::
 applyKeyEvent()
 {
-	double power = 1.0;
+	double power = 0.5;
 	if(keyarr[int('w')]==PUSHED)
 	{
+		// cout<<"@"<<endl;
 		mActions[0][1] += power;
 	}
 	if(keyarr[int('s')]==PUSHED)
@@ -360,12 +446,15 @@ applyKeyEvent()
 	{
 		mActions[0][3] += 0.1;
 	}
+
+	if(mActions[0].norm()>1.0)
+		mActions[0].normalize();
 	else
 	{
 		// mActions[0][3] -= 0.1;
 		// if(mActions[0][3] < -0.1)
 		// 	mActions[0][3] = -0.1;
-		mActions[0][3] = -0.1;
+		// mActions[0][3] = -0.1;
 	}
 	if(keyarr[int('h')]==PUSHED)
 	{
@@ -400,9 +489,18 @@ step()
 		// }
 		if(mEnv->mNumChars == 2)
 		{
+				// cout<<mActions[0].transpose()<<endl;
 			getActionFromNN(0);
-			mEnv->getLocalState(1);
-			mActions[1] = mEnv->getActionFromBTree(1);
+			if(actionCount==0)
+			{
+				updateActionNoise(0);
+				// cout<<(mActionNoises[0].transpose())<<endl;
+				actionCount = 1; 
+			}
+			// mActions[0] += mActionNoises[0];
+			actionCount--;
+			// mEnv->getLocalState(1);
+			// mActions[1] = mEnv->getActionFromBTree(1);
 
 		}
 
@@ -487,7 +585,7 @@ step()
 	// cout<<"step in intWindow"<<endl;
 
 
-	// applyKeyEvent();
+	applyKeyEvent();
 
 
 	for(int i=0;i<mEnv->mNumChars;i++)
@@ -497,10 +595,10 @@ step()
 
 	mEnv->stepAtOnce();
 	mEnv->getRewards();
-	for(int i=0;i<mActions.size();i++)
-	{
-		mActions[i].segment(0,3) = Eigen::Vector3d(0.0, 0.0, 0.0);
-	}
+	// for(int i=0;i<mActions.size();i++)
+	// {
+	// 	mActions[i].segment(0,3) = Eigen::Vector3d(0.0, 0.0, 0.0);
+	// }
 }
 
 void
@@ -535,10 +633,23 @@ getActionFromNN(int index)
 	// cout<<"Here?"<<endl;
 	mActions[index] = mAction;
 	// cout<<"NO"
-
-
 }
 
+void
+IntWindow::
+updateActionNoise(int index)
+{
+	// std::default_random_engine generator(time(NULL));
+	std::random_device rd;
+    std::mt19937 e2(rd());
+	std::normal_distribution<double> distribution_0(0.0,exp(0.0));
+	std::normal_distribution<double> distribution_1(0.0,exp(-2.0));
+    // std::mt19937 e2(rd());
+	mActionNoises[index][0] = distribution_0(e2);
+	mActionNoises[index][1] = distribution_0(e2);
+	mActionNoises[index][2] = distribution_1(e2);
+	mActionNoises[index][3] = distribution_1(e2);
+}
 Eigen::VectorXd
 IntWindow::
 getValueGradient(int index)
@@ -590,14 +701,14 @@ display()
 		{
 			// if(i==0)
 			// 	continue;
-			if(mActions[i][3]>=0)
+			if(mActions[i][3]>0)
 				GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.8, 0.8));
 			else
 				GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
 		}
 		else
 		{
-			if(mActions[i][3]>=0)
+			if(mActions[i][3]>0)
 				GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(0.8, 0.8, 1.0));
 			else
 				GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));
@@ -627,6 +738,7 @@ display()
 
 	std::string scoreString
 	= "Red : "+to_string((int)(mEnv->mAccScore[0]));//+" |Blue : "+to_string((int)(mEnv->mAccScore[1]));
+	// = "Red : "+to_string((getRNDFeatureDiff(0)));//+" |Blue : "+to_string((int)(mEnv->mAccScore[1]));
 	// cout<<"444444"<<endl;
 
 	// cout<<mEnv->getCharacters()[0]->getSkeleton()->getVelocities().transpose()<<endl;
@@ -771,6 +883,55 @@ getValue(int index)
 	}
 	return value[0];
 }
+double
+IntWindow::
+getRNDFeatureDiff(int index)
+{
+	p::object get_target_feature;
+
+	Eigen::VectorXd state = mEnv->getLocalState(index);
+
+	Eigen::VectorXd mTargetFeature(5);
+
+	get_target_feature = target_rnd_nn_module.attr("get_feature");
+
+	p::tuple shape = p::make_tuple(state.size());
+	np::dtype dtype = np::dtype::get_builtin<float>();
+	np::ndarray state_np = np::empty(shape, dtype);
+
+	float* dest = reinterpret_cast<float*>(state_np.get_data());
+	for(int j=0;j<state.size();j++)
+	{
+		dest[j] = state[j];
+	}
+
+	p::object temp = get_target_feature(state_np);
+	np::ndarray target_feature_np = np::from_object(temp);
+	float* srcs = reinterpret_cast<float*>(target_feature_np.get_data());
+	for(int j=0;j<mTargetFeature.rows();j++)
+	{
+		mTargetFeature[j] = srcs[j];
+	}
+
+
+
+	p::object get_predictor_feature;
+
+	Eigen::VectorXd mPredictorFeature(5);
+
+	get_predictor_feature = predictor_rnd_nn_module.attr("get_feature");
+
+	temp = get_predictor_feature(state_np);
+	np::ndarray predictor_feature_np = np::from_object(temp);
+	srcs = reinterpret_cast<float*>(predictor_feature_np.get_data());
+	for(int j=0;j<mPredictorFeature.rows();j++)
+	{
+		mPredictorFeature[j] = srcs[j];
+	}
+	// cout<<(mTargetFeature - mPredictorFeature).norm()<<endl;
+	return pow((mTargetFeature - mPredictorFeature).norm(),2);
+	// cout<<"Here?"<<endl;
+}
 
 void
 IntWindow::
@@ -789,6 +950,7 @@ drawValue()
 	{
 		values[i] = getValue(i);
 	}
+	// cout<<values[0]<<endl;
 
 
 	glPushMatrix();

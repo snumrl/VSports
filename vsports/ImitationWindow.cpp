@@ -564,14 +564,14 @@ display()
 		{
 			// if(i==0)
 			// 	continue;
-			if(mActions[i][3]>=0)
+			if(mActions[i][3]>0)
 				GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.8, 0.8));
 			else
 				GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
 		}
 		else
 		{
-			if(mActions[i][3]>=0)
+			if(mActions[i][3]>0)
 				GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(0.8, 0.8, 1.0));
 			else
 				GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));
