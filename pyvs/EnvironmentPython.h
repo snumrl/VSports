@@ -32,6 +32,8 @@ public:
 	double getReward(int id, int index, int verbose);
 	double getNumIterations();
 
+	int getNumBallTouch(int id);
+
 	void endOfIteration();
 
 	np::ndarray getHardcodedAction(int id, int index);

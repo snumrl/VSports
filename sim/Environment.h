@@ -119,6 +119,8 @@ public:
 
 	std::vector<int> getAgentViewImg(int index);
 
+	int getNumBallTouch(){return mNumBallTouch;}
+
 public:
 	dart::simulation::WorldPtr mWorld;
 	int mNumChars;
@@ -163,6 +165,9 @@ public:
 	double mSlowDuration;
 
 	void reconEnvFromState(int index, Eigen::VectorXd curLocalState);
+
+
+	int mNumBallTouch;
 	// AgentEnvWindow* mWindow;
 };
 double getFacingAngleFromLocalState(Eigen::VectorXd curState);

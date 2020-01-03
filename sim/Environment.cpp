@@ -22,7 +22,7 @@ using namespace dart::constraint;
 Environment::
 Environment(int control_Hz, int simulation_Hz, int numChars)
 :mControlHz(control_Hz), mSimulationHz(simulation_Hz), mNumChars(numChars), mWorld(std::make_shared<dart::simulation::World>()),
-mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180)
+mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0)
 {
 	srand((unsigned int)time(0));
 	initCharacters();
@@ -252,6 +252,7 @@ handleBallContact(int index, double radius, double me)
 		kickPower += 0.5;
 		// kickPower = 0.5;
 		mKicked[index] = mSlowDuration;
+		mNumBallTouch+= 1;
 		// kickPower = 1.0/(exp(-kickPower)+1);
 		// cout<<"Kicked!"<<endl;
 		// kickPower = 1.0;
@@ -379,7 +380,7 @@ step()
 	handleWallContact(ballSkel, 0.08, 0.8);
 
 	boundBallVelocitiy(4.0);
-	dampBallVelocitiy(1.0);
+	dampBallVelocitiy(1.2);
 	// cout<<ballSkel->getVelocities().norm()<<endl;
 
 	for(int i=0;i<mCharacters.size();i++)
@@ -517,6 +518,7 @@ getState(int index)
 		simpleGoalpostPositions.segment(6,2) = mGoalposts[1].second.segment(0,2) + Eigen::Vector2d(0.0, 1.5/2.0) - p;
 
 	}
+
 	Eigen::VectorXd facingVel(1);
 	facingVel[0] = mFacingVels[index];
 
@@ -1002,15 +1004,15 @@ reset()
 			Eigen::VectorXd skelPosition = skel->getPositions();
 			if(i < 1)
 			{
-				skelPosition[0] = -2.0 * (rand()/(double)RAND_MAX ) - 1.0;
-				skelPosition[1] = 2.5 * (rand()/(double)RAND_MAX ) - 2.5/2;
+				skelPosition[0] = 6.0 * (rand()/(double)RAND_MAX ) - 6.0/2;
+				skelPosition[1] = 4.0 * (rand()/(double)RAND_MAX ) - 4.0/2;
 				skelPosition[2] = 2.0 * M_PI * (rand()/(double)RAND_MAX );
 				// cout<<skelPosition[0]<<endl;
 			}
 			else
 			{
-				skelPosition[0] = 2.0 * (rand()/(double)RAND_MAX ) + 1.0;
-				skelPosition[1] = 2.5 * (rand()/(double)RAND_MAX ) - 2.5/2;
+				skelPosition[0] = 6.0 * (rand()/(double)RAND_MAX ) - 6.0/2;
+				skelPosition[1] = 4.0 * (rand()/(double)RAND_MAX ) - 4.0/2;
 				skelPosition[2] = 2.0 * M_PI * (rand()/(double)RAND_MAX );
 				// cout<<skelPosition[0]<<endl;
 			}
@@ -1021,6 +1023,15 @@ reset()
 			skelVel[1] = 3.0 * (rand()/(double)RAND_MAX ) - 1.5;
 			skelVel[2] = 0.0;
 			skel->setVelocities(skelVel);
+
+
+			Eigen::VectorXd ballPosition = ballSkel->getPositions();
+			ballPosition[0] = 6.0 * (rand()/(double)RAND_MAX ) - 6.0/2;
+			ballPosition[1] = 4.0 * (rand()/(double)RAND_MAX ) - 4.0/2;
+			ballSkel->setPositions(ballPosition);
+
+
+
 			// if(i == 0 && rand()%2 == 0)
 			// {
 			// 	ballSkel->setPositions(skelPosition);
@@ -1039,6 +1050,7 @@ reset()
 	mTimeElapsed = 0;
 
 	mAccScore.setZero();
+	mNumBallTouch = 0;
 
 
 	// resetCharacterPositions();
@@ -1915,6 +1927,19 @@ Environment::
 reconEnvFromState(int index, Eigen::VectorXd curLocalState)
 {
 	Eigen::VectorXd curState = localStateToOriginState(curLocalState, mNumChars);
+
+	double facingAngle = getFacingAngleFromLocalState(curLocalState);
+
+
+	double reviseStateByTeam = -1;
+	if(mCharacters[index]->getTeamName() == mGoalposts[0].first)
+	{
+		reviseStateByTeam = 1;
+	}
+	facingAngle = M_PI * (1-reviseStateByTeam)/2.0 + facingAngle;
+	this->getCharacter(0)->getSkeleton()->setPosition(2, facingAngle);
+
+
 
 	Eigen::Vector2d p = curState.segment(_ID_P, 2);
 	Eigen::Vector2d v = curState.segment(_ID_V, 2);

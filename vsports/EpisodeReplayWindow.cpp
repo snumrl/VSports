@@ -138,71 +138,72 @@ void
 EpiWindow::
 reconEnvFromCurrentState()
 {
-	Eigen::VectorXd curState = localStateToOriginState(stateList[curPathIndex][curTimeStep],2);
-	double curTD = TDList[curPathIndex][curTimeStep];
+	mEnv->reconEnvFromState(0, stateList[curPathIndex][curTimeStep]);
+	// Eigen::VectorXd curState = localStateToOriginState(stateList[curPathIndex][curTimeStep],2);
+	// double curTD = TDList[curPathIndex][curTimeStep];
 
-	mEnv->getCharacter(0)->getSkeleton()->setPosition(0, 8.0*curState[_ID_P]);
-	mEnv->getCharacter(0)->getSkeleton()->setPosition(1, 8.0*curState[_ID_P+1]);
-	Eigen::Vector2d p = curState.segment(_ID_P, 2);
-	Eigen::Vector2d temp;
-	if(mEnv->mNumChars == 6)
-	{
+	// mEnv->getCharacter(0)->getSkeleton()->setPosition(0, 8.0*curState[_ID_P]);
+	// mEnv->getCharacter(0)->getSkeleton()->setPosition(1, 8.0*curState[_ID_P+1]);
+	// Eigen::Vector2d p = curState.segment(_ID_P, 2);
+	// Eigen::Vector2d temp;
+	// if(mEnv->mNumChars == 6)
+	// {
 
-		// cout<<curState.transpose()<<endl;
-		temp = curState.segment(_ID_ALLY1_P, 2);
-		// temp = rotate2DVector(temp, theta);
+	// 	// cout<<curState.transpose()<<endl;
+	// 	temp = curState.segment(_ID_ALLY1_P, 2);
+	// 	// temp = rotate2DVector(temp, theta);
 
-		mEnv->getCharacter(1)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
-		mEnv->getCharacter(1)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
+	// 	mEnv->getCharacter(1)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
+	// 	mEnv->getCharacter(1)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
 		
 
-		temp = curState.segment(_ID_ALLY2_P, 2);
-		// temp = rotate2DVector(temp, theta);
+	// 	temp = curState.segment(_ID_ALLY2_P, 2);
+	// 	// temp = rotate2DVector(temp, theta);
 
-		mEnv->getCharacter(2)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
-		mEnv->getCharacter(2)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
+	// 	mEnv->getCharacter(2)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
+	// 	mEnv->getCharacter(2)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
 
 
-		temp = curState.segment(_ID_OP_DEF_P, 2);
-		// temp = rotate2DVector(temp, theta);
+	// 	temp = curState.segment(_ID_OP_DEF_P, 2);
+	// 	// temp = rotate2DVector(temp, theta);
 
-		mEnv->getCharacter(3)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
-		mEnv->getCharacter(3)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
+	// 	mEnv->getCharacter(3)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
+	// 	mEnv->getCharacter(3)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
 
-		temp = curState.segment(_ID_OP_ATK1_P, 2);
-		// temp = rotate2DVector(temp, theta);
+	// 	temp = curState.segment(_ID_OP_ATK1_P, 2);
+	// 	// temp = rotate2DVector(temp, theta);
 
-		mEnv->getCharacter(4)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
-		mEnv->getCharacter(4)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
+	// 	mEnv->getCharacter(4)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
+	// 	mEnv->getCharacter(4)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
 
-		temp = curState.segment(_ID_OP_ATK2_P, 2);
-		// temp = rotate2DVector(temp, theta);
+	// 	temp = curState.segment(_ID_OP_ATK2_P, 2);
+	// 	// temp = rotate2DVector(temp, theta);
 
-		mEnv->getCharacter(5)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
-		mEnv->getCharacter(5)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
-	}
+	// 	mEnv->getCharacter(5)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
+	// 	mEnv->getCharacter(5)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
+	// }
 
-	else if(mEnv->mNumChars == 2)
-	{
-		// cout<<curState.transpose()<<endl;
-		temp = curState.segment(_ID_OP_P, 2);
-		// temp = rotate2DVector(temp, theta);
+	// else if(mEnv->mNumChars == 2)
+	// {
+	// 	// cout<<curState.transpose()<<endl;
+	// 	temp = curState.segment(_ID_OP_P, 2);
+	// 	// temp = rotate2DVector(temp, theta);
 
-		mEnv->getCharacter(1)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
-		mEnv->getCharacter(1)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
+	// 	mEnv->getCharacter(1)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
+	// 	mEnv->getCharacter(1)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
 		
 
-	}
+	// }
 
 	
 
 
 
-	temp = curState.segment(_ID_BALL_P, 2);
-	// temp = rotate2DVector(temp, theta);
+	// temp = curState.segment(_ID_BALL_P, 2);
+	// // temp = rotate2DVector(temp, theta);
 
-	mEnv->ballSkel->setPosition(0, 8.0*(p+temp)[0]);
-	mEnv->ballSkel->setPosition(1, 8.0*(p+temp)[1]);
+	// mEnv->ballSkel->setPosition(0, 8.0*(p+temp)[0]);
+	// mEnv->ballSkel->setPosition(1, 8.0*(p+temp)[1]);
 
 
 

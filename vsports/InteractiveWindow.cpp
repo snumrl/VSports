@@ -447,15 +447,15 @@ applyKeyEvent()
 		mActions[0][3] += 0.1;
 	}
 
-	if(mActions[0].norm()>1.0)
-		mActions[0].normalize();
-	else
-	{
-		// mActions[0][3] -= 0.1;
-		// if(mActions[0][3] < -0.1)
-		// 	mActions[0][3] = -0.1;
-		// mActions[0][3] = -0.1;
-	}
+	// if(mActions[0].norm()>1.0)
+	// 	mActions[0].normalize();
+	// else
+	// {
+	// 	// mActions[0][3] -= 0.1;
+	// 	// if(mActions[0][3] < -0.1)
+	// 	// 	mActions[0][3] = -0.1;
+	// 	// mActions[0][3] = -0.1;
+	// }
 	if(keyarr[int('h')]==PUSHED)
 	{
 		mActions[0][3] = 1.0;
@@ -493,7 +493,7 @@ step()
 			getActionFromNN(0);
 			if(actionCount==0)
 			{
-				updateActionNoise(0);
+				// updateActionNoise(0);
 				// cout<<(mActionNoises[0].transpose())<<endl;
 				actionCount = 1; 
 			}

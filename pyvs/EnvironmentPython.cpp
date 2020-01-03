@@ -226,6 +226,13 @@ reconEnvFromState(int id, int index, np::ndarray curLocalState)
 	mSlaves[id]->reconEnvFromState(index, toEigenVector(curLocalState));
 }
 
+int
+EnvironmentPython::
+getNumBallTouch(int id)
+{
+	return mSlaves[id]->getNumBallTouch();
+}
+
 // void 
 // EnvironmentPython::
 // setHindsightGoal(np::ndarray randomSchedulerState)
@@ -288,7 +295,8 @@ BOOST_PYTHON_MODULE(pyvs)
 		.def("getHardcodedAction",&EnvironmentPython::getHardcodedAction)
 		.def("reconEnvFromState",&EnvironmentPython::reconEnvFromState)
 		// .def("setLinearActorState",&EnvironmentPython::setLinearActorState)
-		.def("endOfIteration",&EnvironmentPython::endOfIteration);
+		.def("endOfIteration",&EnvironmentPython::endOfIteration)
+		.def("getNumBallTouch",&EnvironmentPython::getNumBallTouch);
 		// .def("setHindsightGoal",&EnvironmentPython::setHindsightGoal)
 		// .def("getHindsightState",&EnvironmentPython::getHindsightState)
 		// .def("getHindsightReward",&EnvironmentPython::getHindsightReward);
