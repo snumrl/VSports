@@ -57,7 +57,7 @@ class HExplorationRL(object):
 		self.gamma = 0.997
 		self.lb = 0.95
 
-		self.buffer_size = 8*1024
+		self.buffer_size = 16*1024
 		self.batch_size = 512
 
 		self.buffer = [ [None] for i in range(2)]
@@ -573,7 +573,7 @@ class HExplorationRL(object):
 						# print(j)
 						# exit(0)
 					self.buffer[index].push(rnn_replay_buffer)
-					# x = rnn_replay_buffer
+					x = rnn_replay_buffer
 					# i = 0
 					# # print(x.buffer[i].TD)
 					# if size <= 120:
@@ -782,7 +782,7 @@ class HExplorationRL(object):
 
 					for i in range(rnn_replay_buffer_size):
 						all_segmented_transitions.append(rnn_replay_buffer.buffer[i])
-
+				# print(len(all_segmented_transitions))
 				np.random.shuffle(all_segmented_transitions)
 				for i in range(len(all_segmented_transitions)//self.batch_size):
 					batch_segmented_transitions = all_segmented_transitions[i*self.batch_size:(i+1)*self.batch_size]
@@ -962,6 +962,31 @@ def plot(y,title,num_fig=1,ylim=True):
 	fig.canvas.draw()
 	fig.canvas.flush_events()
 
+def plot_ball(y,title,num_fig=1,ylim=True):
+	temp_y = np.zeros(y.shape)
+	if y.shape[0]>5:
+		temp_y[0] = y[0]
+		temp_y[1] = 0.5*(y[0] + y[1])
+		temp_y[2] = 0.3333*(y[0] + y[1] + y[2])
+		temp_y[3] = 0.25*(y[0] + y[1] + y[2] + y[3])
+		for i in range(4,y.shape[0]):
+			temp_y[i] = np.sum(y[i-4:i+1])*0.2
+
+	fig = plt.figure(num_fig)
+	plt.clf()
+	plt.title(title)
+	plt.plot(y,'b')
+	
+	plt.plot(temp_y,'r')
+	plt.axhline(y=0.0, color='k', linewidth=1)
+	plt.axhline(y=1.0, color='k', linewidth=1)
+
+	# plt.show()
+	if ylim:
+		plt.ylim([0,1])
+
+	fig.canvas.draw()
+	fig.canvas.flush_events()
 
 
 
@@ -998,6 +1023,6 @@ if __name__=="__main__":
 		rl.train()
 		rewards, ball_touch = rl.evaluate()
 		plot(rewards, graph_name + 'Reward',0,False)
-		plot(ball_touch, 'Ball Touch Per Second',1,False)
+		plot_ball(ball_touch, 'Ball Touch Per Second',1,False)
 		# plot_winrate(winRate, graph_name + 'vs Hardcoded Winrate',1,False)
 
