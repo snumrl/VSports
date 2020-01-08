@@ -22,7 +22,7 @@ using namespace dart::constraint;
 Environment::
 Environment(int control_Hz, int simulation_Hz, int numChars)
 :mControlHz(control_Hz), mSimulationHz(simulation_Hz), mNumChars(numChars), mWorld(std::make_shared<dart::simulation::World>()),
-mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180)
+mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(90)
 {
 	srand((unsigned int)time(0));
 	initCharacters();
@@ -196,6 +196,118 @@ initBall()
 	mWorld->addSkeleton(ballSkel);
 }
 
+std::vector<int>
+Environment::
+getUnSeenCollidingWall(SkeletonPtr skel, int index, double radius)
+{
+	std::vector<int> collidingWall;
+
+	double groundWidth = 4.0;
+	double groundHeight = 3.0;
+
+	Eigen::Vector2d centerVector = skel->getPositions().segment(0,2);
+	Eigen::Vector2d widthVector = Eigen::Vector2d::UnitX();
+	Eigen::Vector2d heightVector = Eigen::Vector2d::UnitY();
+
+	double ballRadius = 0.1;
+	double goalpostSize = 1.5;
+
+	Eigen::Vector2d ballPosition = ballSkel->getPositions();
+
+
+	if(skel->getName() == "ball")
+	{
+		if(widthVector.dot(ballPosition)-ballRadius <= mGoalposts[0].second.x())
+		{
+			if(abs(heightVector.dot(ballPosition)) < goalpostSize/2.0)
+			{
+				return collidingWall;
+			}
+		}
+		if(widthVector.dot(ballPosition)+ballRadius >= mGoalposts[1].second.x())
+		{
+			if(abs(heightVector.dot(ballPosition)) < goalpostSize/2.0)
+			{
+				return collidingWall;
+			}
+		}
+	}
+	if(index == 1 || index == 5)
+	{
+		if(centerVector.dot(widthVector) >= (0-radius))
+			collidingWall.push_back(0);
+		else if(centerVector.dot(widthVector) <= -(groundWidth-radius))
+			collidingWall.push_back(1);
+		else if(centerVector.dot(heightVector) >= (groundHeight-radius))
+			collidingWall.push_back(2);
+		else if(centerVector.dot(heightVector) <= -(groundHeight-radius))
+			collidingWall.push_back(3);
+	}
+	else if(index == 2 || index == 4)
+	{
+		if(centerVector.dot(widthVector) >= (groundWidth-radius))
+			collidingWall.push_back(0);
+		else if(centerVector.dot(widthVector) <= -(0-radius))
+			collidingWall.push_back(1);
+		else if(centerVector.dot(heightVector) >= (groundHeight-radius))
+			collidingWall.push_back(2);
+		else if(centerVector.dot(heightVector) <= -(groundHeight-radius))
+			collidingWall.push_back(3);
+	}
+	else
+	{
+		if(centerVector.dot(widthVector) >= (groundWidth-radius))
+			collidingWall.push_back(0);
+		else if(centerVector.dot(widthVector) <= -(groundWidth-radius))
+			collidingWall.push_back(1);
+		else if(centerVector.dot(heightVector) >= (groundHeight-radius))
+			collidingWall.push_back(2);
+		else if(centerVector.dot(heightVector) <= -(groundHeight-radius))
+			collidingWall.push_back(3);
+	}
+	// cout<<collidingWall[0]<<endl;
+	return collidingWall;
+}
+
+void
+Environment::
+handleUnSeenWallContact(dart::dynamics::SkeletonPtr skel, int index, double radius, double me)
+{
+	if(mNumChars != 6)
+		return;
+	std::vector<int> collidingWalls = getUnSeenCollidingWall(skel, index, radius);
+
+	for(int i=0;i<collidingWalls.size();i++)
+	{
+		switch(collidingWalls[i])
+		{
+			case 0:
+			if(me*skel->getVelocity(0)>0)
+				skel->setVelocity(0, -me*skel->getVelocity(0));
+				skel->setForce(0, 0);
+			break;
+			case 1:
+			if(me*skel->getVelocity(0)<0)
+				skel->setVelocity(0, -me*skel->getVelocity(0));
+				skel->setForce(0, 0);
+			break;
+			case 2:
+			if(me*skel->getVelocity(1)>0)
+				skel->setVelocity(1, -me*skel->getVelocity(1));
+				skel->setForce(1, 0);
+			break;
+			case 3:
+			if(me*skel->getVelocity(1)<0)
+				skel->setVelocity(1, -me*skel->getVelocity(1));
+				skel->setForce(1, 0);
+			break;
+			default: 
+			break;
+		}
+	}
+}
+
+
 void
 Environment::
 handleWallContact(dart::dynamics::SkeletonPtr skel, double radius, double me)
@@ -365,6 +477,7 @@ step()
 
 	for(int i=0;i<mCharacters.size();i++)
 	{
+		handleUnSeenWallContact(mCharacters[i]->getSkeleton(), i, 0.08, 0.5);
 		handleWallContact(mCharacters[i]->getSkeleton(), 0.08, 0.5);
 
 
@@ -949,13 +1062,49 @@ reset()
 	ballVel[1] = 4.0 * (rand()/(double)RAND_MAX ) - 2.0;
 	ballSkel->setVelocities(ballVel);
 
-	if(mNumChars >= 4)
+	bool positioningReset = true;
+
+	if(mNumChars == 4 || (mNumChars == 6 && !positioningReset))
 	{
 		for(int i=0;i<mNumChars;i++)
 		{
 			SkeletonPtr skel = mCharacters[i]->getSkeleton();
 			Eigen::VectorXd skelPosition = skel->getPositions();
 			if(i < mNumChars/2)
+			{
+				skelPosition[0] = -2.0 * (rand()/(double)RAND_MAX ) - 1.0;
+				skelPosition[1] = 2.5 * (rand()/(double)RAND_MAX ) - 2.5/2;
+				skelPosition[2] = 2.0 * M_PI * (rand()/(double)RAND_MAX );
+				// cout<<skelPosition[0]<<endl;
+			}
+			else
+			{
+				skelPosition[0] = 2.0 * (rand()/(double)RAND_MAX ) + 1.0;
+				skelPosition[1] = 2.5 * (rand()/(double)RAND_MAX ) - 2.5/2;
+				skelPosition[2] = 2.0 * M_PI * (rand()/(double)RAND_MAX );
+				// cout<<skelPosition[0]<<endl;
+			}
+
+			skel->setPositions(skelPosition);
+			Eigen::VectorXd skelVel = skel->getVelocities();
+			skelVel[0] = 3.0 * (rand()/(double)RAND_MAX ) - 1.5;
+			skelVel[1] = 3.0 * (rand()/(double)RAND_MAX ) - 1.5;
+			skelVel[2] = 0.0;
+			skel->setVelocities(skelVel);
+			// if(i == 0 && rand()%2 == 0)
+			// {
+			// 	ballSkel->setPositions(skelPosition);
+			// 	ballSkel->setVelocities(skelVel);
+			// }
+		}
+	}
+	else if(mNumChars == 6)
+	{
+		for(int i=0;i<mNumChars;i++)
+		{
+			SkeletonPtr skel = mCharacters[i]->getSkeleton();
+			Eigen::VectorXd skelPosition = skel->getPositions();
+			if(i == 0 || i == 1 || i == 5)
 			{
 				skelPosition[0] = -2.0 * (rand()/(double)RAND_MAX ) - 1.0;
 				skelPosition[1] = 2.5 * (rand()/(double)RAND_MAX ) - 2.5/2;
@@ -1032,6 +1181,7 @@ reset()
 
 	// resetCharacterPositions();
 }
+
 
 
 

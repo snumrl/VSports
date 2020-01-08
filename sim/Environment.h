@@ -104,8 +104,10 @@ public:
 	double getElapsedTime(){return mTimeElapsed;}
 
 	std::vector<int> getCollidingWall(dart::dynamics::SkeletonPtr skel, double radius);
+	std::vector<int> getUnSeenCollidingWall(dart::dynamics::SkeletonPtr skel, int index, double radius);
 
 	void handleWallContact(dart::dynamics::SkeletonPtr skel, double radius, double me = 1.0);
+	void handleUnSeenWallContact(dart::dynamics::SkeletonPtr skel, int index, double radius, double me = 1.0);
 	void handleBallContact(int index, double radius, double me = 0.5);
 	void handlePlayerContact(int index1, int index2, double me = 0.5);
 	void handlePlayerContacts(double me = 0.5);
