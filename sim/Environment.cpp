@@ -818,7 +818,7 @@ applyAction(int index)
 	else if(mFacingVels[index] < -maxFacingVel)
 		mFacingVels[index] = -maxFacingVel;
 	skel->setPosition(2, skel->getPosition(2)+mFacingVels[index]/mSimulationHz);
-	mFacingVels[index] += 300.0*mActions[index][2]/mSimulationHz;
+	mFacingVels[index] += 100.0*mActions[index][2]/mSimulationHz;
 	mFacingVels[index] -= 0.04*mFacingVels[index];
 	// mStates[index][mFacingVels]
 	// if(index == 0)

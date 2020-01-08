@@ -545,7 +545,7 @@ class SLAC(object):
 						a_dist_slave_agent,v_slave_agent = self.model[self.indexToNetDic[j]].forward(\
 							Tensor([states[i*self.num_agents+j]]))
 						a_dist_slave.append(a_dist_slave_agent)
-						actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy().squeeze().squeeze().squeeze();		
+						actions[i*self.num_agents+j] = a_dist_slave[j].loc.cpu().detach().numpy().squeeze().squeeze().squeeze();		
 					else :
 						actions[i*self.num_agents+j] = self.env.getHardcodedAction(i, j);
 
@@ -743,6 +743,7 @@ if __name__=="__main__":
 	if args.model is not None:
 		for k in range(slac.num_agents):
 			slac.loadModel(args.model, k)
+		slac.winRate.append(slac.evaluateModel())
 
 	if args.name is not None:
 		graph_name = args.name

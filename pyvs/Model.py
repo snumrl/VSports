@@ -119,7 +119,7 @@ class ActorCriticNN(nn.Module):
 
 
 		# self.log_std = nn.Parameter(-1.0 * torch.ones(num_actions))
-		self.log_std = nn.Parameter(Tensor([1, 1, 0, -2]))
+		self.log_std = nn.Parameter(Tensor([0, 0, -2, -2]))
 
 		# self.rnn.apply(weights_init)
 		self.policy.apply(weights_init)
@@ -127,11 +127,15 @@ class ActorCriticNN(nn.Module):
 
 	def forward(self,x):
 		x = x.cuda()
+		# self.log_std = nn.Parameter(Tensor([0, 0, -2, -2]))
 
 		batch_size = x.size()[0];
 
 		# rnnOutput, out_hidden = self.rnn(x.view(1, batch_size,-1), in_hidden)
-		return MultiVariateNormal(self.policy(x).unsqueeze(0),self.log_std.exp()), self.value(x)
+		# k = np.exp(-0.01 *num_eval)
+		# print(k)
+		# print(self.log_std.exp())
+		return MultiVariateNormal(self.policy(x).unsqueeze(0), self.log_std.exp()), self.value(x)
 		# return MultiVariateNormal(self.policy(rnnOutput).unsqueeze(0),self.log_std.exp()), self.value(rnnOutput), out_hidden
 	def load(self,path):
 		# print('load nn {}'.format(path))
@@ -149,8 +153,8 @@ class ActorCriticNN(nn.Module):
 		# self.cur_hidden = new_hidden
 		# print(p.loc.cpu().detach().numpy())
 
-		# return p.sample().cpu().detach().numpy()
-		return p.loc.cpu().detach().numpy()
+		return p.sample().cpu().detach().numpy()
+		# return p.loc.cpu().detach().numpy()
 
 	def get_value(self, s):
 		ts = torch.tensor(s)
