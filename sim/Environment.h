@@ -168,6 +168,8 @@ public:
 
 
 	int mNumBallTouch;
+
+	int endTime;
 	// AgentEnvWindow* mWindow;
 };
 double getFacingAngleFromLocalState(Eigen::VectorXd curState);

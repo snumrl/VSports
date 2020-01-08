@@ -33,8 +33,26 @@ LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
 ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
 Tensor = FloatTensor
 
-LOW_FREQUENCY = 1
+LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
+
+RNDEpisode = namedtuple('RNDEpisode', ('s','a','r','value','logprob','rnd_r'))
+
+class RNDEpisodeBuffer(object):
+	def __init__(self):
+		self.data = []
+
+	def push(self, *args):
+		self.data.append(RNDEpisode(*args))
+
+	def getData(self):
+		return self.data
+def parallel_variance(avg_a, count_a, var_a, avg_b, count_b, var_b):
+	    delta = avg_b - avg_a
+	    m_a = var_a * (count_a - 1)
+	    m_b = var_b * (count_b - 1)
+	    M2 = m_a + m_b + delta ** 2 * count_a * count_b / (count_a + count_b)
+	    return M2 / (count_a + count_b - 1)
 
 class HExplorationRL(object):
 	def __init__(self):
@@ -45,7 +63,7 @@ class HExplorationRL(object):
 		self.num_state = self.env.getNumState()
 		self.num_action = self.env.getNumAction()
 
-		self.num_epochs = 2
+		self.num_epochs = 10
 		self.num_evaluation = 0
 		self.num_tuple_so_far = [0, 0]
 		self.num_tuple = [0, 0]
@@ -58,7 +76,7 @@ class HExplorationRL(object):
 		self.lb = 0.95
 
 		self.buffer_size = 16*1024
-		self.batch_size = 512
+		self.batch_size = 1024
 
 		self.buffer = [ [None] for i in range(2)]
 		self.buffer[0] = Buffer(100000)
@@ -76,12 +94,12 @@ class HExplorationRL(object):
 		self.target_rnd = RandomNN(self.num_state, self.num_feature)
 		if use_cuda:
 			self.target_rnd.cuda()
-		# self.target_rnd.save('../nn/target_rnd.pt')
+		self.target_rnd.save('../nn/target_rnd.pt')
 
 		self.predictor_rnd = RandomNN(self.num_state, self.num_feature)
 		if use_cuda:
 			self.predictor_rnd.cuda()
-		# self.saveRNDModel()
+		self.saveRNDModel()
 
 
 
@@ -122,7 +140,7 @@ class HExplorationRL(object):
 		self.max_return_epoch = 1
 		self.tic = time.time()
 
-		self.episodes = [[RNNEpisodeBuffer() for y in range(self.num_agents)] for x in range(self.num_slaves)]
+		self.episodes = [[RNDEpisodeBuffer() for y in range(self.num_agents)] for x in range(self.num_slaves)]
 		self.indexToNetDic = {0:0, 1:0}
 
 		self.filecount = 0
@@ -131,6 +149,11 @@ class HExplorationRL(object):
 
 		self.total_ball_touch = 0
 		self.ball_touch = []
+
+		self.rnd_rewards_mean = 0.0
+		self.rnd_rewards_std = 1.0
+
+		self.total_rnd_count = 0
 
 
 	def loadModel(self,path,index):
@@ -153,7 +176,7 @@ class HExplorationRL(object):
 				self.model[i].save('../nn/'+str(self.num_evaluation)+'_'+str(i)+'.pt')
 
 	def saveRNDModel(self):
-		if self.num_evaluation%2 == 0:
+		if self.num_evaluation%4 == 0:
 			self.predictor_rnd.save('../nn/predictor_rnd_'+str(self.num_evaluation)+'.pt')
 		self.predictor_rnd.save('../nn/predictor_rnd_current.pt')
 
@@ -162,170 +185,170 @@ class HExplorationRL(object):
 		return np.array([0,0,0,-1])
 
 
-	def generateDefaultTransitions(self):
-		self.total_episodes = [[] for i in range(1)]
+	# def generateDefaultTransitions(self):
+	# 	self.total_episodes = [[] for i in range(1)]
 
-		states = [None]*self.num_slaves*self.num_agents
-		actions = [None]*self.num_slaves*self.num_agents
-		rewards = [None]*self.num_slaves*self.num_agents
-		logprobs = [None]*self.num_slaves*self.num_agents
-		values = [None]*self.num_slaves*self.num_agents
-		terminated = [False]*self.num_slaves*self.num_agents
+	# 	states = [None]*self.num_slaves*self.num_agents
+	# 	actions = [None]*self.num_slaves*self.num_agents
+	# 	rewards = [None]*self.num_slaves*self.num_agents
+	# 	logprobs = [None]*self.num_slaves*self.num_agents
+	# 	values = [None]*self.num_slaves*self.num_agents
+	# 	terminated = [False]*self.num_slaves*self.num_agents
 
-		for i in range(self.num_slaves):
-			for j in range(self.num_agents):
-				states[i*self.num_agents+j] = self.env.getLocalState(i,j)
+	# 	for i in range(self.num_slaves):
+	# 		for j in range(self.num_agents):
+	# 			states[i*self.num_agents+j] = self.env.getLocalState(i,j)
 
-		learningTeam = random.randrange(0,2)
-		'''Fixed to team 0'''
-		learningTeam = 0
-		teamDic = {0: 0, 1: 1}
-		# teamDic = {0: 0, 1: 0, 2: 0, 3: 1, 4: 1, 5: 1}
+	# 	learningTeam = random.randrange(0,2)
+	# 	'''Fixed to team 0'''
+	# 	learningTeam = 0
+	# 	teamDic = {0: 0, 1: 1}
+	# 	# teamDic = {0: 0, 1: 0, 2: 0, 3: 1, 4: 1, 5: 1}
 
-		local_step = 0
-		counter = 0
+	# 	local_step = 0
+	# 	counter = 0
 
-		vsHardcodedFlags = [2]*self.num_slaves
-		# for i in range(self.num_slaves):
-		# 	randomNumber = random.randrange(0,100)
-		# 	# History
-		# 	if randomNumber < 5:
-		# 		vsHardcodedFlags[i] = 1
-		# 	# Hardcoding
-		# 	elif randomNumber < 10:
-		# 		vsHardcodedFlags[i] = 2
-		# 	# else : self-play
+	# 	vsHardcodedFlags = [2]*self.num_slaves
+	# 	# for i in range(self.num_slaves):
+	# 	# 	randomNumber = random.randrange(0,100)
+	# 	# 	# History
+	# 	# 	if randomNumber < 5:
+	# 	# 		vsHardcodedFlags[i] = 1
+	# 	# 	# Hardcoding
+	# 	# 	elif randomNumber < 10:
+	# 	# 		vsHardcodedFlags[i] = 2
+	# 	# 	# else : self-play
 
-		# print(vsHardcodedFlags)
-		while True:
-			counter += 1
-			if counter%10 == 0:
-				print('SIM : {}'.format(local_step),end='\r')
-
-
-			# if self.num_evaluation > 20:
-			# 	curEvalNum = self.num_evaluation//20
-
-			# 	randomHistoryIndex = random.randrange(0,curEvalNum+1)
-
-			# 	for i in range(self.num_slaves):
-			# 		# prevPath = "../nn/"+clipedRandomNormal+".pt";
-
-			# 		for j in range(self.num_agents):
-			# 			if teamDic[j] != learningTeam:
-			# 				self.loadModel(str(20 * randomHistoryIndex), i*self.num_agents+j)
-			# 		# self.loadModel("current", i*self.num_agents+1)
-			# else :
-			# 	for i in range(self.num_slaves):
-			# 		for j in range(self.num_agents):
-			# 			if teamDic[j] != learningTeam:
-			# 				self.loadModel("0",i*self.num_agents+j)
+	# 	# print(vsHardcodedFlags)
+	# 	while True:
+	# 		counter += 1
+	# 		if counter%10 == 0:
+	# 			print('SIM : {}'.format(local_step),end='\r')
 
 
-			''' Scheduler Part '''
-			for i in range(self.num_slaves):
-				a_dist_slave = []
-				v_slave = []
-				for j in range(self.num_agents):
-					if vsHardcodedFlags[i] == 0:
-						a_dist_slave_agent,v_slave_agent = self.model[self.indexToNetDic[j]].forward(\
-								Tensor([states[i*self.num_agents+j]]))
-						a_dist_slave.append(a_dist_slave_agent)
-						v_slave.append(v_slave_agent)
-						actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy().squeeze().squeeze().squeeze();					
+	# 		# if self.num_evaluation > 20:
+	# 		# 	curEvalNum = self.num_evaluation//20
 
-					elif vsHardcodedFlags[i] == 1:
-						if teamDic[j] == learningTeam:
-							a_dist_slave_agent,v_slave_agent = self.model[self.indexToNetDic[j]].forward(\
-								Tensor([states[i*self.num_agents+j]]))
-						else :
-							a_dist_slave_agent,v_slave_agent = self.model[i*self.num_agents+j].forward(\
-								Tensor([states[i*self.num_agents+j]]))
-						a_dist_slave.append(a_dist_slave_agent)
-						v_slave.append(v_slave_agent)
-						actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy().squeeze().squeeze().squeeze();
+	# 		# 	randomHistoryIndex = random.randrange(0,curEvalNum+1)
 
-					else :
-						if teamDic[j] == learningTeam:
-							a_dist_slave_agent,v_slave_agent = self.model[self.indexToNetDic[j]].forward(\
-								Tensor([states[i*self.num_agents+j]]))
-							a_dist_slave.append(a_dist_slave_agent)
-							v_slave.append(v_slave_agent)
-							actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy().squeeze().squeeze().squeeze();		
-						else :
-							actions[i*self.num_agents+j] = self.getHardcodedAction(i, j);
+	# 		# 	for i in range(self.num_slaves):
+	# 		# 		# prevPath = "../nn/"+clipedRandomNormal+".pt";
 
-				for j in range(self.num_agents):
-					if teamDic[j] == learningTeam or vsHardcodedFlags[i] == 0:
-						logprobs[i*self.num_agents+j] = a_dist_slave[j].log_prob(Tensor(actions[i*self.num_agents+j]))\
-							.cpu().detach().numpy().reshape(-1)[0];
-						values[i*self.num_agents+j] = v_slave[j].cpu().detach().numpy().reshape(-1)[0];
+	# 		# 		for j in range(self.num_agents):
+	# 		# 			if teamDic[j] != learningTeam:
+	# 		# 				self.loadModel(str(20 * randomHistoryIndex), i*self.num_agents+j)
+	# 		# 		# self.loadModel("current", i*self.num_agents+1)
+	# 		# else :
+	# 		# 	for i in range(self.num_slaves):
+	# 		# 		for j in range(self.num_agents):
+	# 		# 			if teamDic[j] != learningTeam:
+	# 		# 				self.loadModel("0",i*self.num_agents+j)
 
 
-				for j in range(self.num_agents):
+	# 		''' Scheduler Part '''
+	# 		for i in range(self.num_slaves):
+	# 			a_dist_slave = []
+	# 			v_slave = []
+	# 			for j in range(self.num_agents):
+	# 				if vsHardcodedFlags[i] == 0:
+	# 					a_dist_slave_agent,v_slave_agent = self.model[self.indexToNetDic[j]].forward(\
+	# 							Tensor([states[i*self.num_agents+j]]))
+	# 					a_dist_slave.append(a_dist_slave_agent)
+	# 					v_slave.append(v_slave_agent)
+	# 					actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy().squeeze().squeeze().squeeze();					
 
-					self.env.setAction(actions[i*self.num_agents+j], i, j);
+	# 				elif vsHardcodedFlags[i] == 1:
+	# 					if teamDic[j] == learningTeam:
+	# 						a_dist_slave_agent,v_slave_agent = self.model[self.indexToNetDic[j]].forward(\
+	# 							Tensor([states[i*self.num_agents+j]]))
+	# 					else :
+	# 						a_dist_slave_agent,v_slave_agent = self.model[i*self.num_agents+j].forward(\
+	# 							Tensor([states[i*self.num_agents+j]]))
+	# 					a_dist_slave.append(a_dist_slave_agent)
+	# 					v_slave.append(v_slave_agent)
+	# 					actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy().squeeze().squeeze().squeeze();
 
-			self.env.stepsAtOnce()
+	# 				else :
+	# 					if teamDic[j] == learningTeam:
+	# 						a_dist_slave_agent,v_slave_agent = self.model[self.indexToNetDic[j]].forward(\
+	# 							Tensor([states[i*self.num_agents+j]]))
+	# 						a_dist_slave.append(a_dist_slave_agent)
+	# 						v_slave.append(v_slave_agent)
+	# 						actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy().squeeze().squeeze().squeeze();		
+	# 					else :
+	# 						actions[i*self.num_agents+j] = self.getHardcodedAction(i, j);
 
-
-			for i in range(self.num_slaves):
-				nan_occur = False
-				terminated_state = True
-				for k in range(self.num_agents):
-					if teamDic[k] == learningTeam or vsHardcodedFlags[i] == 0:
-						rewards[i*self.num_agents+k] = self.env.getReward(i, k, True)
-						if np.any(np.isnan(rewards[i*self.num_agents+k])):
-							nan_occur = True
-						if np.any(np.isnan(states[i*self.num_agents+k])) or np.any(np.isnan(actions[i*self.num_agents+k])):
-							nan_occur = True
-
-				if nan_occur is True:
-					for k in range(self.num_agents):
-						if teamDic[k] == learningTeam or vsHardcodedFlags[i] == 0:
-							self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
-							self.episodes[i][k] = RNNEpisodeBuffer()
-
-					self.env.reset(i)
-
-
-				if self.env.isTerminalState(i) is False:
-					terminated_state = False
-					for k in range(self.num_agents):
-						if teamDic[k] == learningTeam or vsHardcodedFlags[i] == 0:
-							self.episodes[i][k].push(states[i*self.num_agents+k], actions[i*self.num_agents+k],\
-								rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k])
-
-							local_step += 1
-
-				if terminated_state is True:
-					for k in range(self.num_agents):
-						if teamDic[k] == learningTeam or vsHardcodedFlags[i] == 0:
-							self.episodes[i][k].push(states[i*self.num_agents+k], actions[i*self.num_agents+k],\
-								rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k])
-							self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
-							self.episodes[i][k] = RNNEpisodeBuffer()
-
-					self.env.reset(i)
-
-			if local_step >= self.buffer_size:
-				for i in range(self.num_slaves):
-					for k in range(self.num_agents):
-						if teamDic[k] == learningTeam or vsHardcodedFlags[i] == 0:
-							self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
-							self.episodes[i][k] = RNNEpisodeBuffer()
-
-					self.env.reset(i)
-				break
-
-			# get the updated state and updated hidden
-			for i in range(self.num_slaves):
-				for j in range(self.num_agents):
-					states[i*self.num_agents+j] = self.env.getLocalState(i,j)
+	# 			for j in range(self.num_agents):
+	# 				if teamDic[j] == learningTeam or vsHardcodedFlags[i] == 0:
+	# 					logprobs[i*self.num_agents+j] = a_dist_slave[j].log_prob(Tensor(actions[i*self.num_agents+j]))\
+	# 						.cpu().detach().numpy().reshape(-1)[0];
+	# 					values[i*self.num_agents+j] = v_slave[j].cpu().detach().numpy().reshape(-1)[0];
 
 
-		self.env.endOfIteration()
-		print('SIM : {}'.format(local_step))
+	# 			for j in range(self.num_agents):
+
+	# 				self.env.setAction(actions[i*self.num_agents+j], i, j);
+
+	# 		self.env.stepsAtOnce()
+
+
+	# 		for i in range(self.num_slaves):
+	# 			nan_occur = False
+	# 			terminated_state = True
+	# 			for k in range(self.num_agents):
+	# 				if teamDic[k] == learningTeam or vsHardcodedFlags[i] == 0:
+	# 					rewards[i*self.num_agents+k] = self.env.getReward(i, k, True)
+	# 					if np.any(np.isnan(rewards[i*self.num_agents+k])):
+	# 						nan_occur = True
+	# 					if np.any(np.isnan(states[i*self.num_agents+k])) or np.any(np.isnan(actions[i*self.num_agents+k])):
+	# 						nan_occur = True
+
+	# 			if nan_occur is True:
+	# 				for k in range(self.num_agents):
+	# 					if teamDic[k] == learningTeam or vsHardcodedFlags[i] == 0:
+	# 						self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
+	# 						self.episodes[i][k] = RNDEpisodeBuffer()
+
+	# 				self.env.reset(i)
+
+
+	# 			if self.env.isTerminalState(i) is False:
+	# 				terminated_state = False
+	# 				for k in range(self.num_agents):
+	# 					if teamDic[k] == learningTeam or vsHardcodedFlags[i] == 0:
+	# 						self.episodes[i][k].push(states[i*self.num_agents+k], actions[i*self.num_agents+k],\
+	# 							rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k])
+
+	# 						local_step += 1
+
+	# 			if terminated_state is True:
+	# 				for k in range(self.num_agents):
+	# 					if teamDic[k] == learningTeam or vsHardcodedFlags[i] == 0:
+	# 						self.episodes[i][k].push(states[i*self.num_agents+k], actions[i*self.num_agents+k],\
+	# 							rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k])
+	# 						self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
+	# 						self.episodes[i][k] = RNDEpisodeBuffer()
+
+	# 				self.env.reset(i)
+
+	# 		if local_step >= self.buffer_size:
+	# 			for i in range(self.num_slaves):
+	# 				for k in range(self.num_agents):
+	# 					if teamDic[k] == learningTeam or vsHardcodedFlags[i] == 0:
+	# 						self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
+	# 						self.episodes[i][k] = RNDEpisodeBuffer()
+
+	# 				self.env.reset(i)
+	# 			break
+
+	# 		# get the updated state and updated hidden
+	# 		for i in range(self.num_slaves):
+	# 			for j in range(self.num_agents):
+	# 				states[i*self.num_agents+j] = self.env.getLocalState(i,j)
+
+
+	# 	self.env.endOfIteration()
+	# 	print('SIM : {}'.format(local_step))
 
 
 	def generateTransitions(self, action_frequency):
@@ -339,6 +362,7 @@ class HExplorationRL(object):
 		values = [None]*self.num_slaves*self.num_agents
 		terminated = [False]*self.num_slaves*self.num_agents
 		actionCount = [0]*self.num_slaves
+		rnd_rewards = [None]*self.num_slaves*self.num_agents
 
 		actionNoise = [None]*self.num_slaves*self.num_agents
 
@@ -365,10 +389,10 @@ class HExplorationRL(object):
 		vsHardcodedFlags = [2]*self.num_slaves
 
 
-		exploitationFlags = [0]*self.num_slaves
-		for i in range(self.num_slaves):
-			randomNumber = random.randrange(0, 5)
-			exploitationFlags[i] = randomNumber
+		# exploitationFlags = [0]*self.num_slaves
+		# for i in range(self.num_slaves):
+		# 	randomNumber = random.randrange(0, 5)
+		# 	exploitationFlags[i] = randomNumber
 
 		# print(exploitationFlags)
 		# for i in range(self.num_slaves):
@@ -437,12 +461,12 @@ class HExplorationRL(object):
 								Tensor([states[i*self.num_agents+j]]))
 							a_dist_slave[j] = a_dist_slave_agent
 							v_slave[j] = v_slave_agent
-							actions[i*self.num_agents+j] = a_dist_slave[j].loc.cpu().detach().numpy().squeeze().squeeze().squeeze();		
-							if actionCount[i] == 0:
-								actionNoise[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy().squeeze().squeeze().squeeze() - actions[i*self.num_agents+j]
+							# actions[i*self.num_agents+j] = a_dist_slave[j].loc.cpu().detach().numpy().squeeze().squeeze().squeeze();		
+							# # if actionCount[i] == 0:
+							# 	actionNoise[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy().squeeze().squeeze().squeeze() - actions[i*self.num_agents+j]
 								# print(actionNoise[i*self.num_agents+j])
-							if exploitationFlags[i] != 0:
-								actions[i*self.num_agents+j] += actionNoise[i*self.num_agents+j]
+							# if exploitationFlags[i] == 0:
+							actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy().squeeze().squeeze().squeeze()
 						else :
 							actions[i*self.num_agents+j] = self.getHardcodedAction(i, j);
 
@@ -469,10 +493,12 @@ class HExplorationRL(object):
 				terminated_state = True
 				for k in range(self.num_agents):
 					if teamDic[k] == learningTeam or vsHardcodedFlags[i] == 0:
+						rewards[i*self.num_agents+k] = self.env.getReward(i, k, True)
 						# target_feature = self.target_rnd.forward(Tensor([states[i*self.num_agents+k]])).cpu().detach().numpy().squeeze()
 						# predictor_feature = self.predictor_rnd.forward(Tensor([states[i*self.num_agents+k]])).cpu().detach().numpy().squeeze()
 						# diff_feature = Tensor(target_feature - predictor_feature).pow(2).sum()
-						rewards[i*self.num_agents+k] = self.env.getReward(i, k, True)# + diff_feature.cpu().detach().numpy()
+						rnd_rewards[i*self.num_agents+k] = rewards[i*self.num_agents+k] 
+						# rnd_rewards[i*self.num_agents+k] = rewards[i*self.num_agents+k]
 						if np.any(np.isnan(rewards[i*self.num_agents+k])):
 							nan_occur = True
 						if np.any(np.isnan(states[i*self.num_agents+k])) or np.any(np.isnan(actions[i*self.num_agents+k])):
@@ -482,7 +508,7 @@ class HExplorationRL(object):
 					for k in range(self.num_agents):
 						if teamDic[k] == learningTeam or vsHardcodedFlags[i] == 0:
 							self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
-							self.episodes[i][k] = RNNEpisodeBuffer()
+							self.episodes[i][k] = RNDEpisodeBuffer()
 					self.total_num_ball_touch += self.env.getNumBallTouch(i)
 					self.env.reset(i)
 					actionCount[i] = 0
@@ -493,7 +519,7 @@ class HExplorationRL(object):
 					for k in range(self.num_agents):
 						if teamDic[k] == learningTeam or vsHardcodedFlags[i] == 0:
 							self.episodes[i][k].push(states[i*self.num_agents+k], actions[i*self.num_agents+k],\
-								rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k])
+								rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k], rnd_rewards[i*self.num_agents+k])
 
 							local_step += 1
 
@@ -501,9 +527,9 @@ class HExplorationRL(object):
 					for k in range(self.num_agents):
 						if teamDic[k] == learningTeam or vsHardcodedFlags[i] == 0:
 							self.episodes[i][k].push(states[i*self.num_agents+k], actions[i*self.num_agents+k],\
-								rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k])
+								rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k], rnd_rewards[i*self.num_agents+k])
 							self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
-							self.episodes[i][k] = RNNEpisodeBuffer()
+							self.episodes[i][k] = RNDEpisodeBuffer()
 					self.total_num_ball_touch += self.env.getNumBallTouch(i)
 					self.env.reset(i)
 					actionCount[i] = 0
@@ -513,7 +539,7 @@ class HExplorationRL(object):
 					for k in range(self.num_agents):
 						if teamDic[k] == learningTeam or vsHardcodedFlags[i] == 0:
 							self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
-							self.episodes[i][k] = RNNEpisodeBuffer()
+							self.episodes[i][k] = RNDEpisodeBuffer()
 					self.total_num_ball_touch += self.env.getNumBallTouch(i)
 					self.env.reset(i)
 					actionCount[i] = 0
@@ -528,9 +554,40 @@ class HExplorationRL(object):
 		# self.env.endOfIteration()
 		print('SIM : {}'.format(local_step))
 
+	
 
 	def computeTDandGAE(self, is_final = False):
 		# self.total_episodes = self.total_episodes + self.total_hindsight_episodes
+
+
+		# compute mean and std of rnd rewards 
+		iter_rnd_rewards = np.zeros(0)
+		for index in range(1):
+			for epi in self.total_episodes[index]:
+				data = epi.getData()
+				size = len(data)
+				# print(size)
+				if size == 0:
+					continue
+				states, actions, rewards, values, logprobs, rnd_rewards = zip(*data)
+				iter_rnd_rewards = np.concatenate((rnd_rewards, iter_rnd_rewards), axis = 0)
+
+		# iter_rnd_num = len(iter_rnd_rewards)
+		# iter_rnd_mean = np.mean(iter_rnd_rewards)
+		# iter_rnd_std = np.std(iter_rnd_rewards)
+
+		# if self.total_rnd_count == 0:
+		# 	self.total_rnd_count = iter_rnd_num
+		# 	self.rnd_rewards_mean = iter_rnd_mean
+		# 	self.rnd_rewards_std = iter_rnd_std
+		# else:
+		# 	self.rnd_rewards_std = parallel_variance(self.rnd_rewards_mean, self.total_rnd_count, self.rnd_rewards_std,
+		# 											 iter_rnd_mean, iter_rnd_num, iter_rnd_std)
+		# 	self.total_rnd_count += iter_rnd_num
+		# 	self.rnd_rewards_mean = self.rnd_rewards_mean + (iter_rnd_mean - self.rnd_rewards_mean) * iter_rnd_num / self.total_rnd_count
+		# print(self.rnd_rewards_mean)
+		# print(self.rnd_rewards_std)
+
 
 		'''Scheduler'''
 		for index in range(1):
@@ -543,10 +600,14 @@ class HExplorationRL(object):
 				# print(size)
 				if size == 0:
 					continue
-				states, actions, rewards, values, logprobs = zip(*data)
+				states, actions, rewards, values, logprobs, rnd_rewards = zip(*data)
 				values = np.concatenate((values, np.zeros(1)), axis=0)
 				advantages = np.zeros(size)
 				ad_t = 0
+
+				# rnd_rewards = (rnd_rewards)/(self.rnd_rewards_std+1E-5)
+				# print(rnd_rewards)
+				# rewards += rnd_rewards
 
 				epi_return = 0.0
 				for i in reversed(range(len(data))):
@@ -573,7 +634,7 @@ class HExplorationRL(object):
 						# print(j)
 						# exit(0)
 					self.buffer[index].push(rnn_replay_buffer)
-					x = rnn_replay_buffer
+					# x = rnn_replay_buffer
 					# i = 0
 					# # print(x.buffer[i].TD)
 					# if size <= 120:
@@ -598,7 +659,7 @@ class HExplorationRL(object):
 					# 		# print(j)
 
 					# 		self.filecount += 1
-					# 		if self.filecount == 30:
+					# 		if self.filecount == 40:
 					# 			exit(0)
 					# 		f.close()
 					# 		self.buffer[index].push(rnn_replay_buffer)
@@ -640,7 +701,7 @@ class HExplorationRL(object):
 
 			for sampled_index in sampled_indices:
 				sampled_epi = replay_buffers[sampled_index[0]]
-				sampled_startpoint = max(sampled_index[1] - 30, 0)
+				sampled_startpoint = max(sampled_index[1] - 60, 0)
 				sampled_start_transition = sampled_epi.buffer[sampled_startpoint]
 				# sampled_transition = sampled_epi.buffer[sampled_index[1]]
 				# print(sampled_transition.TD)
@@ -670,10 +731,10 @@ class HExplorationRL(object):
 				counter = 0
 				local_step = 0
 
-				exploitationFlags = [0]*self.num_slaves
-				for i in range(self.num_slaves):
-					randomNumber = random.randrange(0, 5)
-					exploitationFlags[i] = randomNumber
+				# exploitationFlags = [0]*self.num_slaves
+				# for i in range(self.num_slaves):
+				# 	randomNumber = random.randrange(0, 5)
+				# 	exploitationFlags[i] = randomNumber
 
 
 
@@ -689,11 +750,12 @@ class HExplorationRL(object):
 									Tensor([states[i*self.num_agents+j]]))
 								a_dist_slave[j] = a_dist_slave_agent
 								v_slave[j] = v_slave_agent
-								actions[i*self.num_agents+j] = a_dist_slave[j].loc.cpu().detach().numpy().squeeze().squeeze().squeeze();		
-								actionNoise[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy().squeeze().squeeze().squeeze() - actions[i*self.num_agents+j]
+								# actions[i*self.num_agents+j] = a_dist_slave[j].loc.cpu().detach().numpy().squeeze().squeeze().squeeze();		
+								# actionNoise[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy().squeeze().squeeze().squeeze() - actions[i*self.num_agents+j]
 									# print(actionNoise[i*self.num_agents+j])
-								if exploitationFlags[i] != 0:
-									actions[i*self.num_agents+j] += actionNoise[i*self.num_agents+j]
+								# if exploitationFlags[i] != 0:
+								# actions[i*self.num_agents+j] += actionNoise[i*self.num_agents+j]
+								actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy().squeeze().squeeze().squeeze()
 							else :
 								actions[i*self.num_agents+j] = self.getHardcodedAction(i, j);
 
@@ -713,7 +775,12 @@ class HExplorationRL(object):
 						terminated_state = True
 
 						for k in range(self.num_agents):
-							rewards[i*self.num_agents+k] = self.env.getReward(i, k, True) 
+							rewards[i*self.num_agents+k] = self.env.getReward(i, k, True)
+							target_feature = self.target_rnd.forward(Tensor([states[i*self.num_agents+k]])).cpu().detach().numpy().squeeze()
+							predictor_feature = self.predictor_rnd.forward(Tensor([states[i*self.num_agents+k]])).cpu().detach().numpy().squeeze()
+							diff_feature = Tensor(target_feature - predictor_feature).pow(2).sum()
+							rnd_rewards[i*self.num_agents+k] = diff_feature.cpu().detach().numpy()
+							# rnd_rewards[i*self.num_agents+k] = rewards[i*self.num_agents+k]
 							if np.any(np.isnan(rewards[i*self.num_agents+k])):
 								nan_occur = True
 							if np.any(np.isnan(states[i*self.num_agents+k])) or np.any(np.isnan(actions[i*self.num_agents+k])):
@@ -723,7 +790,7 @@ class HExplorationRL(object):
 							for k in range(self.num_agents):
 								if teamDic[k] == learningTeam:
 									self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
-									self.episodes[i][k] = RNNEpisodeBuffer()
+									self.episodes[i][k] = RNDEpisodeBuffer()
 							self.total_num_ball_touch += self.env.getNumBallTouch(i)
 							self.env.reset(i)
 
@@ -741,18 +808,23 @@ class HExplorationRL(object):
 									self.episodes[i][k].push(states[i*self.num_agents+k], actions[i*self.num_agents+k],\
 										rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k])
 									self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
-									self.episodes[i][k] = RNNEpisodeBuffer()
+									self.episodes[i][k] = RNDEpisodeBuffer()
 									local_step += 1
 							self.total_num_ball_touch += self.env.getNumBallTouch(i)
 							self.env.reset(i)
-
+					# for i in range(self.num_slaves):
+					# 	for k in range(self.num_agents):
+					# 		if teamDic[k] == learningTeam:
+					# 			print(len(self.episodes[i][k].getData()))
 					counter += 1
 					if counter >= replay_time:
 						for i in range(self.num_slaves):
 							for k in range(self.num_agents):
 								if teamDic[k] == learningTeam:
-									self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
-									self.episodes[i][k] = RNNEpisodeBuffer()
+									# print(len(self.episodes[i][k].getData()))
+									if len(self.episodes[i][k].getData()) == 120:
+										self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
+									self.episodes[i][k] = RNDEpisodeBuffer()
 							self.total_num_ball_touch += self.env.getNumBallTouch(i)
 							self.env.reset(i)
 						break
@@ -802,7 +874,8 @@ class HExplorationRL(object):
 					a_dist,v = self.model[buff_index].forward(Tensor(stack_s))	
 					
 					loss_critic = ((v-Tensor(stack_td)).pow(2)).mean()
-
+					# loss_critic = ((v-Tensor(stack_td)).pow(2)-(v-Tensor(stack_td)).pow(2).mean())/((v-Tensor(stack_td)).pow(2).std()+1E-5)
+					# print(loss_critic)
 					'''Actor Loss'''
 					ratio = torch.exp(a_dist.log_prob(Tensor(stack_a))-Tensor(stack_lp))
 					stack_gae = (stack_gae-stack_gae.mean())/(stack_gae.std()+1E-5)
@@ -814,6 +887,9 @@ class HExplorationRL(object):
 
 					'''Entropy Loss'''
 					loss_entropy = - self.w_entropy * a_dist.entropy().mean()
+					# print(loss_actor, end = ", ")
+					# print(loss_critic, end = ", ")
+					# print(loss_entropy)
 
 					self.loss_actor[buff_index] = loss_actor.cpu().detach().numpy().tolist()
 					self.loss_critic[buff_index] = loss_critic.cpu().detach().numpy().tolist()
@@ -827,9 +903,10 @@ class HExplorationRL(object):
 
 					# print("time :", time.time() - start)
 
-					for param in self.model[buff_index].parameters():
-						if param.grad is not None:
-							param.grad.data.clamp_(-0.5, 0.5)
+					# for param in self.model[buff_index].parameters():
+						# if param.grad is not None:
+							# print(param.grad.data)
+							# param.grad.data.clamp_(-0.5, 0.5)
 
 					self.optimizer[buff_index].step()
 					self.sum_loss_actor[buff_index] += self.loss_actor[buff_index]*self.batch_size/self.num_epochs
@@ -837,24 +914,24 @@ class HExplorationRL(object):
 
 
 
-					# RND optimizer
+					# # RND optimizer
 
-					target_feature = self.target_rnd.forward(Tensor(stack_s))
-					predictor_feature = self.predictor_rnd.forward(Tensor(stack_s))
+					# target_feature = self.target_rnd.forward(Tensor(stack_s)).detach()
+					# predictor_feature = self.predictor_rnd.forward(Tensor(stack_s))
 
-					loss_rnd = self.num_feature*(target_feature - predictor_feature).pow(2).mean()
-					self.optimizer_rnd.zero_grad()
+					# loss_rnd = self.num_feature * (target_feature - predictor_feature).pow(2).mean()
+					# self.optimizer_rnd.zero_grad()
 
-					loss_rnd.backward(retain_graph=True)
+					# loss_rnd.backward(retain_graph=True)
 
-					for param in self.predictor_rnd.parameters():
-						if param.grad is not None:
-							param.grad.data.clamp_(-0.5, 0.5)
+					# # for param in self.predictor_rnd.parameters():
+					# # 	if param.grad is not None:
+					# # 		param.grad.data.clamp_(-0.5, 0.5)
 
-					self.optimizer_rnd.step()
+					# self.optimizer_rnd.step()
 
-					self.loss_rnd = loss_rnd.cpu().detach().numpy().tolist()
-					self.sum_loss_rnd += self.loss_rnd*self.batch_size/self.num_epochs
+					# self.loss_rnd = loss_rnd.cpu().detach().numpy().tolist()
+					# self.sum_loss_rnd += self.loss_rnd*self.batch_size/self.num_epochs
 
 				print('Optimizing actor-critic nn : {}/{}'.format(j+1,self.num_epochs),end='\r')
 		print('')
@@ -876,9 +953,9 @@ class HExplorationRL(object):
 		for param_group in self.optimizer_rnd.param_groups:
 			param_group['lr'] = self.learning_rate
 		# self.generateDefaultTransitions()
-		self.generateTransitions(LOW_FREQUENCY)
-		self.computeTDandGAE(False)
-		self.exploreHighTDTransitions()
+		self.generateTransitions(HIGH_FREQUENCY)
+		# self.computeTDandGAE(False)
+		# self.exploreHighTDTransitions()
 		self.optimizeModel()
 
 
@@ -920,7 +997,8 @@ class HExplorationRL(object):
 		print('||Num Ball touch per 1 second  : {:.3f}'.format(30.0 * self.total_num_ball_touch/self.num_tuple[0]))
 		# print('||Current Win Rate         : {:.3f}'.format(self.winRate[-1]))
 
-		# print('||Avg Loss Predictor RND   : {:.4f}'.format(self.sum_loss_rnd/(self.num_tuple[0])))
+		print('||Mean RND Rewards             : {:.4f}'.format(self.rnd_rewards_mean))
+		print('||Std RND Rewards              : {:.4f}'.format(self.rnd_rewards_std))
 
 
 
@@ -928,7 +1006,7 @@ class HExplorationRL(object):
 		self.ball_touch.append(30.0 * self.total_num_ball_touch/self.num_tuple[0])
 		
 		self.saveModel()
-		# self.saveRNDModel()
+		self.saveRNDModel()
 		print('=============================================')
 		return np.array(self.rewards), np.array(self.ball_touch)
 

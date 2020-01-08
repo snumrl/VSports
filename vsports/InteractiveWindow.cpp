@@ -66,6 +66,7 @@ IntWindow()
 :SimWindow(), mIsNNLoaded(false)
 {
 	mEnv = new Environment(30, 180, 2);
+	mEnv->endTime = 300;
  	// srand (time(NULL));	
  	initCustomView();
 	initGoalpost();
@@ -363,9 +364,15 @@ keyboard(unsigned char key, int x, int y)
 		case 'h':
 			keyarr[int('h')] = PUSHED;
 			break;
+		case 'q':
+			keyarr[int('q')] = PUSHED;
+			break;
+		case 'e':
+			keyarr[int('e')] = PUSHED;
+			break;
 		case 'r':
 			mEnv->reset();
-			// for(int i=0;i<4;i++){
+			// for(int i=0;i<4;i++){	
 			// 	reset_hidden[i]();
 			// }
 
@@ -406,6 +413,12 @@ keyboardUp(unsigned char key, int x, int y)
 		case 'h':
 			keyarr[int('h')] = NOTPUSHED;
 			break;
+		case 'q':
+			keyarr[int('q')] = NOTPUSHED;
+			break;
+		case 'e':
+			keyarr[int('e')] = NOTPUSHED;
+			break;
 	}
 }
 void
@@ -442,14 +455,30 @@ applyKeyEvent()
 	{
 		mActions[0][0] += power;
 	}
+
+	if(keyarr[int('q')]==PUSHED)
+	{
+		mActions[0][2] += -power;
+	}
+	if(keyarr[int('e')]==PUSHED)
+	{
+		mActions[0][2] += power;
+	}
 	if(keyarr[int('g')]==PUSHED)
 	{
-		mActions[0][3] += 0.1;
+		mActions[0][3] = 0.7;
 	}
+	else
+	{
+		// mActions[0][3] = 0.0;
+	}
+
+	if(mActions[0].segment(0,2).norm() > 1.0)
+		mActions[0].segment(0,2).normalize();
 
 	// if(mActions[0].norm()>1.0)
 	// 	mActions[0].normalize();
-	// else
+	// if
 	// {
 	// 	// mActions[0][3] -= 0.1;
 	// 	// if(mActions[0][3] < -0.1)
@@ -490,13 +519,15 @@ step()
 		if(mEnv->mNumChars == 2)
 		{
 				// cout<<mActions[0].transpose()<<endl;
-			getActionFromNN(0);
+			if(controlOn)
+				getActionFromNN(0);
 			if(actionCount==0)
 			{
-				// updateActionNoise(0);
+				updateActionNoise(0);
 				// cout<<(mActionNoises[0].transpose())<<endl;
-				actionCount = 1; 
+				actionCount = 10; 
 			}
+			// cout<<(mActions[0].transpose())<<endl;
 			// mActions[0] += mActionNoises[0];
 			actionCount--;
 			// mEnv->getLocalState(1);
@@ -595,10 +626,10 @@ step()
 
 	mEnv->stepAtOnce();
 	mEnv->getRewards();
-	// for(int i=0;i<mActions.size();i++)
-	// {
-	// 	mActions[i].segment(0,3) = Eigen::Vector3d(0.0, 0.0, 0.0);
-	// }
+	for(int i=0;i<mActions.size();i++)
+	{
+		mActions[i].segment(0,3) = Eigen::Vector3d(0.0, 0.0, 0.0);
+	}
 }
 
 void
@@ -737,8 +768,8 @@ display()
 	// = "Red : "+to_string((int)(mEnv->mAccScore[0] + mEnv->mAccScore[1]))+" |Blue : "+to_string((int)(mEnv->mAccScore[2]+mEnv->mAccScore[3]));
 
 	std::string scoreString
-	= "Red : "+to_string((int)(mEnv->mAccScore[0]));//+" |Blue : "+to_string((int)(mEnv->mAccScore[1]));
-	// = "Red : "+to_string((getRNDFeatureDiff(0)));//+" |Blue : "+to_string((int)(mEnv->mAccScore[1]));
+	// = "Red : "+to_string((mEnv->mAccScore[0]));//+" |Blue : "+to_string((int)(mEnv->mAccScore[1]));
+	= "Red : "+to_string((getRNDFeatureDiff(0)));//+" |Blue : "+to_string((int)(mEnv->mAccScore[1]));
 	// cout<<"444444"<<endl;
 
 	// cout<<mEnv->getCharacters()[0]->getSkeleton()->getVelocities().transpose()<<endl;
@@ -948,7 +979,7 @@ drawValue()
 
 	for(int i=0;i<numChars;i++)
 	{
-		values[i] = getValue(i);
+		values[i] = getValue(i)/10.0;
 	}
 	// cout<<values[0]<<endl;
 

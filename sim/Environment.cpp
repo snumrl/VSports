@@ -22,7 +22,7 @@ using namespace dart::constraint;
 Environment::
 Environment(int control_Hz, int simulation_Hz, int numChars)
 :mControlHz(control_Hz), mSimulationHz(simulation_Hz), mNumChars(numChars), mWorld(std::make_shared<dart::simulation::World>()),
-mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0)
+mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0), endTime(15)
 {
 	srand((unsigned int)time(0));
 	initCharacters();
@@ -939,7 +939,7 @@ bool
 Environment::
 isTerminalState()
 {
-	if(mTimeElapsed>15.0)
+	if(mTimeElapsed > endTime)
 	{
 		// cout<<"Time overed"<<endl;
 		mIsTerminalState = true;
