@@ -10,6 +10,8 @@
 *.rar
 *.tar
 *.zip
+*.pyc
+*.so
 
 # Logs and databases #
 ######################
