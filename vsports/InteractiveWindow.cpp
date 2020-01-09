@@ -65,7 +65,7 @@ IntWindow::
 IntWindow()
 :SimWindow(), mIsNNLoaded(false)
 {
-	mEnv = new Environment(30, 180, 2);
+	mEnv = new Environment(30, 180, 6);
 	mEnv->endTime = 300;
  	// srand (time(NULL));	
  	initCustomView();
@@ -568,6 +568,7 @@ step()
 			{
 				for(int i=3;i<6;i++)
 				{
+					// cout<<"????"<<endl;
 					mEnv->getLocalState(i);
 					mActions[i] = mEnv->getActionFromBTree(i);
 
@@ -768,8 +769,8 @@ display()
 	// = "Red : "+to_string((int)(mEnv->mAccScore[0] + mEnv->mAccScore[1]))+" |Blue : "+to_string((int)(mEnv->mAccScore[2]+mEnv->mAccScore[3]));
 
 	std::string scoreString
-	// = "Red : "+to_string((mEnv->mAccScore[0]));//+" |Blue : "+to_string((int)(mEnv->mAccScore[1]));
-	= "Red : "+to_string((getRNDFeatureDiff(0)));//+" |Blue : "+to_string((int)(mEnv->mAccScore[1]));
+	= "Red : "+to_string((mEnv->mAccScore[0]));//+" |Blue : "+to_string((int)(mEnv->mAccScore[1]));
+	// = "Red : "+to_string((getRNDFeatureDiff(0)));//+" |Blue : "+to_string((int)(mEnv->mAccScore[1]));
 	// cout<<"444444"<<endl;
 
 	// cout<<mEnv->getCharacters()[0]->getSkeleton()->getVelocities().transpose()<<endl;
@@ -979,7 +980,7 @@ drawValue()
 
 	for(int i=0;i<numChars;i++)
 	{
-		values[i] = getValue(i)/10.0;
+		values[i] = getValue(i)/1.0;
 	}
 	// cout<<values[0]<<endl;
 

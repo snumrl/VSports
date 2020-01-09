@@ -75,7 +75,7 @@ class HExplorationRL(object):
 		self.gamma = 0.997
 		self.lb = 0.95
 
-		self.buffer_size = 16*1024
+		self.buffer_size = 8*1024
 		self.batch_size = 1024
 
 		self.buffer = [ [None] for i in range(2)]
@@ -176,8 +176,8 @@ class HExplorationRL(object):
 				self.model[i].save('../nn/'+str(self.num_evaluation)+'_'+str(i)+'.pt')
 
 	def saveRNDModel(self):
-		if self.num_evaluation%4 == 0:
-			self.predictor_rnd.save('../nn/predictor_rnd_'+str(self.num_evaluation)+'.pt')
+		# if self.num_evaluation%4 == 0:
+		# 	self.predictor_rnd.save('../nn/predictor_rnd_'+str(self.num_evaluation)+'.pt')
 		self.predictor_rnd.save('../nn/predictor_rnd_current.pt')
 
 
@@ -461,12 +461,13 @@ class HExplorationRL(object):
 								Tensor([states[i*self.num_agents+j]]))
 							a_dist_slave[j] = a_dist_slave_agent
 							v_slave[j] = v_slave_agent
-							# actions[i*self.num_agents+j] = a_dist_slave[j].loc.cpu().detach().numpy().squeeze().squeeze().squeeze();		
-							# # if actionCount[i] == 0:
-							# 	actionNoise[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy().squeeze().squeeze().squeeze() - actions[i*self.num_agents+j]
+							actions[i*self.num_agents+j] = a_dist_slave[j].loc.cpu().detach().numpy().squeeze().squeeze().squeeze();		
+							if actionCount[i] == 0:
+								actionNoise[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy().squeeze().squeeze().squeeze() - actions[i*self.num_agents+j]
 								# print(actionNoise[i*self.num_agents+j])
 							# if exploitationFlags[i] == 0:
-							actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy().squeeze().squeeze().squeeze()
+							actions[i*self.num_agents+j] += actionNoise[i*self.num_agents+j]
+								# actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy().squeeze().squeeze().squeeze()
 						else :
 							actions[i*self.num_agents+j] = self.getHardcodedAction(i, j);
 
@@ -497,8 +498,8 @@ class HExplorationRL(object):
 						# target_feature = self.target_rnd.forward(Tensor([states[i*self.num_agents+k]])).cpu().detach().numpy().squeeze()
 						# predictor_feature = self.predictor_rnd.forward(Tensor([states[i*self.num_agents+k]])).cpu().detach().numpy().squeeze()
 						# diff_feature = Tensor(target_feature - predictor_feature).pow(2).sum()
-						rnd_rewards[i*self.num_agents+k] = rewards[i*self.num_agents+k] 
-						# rnd_rewards[i*self.num_agents+k] = rewards[i*self.num_agents+k]
+						# rnd_rewards[i*self.num_agents+k] = diff_feature.cpu().detach()
+						rnd_rewards[i*self.num_agents+k] = rewards[i*self.num_agents+k]
 						if np.any(np.isnan(rewards[i*self.num_agents+k])):
 							nan_occur = True
 						if np.any(np.isnan(states[i*self.num_agents+k])) or np.any(np.isnan(actions[i*self.num_agents+k])):
@@ -561,16 +562,16 @@ class HExplorationRL(object):
 
 
 		# compute mean and std of rnd rewards 
-		iter_rnd_rewards = np.zeros(0)
-		for index in range(1):
-			for epi in self.total_episodes[index]:
-				data = epi.getData()
-				size = len(data)
-				# print(size)
-				if size == 0:
-					continue
-				states, actions, rewards, values, logprobs, rnd_rewards = zip(*data)
-				iter_rnd_rewards = np.concatenate((rnd_rewards, iter_rnd_rewards), axis = 0)
+		# iter_rnd_rewards = np.zeros(0)
+		# for index in range(1):
+		# 	for epi in self.total_episodes[index]:
+		# 		data = epi.getData()
+		# 		size = len(data)
+		# 		# print(size)
+		# 		if size == 0:
+		# 			continue
+		# 		states, actions, rewards, values, logprobs, rnd_rewards = zip(*data)
+		# 		iter_rnd_rewards = np.concatenate((rnd_rewards, iter_rnd_rewards), axis = 0)
 
 		# iter_rnd_num = len(iter_rnd_rewards)
 		# iter_rnd_mean = np.mean(iter_rnd_rewards)
@@ -585,9 +586,6 @@ class HExplorationRL(object):
 		# 											 iter_rnd_mean, iter_rnd_num, iter_rnd_std)
 		# 	self.total_rnd_count += iter_rnd_num
 		# 	self.rnd_rewards_mean = self.rnd_rewards_mean + (iter_rnd_mean - self.rnd_rewards_mean) * iter_rnd_num / self.total_rnd_count
-		# print(self.rnd_rewards_mean)
-		# print(self.rnd_rewards_std)
-
 
 		'''Scheduler'''
 		for index in range(1):
@@ -606,8 +604,7 @@ class HExplorationRL(object):
 				ad_t = 0
 
 				# rnd_rewards = (rnd_rewards)/(self.rnd_rewards_std+1E-5)
-				# print(rnd_rewards)
-				# rewards += rnd_rewards
+				# rewards = tuple(l*r for l, r in zip(rewards, rnd_rewards))
 
 				epi_return = 0.0
 				for i in reversed(range(len(data))):
@@ -623,16 +620,8 @@ class HExplorationRL(object):
 
 					rnn_replay_buffer = RNNReplayBuffer(10000)
 					for i in range(size):
-
-						# if TD[i] >= 0.1 or TD[i] <= -0.1:
-						# 	rnn_replay_buffer.push(states[i], actions[i], logprobs[i], TD[i], advantages[i])
-
-						# elif random.randrange(0,3) == 0:
 						rnn_replay_buffer.push(states[i], actions[i], logprobs[i], TD[i], advantages[i])
-						# x = rnn_replay_buffer[i]
-						# j = json.dumps(x._asdict())
-						# print(j)
-						# exit(0)
+
 					self.buffer[index].push(rnn_replay_buffer)
 					# x = rnn_replay_buffer
 					# i = 0
@@ -717,6 +706,7 @@ class HExplorationRL(object):
 				values = [None]*self.num_slaves*self.num_agents
 				terminated = [False]*self.num_slaves*self.num_agents
 				actionNoise = [None]*self.num_slaves*self.num_agents
+				rnd_rewards = [None]*self.num_slaves*self.num_agents
 
 				for i in range(self.num_slaves):
 					for j in range(self.num_agents):
@@ -776,11 +766,11 @@ class HExplorationRL(object):
 
 						for k in range(self.num_agents):
 							rewards[i*self.num_agents+k] = self.env.getReward(i, k, True)
-							target_feature = self.target_rnd.forward(Tensor([states[i*self.num_agents+k]])).cpu().detach().numpy().squeeze()
-							predictor_feature = self.predictor_rnd.forward(Tensor([states[i*self.num_agents+k]])).cpu().detach().numpy().squeeze()
-							diff_feature = Tensor(target_feature - predictor_feature).pow(2).sum()
-							rnd_rewards[i*self.num_agents+k] = diff_feature.cpu().detach().numpy()
-							# rnd_rewards[i*self.num_agents+k] = rewards[i*self.num_agents+k]
+							# target_feature = self.target_rnd.forward(Tensor([states[i*self.num_agents+k]])).cpu().detach().numpy().squeeze()
+							# predictor_feature = self.predictor_rnd.forward(Tensor([states[i*self.num_agents+k]])).cpu().detach().numpy().squeeze()
+							# diff_feature = Tensor(target_feature - predictor_feature).pow(2).sum()
+							# rnd_rewards[i*self.num_agents+k] = diff_feature.cpu().detach().numpy()
+							rnd_rewards[i*self.num_agents+k] = rewards[i*self.num_agents+k]
 							if np.any(np.isnan(rewards[i*self.num_agents+k])):
 								nan_occur = True
 							if np.any(np.isnan(states[i*self.num_agents+k])) or np.any(np.isnan(actions[i*self.num_agents+k])):
@@ -799,29 +789,25 @@ class HExplorationRL(object):
 							for k in range(self.num_agents):
 								if teamDic[k] == learningTeam:
 									self.episodes[i][k].push(states[i*self.num_agents+k], actions[i*self.num_agents+k],\
-										rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k])
+										rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k], rnd_rewards[i*self.num_agents+k])
 									local_step += 1
 
 						if terminated_state is True:
 							for k in range(self.num_agents):
 								if teamDic[k] == learningTeam:
 									self.episodes[i][k].push(states[i*self.num_agents+k], actions[i*self.num_agents+k],\
-										rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k])
+										rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k], rnd_rewards[i*self.num_agents+k])
 									self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
 									self.episodes[i][k] = RNDEpisodeBuffer()
 									local_step += 1
 							self.total_num_ball_touch += self.env.getNumBallTouch(i)
 							self.env.reset(i)
-					# for i in range(self.num_slaves):
-					# 	for k in range(self.num_agents):
-					# 		if teamDic[k] == learningTeam:
-					# 			print(len(self.episodes[i][k].getData()))
+
 					counter += 1
 					if counter >= replay_time:
 						for i in range(self.num_slaves):
 							for k in range(self.num_agents):
 								if teamDic[k] == learningTeam:
-									# print(len(self.episodes[i][k].getData()))
 									if len(self.episodes[i][k].getData()) == 120:
 										self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
 									self.episodes[i][k] = RNDEpisodeBuffer()
@@ -953,9 +939,9 @@ class HExplorationRL(object):
 		for param_group in self.optimizer_rnd.param_groups:
 			param_group['lr'] = self.learning_rate
 		# self.generateDefaultTransitions()
-		self.generateTransitions(HIGH_FREQUENCY)
-		# self.computeTDandGAE(False)
-		# self.exploreHighTDTransitions()
+		self.generateTransitions(LOW_FREQUENCY)
+		self.computeTDandGAE(False)
+		self.exploreHighTDTransitions()
 		self.optimizeModel()
 
 

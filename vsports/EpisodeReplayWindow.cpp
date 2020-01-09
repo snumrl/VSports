@@ -66,7 +66,7 @@ EpiWindow::
 EpiWindow()
 :SimWindow()
 {
-	mEnv = new Environment(30, 180, 2);
+	mEnv = new Environment(30, 180, 6);
 	initCustomView();
 	initGoalpost();
 }

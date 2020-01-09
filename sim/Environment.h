@@ -173,5 +173,5 @@ public:
 	// AgentEnvWindow* mWindow;
 };
 double getFacingAngleFromLocalState(Eigen::VectorXd curState);
-Eigen::VectorXd localStateToOriginState(Eigen::VectorXd localState, int mNumChars=4);
+Eigen::VectorXd localStateToOriginState(Eigen::VectorXd localState, int mNumChars=6);
 #endif

@@ -249,7 +249,7 @@ handleBallContact(int index, double radius, double me)
 
 	if(kickPower > 0)
 	{
-		kickPower += 0.5;
+		kickPower += 0.3;
 		// kickPower = 0.5;
 		mKicked[index] = mSlowDuration;
 		mNumBallTouch+= 1;
@@ -362,7 +362,7 @@ step()
 	}
 	// cout<<"11111111!"<<endl;
 
-	// handlePlayerContacts(0.7);
+	handlePlayerContacts(0.7);
 
 	for(int i=0;i<mCharacters.size();i++)
 	{
@@ -373,14 +373,14 @@ step()
 		{
 			// cout<<"here right?"<<endl;
 			// if(mKicked[i]<=0.5)
-				handleBallContact(i, 0.12, 1.5);
+				handleBallContact(i, 0.12, 2.5);
 		}
 	}
 
 	handleWallContact(ballSkel, 0.08, 0.8);
 
-	boundBallVelocitiy(4.0);
-	dampBallVelocitiy(1.2);
+	boundBallVelocitiy(6.0);
+	dampBallVelocitiy(0.8);
 	// cout<<ballSkel->getVelocities().norm()<<endl;
 
 	for(int i=0;i<mCharacters.size();i++)
@@ -664,7 +664,7 @@ getLocalState(int index)
 
 
 
-	Eigen::VectorXd genState = localStateToOriginState(mLocalStates[index], 2);
+	// Eigen::VectorXd genState = localStateToOriginState(mLocalStates[index], 2);
 	// cout<<(genState - mStates[index]).transpose()<<endl;
 	return normalizeNNState(localState);
 }
@@ -692,13 +692,8 @@ getReward(int index, bool verbose)
 
 	if(ballV.norm()>0 && ballToGoalpost.norm()>0)
 	{
-		double cosTheta =  ballV.normalized().dot(ballToGoalpost.normalized());
-		reward += ballV.norm()* exp(-2.0 * acos(cosTheta));
-
-		// Eigen::VectorXd nextP = ballP + ballV * 1.0 / 30;
-		// Eigen::VectorXd diff = (nextP - ballP) - (p - ballP);
-		// reward = 0.1 * exp(-(p-ballP).norm());
-		// reward += ballV.dot(ballToGoalpost.normalized());
+		// double cosTheta =  ballV.normalized().dot(ballToGoalpost.normalized());
+		// reward += ballV.norm()* exp(-2.0 * acos(cosTheta));
 	}
 	// cout<<reward<<endl;
 	// else
@@ -727,16 +722,16 @@ getReward(int index, bool verbose)
 		{
 	// cout<<2<<endl;
 				// cout<<index<<" ";
-			if(verbose)
+			if(verbose && index == 0)
 			{
 				std::cout<<"Red Team GOALL!!"<<std::endl;
 			}
 			// if(!goalRewardPaid[index])
 
 			if(mCharacters[index]->getTeamName() == "A")
-				reward += 200;
+				reward += 1;
 			else
-				reward -= 200;
+				reward -= 1;
 			// goalRewardPaid[index] = true;
 			mIsTerminalState = true;
 		}
@@ -745,16 +740,16 @@ getReward(int index, bool verbose)
 	{
 		if(abs(heightVector.dot(ballPosition)) < goalpostSize/2.0)
 		{
-			if(verbose)
+			if(verbose && index == 0)
 			{
 				// cout<<index<<" ";
 				std::cout<<"Blue Team GOALL!!"<<std::endl;
 			}
 			// if(!goalRewardPaid[index])
 			if(mCharacters[index]->getTeamName() == "A")
-				reward -= 200;
+				reward -= 1;
 			else
-				reward += 200;
+				reward += 1;
 			// goalRewardPaid[index] = true;
 			mIsTerminalState = true;
 		}
@@ -1200,7 +1195,7 @@ Eigen::VectorXd localStateToOriginState(Eigen::VectorXd localState, int mNumChar
 	Eigen::VectorXd originState = localState;
 	double facingAngle = getFacingAngleFromLocalState(localState);
 
-	if(mNumChars == 4)
+	if(mNumChars == 6)
 	{
 		originState.segment(_ID_V, 2) = rotate2DVector(localState.segment(_ID_V, 2), facingAngle);
 		originState.segment(_ID_BALL_P, 2) = rotate2DVector(localState.segment(_ID_BALL_P, 2), facingAngle);
@@ -1222,6 +1217,29 @@ Eigen::VectorXd localStateToOriginState(Eigen::VectorXd localState, int mNumChar
 
 
 	}
+	// if(mNumChars == 4)
+	// {
+	// 	originState.segment(_ID_V, 2) = rotate2DVector(localState.segment(_ID_V, 2), facingAngle);
+	// 	originState.segment(_ID_BALL_P, 2) = rotate2DVector(localState.segment(_ID_BALL_P, 2), facingAngle);
+	// 	originState.segment(_ID_BALL_V, 2) = rotate2DVector(localState.segment(_ID_BALL_V, 2), facingAngle);
+	// 	originState.segment(_ID_GOALPOST_P, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P, 2), facingAngle);
+	// 	originState.segment(_ID_GOALPOST_P+2, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+2, 2), facingAngle);
+	// 	originState.segment(_ID_GOALPOST_P+4, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+4, 2), facingAngle);
+	// 	originState.segment(_ID_GOALPOST_P+6, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+6, 2), facingAngle);
+	// 	originState.segment(_ID_ALLY1_P, 2) = rotate2DVector(localState.segment(_ID_ALLY1_P, 2), facingAngle);
+	// 	originState.segment(_ID_ALLY1_V, 2) = rotate2DVector(localState.segment(_ID_ALLY1_V, 2), facingAngle);
+	// 	originState.segment(_ID_ALLY2_P, 2) = rotate2DVector(localState.segment(_ID_ALLY2_P, 2), facingAngle);
+	// 	originState.segment(_ID_ALLY2_V, 2) = rotate2DVector(localState.segment(_ID_ALLY2_V, 2), facingAngle);
+	// 	originState.segment(_ID_OP_DEF_P, 2) = rotate2DVector(localState.segment(_ID_OP_DEF_P, 2), facingAngle);
+	// 	originState.segment(_ID_OP_DEF_V, 2) = rotate2DVector(localState.segment(_ID_OP_DEF_V, 2), facingAngle);
+	// 	originState.segment(_ID_OP_ATK1_P, 2) = rotate2DVector(localState.segment(_ID_OP_ATK1_P, 2), facingAngle);
+	// 	originState.segment(_ID_OP_ATK1_V, 2) = rotate2DVector(localState.segment(_ID_OP_ATK1_V, 2), facingAngle);
+	// 	originState.segment(_ID_OP_ATK2_P, 2) = rotate2DVector(localState.segment(_ID_OP_ATK2_P, 2), facingAngle);
+	// 	originState.segment(_ID_OP_ATK2_V, 2) = rotate2DVector(localState.segment(_ID_OP_ATK2_V, 2), facingAngle);
+
+
+	// }
+
 
 
 	// else if(mNumChars == 4)
@@ -1937,7 +1955,7 @@ reconEnvFromState(int index, Eigen::VectorXd curLocalState)
 		reviseStateByTeam = 1;
 	}
 	facingAngle = M_PI * (1-reviseStateByTeam)/2.0 + facingAngle;
-	this->getCharacter(0)->getSkeleton()->setPosition(2, facingAngle);
+	this->getCharacter(index)->getSkeleton()->setPosition(2, facingAngle);
 
 
 
