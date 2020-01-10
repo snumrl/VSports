@@ -90,7 +90,7 @@ class RL(object):
 		self.policy[1] = SimulationNN(self.num_state, self.num_action)
 		
 
-		self.num_epochs = 10
+		self.num_epochs = 5
 		self.num_evaluation = 0
 		self.num_tuple_so_far = [0, 0]
 		# self.num_episode = [0, 0]
@@ -181,13 +181,15 @@ class RL(object):
 
 		self.env.resets()
 
+		self.originalCount  = [0, 0]
+
 	def loadModel(self,path,index):
-		self.model[index].load('../nn/'+path+'_'+str(self.indexToNetDic[index%self.num_agents])+'.pt')
+		self.model[self.indexToNetDic[index]].load('../nn/'+path+'_'+str(self.indexToNetDic[index%self.num_agents])+'.pt')
 
 	def loadPolicy(self,path):
 		for i in range(2):
-			self.policy[i].load(path+"_"+str(i)+".pt")
-			self.model[i].policy.load_state_dict(self.policy[i].policy.state_dict())
+			self.policy[self.indexToNetDic[i]].load(path+"_"+str(i)+".pt")
+			self.model[self.indexToNetDic[i]].policy.load_state_dict(self.policy[i].policy.state_dict())
 		self.saveModel()
 		self.winRate.append(self.evaluateModel())
 
@@ -205,7 +207,7 @@ class RL(object):
 
 
 	def getHardcodedAction(self, slave_index, agent_index):
-		return np.array([0,0,0,-1])
+		return np.array([0,0,-1])
 
 
 	def generateTransitions(self, action_frequency):
@@ -384,11 +386,16 @@ class RL(object):
 
 	def computeTDandGAE(self, is_final = False):
 		# self.total_episodes = self.total_episodes + self.total_hindsight_episodes
+		if not is_final:
+			self.originalCount[0] = 0
+			self.originalCount[1] = 0
+		cur_count = [0, 0]
 
 		'''Scheduler'''
 		for index in range(2):
 			self.buffer[index].clear()
-			self.sum_return = 0.0
+			if not is_final:
+				self.sum_return = 0.0
 		# for i in range
 			for epi in self.total_episodes[index]:
 				data = epi.getData()
@@ -409,8 +416,10 @@ class RL(object):
 					advantages[i] = ad_t
 
 				if not np.isnan(epi_return):
-					if index == 1:
+					if index == 1 and not is_final:
 						self.sum_return += epi_return
+						# if is_final:
+						# 	print("????????????/")
 					TD = values[:size] + advantages
 
 
@@ -427,50 +436,58 @@ class RL(object):
 						# print(j)
 						# exit(0)
 					self.buffer[index].push(rnn_replay_buffer)
-					# x = rnn_replay_buffer
-					# i = 0
-					# # print(x.buffer[i].TD)
-					# if size <= 150:
-					# 	while i < size:
-					# 		# if abs(x.buffer[i].TD) > 9.0:
-					# 		startTime = max(0, i)
-					# 		endTime = min(size-1, i+150)
+					cur_count[index] += 1
+					if not is_final:
+						self.originalCount[index] +=1
 
-					# 		# j = json.dumps(x._asdict())
-					# 		f = open("../data/high_TD_episode_"+str(self.filecount)+".txt", 'w')
-					# 		f.write(str(endTime-startTime+1))
-					# 		f.write("\n")
+					if is_final and cur_count[index] > self.originalCount[index]:
+						x = rnn_replay_buffer
+						i = 0
+						# print(x.buffer[i].TD)
+						if random.randrange(0,20) == 0:
+							while i < size:
+								# if abs(x.buffer[i].TD) > 9.0:
+								startTime = max(0, i)
+								endTime = min(size-1, i+120)
 
-					# 		for line in range(startTime, endTime+1):
-					# 			for line_s in range(len(x.buffer[line].s)):
-					# 				f.write(str(x.buffer[line].s[line_s]))
-					# 				f.write(" ")
-					# 			# f.write(str(x.buffer[line].s))
-					# 			# f.write(" ")
-					# 			f.write(str(x.buffer[line].TD))
-					# 			f.write("\n")
-					# 		# print(j)
+								# j = json.dumps(x._asdict())
+								f = open("../data/high_TD_episode_"+str(self.filecount)+".txt", 'w')
+								f.write(str(endTime-startTime+1))
+								f.write("\n")
+								f.write(str(index))
+								f.write("\n")
 
-					# 		self.filecount += 1
-					# 		f.close()
-					# 		i = endTime
-					# 		i+=1
-					# if self.filecount >= 40:
-					# 	self.filecount = 0
+								for line in range(startTime, endTime+1):
+									for line_s in range(len(x.buffer[line].s)):
+										f.write(str(x.buffer[line].s[line_s]))
+										f.write(" ")
+									# f.write(str(x.buffer[line].s))
+									# f.write(" ")
+									f.write(str(x.buffer[line].TD))
+									f.write("\n")
+								# print(j)
+
+								self.filecount += 1
+								f.close()
+								i = endTime
+								i+=1
+						if self.filecount >= 40:
+							self.filecount = 0
 
 
 			''' counting numbers(w.r.t scheduler) '''
-			self.num_episode = len(self.total_episodes[index])
+			if not is_final:
+				self.num_episode = len(self.total_episodes[1])
 			self.num_tuple[index] = 0
 			for rnn_replay_buffer in self.buffer[index].buffer:
 				self.num_tuple[index] += len(rnn_replay_buffer.buffer)
 			self.num_tuple_so_far[index] += self.num_tuple[index]
-			if is_final == True:
+			if is_final:
 				self.num_tuple_so_far[index] += self.num_tuple[index]
 
 	def exploreHighTDTransitions(self):
-		sample_ratio = 1.0/1200.0
-		replay_time = 150
+		sample_ratio = 1.0/2400.0
+		replay_time = 120
 
 
 		for buff_index in range(2):
@@ -482,7 +499,7 @@ class RL(object):
 					transition = replay_buffers[replay_buffer_index].buffer[transition_index]
 					index_array.append((replay_buffer_index, transition_index))	
 					TD_array.append(pow(transition.TD, 2))
-			num_samples = int(self.num_tuple[0] * sample_ratio)
+			num_samples = int(self.num_tuple[buff_index] * sample_ratio)
 			# print(num_samples)
 			sampled_indices = random.choices(population=index_array, weights=TD_array, k = num_samples)
 			sample_iter = 0
@@ -494,13 +511,16 @@ class RL(object):
 
 			for sampled_index in sampled_indices:
 				sampled_epi = replay_buffers[sampled_index[0]]
-				sampled_startpoint = max(sampled_index[1] - 60, 0)
+				sampled_startpoint = max(sampled_index[1] - 30, 0)
 				sampled_start_transition = sampled_epi.buffer[sampled_startpoint]
 				# sampled_transition = sampled_epi.buffer[sampled_index[1]]
 				# print(sampled_transition.TD)
 				# replay_number = 5
 				for i in range(self.num_slaves):
-					self.env.reconEnvFromState(i, buff_index, sampled_start_transition.s)
+					if buff_index == 0:
+						self.env.reconEnvFromState(i, 0, sampled_start_transition.s)
+					else:
+						self.env.reconEnvFromState(i, 2, sampled_start_transition.s)
 				# print(sampled_start_transition.s)
 
 				states = [None]*self.num_slaves*self.num_agents
@@ -555,7 +575,7 @@ class RL(object):
 
 				while True:
 					if counter%10 == 0:
-						print('Exploration SIM : {}'.format(local_step + 6*replay_time*self.num_slaves*sample_iter),end='\r')
+						print('Exploration SIM : {}'.format(local_step + 3	*replay_time*self.num_slaves*sample_iter),end='\r')
 					for i in range(self.num_slaves):
 						a_dist_slave = [None]*self.num_agents
 						v_slave = [None]*self.num_agents
@@ -564,15 +584,16 @@ class RL(object):
 									Tensor([states[i*self.num_agents+j]]))
 							a_dist_slave[j] = a_dist_slave_agent
 							v_slave[j] = v_slave_agent
-							actions[i*self.num_agents+j] = a_dist_slave[j].loc.cpu().detach().numpy().squeeze().squeeze().squeeze()			
 							if teamDic[j] == learningTeam:
-								actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy().squeeze().squeeze().squeeze()
+								actions[i*self.num_agents+j] = a_dist_slave[j].sample().cpu().detach().numpy().squeeze().squeeze().squeeze()			
+							else:
+								actions[i*self.num_agents+j] = self.getHardcodedAction(i, j)
 
 						for j in range(self.num_agents):
-							# if teamDic[j] == learningTeam:
-							logprobs[i*self.num_agents+j] = a_dist_slave[j].log_prob(Tensor(actions[i*self.num_agents+j]))\
-								.cpu().detach().numpy().reshape(-1)[0];
-							values[i*self.num_agents+j] = v_slave[j].cpu().detach().numpy().reshape(-1)[0];
+							if teamDic[j] == learningTeam:
+								logprobs[i*self.num_agents+j] = a_dist_slave[j].log_prob(Tensor(actions[i*self.num_agents+j]))\
+									.cpu().detach().numpy().reshape(-1)[0];
+								values[i*self.num_agents+j] = v_slave[j].cpu().detach().numpy().reshape(-1)[0];
 
 						for j in range(self.num_agents):
 							self.env.setAction(actions[i*self.num_agents+j], i, j);
@@ -597,37 +618,37 @@ class RL(object):
 
 						if nan_occur is True:
 							for k in range(self.num_agents):
-								# if teamDic[k] == learningTeam:
-								self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
-								self.episodes[i][k] = RNNEpisodeBuffer()
+								if teamDic[k] == learningTeam:
+									self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
+									self.episodes[i][k] = RNNEpisodeBuffer()
 							self.env.reset(i)
 
 						if self.env.isTerminalState(i) is False:
 							terminated_state = False
 							for k in range(self.num_agents):
-								# if teamDic[k] == learningTeam:
-								self.episodes[i][k].push(states[i*self.num_agents+k], actions[i*self.num_agents+k],\
-									rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k])
-								local_step += 1
+								if teamDic[k] == learningTeam:
+									self.episodes[i][k].push(states[i*self.num_agents+k], actions[i*self.num_agents+k],\
+										rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k])
+									local_step += 1
 
 						if terminated_state is True:
 							for k in range(self.num_agents):
-								# if teamDic[k] == learningTeam:
-								self.episodes[i][k].push(states[i*self.num_agents+k], actions[i*self.num_agents+k],\
-									rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k])
-								self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
-								self.episodes[i][k] = RNNEpisodeBuffer()
-								local_step += 1
+								if teamDic[k] == learningTeam:
+									self.episodes[i][k].push(states[i*self.num_agents+k], actions[i*self.num_agents+k],\
+										rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k])
+									self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
+									self.episodes[i][k] = RNNEpisodeBuffer()
+									local_step += 1
 							self.env.reset(i)
 
 					counter += 1
 					if counter >= replay_time:
 						for i in range(self.num_slaves):
 							for k in range(self.num_agents):
-								# if teamDic[k] == learningTeam:
-								if len(self.episodes[i][k].getData()) == 150:
-									self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
-								self.episodes[i][k] = RNNEpisodeBuffer()
+								if teamDic[k] == learningTeam:
+									if len(self.episodes[i][k].getData()) == 90:
+										self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
+									self.episodes[i][k] = RNNEpisodeBuffer()
 							self.env.reset(i)
 						break
 
@@ -842,7 +863,6 @@ class RL(object):
 
 	def optimizeModel(self):
 		self.computeTDandGAE(True)
-		# self.exploreHighTDTransitions()
 		self.optimizeSchedulerNN()
 
 
@@ -856,9 +876,9 @@ class RL(object):
 
 		# for param_group in self.optimizer_rnd.param_groups:
 		# 		param_group['lr'] = 0.1*self.learning_rate
-		self.generateTransitions(HIGH_FREQUENCY)
-		# self.computeTDandGAE(False)
-		# self.exploreHighTDTransitions()
+		self.generateTransitions(LOW_FREQUENCY)
+		self.computeTDandGAE(False)
+		self.exploreHighTDTransitions()
 		self.optimizeModel()
 
 	def evaluate(self):

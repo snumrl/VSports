@@ -84,7 +84,7 @@ initCharacters()
 		mAccScore.setZero();
 		// mAction.resize(zeroVel.rows()+touch.rows());
 		// mAction << zeroVel, touch;
-		mAction.resize(4);
+		mAction.resize(3);
 		mAction.setZero();
 		mActions.push_back(mAction);
 	}
@@ -110,45 +110,45 @@ resetCharacterPositions()
 {
 	if(mNumChars == 6)
 	{
-		std::vector<Eigen::Vector3d> charPositions;
-		charPositions.push_back(Eigen::Vector3d(-2.0, 0.0, 0.0));
-		charPositions.push_back(Eigen::Vector3d(-1.0, 0.5, 0.0));
-		charPositions.push_back(Eigen::Vector3d(-1.0, -0.5, 0.0));
-		charPositions.push_back(Eigen::Vector3d(2.0, 0.0, M_PI));
-		charPositions.push_back(Eigen::Vector3d(1.0, 0.5, M_PI));
-		charPositions.push_back(Eigen::Vector3d(1.0, -0.5, M_PI));
+		std::vector<Eigen::Vector2d> charPositions;
+		charPositions.push_back(Eigen::Vector2d(-2.0, 0.0));
+		charPositions.push_back(Eigen::Vector2d(-1.0, 0.5));
+		charPositions.push_back(Eigen::Vector2d(-1.0, -0.5));
+		charPositions.push_back(Eigen::Vector2d(2.0, 0.0));
+		charPositions.push_back(Eigen::Vector2d(1.0, 0.5));
+		charPositions.push_back(Eigen::Vector2d(1.0, -0.5));
 
 		for(int i=0;i<mNumChars;i++)
 		{
 			mCharacters[i]->getSkeleton()->setPositions(charPositions[i]);
-			mCharacters[i]->getSkeleton()->setVelocities(Eigen::Vector3d(0.0, 0.0, 0.0));
+			mCharacters[i]->getSkeleton()->setVelocities(Eigen::Vector2d(0.0, 0.0));
 		}
 	}
 	else if(mNumChars == 4)
 	{
-		std::vector<Eigen::Vector3d> charPositions;
-		charPositions.push_back(Eigen::Vector3d(1.0, 0.5, 0.0));
-		charPositions.push_back(Eigen::Vector3d(1.0, -0.5, 0.0));
-		charPositions.push_back(Eigen::Vector3d(2.0, 0.0, M_PI));
-		charPositions.push_back(Eigen::Vector3d(0.0, -0.0, M_PI));
+		std::vector<Eigen::Vector2d> charPositions;
+		charPositions.push_back(Eigen::Vector2d(1.0, 0.5));
+		charPositions.push_back(Eigen::Vector2d(1.0, -0.5));
+		charPositions.push_back(Eigen::Vector2d(2.0, 0.0));
+		charPositions.push_back(Eigen::Vector2d(0.0, -0.0));
 
 		for(int i=0;i<mNumChars;i++)
 		{
 			mCharacters[i]->getSkeleton()->setPositions(charPositions[i]);
-			mCharacters[i]->getSkeleton()->setVelocities(Eigen::Vector3d(0.0, 0.0, 0.0));
+			mCharacters[i]->getSkeleton()->setVelocities(Eigen::Vector2d(0.0, 0.0));
 		}
 		ballSkel->setPosition(0, 1.5);
 	}
 	else if(mNumChars == 2)
 	{
-		std::vector<Eigen::Vector3d> charPositions;
-		charPositions.push_back(Eigen::Vector3d(-1.0, 0.0, 0.0));
-		charPositions.push_back(Eigen::Vector3d(1.0, 0.0, M_PI));
+		std::vector<Eigen::Vector2d> charPositions;
+		charPositions.push_back(Eigen::Vector2d(-1.0, 0.0));
+		charPositions.push_back(Eigen::Vector2d(1.0, 0.0));
 
 		for(int i=0;i<mNumChars;i++)
 		{
 			mCharacters[i]->getSkeleton()->setPositions(charPositions[i]);
-			mCharacters[i]->getSkeleton()->setVelocities(Eigen::Vector3d(0.0, 0.0, 0.0));
+			mCharacters[i]->getSkeleton()->setVelocities(Eigen::Vector2d(0.0, 0.0));
 		}
 	}
 
@@ -241,7 +241,7 @@ handleBallContact(int index, double radius, double me)
 	SkeletonPtr skel = mCharacters[index]->getSkeleton();
 	double ballDistance = (ballSkel->getPositions() - skel->getPositions().segment(0,2)).norm();
 
-	double kickPower = mActions[index][3];
+	double kickPower = mActions[index][2];
 
 	// if(kickPower>=1)
 	// 	kickPower = 1;
@@ -301,8 +301,8 @@ handlePlayerContact(int index1, int index2, double me)
 		skel1NewVelocities = (meanVel_p2p + (skel2Vel_p2p-meanVel_p2p) * me) * p2pVector + skel1Velocities.dot(p2pNormalVector) * p2pNormalVector;
 		skel2NewVelocities = (meanVel_p2p + (skel1Vel_p2p-meanVel_p2p) * me) * p2pVector + skel2Velocities.dot(p2pNormalVector) * p2pNormalVector;
 
-		Eigen::Vector3d skel1VelocitiesFull = skel1->getVelocities();
-		Eigen::Vector3d skel2VelocitiesFull = skel1->getVelocities();
+		Eigen::Vector2d skel1VelocitiesFull = skel1->getVelocities();
+		Eigen::Vector2d skel2VelocitiesFull = skel1->getVelocities();
 		skel1VelocitiesFull.segment(0,2) = skel1NewVelocities;
 		skel2VelocitiesFull.segment(0,2) = skel2NewVelocities;
 
@@ -522,8 +522,8 @@ getState(int index)
 
 	}
 
-	Eigen::VectorXd facingVel(1);
-	facingVel[0] = mFacingVels[index];
+	// Eigen::VectorXd facingVel(1);
+	// facingVel[0] = mFacingVels[index];
 
 	Eigen::VectorXd slowed(1);
 	slowed[0] = mKicked[index]/mSlowDuration;
@@ -539,7 +539,7 @@ getState(int index)
 	Eigen::VectorXd state;
 
 	state.resize(p.rows() + v.rows() + ballP.rows() + ballV.rows() + kickable.rows() + simpleGoalpostPositions.rows()
-		+ otherS.rows()+facingVel.rows()+slowed.rows());
+		+ otherS.rows()+slowed.rows());
 
 	count = 0;
 	for(int i=0;i<p.rows();i++)
@@ -572,10 +572,10 @@ getState(int index)
 	{
 		state[count++] = reviseStateByTeam * otherS[i];
 	}
-	for(int i=0;i<facingVel.rows();i++)
-	{
-		state[count++] = facingVel[i];
-	}
+	// for(int i=0;i<facingVel.rows();i++)
+	// {
+	// 	state[count++] = facingVel[i];
+	// }
 	for(int i=0;i<slowed.rows();i++)
 	{
 		state[count++] = slowed[i];
@@ -604,7 +604,8 @@ getLocalState(int index)
 	{
 		reviseStateByTeam = 1;
 	}
-	double facingAngle = mCharacters[index]->getSkeleton()->getPosition(2);
+	// double facingAngle = mCharacters[index]->getSkeleton()->getPosition(2);
+	double facingAngle = 0.0;
 	facingAngle = M_PI * (1-reviseStateByTeam)/2.0 + facingAngle;
 	// cout<<facingAngle<<" ";
 	// double facingAngle = atan2(mStates[index][_ID_FACING_SIN], mStates[index][_ID_FACING_COS]);
@@ -817,15 +818,12 @@ void
 Environment::
 applyAction(int index)
 {
-	// cout<<index<<endl;
-	// double maxVel = 4.0;
+
 	SkeletonPtr skel = mCharacters[index]->getSkeleton();
-	// cout<<mForces[index].transpose()<<endl;
 	mForces[index].segment(0,2) -= 4.0*skel->getVelocities().segment(0,2);
 	skel->setForces(mForces[index]);
 
 	Eigen::VectorXd vel = skel->getVelocities();
-	// cout<<vel.transpose()<<endl;
 
 	double curMaxvel = maxVel;
 	if(mKicked[index]>0)
@@ -833,27 +831,18 @@ applyAction(int index)
 
 	if (vel.segment(0,2).norm() > curMaxvel)
 		vel.segment(0,2) = vel.segment(0,2)/vel.segment(0,2).norm() * curMaxvel;
-	// cout<<vel[2]<<" ";
-	// if (vel.segment(2,1).norm() > 20.0)
-	// 	vel.segment(2,1) = vel.segment(2,1)/vel.segment(2,1).norm() * 20.0;
-	// cout<<vel[2]<<endl;
-	vel[2] = 0.0;
 
-	double maxFacingVel = 10.0;
-	if(mFacingVels[index] > maxFacingVel)
-		mFacingVels[index] = maxFacingVel;
-	else if(mFacingVels[index] < -maxFacingVel)
-		mFacingVels[index] = -maxFacingVel;
-	skel->setPosition(2, skel->getPosition(2)+mFacingVels[index]/mSimulationHz);
+	// vel[2] = 0.0;
+
+	// double maxFacingVel = 10.0;
+	// if(mFacingVels[index] > maxFacingVel)
+	// 	mFacingVels[index] = maxFacingVel;
+	// else if(mFacingVels[index] < -maxFacingVel)
+	// 	mFacingVels[index] = -maxFacingVel;
+	// skel->setPosition(2, skel->getPosition(2)+mFacingVels[index]/mSimulationHz);
 	// cout<<mActions[index][2]<<endl;
-	mFacingVels[index] += 100.0*mActions[index][2]/mSimulationHz;
-	mFacingVels[index] -= 0.04*mFacingVels[index];
-	// mStates[index][mFacingVels]
-	// if(index == 0)
-	// {
-	// 	// cout<<mActions[index][2]<<endl;
-	// 	// cout<<mFacingVels[index]<<endl;
-	// }
+	// mFacingVels[index] += 100.0*mActions[index][2]/mSimulationHz;
+	// mFacingVels[index] -= 0.04*mFacingVels[index];
 
 	skel->setVelocities(vel);
 }
@@ -872,12 +861,7 @@ void
 Environment::
 setAction(int index, const Eigen::VectorXd& a)
 {
-	// cout<<a.transpose()<<endl;
 	bool isNanOccured = false;
-	// double maxVel = 4.0;
-	// if(index==0)
-	// 	cout<<a.transpose()<<endl;
-	// cout<<a.transpose()<<endl;
 
 	for(int i=0;i<a.size();i++)
 	{
@@ -896,12 +880,10 @@ setAction(int index, const Eigen::VectorXd& a)
 	{
 		mActions[index].segment(0,2) /= mActions[index].segment(0,2).norm();
 	}
-	// cout<<mActions[index][2]<<" ";
-	if(mActions[index].segment(2,1).norm()>1.0)
-	{
-		mActions[index].segment(2,1) /= mActions[index].segment(2,1).norm();
-	}
-	// cout<<mActions[index][2]<<endl;
+	// if(mActions[index].segment(2,1).norm()>1.0)
+	// {
+	// 	mActions[index].segment(2,1) /= mActions[index].segment(2,1).norm();
+	// }
 
 
 
@@ -911,29 +893,24 @@ setAction(int index, const Eigen::VectorXd& a)
 	if( mCharacters[index]->getTeamName() == mGoalposts[0].first)
 		reviseStateByTeam = 1;
 
-	Eigen::VectorXd applyingForce = mActions[index].segment(0,3);
-
-	// change action with respect to the viewing direction
-	// if(mActions[index].segment(2,2).norm() !=0.0)
-	// 	mActions[index].segment(2,2).normalize();
-	// else
-	// 	mActions[index].segment(2,2) = Eigen::Vector2d(0.0, 1.0);
+	Eigen::VectorXd applyingForce = mActions[index].segment(0,2);
 
 
-	double curFacingAngle = skel->getPosition(2);
-	if(curFacingAngle > M_PI)
-	{
-		curFacingAngle -= 2*M_PI;
-	}
-	if(curFacingAngle < -M_PI)
-	{
-		curFacingAngle += 2*M_PI;
-	}
-	skel->setPosition(2, curFacingAngle);
+	// double curFacingAngle = skel->getPosition(2);
+	double curFacingAngle = 0.0;
+	// if(curFacingAngle > M_PI)
+	// {
+	// 	curFacingAngle -= 2*M_PI;
+	// }
+	// if(curFacingAngle < -M_PI)
+	// {
+	// 	curFacingAngle += 2*M_PI;
+	// }
+	// skel->setPosition(2, curFacingAngle);
 	// cout<<curFacingAngle<<" "<<(getFacingAngleFromLocalState(mLocalStates[index])+M_PI*(1-reviseStateByTeam)/2.0)<<endl;
 
 	/// Add pi if it is not the red team
-	curFacingAngle +=  M_PI*(1-reviseStateByTeam)/2.0;
+	// curFacingAngle +=  M_PI*(1-reviseStateByTeam)/2.0;
 	// cout<<skel->getPosition(2)<<endl;	
 
 	// double facingAngle = curFacingAngle + atan2(mActions[index][2], mActions[index][3]);
@@ -990,14 +967,14 @@ reset()
 			{
 				skelPosition[0] = 2.0 * (rand()/(double)RAND_MAX );
 				skelPosition[1] = 2.5 * (rand()/(double)RAND_MAX ) - 2.5/2;
-				skelPosition[2] = 2.0 * M_PI * (rand()/(double)RAND_MAX );
+				// skelPosition[2] = 2.0 * M_PI * (rand()/(double)RAND_MAX );
 				// cout<<skelPosition[0]<<endl;
 			}
 			else
 			{
 				skelPosition[0] = 2.0 * (rand()/(double)RAND_MAX ) + 2.0;
 				skelPosition[1] = 2.5 * (rand()/(double)RAND_MAX ) - 2.5/2;
-				skelPosition[2] = 2.0 * M_PI * (rand()/(double)RAND_MAX );
+				// skelPosition[2] = 2.0 * M_PI * (rand()/(double)RAND_MAX );
 				// cout<<skelPosition[0]<<endl;
 			}
 			skel->setPositions(skelPosition);
@@ -1006,7 +983,7 @@ reset()
 			Eigen::VectorXd skelVel = skel->getVelocities();
 			skelVel[0] = 3.0 * (rand()/(double)RAND_MAX ) - 1.5;
 			skelVel[1] = 3.0 * (rand()/(double)RAND_MAX ) - 1.5;
-			skelVel[2] = 0.0;
+			// skelVel[2] = 0.0;
 			skel->setVelocities(skelVel);
 			if(i == 3)
 				skel->setVelocities(skelVel.setZero());
@@ -1029,14 +1006,14 @@ reset()
 			{
 				skelPosition[0] = 6.0 * (rand()/(double)RAND_MAX ) - 6.0/2;
 				skelPosition[1] = 4.0 * (rand()/(double)RAND_MAX ) - 4.0/2;
-				skelPosition[2] = 2.0 * M_PI * (rand()/(double)RAND_MAX );
+				// skelPosition[2] = 2.0 * M_PI * (rand()/(double)RAND_MAX );
 				// cout<<skelPosition[0]<<endl;
 			}
 			else
 			{
 				skelPosition[0] = 6.0 * (rand()/(double)RAND_MAX ) - 6.0/2;
 				skelPosition[1] = 4.0 * (rand()/(double)RAND_MAX ) - 4.0/2;
-				skelPosition[2] = 2.0 * M_PI * (rand()/(double)RAND_MAX );
+				// skelPosition[2] = 2.0 * M_PI * (rand()/(double)RAND_MAX );
 				// cout<<skelPosition[0]<<endl;
 			}
 
@@ -1044,7 +1021,7 @@ reset()
 			Eigen::VectorXd skelVel = skel->getVelocities();
 			skelVel[0] = 3.0 * (rand()/(double)RAND_MAX ) - 1.5;
 			skelVel[1] = 3.0 * (rand()/(double)RAND_MAX ) - 1.5;
-			skelVel[2] = 0.0;
+			// skelVel[2] = 0.0;
 			skel->setVelocities(skelVel);
 
 
@@ -1983,7 +1960,7 @@ reconEnvFromState(int index, Eigen::VectorXd curLocalState)
 		reviseStateByTeam = 1;
 	}
 	facingAngle = M_PI * (1-reviseStateByTeam)/2.0 + facingAngle;
-	this->getCharacter(index)->getSkeleton()->setPosition(2, facingAngle);
+	// this->getCharacter(index)->getSkeleton()->setPosition(2, facingAngle);
 
 
 
@@ -2079,13 +2056,98 @@ reconEnvFromState(int index, Eigen::VectorXd curLocalState)
 		this->getCharacter(1)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
 
 	}
+	if(mNumChars == 4)
+	{
+		if(index == 0 || index == 1)
+		{
+			this->getCharacter(0)->getSkeleton()->setPosition(0, 8.0*curState[_ID_P]);
+			this->getCharacter(0)->getSkeleton()->setPosition(1, 8.0*curState[_ID_P+1]);
+
+			this->getCharacter(0)->getSkeleton()->setVelocity(0, 8.0*curState[_ID_V]);
+			this->getCharacter(0)->getSkeleton()->setVelocity(1, 8.0*curState[_ID_V+1]);
+
+			temp = curState.segment(_ID_ALLY_P, 2);
+			this->getCharacter(1)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
+			this->getCharacter(1)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
+
+			temp = curState.segment(_ID_ALLY_V, 2);
+			this->getCharacter(1)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
+			this->getCharacter(1)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
+
+			temp = curState.segment(_ID_OP_DEF_P, 2);
+			this->getCharacter(2)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
+			this->getCharacter(2)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
+
+			temp = curState.segment(_ID_OP_DEF_V, 2);
+			this->getCharacter(2)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
+			this->getCharacter(2)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
+
+			temp = curState.segment(_ID_OP_ATK_P, 2);
+			this->getCharacter(3)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
+			this->getCharacter(3)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
+
+			temp = curState.segment(_ID_OP_ATK_V, 2);
+			this->getCharacter(3)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
+			this->getCharacter(3)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
 
 
-	temp = curState.segment(_ID_BALL_P, 2);
-	this->ballSkel->setPosition(0, 8.0*(p+temp)[0]);
-	this->ballSkel->setPosition(1, 8.0*(p+temp)[1]);
+			temp = curState.segment(_ID_BALL_P, 2);
+			this->ballSkel->setPosition(0, 8.0*(p+temp)[0]);
+			this->ballSkel->setPosition(1, 8.0*(p+temp)[1]);
 
-	temp = curState.segment(_ID_BALL_V, 2);
-	this->ballSkel->setVelocity(0, 8.0*(v+temp)[0]);
-	this->ballSkel->setVelocity(1, 8.0*(v+temp)[1]);
+			temp = curState.segment(_ID_BALL_V, 2);
+			this->ballSkel->setVelocity(0, 8.0*(v+temp)[0]);
+			this->ballSkel->setVelocity(1, 8.0*(v+temp)[1]);
+		}
+		else
+		{
+			this->getCharacter(2)->getSkeleton()->setPosition(0, -8.0*curState[_ID_P]);
+			this->getCharacter(2)->getSkeleton()->setPosition(1, -8.0*curState[_ID_P+1]);
+
+			this->getCharacter(2)->getSkeleton()->setVelocity(0, -8.0*curState[_ID_V]);
+			this->getCharacter(2)->getSkeleton()->setVelocity(1, -8.0*curState[_ID_V+1]);
+
+			temp = curState.segment(_ID_ALLY_P, 2);
+			this->getCharacter(3)->getSkeleton()->setPosition(0, -8.0*(p+temp)[0]);
+			this->getCharacter(3)->getSkeleton()->setPosition(1, -8.0*(p+temp)[1]);
+
+			temp = curState.segment(_ID_ALLY_V, 2);
+			this->getCharacter(3)->getSkeleton()->setVelocity(0, -8.0*(v+temp)[0]);
+			this->getCharacter(3)->getSkeleton()->setVelocity(1, -8.0*(v+temp)[1]);
+
+			temp = curState.segment(_ID_OP_DEF_P, 2);
+			this->getCharacter(0)->getSkeleton()->setPosition(0, -8.0*(p+temp)[0]);
+			this->getCharacter(0)->getSkeleton()->setPosition(1, -8.0*(p+temp)[1]);
+
+			temp = curState.segment(_ID_OP_DEF_V, 2);
+			this->getCharacter(0)->getSkeleton()->setVelocity(0, -8.0*(v+temp)[0]);
+			this->getCharacter(0)->getSkeleton()->setVelocity(1, -8.0*(v+temp)[1]);
+
+			temp = curState.segment(_ID_OP_ATK_P, 2);
+			this->getCharacter(1)->getSkeleton()->setPosition(0, -8.0*(p+temp)[0]);
+			this->getCharacter(1)->getSkeleton()->setPosition(1, -8.0*(p+temp)[1]);
+
+			temp = curState.segment(_ID_OP_ATK_V, 2);
+			this->getCharacter(1)->getSkeleton()->setVelocity(0, -8.0*(v+temp)[0]);
+			this->getCharacter(1)->getSkeleton()->setVelocity(1, -8.0*(v+temp)[1]);
+
+			temp = curState.segment(_ID_BALL_P, 2);
+			this->ballSkel->setPosition(0, -8.0*(p+temp)[0]);
+			this->ballSkel->setPosition(1, -8.0*(p+temp)[1]);
+
+			temp = curState.segment(_ID_BALL_V, 2);
+			this->ballSkel->setVelocity(0, -8.0*(v+temp)[0]);
+			this->ballSkel->setVelocity(1, -8.0*(v+temp)[1]);
+
+		}
+		
+	}
+
+	// temp = curState.segment(_ID_BALL_P, 2);
+	// this->ballSkel->setPosition(0, 8.0*(p+temp)[0]);
+	// this->ballSkel->setPosition(1, 8.0*(p+temp)[1]);
+
+	// temp = curState.segment(_ID_BALL_V, 2);
+	// this->ballSkel->setVelocity(0, 8.0*(v+temp)[0]);
+	// this->ballSkel->setVelocity(1, 8.0*(v+temp)[1]);
 }

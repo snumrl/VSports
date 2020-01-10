@@ -87,6 +87,7 @@ public:
 
 	std::vector<std::vector<Eigen::VectorXd>> stateList;
 	std::vector<std::vector<double>> TDList;
+	std::vector<int> charIndexList;
 
 	double curTD;
 

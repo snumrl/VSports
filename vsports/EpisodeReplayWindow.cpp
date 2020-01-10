@@ -66,7 +66,7 @@ EpiWindow::
 EpiWindow()
 :SimWindow()
 {
-	mEnv = new Environment(30, 180, 6);
+	mEnv = new Environment(30, 180, 4);
 	initCustomView();
 	initGoalpost();
 }
@@ -104,6 +104,9 @@ storeEpisodeFromPath()
 		ifstream in;
 		in.open(mReplayPathList[i]);
 		in >> epiLength;
+		int charIndex;
+		in >> charIndex;
+		charIndexList.push_back(charIndex);
 
 		for(int t=0;t<epiLength;t++)
 		{
@@ -138,7 +141,7 @@ void
 EpiWindow::
 reconEnvFromCurrentState()
 {
-	mEnv->reconEnvFromState(0, stateList[curPathIndex][curTimeStep]);
+	mEnv->reconEnvFromState(2*charIndexList[curPathIndex], stateList[curPathIndex][curTimeStep]);
 	// Eigen::VectorXd curState = localStateToOriginState(stateList[curPathIndex][curTimeStep],2);
 	// double curTD = TDList[curPathIndex][curTimeStep];
 

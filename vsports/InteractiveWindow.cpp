@@ -97,8 +97,8 @@ IntWindow()
 	mActionNoises.resize(mEnv->mNumChars);
 	for(int i=0;i<mActions.size();i++)
 	{
-		mActions[i] = Eigen::VectorXd(4);
-		mActionNoises[i] = Eigen::VectorXd(4);
+		mActions[i] = Eigen::VectorXd(3);
+		mActionNoises[i] = Eigen::VectorXd(3);
 		mActions[i].setZero();
 		mActionNoises[i].setZero();
 	}
@@ -462,22 +462,22 @@ applyKeyEvent()
 		mActions[0][0] += power;
 	}
 
-	if(keyarr[int('q')]==PUSHED)
-	{
-		mActions[0][2] += -power;
-	}
-	if(keyarr[int('e')]==PUSHED)
-	{
-		mActions[0][2] += power;
-	}
-	if(keyarr[int('g')]==PUSHED)
-	{
-		mActions[0][3] = 0.7;
-	}
-	else
-	{
-		// mActions[0][3] = 0.0;
-	}
+	// if(keyarr[int('q')]==PUSHED)
+	// {
+	// 	mActions[0][2] += -power;
+	// }
+	// if(keyarr[int('e')]==PUSHED)
+	// {
+	// 	mActions[0][2] += power;
+	// }
+	// if(keyarr[int('g')]==PUSHED)
+	// {
+	// 	mActions[0][3] = 0.7;
+	// }
+	// else
+	// {
+	// 	// mActions[0][3] = 0.0;
+	// }
 
 	if(mActions[0].segment(0,2).norm() > 1.0)
 		mActions[0].segment(0,2).normalize();
@@ -491,11 +491,11 @@ applyKeyEvent()
 	// 	// 	mActions[0][3] = -0.1;
 	// 	// mActions[0][3] = -0.1;
 	// }
-	if(keyarr[int('h')]==PUSHED)
-	{
-		mActions[0][3] = 1.0;
-		Eigen::Vector3d curVel = mEnv->getState(0);
-	}
+	// if(keyarr[int('h')]==PUSHED)
+	// {
+	// 	mActions[0][3] = 1.0;
+	// 	Eigen::Vector3d curVel = mEnv->getState(0);
+	// }
 }
 
 void
@@ -634,10 +634,10 @@ step()
 
 	mEnv->stepAtOnce();
 	mEnv->getRewards();
-	for(int i=0;i<mActions.size();i++)
-	{
-		mActions[i].segment(0,3) = Eigen::Vector3d(0.0, 0.0, 0.0);
-	}
+	// for(int i=0;i<mActions.size();i++)
+	// {
+	// 	mActions[i].segment(0,3) = Eigen::Vector3d(0.0, 0.0, 0.0);
+	// }
 }
 
 void
@@ -740,14 +740,15 @@ display()
 		{
 			// if(i==0)
 			// 	continue;
-			if(mActions[i][3]>0)
+			// cout<<mActions[i].transpose()<<endl;
+			if(mActions[i][2]>0)
 				GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.8, 0.8));
 			else
 				GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
 		}
 		else
 		{
-			if(mActions[i][3]>0)
+			if(mActions[i][2]>0)
 				GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(0.8, 0.8, 1.0));
 			else
 				GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));

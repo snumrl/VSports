@@ -36,14 +36,14 @@ setDefaultShape(const Eigen::Vector3d& color)
 		SHAPE_TYPE::BALL, Eigen::Vector3d::UnitX() * 0.10, 
 		pb2jT, Eigen::Isometry3d::Identity());
 
-	Eigen::Isometry3d j2pbT;
+	// Eigen::Isometry3d j2pbT;
 
-	pb2jT.setIdentity();
-	j2pbT.setIdentity();
-	j2pbT.translation() += Eigen::Vector3d(-0.10, 0.0, 0.0);
-	SkelMaker::makeRevoluteJointBody(mName + "_arrowJoint", mSkeleton, mSkeleton->getRootBodyNode(), 
-		SHAPE_TYPE::BALL, Eigen::Vector3d::UnitX() * 0.04, 
-		pb2jT, j2pbT);
+	// pb2jT.setIdentity();
+	// j2pbT.setIdentity();
+	// j2pbT.translation() += Eigen::Vector3d(-0.10, 0.0, 0.0);
+	// SkelMaker::makeRevoluteJointBody(mName + "_arrowJoint", mSkeleton, mSkeleton->getRootBodyNode(), 
+	// 	SHAPE_TYPE::BALL, Eigen::Vector3d::UnitX() * 0.04, 
+	// 	pb2jT, j2pbT);
 }
 
 void 

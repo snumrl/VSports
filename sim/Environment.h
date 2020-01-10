@@ -34,8 +34,8 @@
 #define _ID_OP_DEF_V 23
 #define _ID_OP_ATK_P 25
 #define _ID_OP_ATK_V 27
-#define _ID_FACING_V 29
-#define _ID_SLOWED 30
+// #define _ID_FACING_V 29
+#define _ID_SLOWED 29
 
 
 // #define _ID_P 0
