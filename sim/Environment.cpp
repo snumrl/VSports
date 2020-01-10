@@ -25,10 +25,10 @@ Environment(int control_Hz, int simulation_Hz, int numChars)
 mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0), endTime(15)
 {
 	srand((unsigned int)time(0));
+	initBall();
 	initCharacters();
 	initGoalposts();
 	initFloor();
-	initBall();
 	getNumState();
 
 	mWorld->setTimeStep(1.0/mSimulationHz);
@@ -127,16 +127,17 @@ resetCharacterPositions()
 	else if(mNumChars == 4)
 	{
 		std::vector<Eigen::Vector3d> charPositions;
-		charPositions.push_back(Eigen::Vector3d(-1.0, 0.5, 0.0));
-		charPositions.push_back(Eigen::Vector3d(-1.0, -0.5, 0.0));
-		charPositions.push_back(Eigen::Vector3d(1.0, 0.5, M_PI));
-		charPositions.push_back(Eigen::Vector3d(1.0, -0.5, M_PI));
+		charPositions.push_back(Eigen::Vector3d(1.0, 0.5, 0.0));
+		charPositions.push_back(Eigen::Vector3d(1.0, -0.5, 0.0));
+		charPositions.push_back(Eigen::Vector3d(2.0, 0.0, M_PI));
+		charPositions.push_back(Eigen::Vector3d(0.0, -0.0, M_PI));
 
 		for(int i=0;i<mNumChars;i++)
 		{
 			mCharacters[i]->getSkeleton()->setPositions(charPositions[i]);
 			mCharacters[i]->getSkeleton()->setVelocities(Eigen::Vector3d(0.0, 0.0, 0.0));
 		}
+		ballSkel->setPosition(0, 1.5);
 	}
 	else if(mNumChars == 2)
 	{
@@ -316,6 +317,8 @@ handlePlayerContacts(double me)
 {
 	for(int i=1;i<mCharacters.size();i++)
 	{
+		if(i==3)
+			continue;
 		for(int j=0;j<i;j++)
 		{
 			handlePlayerContact(i,j,me);
@@ -609,6 +612,27 @@ getLocalState(int index)
 
 	if(mNumChars == 6)
 	{
+		// localState.segment(_ID_V, 2) = rotate2DVector(localState.segment(_ID_V, 2), -facingAngle);
+		// localState.segment(_ID_BALL_P, 2) = rotate2DVector(localState.segment(_ID_BALL_P, 2), -facingAngle);
+		// localState.segment(_ID_BALL_V, 2) = rotate2DVector(localState.segment(_ID_BALL_V, 2), -facingAngle);
+		// localState.segment(_ID_GOALPOST_P, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P, 2), -facingAngle);
+		// localState.segment(_ID_GOALPOST_P+2, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+2, 2), -facingAngle);
+		// localState.segment(_ID_GOALPOST_P+4, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+4, 2), -facingAngle);
+		// localState.segment(_ID_GOALPOST_P+6, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+6, 2), -facingAngle);
+		// localState.segment(_ID_ALLY1_P, 2) = rotate2DVector(localState.segment(_ID_ALLY1_P, 2), -facingAngle);
+		// localState.segment(_ID_ALLY1_V, 2) = rotate2DVector(localState.segment(_ID_ALLY1_V, 2), -facingAngle);
+		// localState.segment(_ID_ALLY2_P, 2) = rotate2DVector(localState.segment(_ID_ALLY2_P, 2), -facingAngle);
+		// localState.segment(_ID_ALLY2_V, 2) = rotate2DVector(localState.segment(_ID_ALLY2_V, 2), -facingAngle);
+		// localState.segment(_ID_OP_DEF_P, 2) = rotate2DVector(localState.segment(_ID_OP_DEF_P, 2), -facingAngle);
+		// localState.segment(_ID_OP_DEF_V, 2) = rotate2DVector(localState.segment(_ID_OP_DEF_V, 2), -facingAngle);
+		// localState.segment(_ID_OP_ATK1_P, 2) = rotate2DVector(localState.segment(_ID_OP_ATK1_P, 2), -facingAngle);
+		// localState.segment(_ID_OP_ATK1_V, 2) = rotate2DVector(localState.segment(_ID_OP_ATK1_V, 2), -facingAngle);
+		// localState.segment(_ID_OP_ATK2_P, 2) = rotate2DVector(localState.segment(_ID_OP_ATK2_P, 2), -facingAngle);
+		// localState.segment(_ID_OP_ATK2_V, 2) = rotate2DVector(localState.segment(_ID_OP_ATK2_V, 2), -facingAngle);
+	}
+
+	else if(mNumChars == 4)
+	{
 		localState.segment(_ID_V, 2) = rotate2DVector(localState.segment(_ID_V, 2), -facingAngle);
 		localState.segment(_ID_BALL_P, 2) = rotate2DVector(localState.segment(_ID_BALL_P, 2), -facingAngle);
 		localState.segment(_ID_BALL_V, 2) = rotate2DVector(localState.segment(_ID_BALL_V, 2), -facingAngle);
@@ -616,19 +640,14 @@ getLocalState(int index)
 		localState.segment(_ID_GOALPOST_P+2, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+2, 2), -facingAngle);
 		localState.segment(_ID_GOALPOST_P+4, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+4, 2), -facingAngle);
 		localState.segment(_ID_GOALPOST_P+6, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+6, 2), -facingAngle);
-		localState.segment(_ID_ALLY1_P, 2) = rotate2DVector(localState.segment(_ID_ALLY1_P, 2), -facingAngle);
-		localState.segment(_ID_ALLY1_V, 2) = rotate2DVector(localState.segment(_ID_ALLY1_V, 2), -facingAngle);
-		localState.segment(_ID_ALLY2_P, 2) = rotate2DVector(localState.segment(_ID_ALLY2_P, 2), -facingAngle);
-		localState.segment(_ID_ALLY2_V, 2) = rotate2DVector(localState.segment(_ID_ALLY2_V, 2), -facingAngle);
+		localState.segment(_ID_ALLY_P, 2) = rotate2DVector(localState.segment(_ID_ALLY_P, 2), -facingAngle);
+		localState.segment(_ID_ALLY_V, 2) = rotate2DVector(localState.segment(_ID_ALLY_V, 2), -facingAngle);
 		localState.segment(_ID_OP_DEF_P, 2) = rotate2DVector(localState.segment(_ID_OP_DEF_P, 2), -facingAngle);
 		localState.segment(_ID_OP_DEF_V, 2) = rotate2DVector(localState.segment(_ID_OP_DEF_V, 2), -facingAngle);
-		localState.segment(_ID_OP_ATK1_P, 2) = rotate2DVector(localState.segment(_ID_OP_ATK1_P, 2), -facingAngle);
-		localState.segment(_ID_OP_ATK1_V, 2) = rotate2DVector(localState.segment(_ID_OP_ATK1_V, 2), -facingAngle);
-		localState.segment(_ID_OP_ATK2_P, 2) = rotate2DVector(localState.segment(_ID_OP_ATK2_P, 2), -facingAngle);
-		localState.segment(_ID_OP_ATK2_V, 2) = rotate2DVector(localState.segment(_ID_OP_ATK2_V, 2), -facingAngle);
+		localState.segment(_ID_OP_ATK_P, 2) = rotate2DVector(localState.segment(_ID_OP_ATK_P, 2), -facingAngle);
+		localState.segment(_ID_OP_ATK_V, 2) = rotate2DVector(localState.segment(_ID_OP_ATK_V, 2), -facingAngle);
 	}
-
-	// else if(mNumChars == 4)
+	// else if(mNumChars == 3)
 	// {
 	// 	localState.segment(_ID_V, 2) = rotate2DVector(localState.segment(_ID_V, 2), -facingAngle);
 	// 	localState.segment(_ID_BALL_P, 2) = rotate2DVector(localState.segment(_ID_BALL_P, 2), -facingAngle);
@@ -643,19 +662,19 @@ getLocalState(int index)
 	// 	localState.segment(_ID_OP_DEF_V, 2) = rotate2DVector(localState.segment(_ID_OP_DEF_V, 2), -facingAngle);
 	// 	localState.segment(_ID_OP_ATK_P, 2) = rotate2DVector(localState.segment(_ID_OP_ATK_P, 2), -facingAngle);
 	// 	localState.segment(_ID_OP_ATK_V, 2) = rotate2DVector(localState.segment(_ID_OP_ATK_V, 2), -facingAngle);
-
 	// }
+
 	else if(mNumChars == 2)
 	{
-		localState.segment(_ID_V, 2) = rotate2DVector(localState.segment(_ID_V, 2), -facingAngle);
-		localState.segment(_ID_BALL_P, 2) = rotate2DVector(localState.segment(_ID_BALL_P, 2), -facingAngle);
-		localState.segment(_ID_BALL_V, 2) = rotate2DVector(localState.segment(_ID_BALL_V, 2), -facingAngle);
-		localState.segment(_ID_GOALPOST_P, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P, 2), -facingAngle);
-		localState.segment(_ID_GOALPOST_P+2, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+2, 2), -facingAngle);
-		localState.segment(_ID_GOALPOST_P+4, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+4, 2), -facingAngle);
-		localState.segment(_ID_GOALPOST_P+6, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+6, 2), -facingAngle);
-		localState.segment(_ID_OP_P, 2) = rotate2DVector(localState.segment(_ID_OP_P, 2), -facingAngle);
-		localState.segment(_ID_OP_V, 2) = rotate2DVector(localState.segment(_ID_OP_V, 2), -facingAngle);
+		// localState.segment(_ID_V, 2) = rotate2DVector(localState.segment(_ID_V, 2), -facingAngle);
+		// localState.segment(_ID_BALL_P, 2) = rotate2DVector(localState.segment(_ID_BALL_P, 2), -facingAngle);
+		// localState.segment(_ID_BALL_V, 2) = rotate2DVector(localState.segment(_ID_BALL_V, 2), -facingAngle);
+		// localState.segment(_ID_GOALPOST_P, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P, 2), -facingAngle);
+		// localState.segment(_ID_GOALPOST_P+2, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+2, 2), -facingAngle);
+		// localState.segment(_ID_GOALPOST_P+4, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+4, 2), -facingAngle);
+		// localState.segment(_ID_GOALPOST_P+6, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+6, 2), -facingAngle);
+		// localState.segment(_ID_OP_P, 2) = rotate2DVector(localState.segment(_ID_OP_P, 2), -facingAngle);
+		// localState.segment(_ID_OP_V, 2) = rotate2DVector(localState.segment(_ID_OP_V, 2), -facingAngle);
 	}
 	// cout<<"get localState : "<<localState[_ID_FACING_V]<<endl;
 
@@ -702,6 +721,10 @@ getReward(int index, bool verbose)
 	// double effort = pow(mActions[index].segment(0,2).norm(),2) + pow(mActions[index][2],2) + pow(mActions[index][3],2);
 
 
+	if(index == 2)
+	{
+		reward = 1.0/30.0;
+	}
 
 
 
@@ -948,7 +971,7 @@ Environment::
 reset()
 {
 	Eigen::VectorXd ballPosition = ballSkel->getPositions();
-	ballPosition[0] = 2.0 * (rand()/(double)RAND_MAX ) - 2.0/2.0;
+	ballPosition[0] = 2.0 * (rand()/(double)RAND_MAX );
 	ballPosition[1] = 1.5 * (rand()/(double)RAND_MAX ) - 1.5/2.0;
 	ballSkel->setPositions(ballPosition);
 	Eigen::VectorXd ballVel = ballSkel->getVelocities();
@@ -965,31 +988,36 @@ reset()
 			Eigen::VectorXd skelPosition = skel->getPositions();
 			if(i < mNumChars/2)
 			{
-				skelPosition[0] = -2.0 * (rand()/(double)RAND_MAX ) - 1.0;
+				skelPosition[0] = 2.0 * (rand()/(double)RAND_MAX );
 				skelPosition[1] = 2.5 * (rand()/(double)RAND_MAX ) - 2.5/2;
 				skelPosition[2] = 2.0 * M_PI * (rand()/(double)RAND_MAX );
 				// cout<<skelPosition[0]<<endl;
 			}
 			else
 			{
-				skelPosition[0] = 2.0 * (rand()/(double)RAND_MAX ) + 1.0;
+				skelPosition[0] = 2.0 * (rand()/(double)RAND_MAX ) + 2.0;
 				skelPosition[1] = 2.5 * (rand()/(double)RAND_MAX ) - 2.5/2;
 				skelPosition[2] = 2.0 * M_PI * (rand()/(double)RAND_MAX );
 				// cout<<skelPosition[0]<<endl;
 			}
-
 			skel->setPositions(skelPosition);
+			if(i == 3)
+				skel->setPositions(skelPosition.setZero());
 			Eigen::VectorXd skelVel = skel->getVelocities();
 			skelVel[0] = 3.0 * (rand()/(double)RAND_MAX ) - 1.5;
 			skelVel[1] = 3.0 * (rand()/(double)RAND_MAX ) - 1.5;
 			skelVel[2] = 0.0;
 			skel->setVelocities(skelVel);
+			if(i == 3)
+				skel->setVelocities(skelVel.setZero());
 			// if(i == 0 && rand()%2 == 0)
 			// {
 			// 	ballSkel->setPositions(skelPosition);
 			// 	ballSkel->setVelocities(skelVel);
 			// }
 		}
+
+
 	}
 	else if(mNumChars == 2)
 	{
@@ -1092,7 +1120,7 @@ getCollidingWall(SkeletonPtr skel, double radius)
 	}
 	if(centerVector.dot(widthVector) >= (groundWidth-radius))
 		collidingWall.push_back(0);
-	else if(centerVector.dot(widthVector) <= -(groundWidth-radius))
+	else if(centerVector.dot(widthVector) <= -(0-radius))
 		collidingWall.push_back(1);
 	else if(centerVector.dot(heightVector) >= (groundHeight-radius))
 		collidingWall.push_back(2);
@@ -1242,24 +1270,24 @@ Eigen::VectorXd localStateToOriginState(Eigen::VectorXd localState, int mNumChar
 
 
 
-	// else if(mNumChars == 4)
-	// {
-	// 	originState.segment(_ID_V, 2) = rotate2DVector(localState.segment(_ID_V, 2), facingAngle);
-	// 	originState.segment(_ID_BALL_P, 2) = rotate2DVector(localState.segment(_ID_BALL_P, 2), facingAngle);
-	// 	originState.segment(_ID_BALL_V, 2) = rotate2DVector(localState.segment(_ID_BALL_V, 2), facingAngle);
-	// 	originState.segment(_ID_GOALPOST_P, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P, 2), facingAngle);
-	// 	originState.segment(_ID_GOALPOST_P+2, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+2, 2), facingAngle);
-	// 	originState.segment(_ID_GOALPOST_P+4, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+4, 2), facingAngle);
-	// 	originState.segment(_ID_GOALPOST_P+6, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+6, 2), facingAngle);
-	// 	// cout<<(originState.segment(_ID_GOALPOST_P, 2) + originState.segment(_ID_P, 2)).transpose()<<endl;
-	// 	originState.segment(_ID_ALLY_P, 2) = rotate2DVector(localState.segment(_ID_ALLY_P, 2), facingAngle);
-	// 	originState.segment(_ID_ALLY_V, 2) = rotate2DVector(localState.segment(_ID_ALLY_V, 2), facingAngle);
-	// 	originState.segment(_ID_OP_DEF_P, 2) = rotate2DVector(localState.segment(_ID_OP_DEF_P, 2), facingAngle);
-	// 	originState.segment(_ID_OP_DEF_V, 2) = rotate2DVector(localState.segment(_ID_OP_DEF_V, 2), facingAngle);
-	// 	originState.segment(_ID_OP_ATK_P, 2) = rotate2DVector(localState.segment(_ID_OP_ATK_P, 2), facingAngle);
-	// 	originState.segment(_ID_OP_ATK_V, 2) = rotate2DVector(localState.segment(_ID_OP_ATK_V, 2), facingAngle);
+	else if(mNumChars == 4)
+	{
+		originState.segment(_ID_V, 2) = rotate2DVector(localState.segment(_ID_V, 2), facingAngle);
+		originState.segment(_ID_BALL_P, 2) = rotate2DVector(localState.segment(_ID_BALL_P, 2), facingAngle);
+		originState.segment(_ID_BALL_V, 2) = rotate2DVector(localState.segment(_ID_BALL_V, 2), facingAngle);
+		originState.segment(_ID_GOALPOST_P, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P, 2), facingAngle);
+		originState.segment(_ID_GOALPOST_P+2, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+2, 2), facingAngle);
+		originState.segment(_ID_GOALPOST_P+4, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+4, 2), facingAngle);
+		originState.segment(_ID_GOALPOST_P+6, 2) = rotate2DVector(localState.segment(_ID_GOALPOST_P+6, 2), facingAngle);
+		// cout<<(originState.segment(_ID_GOALPOST_P, 2) + originState.segment(_ID_P, 2)).transpose()<<endl;
+		originState.segment(_ID_ALLY_P, 2) = rotate2DVector(localState.segment(_ID_ALLY_P, 2), facingAngle);
+		originState.segment(_ID_ALLY_V, 2) = rotate2DVector(localState.segment(_ID_ALLY_V, 2), facingAngle);
+		originState.segment(_ID_OP_DEF_P, 2) = rotate2DVector(localState.segment(_ID_OP_DEF_P, 2), facingAngle);
+		originState.segment(_ID_OP_DEF_V, 2) = rotate2DVector(localState.segment(_ID_OP_DEF_V, 2), facingAngle);
+		originState.segment(_ID_OP_ATK_P, 2) = rotate2DVector(localState.segment(_ID_OP_ATK_P, 2), facingAngle);
+		originState.segment(_ID_OP_ATK_V, 2) = rotate2DVector(localState.segment(_ID_OP_ATK_V, 2), facingAngle);
 
-	// }
+	}
 	else if(mNumChars == 2)
 	{
 		originState.segment(_ID_V, 2) = rotate2DVector(localState.segment(_ID_V, 2), facingAngle);

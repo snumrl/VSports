@@ -103,7 +103,7 @@ class RL(object):
 		self.gamma = 0.997
 		self.lb = 0.95
 
-		self.buffer_size = 24*1024
+		self.buffer_size = 36*1024
 		self.batch_size = 1024
 		# self.trunc_size = 40
 		# self.burn_in_size = 10

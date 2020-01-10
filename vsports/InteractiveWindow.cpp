@@ -65,7 +65,7 @@ IntWindow::
 IntWindow()
 :SimWindow(), mIsNNLoaded(false)
 {
-	mEnv = new Environment(30, 180, 6);
+	mEnv = new Environment(30, 180, 4);
 	mEnv->endTime = 300;
  	// srand (time(NULL));	
  	initCustomView();
@@ -150,14 +150,20 @@ IntWindow(const std::string& nn_path0, const std::string& nn_path1)
 		actionCount = 0;
 		// load[1](nn_path1);
 	}
+	if(mEnv->mNumChars == 4)
+	{
+		load[0](nn_path0);
+		load[1](nn_path0);
+		load[2](nn_path1);
+	}
 
 
 
-	target_rnd_nn_module = p::eval("RandomNN(num_state, 5).cuda()", mns);
-	p::object target_rnd_load = target_rnd_nn_module.attr("load");
+	// target_rnd_nn_module = p::eval("RandomNN(num_state, 5).cuda()", mns);
+	// p::object target_rnd_load = target_rnd_nn_module.attr("load");
 
-	predictor_rnd_nn_module = p::eval("RandomNN(num_state, 5).cuda()", mns);
-	p::object predictor_rnd_load = predictor_rnd_nn_module.attr("load");
+	// predictor_rnd_nn_module = p::eval("RandomNN(num_state, 5).cuda()", mns);
+	// p::object predictor_rnd_load = predictor_rnd_nn_module.attr("load");
 
 	// reset_hidden[0] = nn_module[0].attr("reset_hidden");
 	// reset_hidden[1] = nn_module[1].attr("reset_hidden");
@@ -542,20 +548,21 @@ step()
 
 			getActionFromNN(0);
 			getActionFromNN(1);
-			if(vsHardcoded)
-			{
-				for(int i=2;i<4;i++)
-				{
-					mEnv->getLocalState(i);
-					mActions[i] = mEnv->getActionFromBTree(i);
+			getActionFromNN(2);
+			// if(vsHardcoded)
+			// {
+			// 	for(int i=2;i<4;i++)
+			// 	{
+			// 		mEnv->getLocalState(i);
+			// 		mActions[i] = mEnv->getActionFromBTree(i);
 
-				}
-			}
-			else
-			{
-				getActionFromNN(2);
-				getActionFromNN(3);
-			}
+			// 	}
+			// }
+			// else
+			// {
+			// 	getActionFromNN(2);
+			// 	getActionFromNN(3);
+			// }
 		}
 
 		if(mEnv->mNumChars == 6)
@@ -725,7 +732,7 @@ display()
 	std::vector<Character2D*> chars = mEnv->getCharacters();
 
 
-	for(int i=0;i<chars.size();i++)
+	for(int i=0;i<chars.size()-1;i++)
 	{
 		// if (i!=0)
 		// 	continue;
