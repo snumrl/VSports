@@ -113,6 +113,14 @@ class RL(object):
 		self.buffer[0] = Buffer(100000)
 		self.buffer[1] = Buffer(100000)
 
+		self.target_model = [None]*2
+		for i in range(2):
+			# exit()
+			self.target_model[i] = ActorCriticNN(self.num_state, self.num_action)
+			if use_cuda:
+				self.target_model[i].cuda()
+
+
 		self.model = [None]*self.num_slaves*self.num_agents
 		for i in range(self.num_slaves*self.num_agents):
 			# exit()
@@ -134,8 +142,8 @@ class RL(object):
 		self.learning_rate = self.default_learning_rate
 		self.clip_ratio = self.default_clip_ratio
 		self.optimizer = [None]*2
-		self.optimizer[0] = optim.Adam(self.model[0].parameters(), lr=self.learning_rate)
-		self.optimizer[1] = optim.Adam(self.model[1].parameters(), lr=self.learning_rate)
+		self.optimizer[0] = optim.Adam(self.target_model[0].parameters(), lr=self.learning_rate)
+		self.optimizer[1] = optim.Adam(self.target_model[1].parameters(), lr=self.learning_rate)
 
 
 		self.optimizer_rnd = optim.Adam(self.predictor_rnd.parameters(), lr=self.learning_rate)
@@ -184,12 +192,15 @@ class RL(object):
 		self.originalCount  = [0, 0]
 
 	def loadModel(self,path,index):
-		self.model[self.indexToNetDic[index]].load('../nn/'+path+'_'+str(self.indexToNetDic[index%self.num_agents])+'.pt')
+		self.model[index].load('../nn/'+path+'_'+str(self.indexToNetDic[index%self.num_agents])+'.pt')
 
-	def loadPolicy(self,path):
+	def loadTargetModel(self,path,index):
+		self.target_model[self.indexToNetDic[index]].load('../nn/'+path+'_'+str(self.indexToNetDic[index%self.num_agents])+'.pt')
+
+	def loadTargetPolicy(self,path):
 		for i in range(2):
 			self.policy[self.indexToNetDic[i]].load(path+"_"+str(i)+".pt")
-			self.model[self.indexToNetDic[i]].policy.load_state_dict(self.policy[i].policy.state_dict())
+			self.target_model[self.indexToNetDic[i]].policy.load_state_dict(self.policy[i].policy.state_dict())
 		self.saveModel()
 		self.winRate.append(self.evaluateModel())
 
@@ -243,9 +254,9 @@ class RL(object):
 		local_step = 0
 		counter = 0
 
-		vsHardcodedFlags = [0]*self.num_slaves
+		oppTypeFlags = [([0]*self.num_agents) for i in range(self.num_slaves)]
 
-
+		# print(oppTypeFlags)
 		# exploitationFlags = [0]*self.num_slaves
 		# for i in range(self.num_slaves):
 		# 	randomNumber = random.randrange(0, 5)
@@ -253,39 +264,37 @@ class RL(object):
 
 		# print(exploitationFlags)
 		for i in range(self.num_slaves):
-			randomNumber = random.randrange(0,100)
-			# History
-			if randomNumber < 5:
-				vsHardcodedFlags[i] = 1
-			# Hardcoding
-			elif randomNumber < 10:
-				vsHardcodedFlags[i] = 2
-			# else : self-play
+			for j in range(self.num_agents):
+				randomNumber = random.randrange(0,100)
+				# History
+				if randomNumber < 5:
+					oppTypeFlags[i][j] = 1
+				# else : self-play
 
-		print(vsHardcodedFlags)
+		print(oppTypeFlags)
 		while True:
 			counter += 1
 			if counter%10 == 0:
 				print('SIM : {}'.format(local_step),end='\r')
 
 
-			# if self.num_evaluation > 20:
-			# 	curEvalNum = self.num_evaluation//20
+			if self.num_evaluation > 20:
+				curEvalNum = self.num_evaluation//20
 
-			# 	randomHistoryIndex = random.randrange(0,curEvalNum+1)
+				randomHistoryIndex = random.randrange(0,curEvalNum+1)
 
-			# 	for i in range(self.num_slaves):
-			# 		# prevPath = "../nn/"+clipedRandomNormal+".pt";
+				for i in range(self.num_slaves):
+					# prevPath = "../nn/"+clipedRandomNormal+".pt";
 
-			# 		for j in range(self.num_agents):
-			# 			if teamDic[j] != learningTeam:
-			# 				self.loadModel(str(20 * randomHistoryIndex), i*self.num_agents+j)
-			# 		# self.loadModel("current", i*self.num_agents+1)
-			# else :
-			# 	for i in range(self.num_slaves):
-			# 		for j in range(self.num_agents):
-			# 			if teamDic[j] != learningTeam:
-			# 				self.loadModel("0",i*self.num_agents+j)
+					for j in range(self.num_agents):
+						if teamDic[j] == learningTeam and oppTypeFlags[i][j] == 1:
+							self.loadModel(str(20 * randomHistoryIndex), i*self.num_agents+j)
+					# self.loadModel("current", i*self.num_agents+1)
+			else :
+				for i in range(self.num_slaves):
+					for j in range(self.num_agents):
+						if teamDic[j] == learningTeam and oppTypeFlags[i][j] == 1:
+							self.loadModel("0",i*self.num_agents+j)
 
 
 			''' Scheduler Part '''
@@ -294,8 +303,12 @@ class RL(object):
 				v_slave = [None]*self.num_agents
 				for j in range(self.num_agents):
 					if teamDic[j] == learningTeam:
-						a_dist_slave_agent,v_slave_agent = self.model[self.indexToNetDic[j]].forward(\
-							Tensor([states[i*self.num_agents+j]]))
+						if oppTypeFlags[i][j] == 0:
+							a_dist_slave_agent,v_slave_agent = self.target_model[self.indexToNetDic[j]].forward(\
+								Tensor([states[i*self.num_agents+j]]))
+						else:
+							a_dist_slave_agent,v_slave_agent = self.model[i*self.num_agents+j].forward(\
+								Tensor([states[i*self.num_agents+j]]))
 						a_dist_slave[j] = a_dist_slave_agent
 						v_slave[j] = v_slave_agent
 						actions[i*self.num_agents+j] = a_dist_slave[j].loc.cpu().detach().numpy().squeeze().squeeze().squeeze();		
@@ -309,9 +322,10 @@ class RL(object):
 
 				for j in range(self.num_agents):
 					if teamDic[j] == learningTeam:
-						logprobs[i*self.num_agents+j] = a_dist_slave[j].log_prob(Tensor(actions[i*self.num_agents+j]))\
-							.cpu().detach().numpy().reshape(-1)[0];
-						values[i*self.num_agents+j] = v_slave[j].cpu().detach().numpy().reshape(-1)[0];
+						if oppTypeFlags[i][j] == 0:
+							logprobs[i*self.num_agents+j] = a_dist_slave[j].log_prob(Tensor(actions[i*self.num_agents+j]))\
+								.cpu().detach().numpy().reshape(-1)[0];
+							values[i*self.num_agents+j] = v_slave[j].cpu().detach().numpy().reshape(-1)[0];
 
 
 				for j in range(self.num_agents):
@@ -329,7 +343,7 @@ class RL(object):
 				nan_occur = False
 				terminated_state = True
 				for k in range(self.num_agents):
-					if teamDic[k] == learningTeam:
+					if teamDic[k] == learningTeam and oppTypeFlags[i][k] == 0:
 						rewards[i*self.num_agents+k] = self.env.getReward(i, k, True)
 						if np.any(np.isnan(rewards[i*self.num_agents+k])):
 							nan_occur = True
@@ -338,7 +352,7 @@ class RL(object):
 
 				if nan_occur is True:
 					for k in range(self.num_agents):
-						if teamDic[k] == learningTeam:
+						if teamDic[k] == learningTeam and oppTypeFlags[i][k] == 0:
 							self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
 							self.episodes[i][k] = RNNEpisodeBuffer()
 					self.env.reset(i)
@@ -348,7 +362,7 @@ class RL(object):
 				if self.env.isTerminalState(i) is False:
 					terminated_state = False
 					for k in range(self.num_agents):
-						if teamDic[k] == learningTeam :
+						if teamDic[k] == learningTeam and oppTypeFlags[i][k] == 0 :
 							self.episodes[i][k].push(states[i*self.num_agents+k], actions[i*self.num_agents+k],\
 								rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k])
 
@@ -356,7 +370,7 @@ class RL(object):
 
 				if terminated_state is True:
 					for k in range(self.num_agents):
-						if teamDic[k] == learningTeam:
+						if teamDic[k] == learningTeam and oppTypeFlags[i][k] == 0:
 							self.episodes[i][k].push(states[i*self.num_agents+k], actions[i*self.num_agents+k],\
 								rewards[i*self.num_agents+k], values[i*self.num_agents+k], logprobs[i*self.num_agents+k])
 							self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
@@ -367,7 +381,7 @@ class RL(object):
 			if local_step >= self.buffer_size:
 				for i in range(self.num_slaves):
 					for k in range(self.num_agents):
-						if teamDic[k] == learningTeam:
+						if teamDic[k] == learningTeam and oppTypeFlags[i][k] == 0:
 							self.total_episodes[self.indexToNetDic[k]].append(self.episodes[i][k])
 							self.episodes[i][k] = RNNEpisodeBuffer()
 					self.env.reset(i)
@@ -704,9 +718,9 @@ class RL(object):
 					stack_td = np.vstack(batch.TD).astype(np.float32)
 					stack_gae = np.vstack(batch.GAE).astype(np.float32)
 
-					num_layers = self.model[buff_index].num_layers
+					# num_layers = self.target_model[buff_index].num_layers
 
-					a_dist,v = self.model[buff_index].forward(Tensor(stack_s))	
+					a_dist,v = self.target_model[buff_index].forward(Tensor(stack_s))	
 					
 					# hidden_list[timeStep] = list(cur_stack_hidden)
 
@@ -1015,7 +1029,7 @@ if __name__=="__main__":
 		graph_name = args.name
 
 	if args.policy is not None:
-		rl.loadPolicy(args.policy)
+		rl.loadTargetPolicy(args.policy)
 	if args.iteration is not None:
 		rl.num_evaluation = int(args.iteration)
 		for i in range(int(args.iteration)):
