@@ -482,8 +482,8 @@ class RL(object):
 			for rnn_replay_buffer in self.buffer[index].buffer:
 				self.num_tuple[index] += len(rnn_replay_buffer.buffer)
 			self.num_tuple_so_far[index] += self.num_tuple[index]
-			if is_final:
-				self.num_tuple_so_far[index] += self.num_tuple[index]
+			# if is_final:
+			self.num_tuple_so_far[index] += self.num_tuple[index]
 
 	def exploreHighTDTransitions(self):
 		sample_ratio = 1.0/2400.0
@@ -862,7 +862,7 @@ class RL(object):
 
 
 	def optimizeModel(self):
-		self.computeTDandGAE(True)
+		self.computeTDandGAE(False)
 		self.optimizeSchedulerNN()
 
 
@@ -876,9 +876,9 @@ class RL(object):
 
 		# for param_group in self.optimizer_rnd.param_groups:
 		# 		param_group['lr'] = 0.1*self.learning_rate
-		self.generateTransitions(LOW_FREQUENCY)
-		self.computeTDandGAE(False)
-		self.exploreHighTDTransitions()
+		self.generateTransitions(HIGH_FREQUENCY)
+		# self.computeTDandGAE(False)
+		# self.exploreHighTDTransitions()
 		self.optimizeModel()
 
 	def evaluate(self):

@@ -378,6 +378,7 @@ keyboard(unsigned char key, int x, int y)
 			break;
 		case 'r':
 			mEnv->reset();
+			// mEnv->getCharacter(1)->getSkeleton()->setPositions(Eigen::Vector2d(0.0, 0.0));
 			// for(int i=0;i<4;i++){	
 			// 	reset_hidden[i]();
 			// }
@@ -592,6 +593,8 @@ step()
 
 	}
 
+	// mEnv->getCharacter(1)->getSkeleton()->setVelocities(Eigen::Vector2d(0.0, 0.0));
+	// mEnv->getCharacter(1)->getSkeleton()->setPositions(Eigen::Vector2d(0.0, 0.0));
 
 	// else
 	// {

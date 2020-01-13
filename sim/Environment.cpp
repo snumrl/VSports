@@ -203,6 +203,9 @@ handleWallContact(dart::dynamics::SkeletonPtr skel, double radius, double me)
 {
 	std::vector<int> collidingWalls = getCollidingWall(skel, radius);
 
+	double groundWidth = 4.0;
+	double groundHeight = 3.0;
+	Eigen::VectorXd cur_pos;
 	for(int i=0;i<collidingWalls.size();i++)
 	{
 		switch(collidingWalls[i])
@@ -210,22 +213,40 @@ handleWallContact(dart::dynamics::SkeletonPtr skel, double radius, double me)
 			case 0:
 			if(me*skel->getVelocity(0)>0)
 				skel->setVelocity(0, -me*skel->getVelocity(0));
-				skel->setForce(0, 0);
+			cur_pos = skel->getPositions();
+			cur_pos[0] = (groundWidth-radius) - (cur_pos[0]-(groundWidth-radius));
+			skel->setPositions(cur_pos);
+			skel->setForce(0, 0);
 			break;
 			case 1:
 			if(me*skel->getVelocity(0)<0)
 				skel->setVelocity(0, -me*skel->getVelocity(0));
-				skel->setForce(0, 0);
+			cur_pos = skel->getPositions();
+			cur_pos[0] = (0) - (cur_pos[0]-(0));
+			skel->setPositions(cur_pos);
+			skel->setForce(0, 0);
 			break;
 			case 2:
 			if(me*skel->getVelocity(1)>0)
 				skel->setVelocity(1, -me*skel->getVelocity(1));
-				skel->setForce(1, 0);
+			cur_pos = skel->getPositions();
+			// cout<<cur_pos.transpose()<<endl;
+			cur_pos[1] = (groundHeight-radius) - (cur_pos[1]-(groundHeight-radius));
+			// cout<<"2 "<<cur_pos.transpose()<<endl;
+			// cout<<endl;
+			skel->setPositions(cur_pos);
+			skel->setForce(1, 0);
 			break;
 			case 3:
 			if(me*skel->getVelocity(1)<0)
 				skel->setVelocity(1, -me*skel->getVelocity(1));
-				skel->setForce(1, 0);
+			cur_pos = skel->getPositions();
+			// cout<<cur_pos.transpose()<<endl;
+			cur_pos[1] = -(groundHeight-radius) - (cur_pos[1]+(groundHeight-radius));
+			// cout<<"3 "<<cur_pos.transpose()<<endl;
+			// cout<<endl;
+			skel->setPositions(cur_pos);
+			skel->setForce(1, 0);
 			break;
 			default: 
 			break;
@@ -1097,7 +1118,7 @@ getCollidingWall(SkeletonPtr skel, double radius)
 	}
 	if(centerVector.dot(widthVector) >= (groundWidth-radius))
 		collidingWall.push_back(0);
-	else if(centerVector.dot(widthVector) <= -(0-radius))
+	else if(centerVector.dot(widthVector) <= -(0))
 		collidingWall.push_back(1);
 	else if(centerVector.dot(heightVector) >= (groundHeight-radius))
 		collidingWall.push_back(2);
