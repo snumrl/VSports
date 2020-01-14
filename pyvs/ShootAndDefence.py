@@ -408,7 +408,7 @@ class RL(object):
 		'''Scheduler'''
 		for index in range(2):
 			self.buffer[index].clear()
-			if not is_final:
+			if not is_final and index == 0:
 				self.sum_return = 0.0
 		# for i in range
 			for epi in self.total_episodes[index]:
@@ -1023,7 +1023,8 @@ if __name__=="__main__":
 	
 	if args.model is not None:
 		for k in range(rl.num_agents):
-			rl.loadModel(args.model, k)
+			rl.loadTargetModel(args.model, k)
+			# rl.loadModel(args.model, k)
 
 	if args.name is not None:
 		graph_name = args.name

@@ -753,7 +753,7 @@ getReward(int index, bool verbose)
 	}
 	else
 	{
-		if(mStates[2][_ID_KICKABLE] == 1 && mActions[2][0] > 0)
+		if(mStates[2][_ID_KICKABLE] == 1 && mActions[2][2] > 0)
 		{
 			// mIsTerminalState = true;
 			reward = -0.2;
