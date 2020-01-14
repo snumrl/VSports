@@ -156,7 +156,7 @@ public:
 	std::vector<Eigen::VectorXd> mVStates;
 
 	std::vector<BNode*> mBTs;
-	double maxVel = 1.0;
+	double maxVel = 0.8;
 
 	std::vector<double> mFacingVels;
 
