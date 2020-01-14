@@ -397,7 +397,7 @@ step()
 		{
 			// cout<<"here right?"<<endl;
 			// if(mKicked[i]<=0.5)
-				handleBallContact(i, 0.12, 3.0);
+				handleBallContact(i, 0.12, 4.0);
 		}
 	}
 
