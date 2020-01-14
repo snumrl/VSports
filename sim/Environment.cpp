@@ -465,7 +465,7 @@ getState(int index)
 
 
 	Eigen::VectorXd kickable(1);
-	if(relativeBallP.norm()<0.25)
+	if(relativeBallP.norm()<0.15)
 	{
 		kickable[0] = 1;
 	}
@@ -745,7 +745,19 @@ getReward(int index, bool verbose)
 
 	if(index == 2)
 	{
-		reward = 1.0/30.0;
+		// if(mStates[index][_ID_KICKABLE] == 1 && mActions[index][0] > 0)
+		// {
+		// 	reward = 1;
+		// }
+		reward = 1.0/60.0;
+	}
+	else
+	{
+		if(mStates[2][_ID_KICKABLE] == 1 && mActions[2][0] > 0)
+		{
+			// mIsTerminalState = true;
+			reward = -0.2;
+		}
 	}
 
 

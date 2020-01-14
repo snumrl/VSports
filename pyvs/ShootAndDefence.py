@@ -207,12 +207,12 @@ class RL(object):
 
 	def saveModel(self):
 		for i in range(2):
-			self.model[i].save('../nn/current_'+str(i)+'.pt')
+			self.target_model[i].save('../nn/current_'+str(i)+'.pt')
 
 			if self.max_return_epoch == self.num_evaluation:
-				self.model[i].save('../nn/max_'+str(i)+'.pt')
+				self.target_model[i].save('../nn/max_'+str(i)+'.pt')
 			if self.num_evaluation%10 == 0:
-				self.model[i].save('../nn/'+str(self.num_evaluation)+'_'+str(i)+'.pt')
+				self.target_model[i].save('../nn/'+str(self.num_evaluation)+'_'+str(i)+'.pt')
 
 
 
@@ -430,8 +430,8 @@ class RL(object):
 					advantages[i] = ad_t
 
 				if not np.isnan(epi_return):
-					if index == 1 and not is_final:
-						self.sum_return += epi_return
+					if index == 0 and not is_final:
+						self.sum_return += epi_return/2.0
 						# if is_final:
 						# 	print("????????????/")
 					TD = values[:size] + advantages
