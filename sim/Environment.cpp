@@ -271,7 +271,7 @@ handleBallContact(int index, double radius, double me)
 
 	if(kickPower > 0)
 	{
-		kickPower += 0.3;
+		kickPower += 0.2;
 		// kickPower = 0.5;
 		mKicked[index] = mSlowDuration;
 		mNumBallTouch+= 1;
@@ -397,7 +397,7 @@ step()
 		{
 			// cout<<"here right?"<<endl;
 			// if(mKicked[i]<=0.5)
-				handleBallContact(i, 0.12, 2.5);
+				handleBallContact(i, 0.12, 3.0);
 		}
 	}
 
