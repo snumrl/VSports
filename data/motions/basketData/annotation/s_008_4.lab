@@ -1,0 +1,24 @@
+{
+	defaultType:b_right
+	file:s_008_4_1.bvh
+	person:1
+	oppositePerson:0
+	startFrame:1487
+	endFrame:1520
+	include:
+	isAlone:
+	type:walk
+	subtype:
+	mood:
+	power:
+	beforeActiveState:
+	afterActiveState:
+	beforePassiveState:
+	afterPassiveState:
+	mutipleInteraction:
+	interactionFrame:-1
+	interactionActivePart:
+	interactionPassivePart:
+	interactionType:
+	weight:1.0
+},

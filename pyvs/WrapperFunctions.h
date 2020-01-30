@@ -8,6 +8,8 @@
 #include <boost/python/numpy.hpp>
 namespace p = boost::python;
 namespace np = boost::python::numpy;
+namespace Wrapper
+{
 np::ndarray toNumPyArray(const std::vector<float>& val);
 np::ndarray toNumPyArray(const std::vector<double>& val);
 np::ndarray toNumPyArray(const std::vector<Eigen::VectorXd>& val);
@@ -22,4 +24,5 @@ Eigen::VectorXd toEigenVector(const np::ndarray& array);
 std::vector<Eigen::VectorXd> toEigenVectorVector(const np::ndarray& array);
 Eigen::MatrixXd toEigenMatrix(const np::ndarray& array);
 std::vector<bool> toStdVector(const p::list& list);
+}
 #endif

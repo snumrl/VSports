@@ -12,6 +12,7 @@ namespace GUI
 void drawSkeleton(
 		const dart::dynamics::SkeletonPtr& skel,
 		const Eigen::Vector3d& color=Eigen::Vector3d(0.8,0.8,0.8),
+		bool mesh = false,
 		bool wireFrame = false);
 
 void drawShape(const Eigen::Isometry3d& T,

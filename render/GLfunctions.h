@@ -31,6 +31,9 @@ namespace GUI
 
 	void drawSquare(double width, double height);
 	void drawSoccerLine(double x, double y);
+	void drawMesh(const Eigen::Vector3d& scale, const aiScene* mesh,const Eigen::Vector3d& color=Eigen::Vector3d(0.8,0.8,0.8));
+	void drawVerticalLine(const Eigen::Vector2d& point, const Eigen::Vector3d& color=Eigen::Vector3d(1.0, 1.0, 1.0));
+
 };
 
 Eigen::Vector3d degreeToRgb(double degree, bool forValue = false);

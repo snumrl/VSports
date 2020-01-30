@@ -1,0 +1,72 @@
+{
+	defaultType:
+	file:s_004_6_2.bvh
+	person:2
+	oppositePerson:0
+	startFrame:330
+	endFrame:351
+	include:
+	isAlone:
+	type:pivot_l
+	subtype:
+	mood:
+	power:
+	beforeActiveState:
+	afterActiveState:
+	beforePassiveState:
+	afterPassiveState:
+	mutipleInteraction:
+	interactionFrame:-1
+	interactionActivePart:
+	interactionPassivePart:
+	interactionType:
+	weight:1.0
+},
+{
+	defaultType:
+	file:s_004_6_1.bvh
+	person:1
+	oppositePerson:0
+	startFrame:355
+	endFrame:371
+	include:
+	isAlone:
+	type:walk
+	subtype:
+	mood:
+	power:
+	beforeActiveState:
+	afterActiveState:
+	beforePassiveState:
+	afterPassiveState:
+	mutipleInteraction:
+	interactionFrame:-1
+	interactionActivePart:
+	interactionPassivePart:
+	interactionType:
+	weight:1.0
+},
+{
+	defaultType:
+	file:s_004_6_1.bvh
+	person:1
+	oppositePerson:0
+	startFrame:371
+	endFrame:383
+	include:
+	isAlone:
+	type:walk
+	subtype:
+	mood:
+	power:
+	beforeActiveState:
+	afterActiveState:
+	beforePassiveState:
+	afterPassiveState:
+	mutipleInteraction:
+	interactionFrame:-1
+	interactionActivePart:
+	interactionPassivePart:
+	interactionType:
+	weight:1.0
+},

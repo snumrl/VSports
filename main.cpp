@@ -1,12 +1,8 @@
-// #include "vsports/SimpleSocWindow.h"
-// #include "vsports/MultiSocWindow.h"
-#include "vsports/InteractiveWindow.h"
-#include "vsports/EpisodeReplayWindow.h"
-#include "vsports/ImitationWindow.h"
-#include "vsports/AgentWindow.h"
+#include "vsports/BvhWindow.h"
+#include "vsports/common.h"
+
 #include <GL/glut.h>
-// #include <GL/glew.h>
-// #include <GLFW/glfw3.h>
+
 #include <iostream>
 #include <stdio.h>
 using namespace std;
@@ -21,63 +17,14 @@ int main(int argc, char** argv)
 
 	glutInit(&argc, argv);
 
-	// SimWindow* simwindow;
-	if(argc == 1)
+	if(argc==3)
 	{
-		ImitationWindow* simwindow = new ImitationWindow();
-		simwindow->initWindow(1000, 1000, "Render");
-		simwindow->initialize();
-	}
-	else if(argc==3)
-	{
-		IntWindow* simwindow = new IntWindow(argv[1], argv[2]);
-		simwindow->initWindow(1000, 1000, "Render");
-		simwindow->initialize();
-	}
-
-	else if(argc==5)
-	{
-		if(strcmp(argv[1], "-rnd")==0)
+		if(strcmp(argv[1], "-bvh")==0)
 		{
-			IntWindow* simwindow = new IntWindow(argv[2], argv[3], argv[4]);
+			BvhWindow* simwindow = new BvhWindow(argv[2]);
 			simwindow->initWindow(1000, 1000, "Render");
-			simwindow->initialize();
+			// simwindow->initialize();
 		}
-		else
-		{
-			IntWindow* simwindow = new IntWindow(argv[1], argv[2], argv[3], argv[4]);
-			simwindow->initWindow(1000, 1000, "Render");
-			simwindow->initialize();
-		}
-
 	}
-	else if(argc == 4)
-	{
-		if(strcmp(argv[1], "-r")==0)
-		{
-			EpiWindow* simwindow = new EpiWindow(argv[2], argv[3]);
-			simwindow->initWindow(1000, 1000, "Render");
-			simwindow->initialize();
-		}
-		else
-		{
-			ImitationWindow* simwindow = new ImitationWindow(argv[1], argv[2]);
-			simwindow->initWindow(1000, 1000, "Render");
-			simwindow->initialize();
-		}
-		
-	}
-
-
-	// else if(argc==3)
-	// 	simwindow = new MultiSocWindow(argv);
-
-
-	// glfwInit(&argc, argv);
-	// AgentWindow* agentWindow = new AgentWindow(0,simwindow->mEnv);
-	// agentWindow->initWindow(400, 300, "Render");
-
-	// simwindow->initWindow(1000, 1000, "Render2");
-
 	glutMainLoop();
 }

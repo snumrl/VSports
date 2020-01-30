@@ -107,7 +107,7 @@ void
 GLUTWindow::
 initLights()
 {
-	static float ambient[]             = {0.3, 0.3, 0.3, 1.0};
+	static float ambient[]             = {0.5, 0.5, 0.5, 1.0};
 	static float diffuse[]             = {0.2, 0.2, 0.2, 1.0};
 	static float front_mat_shininess[] = {60.0};
 	static float front_mat_specular[]  = {0.2, 0.2,  0.2,  1.0};
@@ -115,8 +115,8 @@ initLights()
 	static float lmodel_ambient[]      = {0.2, 0.2,  0.2,  1.0};
 	static float lmodel_twoside[]      = {GL_TRUE};
 
-	GLfloat position[] = {0.0, 1.0, 1.0, 0.0};
-	GLfloat position1[] = {0.0, 1.0, -1.0, 0.0};
+	GLfloat position[] = {0.0, 10.0, 10.0, 0.0};
+	GLfloat position1[] = {0.0, 10.0, -10.0, 0.0};
 
 	glEnable(GL_LIGHT0);
 	glLightfv(GL_LIGHT0, GL_AMBIENT,  ambient);
@@ -132,9 +132,9 @@ initLights()
 	glEnable(GL_LIGHTING);
 	glEnable(GL_COLOR_MATERIAL);
 
-	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, front_mat_shininess);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  front_mat_specular);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE,   front_mat_diffuse);
+	// glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, front_mat_shininess);
+	// glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  front_mat_specular);
+	// glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE,   front_mat_diffuse);
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);

@@ -82,7 +82,7 @@ getState(int id, int index)
 	// std::cout<<"I got state"<<std::endl;
 	// std::cout<< toNumPyArray(mSlaves[id]->getState(index)).shape(0)<<std::endl;
 	// exit(0);
-	return toNumPyArray(mSlaves[id]->getState(index));
+	return Wrapper::toNumPyArray(mSlaves[id]->getState(index));
 }
 np::ndarray
 EnvironmentPython::
@@ -93,7 +93,7 @@ getLocalState(int id, int index)
 	// std::cout<<"I got state"<<std::endl;
 	// std::cout<< toNumPyArray(mSlaves[id]->getState(index)).shape(0)<<std::endl;
 	// exit(0);
-	return toNumPyArray(mSlaves[id]->getLocalState(index));
+	return Wrapper::toNumPyArray(mSlaves[id]->getLocalState(index));
 }
 // np::ndarray
 // EnvironmentPython::
@@ -122,7 +122,7 @@ void
 EnvironmentPython::
 setAction(np::ndarray np_array, int id, int index)
 {
-	mSlaves[id]->setAction(index, toEigenVector(np_array));
+	mSlaves[id]->setAction(index, Wrapper::toEigenVector(np_array));
 }
 
 
@@ -149,7 +149,7 @@ np::ndarray
 EnvironmentPython::
 getHardcodedAction(int id, int index)
 {
-	return toNumPyArray(mSlaves[id]->getActionFromBTree(index));
+	return Wrapper::toNumPyArray(mSlaves[id]->getActionFromBTree(index));
 }
 
 // double
@@ -223,7 +223,7 @@ void
 EnvironmentPython::
 reconEnvFromState(int id, int index, np::ndarray curLocalState)
 {
-	mSlaves[id]->reconEnvFromState(index, toEigenVector(curLocalState));
+	mSlaves[id]->reconEnvFromState(index, Wrapper::toEigenVector(curLocalState));
 }
 
 int

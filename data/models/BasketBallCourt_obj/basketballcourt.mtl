@@ -1,0 +1,55 @@
+# 
+# Wavefront material file
+# Converted by 3D Exploration 1.7
+# XDimension Software, LLC
+# http://www.xdsoft.com/explorer/
+# 
+newmtl woodfloor
+	 Ka 0.309804 0.0862745 0
+	 Kd 0.309804 0.0862745 0
+	 Ks 0.898039 0.898039 0.898039
+	 illum 2
+	 Ns 32
+	 map_Kd TUTASH.jpg
+newmtl ____Default
+	 Ka 0.984314 0.984314 0.984314
+	 Kd 0.984314 0.984314 0.984314
+	 Ks 0.898039 0.898039 0.898039
+	 illum 2
+	 Ns 4
+newmtl ____Default0
+	 Ka 1 0 0
+	 Kd 1 0 0
+	 Ks 0.898039 0.898039 0.898039
+	 illum 2
+	 Ns 4
+newmtl ____Default01
+	 Ka 1 1 1
+	 Kd 1 1 1
+	 Ks 0.898039 0.898039 0.898039
+	 illum 2
+	 Ns 4
+newmtl ____Default012
+	 Ka 0.588235 0.588235 0.588235
+	 Kd 0.588235 0.588235 0.588235
+	 Ks 0.898039 0.898039 0.898039
+	 illum 2
+	 Ns 4
+newmtl ____Default0123
+	 Ka 0.588235 0.588235 0.588235
+	 Kd 0.588235 0.588235 0.588235
+	 Ks 0.898039 0.898039 0.898039
+	 illum 2
+	 Ns 4
+newmtl floor
+	 Ka 0.172549 0.172549 0.172549
+	 Kd 0.172549 0.172549 0.172549
+	 Ks 0.898039 0.898039 0.898039
+	 illum 2
+	 Ns 32
+newmtl ____Default01234
+	 Ka 0.372549 0.372549 0.372549
+	 Kd 0.372549 0.372549 0.372549
+	 Ks 0.898039 0.898039 0.898039
+	 illum 2
+	 Ns 4

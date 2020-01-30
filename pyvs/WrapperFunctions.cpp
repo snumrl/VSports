@@ -1,7 +1,7 @@
 #include "WrapperFunctions.h"
 #include <iostream>
 
-np::ndarray toNumPyArray(const std::vector<float>& val)
+np::ndarray Wrapper::toNumPyArray(const std::vector<float>& val)
 {
 	int n = val.size();
 	p::tuple shape = p::make_tuple(n);
@@ -16,7 +16,7 @@ np::ndarray toNumPyArray(const std::vector<float>& val)
 
 	return array;
 }
-np::ndarray toNumPyArray(const std::vector<double>& val)
+np::ndarray Wrapper::toNumPyArray(const std::vector<double>& val)
 {
 	int n = val.size();
 	p::tuple shape = p::make_tuple(n);
@@ -31,7 +31,7 @@ np::ndarray toNumPyArray(const std::vector<double>& val)
 
 	return array;
 }
-np::ndarray toNumPyArray(const std::vector<Eigen::VectorXd>& val)
+np::ndarray Wrapper::toNumPyArray(const std::vector<Eigen::VectorXd>& val)
 {
 	int n =val.size();
 	int m = val[0].rows();
@@ -50,7 +50,7 @@ np::ndarray toNumPyArray(const std::vector<Eigen::VectorXd>& val)
 	}
 	return array;	
 }
-np::ndarray toNumPyArray(const std::vector<Eigen::MatrixXd>& val)
+np::ndarray Wrapper::toNumPyArray(const std::vector<Eigen::MatrixXd>& val)
 {
 	int n = val.size();
 	int m = val[0].rows();
@@ -69,7 +69,7 @@ np::ndarray toNumPyArray(const std::vector<Eigen::MatrixXd>& val)
 
 	return array;
 }
-np::ndarray toNumPyArray(const std::vector<std::vector<float>>& val)
+np::ndarray Wrapper::toNumPyArray(const std::vector<std::vector<float>>& val)
 {
 	int n =val.size();
 	int m = val[0].size();
@@ -89,7 +89,7 @@ np::ndarray toNumPyArray(const std::vector<std::vector<float>>& val)
 
 	return array;
 }
-np::ndarray toNumPyArray(const std::vector<std::vector<double>>& val)
+np::ndarray Wrapper::toNumPyArray(const std::vector<std::vector<double>>& val)
 {
 	int n =val.size();
 	int m = val[0].size();
@@ -110,7 +110,7 @@ np::ndarray toNumPyArray(const std::vector<std::vector<double>>& val)
 	return array;
 }
 //always return 1-dim array
-np::ndarray toNumPyArray(const std::vector<bool>& val)
+np::ndarray Wrapper::toNumPyArray(const std::vector<bool>& val)
 {
 	int n = val.size();
 	p::tuple shape = p::make_tuple(n);
@@ -127,7 +127,7 @@ np::ndarray toNumPyArray(const std::vector<bool>& val)
 }
 
 //always return 1-dim array
-np::ndarray toNumPyArray(const Eigen::VectorXd& vec)
+np::ndarray Wrapper::toNumPyArray(const Eigen::VectorXd& vec)
 {
 	int n = vec.rows();
 	p::tuple shape = p::make_tuple(n);
@@ -143,7 +143,7 @@ np::ndarray toNumPyArray(const Eigen::VectorXd& vec)
 	return array;
 }
 //always return 2-dim array
-np::ndarray toNumPyArray(const Eigen::MatrixXd& matrix)
+np::ndarray Wrapper::toNumPyArray(const Eigen::MatrixXd& matrix)
 {
 	int n = matrix.rows();
 	int m = matrix.cols();
@@ -165,7 +165,7 @@ np::ndarray toNumPyArray(const Eigen::MatrixXd& matrix)
 	return array;
 }
 //always return 2-dim array
-np::ndarray toNumPyArray(const Eigen::Isometry3d& T)
+np::ndarray Wrapper::toNumPyArray(const Eigen::Isometry3d& T)
 {
 	int n = 4;
 	int m = 4;
@@ -185,7 +185,7 @@ np::ndarray toNumPyArray(const Eigen::Isometry3d& T)
 
 	return array;
 }
-Eigen::VectorXd toEigenVector(const np::ndarray& array)
+Eigen::VectorXd Wrapper::toEigenVector(const np::ndarray& array)
 {
 	Eigen::VectorXd vec(array.shape(0));
 
@@ -197,7 +197,7 @@ Eigen::VectorXd toEigenVector(const np::ndarray& array)
 	}
 	return vec;
 }
-std::vector<Eigen::VectorXd> toEigenVectorVector(const np::ndarray& array)
+std::vector<Eigen::VectorXd> Wrapper::toEigenVectorVector(const np::ndarray& array)
 {
 	std::vector<Eigen::VectorXd> mat;
 	mat.resize(array.shape(0));
@@ -213,7 +213,7 @@ std::vector<Eigen::VectorXd> toEigenVectorVector(const np::ndarray& array)
 
 	return mat;	
 }
-Eigen::MatrixXd toEigenMatrix(const np::ndarray& array)
+Eigen::MatrixXd Wrapper::toEigenMatrix(const np::ndarray& array)
 {
 	Eigen::MatrixXd mat(array.shape(0),array.shape(1));
 
@@ -229,7 +229,7 @@ Eigen::MatrixXd toEigenMatrix(const np::ndarray& array)
 	}
 	return mat;
 }
-std::vector<bool> toStdVector(const p::list& list)
+std::vector<bool> Wrapper::toStdVector(const p::list& list)
 {
 	std::vector<bool> vec(boost::python::len(list));
 	for(int i =0;i<vec.size();i++)

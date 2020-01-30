@@ -1,0 +1,3 @@
+[submodule "extern/ICA"]
+	path = extern/ICA
+	url = https://github.com/sunny-Codes/ICA
