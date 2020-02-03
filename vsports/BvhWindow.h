@@ -57,6 +57,9 @@ public:
 
 	dart::dynamics::SkeletonPtr makeGoalpost(Eigen::Vector3d position, std::string label);
 
+	void initDartNameIdMapping();
+
+
 	dart::dynamics::SkeletonPtr floorSkel;
 	dart::dynamics::SkeletonPtr ballSkel;
 
@@ -84,6 +87,8 @@ public:
 	boost::python::object predictor_rnd_nn_module;
 	// boost::python::object *reset_hidden;
 	bool mIsNNLoaded;
+
+	std::map<std::string, int> dartNameIdMap;
 
 	bool controlOn;
 

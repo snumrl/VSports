@@ -113,7 +113,6 @@ BvhWindow(const char* bvh_path)
 	bvhParser->writeSkelFile();
 	// cout<<bvhParser->skelFilePath<<endl;
 	SkeletonPtr bvhSkel = dart::utils::SkelParser::readSkeleton(bvhParser->skelFilePath);
-	// SkeletonPtr bvhSkel = dart::utils::SkelParser::readSkeleton("/home/minseok/Project/VSports/data/skels/"s_003_1_1.skel"");
 	charNames.push_back(getFileName_(bvh_path));
 	// cout<<charNames[0]<<endl;	
 	BVHmanager::setPositionFromBVH(bvhSkel, bvhParser, 0);
@@ -123,8 +122,29 @@ BvhWindow(const char* bvh_path)
 	// exit(0);
 	cout<<"BVH skeleton dofs : "<<bvhSkel->getNumDofs()<<endl;
 	cout<<"BVH skeleton numBodies : "<<bvhSkel->getNumBodyNodes()<<endl;
-	// mMotionGenerator = new ICA_MOTIONGEN::MotionGenerator("walkonly_0");
-	// mMotionGenerator->setCurrentPose(bvhSkel->getPositions());
+	initDartNameIdMapping();
+	mMotionGenerator = new ICA_MOTIONGEN::MotionGenerator("walkonly_0");
+	mMotionGenerator->setCurrentPose(bvhSkel->getPositions(), this->dartNameIdMap);
+}
+
+void
+BvhWindow::
+initDartNameIdMapping()
+{    
+	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
+	int curIndex = 0;
+	// cout<<bvhSkel->getNumBodyNodes()<<endl;
+	for(int i=0;i<bvhSkel->getNumBodyNodes();i++)
+	{
+		this->dartNameIdMap[bvhSkel->getBodyNode(i)->getName()] = curIndex;
+		curIndex += bvhSkel->getBodyNode(i)->getParentJoint()->getNumDofs();
+	}
+
+	// cout<<this->dartNameIdMap.size()<<endl;
+	// for(auto& nameMap : this->dartNameIdMap)
+	// {
+	// 	cout<<nameMap.first<<" "<<nameMap.second<<endl;
+	// }
 }
 
 void
@@ -325,9 +345,10 @@ step()
 
 	applyKeyEvent();
 
+	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
 	for(int i=0;i<1;i++)
 	{
-		BVHmanager::setPositionFromBVH(mEnv->mWorld->getSkeleton(charNames[i]), bvhParser, bvhFrame++);
+		// BVHmanager::setPositionFromBVH(mEnv->mWorld->getSkeleton(charNames[i]), bvhParser, bvhFrame++);
 	}
 
 
@@ -335,7 +356,7 @@ step()
 	{
 		mEnv->setAction(i, mActions[i]);
 	}
-	// mMotionGenerator->generateNextPose();
+	bvhSkel->setPositions(mMotionGenerator->generateNextPose());
 
 	// mEnv->stepAtOnce();
 	// mEnv->getRewards();
@@ -385,7 +406,7 @@ display()
 	// cout<<endl;
 
 
-	// GUI::drawSkeleton(mEnv->floorSkel, Eigen::Vector3d(0.5, 1.0, 0.5), showCourtMesh, false);
+	GUI::drawSkeleton(mEnv->floorSkel, Eigen::Vector3d(0.5, 1.0, 0.5), showCourtMesh, false);
 
 	// GUI::drawSkeleton(mEnv->ballSkel, Eigen::Vector3d(0.1, 0.1, 0.1));
 
@@ -408,7 +429,7 @@ display()
 	GUI::drawStringOnScreen(0.8, 0.8, to_string(mEnv->getElapsedTime()), true, Eigen::Vector3d::Zero());
 
 
-	// GUI::drawVerticalLine(goal, Eigen::Vector3d(1.0, 1.0, 1.0));
+	GUI::drawVerticalLine(goal, Eigen::Vector3d(1.0, 1.0, 1.0));
 
 	glutSwapBuffers();
 	if(mTakeScreenShot)
@@ -489,7 +510,7 @@ mouse(int button, int state, int x, int y)
         this->goal[0] = objx1 + (objx2 - objx1)*(objy1)/(objy1-objy2);
         this->goal[1] = objz1 + (objz2 - objz1)*(objy1)/(objy1-objy2);
 
-        mMotionGenerator->goal = this->goal;
+        mMotionGenerator->mGoal = 100.0*this->goal;
 
        	std::cout<<"new goal: "<<this->goal.transpose()<<std::endl;
 	}
