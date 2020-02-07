@@ -123,8 +123,18 @@ BvhWindow(const char* bvh_path)
 	cout<<"BVH skeleton dofs : "<<bvhSkel->getNumDofs()<<endl;
 	cout<<"BVH skeleton numBodies : "<<bvhSkel->getNumBodyNodes()<<endl;
 	initDartNameIdMapping();
-	mMotionGenerator = new ICA_MOTIONGEN::MotionGenerator("walkonly_0");
-	mMotionGenerator->setCurrentPose(bvhSkel->getPositions(), this->dartNameIdMap);
+	mMotionGenerator = new ICA::dart::MotionGenerator("walkonly_0", this->dartNameIdMap);
+	// cout<<bvhSkel->getPositions().transpose()<<endl;
+	for(int i=0;i<10;i++)
+	{
+		BVHmanager::setPositionFromBVH(bvhSkel, bvhParser, i);
+		Eigen::VectorXd bvhPosition = bvhSkel->getPositions();
+		// bvhPosition[3] -= 4.0;
+		// cout<<bvhPosition.transpose()<<endl;
+		mMotionGenerator->setCurrentPose(bvhPosition);
+		bvhSkel->setPositions(bvhPosition);
+	}
+
 }
 
 void
@@ -154,7 +164,7 @@ initCustomView()
 	// mCamera->eye = Eigen::Vector3d(3.60468, -4.29576, 1.87037);
 	// mCamera->lookAt = Eigen::Vector3d(-0.0936473, 0.158113, 0.293854);
 	// mCamera->up = Eigen::Vector3d(-0.132372, 0.231252, 0.963847);
-	mCamera->eye = Eigen::Vector3d(-20.0, 10.0, 20.0);
+	mCamera->eye = Eigen::Vector3d(-10.0, 5.0, 10.0);
 	mCamera->lookAt = Eigen::Vector3d(0.0, 0.0, 0.0);
 	mCamera->up = Eigen::Vector3d(0.0, 1.0, 0.0);
 
