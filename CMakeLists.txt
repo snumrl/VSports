@@ -26,14 +26,12 @@ include_directories(${GLUT_INCLUDE_DIR})
 include_directories(${CMAKE_SOURCE_DIR})
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${PYTHON_INCLUDE_DIR})
-include_directories(plugin/ICA)
 include_directories(extern)
 
 
 add_subdirectory( sim )
 add_subdirectory( model )
 add_subdirectory( pyvs )
-add_subdirectory( extern/ICA/plugin)
 
 
 file(GLOB srcs
@@ -44,4 +42,4 @@ file(GLOB srcs
 		"motion/*.h" "motion/*.cpp")
 
 add_executable(vsports ${srcs})
-target_link_libraries(vsports ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${DART_LIBRARIES} ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} sim pyvs model plugin_ICA)
+target_link_libraries(vsports ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${DART_LIBRARIES} ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} sim pyvs model)

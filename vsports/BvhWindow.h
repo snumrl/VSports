@@ -7,7 +7,6 @@
 #include <boost/python/numpy.hpp>
 #include "common.h"
 #include "../motion/BVHparser.h"
-#include "../extern/ICA/plugin/MotionGenerator.h"
 
 // #include <GL/glut.h>
 // #include <GL/glew.h>
@@ -108,7 +107,6 @@ public:
     int mPrevY;
 
     Eigen::Vector2d goal;
-    ICA_MOTIONGEN::MotionGenerator* mMotionGenerator;
 };
 
 #endif

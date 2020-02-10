@@ -67,9 +67,9 @@ public :
 	MotionNode* rootNode;
 	bool lowerBodyOnly;
 	bool upperBodyOnly;
-	BVHparser(const char* path);
-	BVHparser(const char* path, const char* match_name_path);
-	BVHparser(const char* path, BVHType bvhType);
+	// BVHparser(const char* path);
+	// BVHparser(const char* path, const char* match_name_path);
+	BVHparser(const char* path, BVHType bvhType = BVHType::BASKET);
 	int frames;
 	float frameTime;
 	MotionNode* getRootNode();

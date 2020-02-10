@@ -28,7 +28,7 @@ MotionNode::MotionNode()
 	next = nullptr;
 	childs = vector<MotionNode*>();
 	channelNum = 0;
-	orientation = Eigen::AngleAxisd::Identity();
+	// orientation = Eigen::AngleAxisd::Identity();
 }
 MotionNode* MotionNode::getParent()
 {
@@ -192,10 +192,15 @@ void BVHparser::initMatchNameListForMotionNode(const char* path)
 	in.close();
 }
 
-BVHparser::BVHparser(const char* path)
+// BVHparser::BVHparser(const char* path)
+// {
+
+// }
+
+BVHparser::BVHparser(const char* path, BVHType bvhType)
 {
+	mBvhType = bvhType;
 	this->scale = 1.0;
-	mBvhType = BVHType::BASKET;
 	int lineNum = 0;
 	int channelNum = 0;
 	string channels[6];
@@ -242,7 +247,10 @@ BVHparser::BVHparser(const char* path)
 	s.str("");
 	s = istringstream(line);
 	s >> bvh_keyword; s >> offx; s >> offy; s >> offz;
-	rootNode->setOffset(offx, offy-90, offz);
+	if(mBvhType == BVHType::BASKET)
+		rootNode->setOffset(offx, offy-90, offz);
+	else
+		rootNode->setOffset(offx, offy, offz);
 
 
 	getline(in, line);										//	CHANNELS 6 Xposition Yposition Zposition Xrotation Yrotation Zrotation
@@ -439,13 +447,6 @@ BVHparser::BVHparser(const char* path)
 	// this->initMatchNameListForMotionNode("../motion/bodyNameMatch.txt");
 }
 
-BVHparser::BVHparser(const char* path, BVHType bvhType)
-:BVHparser(path)
-{
-
-	mBvhType = bvhType;
-}
-
 
 
 MotionNode* BVHparser::getRootNode()
@@ -535,11 +536,11 @@ void BVHparser::writeSkelFile()
     	parentNode = curNode->getParent();
     	curNode->getOffset(curOffset);
     	outfile << "			";
-    	outfile << "<body name=\"h_" <<curNode->getName() << "\">" <<endl;
+    	outfile << "<body name=\"" <<curNode->getName() << "\">" <<endl;
 
     	outfile << "			";
 
-    	Eigen::AngleAxisd curOrientation = Eigen::AngleAxisd::Identity();
+    	// Eigen::AngleAxisd curOrientation = Eigen::AngleAxisd::Identity();
     	while(parentNode!= nullptr)
     	{
     		parentNode->getOffset(parentOffset);
@@ -547,7 +548,7 @@ void BVHparser::writeSkelFile()
     		{
     			curOffset[i] += parentOffset[i];
     		}
-    		curOrientation = parentNode->orientation * curOrientation;
+    		// curOrientation = parentNode->orientation * curOrientation;
     		parentNode = parentNode->getParent();
     	}
     	outfile << "	<transformation>";
@@ -575,10 +576,10 @@ void BVHparser::writeSkelFile()
     			double angle = atan2(axis.norm(), cosAngle);
     			axis.normalize();
     			axis*= angle;
-    			Eigen::AngleAxisd mNodeOrientation = Eigen::AngleAxisd(angle, axis);
+    			// Eigen::AngleAxisd mNodeOrientation = Eigen::AngleAxisd(angle, axis);
 
-    			curNode->orientation = mNodeOrientation;
-    			axis = mNodeOrientation.axis();
+    			// curNode->orientation = mNodeOrientation;
+    			// axis = mNodeOrientation.axis();
 
     			outfile<<axis[0]<<" "<<axis[1]<<" "<<axis[2]<<"</transformation>"<<endl;
     		}
@@ -782,10 +783,10 @@ void BVHparser::writeSkelFile()
     	if(curNode->getName() == rootNode->getName())
     		outfile << "	<parent>world</parent>" <<endl;
     	else
-    		outfile << "	<parent>h_" << curNode->getParent()->getName() << "</parent>" <<endl;		
+    		outfile << "	<parent>" << curNode->getParent()->getName() << "</parent>" <<endl;		
 
     	outfile << "			";
-    	outfile << "	<child>h_" << curNode->getName() << "</child>" <<endl;
+    	outfile << "	<child>" << curNode->getName() << "</child>" <<endl;
 
 		// if(curNode->getName() != rootNode->getName())
   //   	{

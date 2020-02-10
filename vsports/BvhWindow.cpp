@@ -14,7 +14,6 @@
 #include <GLFW/glfw3.h>
 // Include GLM
 #include <glm/glm.hpp>
-#include "../extern/ICA/plugin/MotionGenerator.h"
 using namespace glm;
 #include <iostream>
 #include <random>
@@ -109,7 +108,7 @@ BvhWindow::
 BvhWindow(const char* bvh_path)
 :BvhWindow()
 {
-	bvhParser = new BVHparser(bvh_path, BVHType::CMU);
+	bvhParser = new BVHparser(bvh_path, BVHType::BASKET);
 	bvhParser->writeSkelFile();
 	// cout<<bvhParser->skelFilePath<<endl;
 	SkeletonPtr bvhSkel = dart::utils::SkelParser::readSkeleton(bvhParser->skelFilePath);
@@ -134,7 +133,7 @@ initCustomView()
 	// mCamera->eye = Eigen::Vector3d(3.60468, -4.29576, 1.87037);
 	// mCamera->lookAt = Eigen::Vector3d(-0.0936473, 0.158113, 0.293854);
 	// mCamera->up = Eigen::Vector3d(-0.132372, 0.231252, 0.963847);
-	mCamera->eye = Eigen::Vector3d(-20.0, 10.0, 20.0);
+	mCamera->eye = Eigen::Vector3d(-10.0, 5.0, 10.0);
 	mCamera->lookAt = Eigen::Vector3d(0.0, 0.0, 0.0);
 	mCamera->up = Eigen::Vector3d(0.0, 1.0, 0.0);
 
@@ -385,7 +384,7 @@ display()
 	// cout<<endl;
 
 
-	// GUI::drawSkeleton(mEnv->floorSkel, Eigen::Vector3d(0.5, 1.0, 0.5), showCourtMesh, false);
+	GUI::drawSkeleton(mEnv->floorSkel, Eigen::Vector3d(0.5, 1.0, 0.5), showCourtMesh, false);
 
 	// GUI::drawSkeleton(mEnv->ballSkel, Eigen::Vector3d(0.1, 0.1, 0.1));
 
@@ -488,8 +487,6 @@ mouse(int button, int state, int x, int y)
 
         this->goal[0] = objx1 + (objx2 - objx1)*(objy1)/(objy1-objy2);
         this->goal[1] = objz1 + (objz2 - objz1)*(objy1)/(objy1-objy2);
-
-        mMotionGenerator->goal = this->goal;
 
        	std::cout<<"new goal: "<<this->goal.transpose()<<std::endl;
 	}
