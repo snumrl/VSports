@@ -207,6 +207,34 @@ keyboard(unsigned char key, int x, int y)
 		case 'i':
 			showCourtMesh = !showCourtMesh;
 			break;
+		case 'p':
+			bvhFrame += 10;
+			if(bvhFrame >= bvhParser->frames-1)
+			{
+				bvhFrame = bvhParser->frames-1;
+			}
+			break;
+		case ']':
+			bvhFrame++;
+			if(bvhFrame >= bvhParser->frames-1)
+			{
+				bvhFrame = bvhParser->frames-1;
+			}
+			break;
+		case 'o':
+			bvhFrame -= 10;
+			if(bvhFrame < 0)
+			{
+				bvhFrame = 0;
+			}
+			break;
+		case '[':
+			bvhFrame--;
+			if(bvhFrame < 0)
+			{
+				bvhFrame = 0;
+			}
+			break;
 
 		default: SimWindow::keyboard(key, x, y);
 	}
@@ -323,13 +351,12 @@ step()
 
 
 	applyKeyEvent();
-
-	for(int i=0;i<1;i++)
+	bvhFrame++;
+	if(bvhFrame >= bvhParser->frames-1)
 	{
-		BVHmanager::setPositionFromBVH(mEnv->mWorld->getSkeleton(charNames[i]), bvhParser, bvhFrame++);
+		// sleep(1);
+		bvhFrame = bvhParser->frames-1;
 	}
-
-
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
 		mEnv->setAction(i, mActions[i]);
@@ -354,6 +381,8 @@ display()
 
 	std::vector<Character2D*> chars = mEnv->getCharacters();
 
+	for(int i=0;i<1;i++)
+		BVHmanager::setPositionFromBVH(mEnv->mWorld->getSkeleton(charNames[i]), bvhParser, bvhFrame);
 
 	// for(int i=0;i<chars.size()-1;i++)
 	// {
@@ -397,14 +426,11 @@ display()
 	std::string scoreString
 	= "Red : "+to_string((mEnv->mAccScore[0]));//+" |Blue : "+to_string((int)(mEnv->mAccScore[1]));
 	// = "Red : "+to_string((getRNDFeatureDiff(0)));//+" |Blue : "+to_string((int)(mEnv->mAccScore[1]));
-	// cout<<"444444"<<endl;
 
-	// cout<<mEnv->getCharacters()[0]->getSkeleton()->getVelocities().transpose()<<endl;
-	// cout<<mActions[1][3]<<endl;
 
-	GUI::drawStringOnScreen(0.2, 0.8, scoreString, true, Eigen::Vector3d::Zero());
+	// GUI::drawStringOnScreen(0.2, 0.8, scoreString, true, Eigen::Vector3d::Zero());
 
-	GUI::drawStringOnScreen(0.8, 0.8, to_string(mEnv->getElapsedTime()), true, Eigen::Vector3d::Zero());
+	GUI::drawStringOnScreen(0.2, 0.8, to_string(bvhFrame), true, Eigen::Vector3d::Zero());
 
 
 	// GUI::drawVerticalLine(goal, Eigen::Vector3d(1.0, 1.0, 1.0));
