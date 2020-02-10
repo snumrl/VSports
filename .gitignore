@@ -42,6 +42,7 @@ pyvs/*.so
 model/*.so
 sim/*.a
 pyvs/__pycahe__/*
+*.so
 
 # Sublime files #
 ######################
