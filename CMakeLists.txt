@@ -5,7 +5,7 @@ add_compile_options(-fPIC)
 #add_compile_options(-std=gnu++11)
 add_compile_options(-Wdeprecated-declarations)
 add_compile_options(-DHAVE_CSTDDEF)
-project(vsports)
+project(bvh_viewer)
 
 SET(CMAKE_BUILD_TYPE Release CACHE STRING
 	"Choose the type of build, options are: None Debug Release."
@@ -41,5 +41,5 @@ file(GLOB srcs
 		"vsports/common/*.h" "vsports/common/*.cpp"
 		"motion/*.h" "motion/*.cpp")
 
-add_executable(vsports ${srcs})
-target_link_libraries(vsports ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${DART_LIBRARIES} ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} sim pyvs model)
+add_executable(bvh_viewer ${srcs})
+target_link_libraries(bvh_viewer ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${DART_LIBRARIES} ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} sim pyvs model)
