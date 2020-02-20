@@ -14,7 +14,6 @@
 #include <GLFW/glfw3.h>
 // Include GLM
 #include <glm/glm.hpp>
-#include "../extern/ICA/plugin/MotionGenerator.h"
 using namespace glm;
 #include <iostream>
 #include <random>
@@ -109,10 +108,11 @@ BvhWindow::
 BvhWindow(const char* bvh_path)
 :BvhWindow()
 {
-	bvhParser = new BVHparser(bvh_path, BVHType::CMU);
+	bvhParser = new BVHparser(bvh_path, BVHType::BASKET);
 	bvhParser->writeSkelFile();
 	// cout<<bvhParser->skelFilePath<<endl;
 	SkeletonPtr bvhSkel = dart::utils::SkelParser::readSkeleton(bvhParser->skelFilePath);
+	// SkeletonPtr bvhSkel = dart::utils::SkelParser::readSkeleton("/home/minseok/Project/VSports/data/skels/"s_003_1_1.skel"");
 	charNames.push_back(getFileName_(bvh_path));
 	// cout<<charNames[0]<<endl;	
 	BVHmanager::setPositionFromBVH(bvhSkel, bvhParser, 0);
@@ -122,39 +122,8 @@ BvhWindow(const char* bvh_path)
 	// exit(0);
 	cout<<"BVH skeleton dofs : "<<bvhSkel->getNumDofs()<<endl;
 	cout<<"BVH skeleton numBodies : "<<bvhSkel->getNumBodyNodes()<<endl;
-	initDartNameIdMapping();
-	mMotionGenerator = new ICA::dart::MotionGenerator("walkonly_0", this->dartNameIdMap);
-	// cout<<bvhSkel->getPositions().transpose()<<endl;
-	for(int i=0;i<10;i++)
-	{
-		BVHmanager::setPositionFromBVH(bvhSkel, bvhParser, i);
-		Eigen::VectorXd bvhPosition = bvhSkel->getPositions();
-		// bvhPosition[3] -= 4.0;
-		// cout<<bvhPosition.transpose()<<endl;
-		mMotionGenerator->setCurrentPose(bvhPosition);
-		bvhSkel->setPositions(bvhPosition);
-	}
-
-}
-
-void
-BvhWindow::
-initDartNameIdMapping()
-{    
-	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
-	int curIndex = 0;
-	// cout<<bvhSkel->getNumBodyNodes()<<endl;
-	for(int i=0;i<bvhSkel->getNumBodyNodes();i++)
-	{
-		this->dartNameIdMap[bvhSkel->getBodyNode(i)->getName()] = curIndex;
-		curIndex += bvhSkel->getBodyNode(i)->getParentJoint()->getNumDofs();
-	}
-
-	// cout<<this->dartNameIdMap.size()<<endl;
-	// for(auto& nameMap : this->dartNameIdMap)
-	// {
-	// 	cout<<nameMap.first<<" "<<nameMap.second<<endl;
-	// }
+	// mMotionGenerator = new ICA_MOTIONGEN::MotionGenerator("walkonly_0");
+	// mMotionGenerator->setCurrentPose(bvhSkel->getPositions());
 }
 
 void
@@ -237,6 +206,34 @@ keyboard(unsigned char key, int x, int y)
 			break;
 		case 'i':
 			showCourtMesh = !showCourtMesh;
+			break;
+		case 'p':
+			bvhFrame += 10;
+			if(bvhFrame >= bvhParser->frames-1)
+			{
+				bvhFrame = bvhParser->frames-1;
+			}
+			break;
+		case ']':
+			bvhFrame++;
+			if(bvhFrame >= bvhParser->frames-1)
+			{
+				bvhFrame = bvhParser->frames-1;
+			}
+			break;
+		case 'o':
+			bvhFrame -= 10;
+			if(bvhFrame < 0)
+			{
+				bvhFrame = 0;
+			}
+			break;
+		case '[':
+			bvhFrame--;
+			if(bvhFrame < 0)
+			{
+				bvhFrame = 0;
+			}
 			break;
 
 		default: SimWindow::keyboard(key, x, y);
@@ -354,19 +351,17 @@ step()
 
 
 	applyKeyEvent();
-
-	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
-	for(int i=0;i<1;i++)
+	bvhFrame++;
+	if(bvhFrame >= bvhParser->frames-1)
 	{
-		// BVHmanager::setPositionFromBVH(mEnv->mWorld->getSkeleton(charNames[i]), bvhParser, bvhFrame++);
+		// sleep(1);
+		bvhFrame = bvhParser->frames-1;
 	}
-
-
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
 		mEnv->setAction(i, mActions[i]);
 	}
-	bvhSkel->setPositions(mMotionGenerator->generateNextPose());
+	// mMotionGenerator->generateNextPose();
 
 	// mEnv->stepAtOnce();
 	// mEnv->getRewards();
@@ -386,6 +381,8 @@ display()
 
 	std::vector<Character2D*> chars = mEnv->getCharacters();
 
+	for(int i=0;i<1;i++)
+		BVHmanager::setPositionFromBVH(mEnv->mWorld->getSkeleton(charNames[i]), bvhParser, bvhFrame);
 
 	// for(int i=0;i<chars.size()-1;i++)
 	// {
@@ -429,17 +426,14 @@ display()
 	std::string scoreString
 	= "Red : "+to_string((mEnv->mAccScore[0]));//+" |Blue : "+to_string((int)(mEnv->mAccScore[1]));
 	// = "Red : "+to_string((getRNDFeatureDiff(0)));//+" |Blue : "+to_string((int)(mEnv->mAccScore[1]));
-	// cout<<"444444"<<endl;
-
-	// cout<<mEnv->getCharacters()[0]->getSkeleton()->getVelocities().transpose()<<endl;
-	// cout<<mActions[1][3]<<endl;
-
-	GUI::drawStringOnScreen(0.2, 0.8, scoreString, true, Eigen::Vector3d::Zero());
-
-	GUI::drawStringOnScreen(0.8, 0.8, to_string(mEnv->getElapsedTime()), true, Eigen::Vector3d::Zero());
 
 
-	GUI::drawVerticalLine(goal, Eigen::Vector3d(1.0, 1.0, 1.0));
+	// GUI::drawStringOnScreen(0.2, 0.8, scoreString, true, Eigen::Vector3d::Zero());
+
+	GUI::drawStringOnScreen(0.2, 0.8, to_string(bvhFrame), true, Eigen::Vector3d::Zero());
+
+
+	// GUI::drawVerticalLine(goal, Eigen::Vector3d(1.0, 1.0, 1.0));
 
 	glutSwapBuffers();
 	if(mTakeScreenShot)
@@ -520,8 +514,6 @@ mouse(int button, int state, int x, int y)
         this->goal[0] = objx1 + (objx2 - objx1)*(objy1)/(objy1-objy2);
         this->goal[1] = objz1 + (objz2 - objz1)*(objy1)/(objy1-objy2);
 
-        mMotionGenerator->mGoal = 100.0*this->goal;
-
        	std::cout<<"new goal: "<<this->goal.transpose()<<std::endl;
 	}
 	else
@@ -537,4 +529,3 @@ motion(int x, int y)
 {
 	SimWindow::motion(x, y);
 }
-
