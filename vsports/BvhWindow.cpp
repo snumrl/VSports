@@ -101,7 +101,8 @@ BvhWindow()
 // if (!GLEW_VERSION_2_1)  // check that the machine supports the 2.1 API.
 //   cout<<"Not ok with glew version"<<endl; // or handle the error in a nicer way
 //   cout<< glewGetString(err) <<endl; // or handle the error in a nicer way
-    this->goal= Eigen::Vector2d(0,0);
+    this->goal.resize(26);
+    this->goal.setZero();
 
 }
 
@@ -109,7 +110,7 @@ BvhWindow::
 BvhWindow(const char* bvh_path)
 :BvhWindow()
 {
-	bvhParser = new BVHparser(bvh_path, BVHType::CMU);
+	bvhParser = new BVHparser(bvh_path, BVHType::BASKET);
 	bvhParser->writeSkelFile();
 	// cout<<bvhParser->skelFilePath<<endl;
 	SkeletonPtr bvhSkel = dart::utils::SkelParser::readSkeleton(bvhParser->skelFilePath);
@@ -123,11 +124,11 @@ BvhWindow(const char* bvh_path)
 	cout<<"BVH skeleton dofs : "<<bvhSkel->getNumDofs()<<endl;
 	cout<<"BVH skeleton numBodies : "<<bvhSkel->getNumBodyNodes()<<endl;
 	initDartNameIdMapping();
-	mMotionGenerator = new ICA::dart::MotionGenerator("walkonly_0", this->dartNameIdMap);
+	mMotionGenerator = new ICA::dart::MotionGenerator("basket_1", this->dartNameIdMap);
 	// cout<<bvhSkel->getPositions().transpose()<<endl;
 	for(int i=0;i<10;i++)
 	{
-		BVHmanager::setPositionFromBVH(bvhSkel, bvhParser, i);
+		BVHmanager::setPositionFromBVH(bvhSkel, bvhParser, 100+i);
 		Eigen::VectorXd bvhPosition = bvhSkel->getPositions();
 		// bvhPosition[3] -= 4.0;
 		// cout<<bvhPosition.transpose()<<endl;
@@ -366,7 +367,9 @@ step()
 	{
 		mEnv->setAction(i, mActions[i]);
 	}
-	bvhSkel->setPositions(mMotionGenerator->generateNextPose());
+	Eigen::VectorXd nextPosition = mMotionGenerator->generateNextPose();
+	bvhSkel->setPositions(nextPosition);
+	cout<<nextPosition.transpose()<<endl;
 
 	// mEnv->stepAtOnce();
 	// mEnv->getRewards();
@@ -439,7 +442,7 @@ display()
 	GUI::drawStringOnScreen(0.8, 0.8, to_string(mEnv->getElapsedTime()), true, Eigen::Vector3d::Zero());
 
 
-	GUI::drawVerticalLine(goal, Eigen::Vector3d(1.0, 1.0, 1.0));
+	GUI::drawVerticalLine(goal.segment(0,2), Eigen::Vector3d(1.0, 1.0, 1.0));
 
 	glutSwapBuffers();
 	if(mTakeScreenShot)
@@ -519,8 +522,12 @@ mouse(int button, int state, int x, int y)
 
         this->goal[0] = objx1 + (objx2 - objx1)*(objy1)/(objy1-objy2);
         this->goal[1] = objz1 + (objz2 - objz1)*(objy1)/(objy1-objy2);
+        this->goal.segment(2,24).setZero();
+        // this->goal[25] = -1;
+        // this->goal[3] = 1;
 
-        mMotionGenerator->mGoal = 100.0*this->goal;
+        mMotionGenerator->mGoal = this->goal;
+        mMotionGenerator->mGoal.segment(0,2) *= 100.0;
 
        	std::cout<<"new goal: "<<this->goal.transpose()<<std::endl;
 	}

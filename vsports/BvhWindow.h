@@ -112,7 +112,7 @@ public:
     int mPrevX;
     int mPrevY;
 
-    Eigen::Vector2d goal;
+    Eigen::VectorXd goal;
     ICA::dart::MotionGenerator* mMotionGenerator;
 };
 

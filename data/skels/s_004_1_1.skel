@@ -7,7 +7,7 @@
 		</physics>
 		<skeleton name="s_004_1_1">
 			<transformation>0 0 0 0 0 0</transformation>
-			<body name="h_Hips">
+			<body name="Hips">
 				<transformation>0.0000 -0.0048 0.0054 0 0 0</transformation>
 				<inertia>
 					<mass>4.0000</mass>
@@ -23,7 +23,7 @@
 		<color> 1.0 1.0 1.0 </color>
 				</visualization_shape>
 				<collision_shape>
-				<transformation>0.0000 -0.0048 0.0054 0 0 0</transformation>
+					<transformation>0.0601 0.0000 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
 							<size>0.1 0.1 0.1</size>
@@ -31,7 +31,7 @@
 					</geometry>
 				</collision_shape>
 			</body>
-			<body name="h_Spine">
+			<body name="Spine">
 				<transformation>0.1203 -0.0065 0.0054 0.0000 0.0000 -0.0008</transformation>
 				<inertia>
 					<mass>5.0000</mass>
@@ -41,21 +41,21 @@
 					<transformation>0.0766 0.0000 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
-							<size>0.3 0.1532 0.3</size>
+							<size>0.1532 0.3 0.3</size>
 						</box>
 					</geometry>
 		<color> 1.0 1.0 1.0 </color>
 				</visualization_shape>
 				<collision_shape>
-				<transformation>0.1203 -0.0016 0.0000 0.0000 0.0000 -0.0008</transformation>
+					<transformation>0.0766 0.0000 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
-							<size>0.3 0.1532 0.4</size>
+							<size>0.1532 0.3 0.3</size>
 						</box>
 					</geometry>
 				</collision_shape>
 			</body>
-			<body name="h_Spine1">
+			<body name="Spine1">
 				<transformation>0.2734 -0.0066 0.0054 0.0000 0.0000 -0.0008</transformation>
 				<inertia>
 					<mass>5.0000</mass>
@@ -65,21 +65,21 @@
 					<transformation>0.0766 0.0000 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
-							<size>0.1 0.1 0.1</size>
+							<size>0.1532 0.3 0.3</size>
 						</box>
 					</geometry>
 		<color> 1.0 1.0 1.0 </color>
 				</visualization_shape>
 				<collision_shape>
-				<transformation>0.1532 -0.0001 0.0000 0.0000 0.0000 -0.0008</transformation>
+					<transformation>0.0766 0.0000 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
-							<size>0.3 0.1532 0.4</size>
+							<size>0.1532 0.3 0.3</size>
 						</box>
 					</geometry>
 				</collision_shape>
 			</body>
-			<body name="h_Spine2">
+			<body name="Spine2">
 				<transformation>0.4266 -0.0067 0.0054 0.0000 0.0000 0.0783</transformation>
 				<inertia>
 					<mass>5.0000</mass>
@@ -89,21 +89,21 @@
 					<transformation>0.0999 0.0000 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
-							<size>0.3 0.1998 0.3</size>
+							<size>0.1998 0.3 0.3</size>
 						</box>
 					</geometry>
 		<color> 1.0 1.0 1.0 </color>
 				</visualization_shape>
 				<collision_shape>
-				<transformation>0.1532 -0.0001 0.0000 0.0000 0.0000 0.0783</transformation>
+					<transformation>0.0999 0.0000 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
-							<size>0.3 0.1998 0.4</size>
+							<size>0.1998 0.3 0.3</size>
 						</box>
 					</geometry>
 				</collision_shape>
 			</body>
-			<body name="h_Neck">
+			<body name="Neck">
 				<transformation>0.6257 0.0089 0.0054 0 0 0</transformation>
 				<inertia>
 					<mass>4.0000</mass>
@@ -119,7 +119,7 @@
 		<color> 1.0 1.0 1.0 </color>
 				</visualization_shape>
 				<collision_shape>
-				<transformation>0.6257 0.0089 0.0054 0 0 0</transformation>
+					<transformation>0.0346 0.0000 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
 							<size>0.1 0.1 0.1</size>
@@ -127,7 +127,7 @@
 					</geometry>
 				</collision_shape>
 			</body>
-			<body name="h_Head">
+			<body name="Head">
 				<transformation>0.6950 0.0089 0.0054 0.0000 0.0000 0.0000</transformation>
 				<inertia>
 					<mass>8.0000</mass>
@@ -144,7 +144,7 @@
 		<color> 1.0 1.0 1.0 </color>
 				</visualization_shape>
 				<collision_shape>
-				<transformation>0.6950 0.0089 0.0054 0.0000 0.0000 0.0000</transformation>
+					<transformation>0.1038 0.0000 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
 							<size>0.3 0.3 0.3</size>
@@ -153,7 +153,7 @@
 					</geometry>
 				</collision_shape>
 			</body>
-			<body name="h_LeftShoulder">
+			<body name="LeftShoulder">
 				<transformation>0.5637 0.0160 0.0782 -0.0000 0.0000 0.0000</transformation>
 				<inertia>
 					<mass>3.5270</mass>
@@ -169,7 +169,7 @@
 		<color> 1.0 1.0 1.0 </color>
 				</visualization_shape>
 				<collision_shape>
-				<transformation>0.5637 0.0160 0.0782 -0.0000 0.0000 0.0000</transformation>
+					<transformation>0.0705 0.0000 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
 							<size>0.1411 0.0500 0.0500</size>
@@ -177,7 +177,7 @@
 					</geometry>
 				</collision_shape>
 			</body>
-			<body name="h_LeftArm">
+			<body name="LeftArm">
 				<transformation>0.7048 0.0160 0.0782 0.0000 0.0000 0.0000</transformation>
 				<inertia>
 					<mass>7.1450</mass>
@@ -193,7 +193,7 @@
 		<color> 1.0 1.0 1.0 </color>
 				</visualization_shape>
 				<collision_shape>
-				<transformation>0.7048 0.0160 0.0782 0.0000 0.0000 0.0000</transformation>
+					<transformation>0.1429 0.0000 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
 							<size>0.2858 0.0500 0.0500</size>
@@ -201,7 +201,7 @@
 					</geometry>
 				</collision_shape>
 			</body>
-			<body name="h_LeftForeArm">
+			<body name="LeftForeArm">
 				<transformation>0.9906 0.0160 0.0782 0.0000 0.0000 0.0000</transformation>
 				<inertia>
 					<mass>6.7730</mass>
@@ -217,7 +217,7 @@
 		<color> 1.0 1.0 1.0 </color>
 				</visualization_shape>
 				<collision_shape>
-				<transformation>0.9906 0.0160 0.0782 0.0000 0.0000 0.0000</transformation>
+					<transformation>0.1355 0.0000 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
 							<size>0.2709 0.0500 0.0500</size>
@@ -225,7 +225,7 @@
 					</geometry>
 				</collision_shape>
 			</body>
-			<body name="h_LeftHand">
+			<body name="LeftHand">
 				<transformation>1.2615 0.0160 0.0782 0.0000 -0.0152 -0.0195</transformation>
 				<inertia>
 					<mass>2.3898</mass>
@@ -241,7 +241,7 @@
 		<color> 1.0 1.0 1.0 </color>
 				</visualization_shape>
 				<collision_shape>
-				<transformation>1.2615 0.0160 0.0782 0.0000 -0.0152 -0.0195</transformation>
+					<transformation>0.0478 0.0000 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
 							<size>0.0956 0.0500 0.0500</size>
@@ -249,7 +249,7 @@
 					</geometry>
 				</collision_shape>
 			</body>
-			<body name="h_RightShoulder">
+			<body name="RightShoulder">
 				<transformation>0.5637 0.0160 -0.0675 0.0000 -0.0000 0.0000</transformation>
 				<inertia>
 					<mass>3.5270</mass>
@@ -265,7 +265,7 @@
 		<color> 1.0 1.0 1.0 </color>
 				</visualization_shape>
 				<collision_shape>
-				<transformation>0.5637 0.0160 -0.0675 0.0000 -0.0000 0.0000</transformation>
+					<transformation>0.0705 0.0000 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
 							<size>0.1411 0.0500 0.0500</size>
@@ -273,7 +273,7 @@
 					</geometry>
 				</collision_shape>
 			</body>
-			<body name="h_RightArm">
+			<body name="RightArm">
 				<transformation>0.7048 0.0160 -0.0675 0.0000 0.0000 0.0000</transformation>
 				<inertia>
 					<mass>7.1450</mass>
@@ -289,7 +289,7 @@
 		<color> 1.0 1.0 1.0 </color>
 				</visualization_shape>
 				<collision_shape>
-				<transformation>0.7048 0.0160 -0.0675 0.0000 0.0000 0.0000</transformation>
+					<transformation>0.1429 0.0000 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
 							<size>0.2858 0.0500 0.0500</size>
@@ -297,7 +297,7 @@
 					</geometry>
 				</collision_shape>
 			</body>
-			<body name="h_RightForeArm">
+			<body name="RightForeArm">
 				<transformation>0.9906 0.0160 -0.0675 0.0000 0.0000 0.0000</transformation>
 				<inertia>
 					<mass>6.7730</mass>
@@ -313,7 +313,7 @@
 		<color> 1.0 1.0 1.0 </color>
 				</visualization_shape>
 				<collision_shape>
-				<transformation>0.9906 0.0160 -0.0675 0.0000 0.0000 0.0000</transformation>
+					<transformation>0.1355 0.0000 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
 							<size>0.2709 0.0500 0.0500</size>
@@ -321,7 +321,7 @@
 					</geometry>
 				</collision_shape>
 			</body>
-			<body name="h_RightHand">
+			<body name="RightHand">
 				<transformation>1.2615 0.0160 -0.0675 0.0000 0.0152 -0.0195</transformation>
 				<inertia>
 					<mass>2.3898</mass>
@@ -337,7 +337,7 @@
 		<color> 1.0 1.0 1.0 </color>
 				</visualization_shape>
 				<collision_shape>
-				<transformation>1.2615 0.0160 -0.0675 0.0000 0.0152 -0.0195</transformation>
+					<transformation>0.0478 0.0000 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
 							<size>0.0956 0.0500 0.0500</size>
@@ -345,7 +345,7 @@
 					</geometry>
 				</collision_shape>
 			</body>
-			<body name="h_LeftUpLeg">
+			<body name="LeftUpLeg">
 				<transformation>0.0000 -0.0102 0.0937 0.0000 0.0000 0.0000</transformation>
 				<inertia>
 					<mass>9.9759</mass>
@@ -361,7 +361,7 @@
 		<color> 1.0 1.0 1.0 </color>
 				</visualization_shape>
 				<collision_shape>
-				<transformation>0.0000 -0.0102 0.0937 0.0000 0.0000 0.0000</transformation>
+					<transformation>0.1995 0.0000 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
 							<size>0.3990 0.0500 0.0500</size>
@@ -369,7 +369,7 @@
 					</geometry>
 				</collision_shape>
 			</body>
-			<body name="h_LeftLeg">
+			<body name="LeftLeg">
 				<transformation>0.3991 -0.0102 0.0937 0.0000 0.0000 0.0000</transformation>
 				<inertia>
 					<mass>9.9172</mass>
@@ -385,7 +385,7 @@
 		<color> 1.0 1.0 1.0 </color>
 				</visualization_shape>
 				<collision_shape>
-				<transformation>0.3991 -0.0102 0.0937 0.0000 0.0000 0.0000</transformation>
+					<transformation>0.1983 0.0000 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
 							<size>0.3967 0.0500 0.0500</size>
@@ -393,7 +393,7 @@
 					</geometry>
 				</collision_shape>
 			</body>
-			<body name="h_LeftFoot">
+			<body name="LeftFoot">
 				<transformation>0.7958 -0.0102 0.0937 0.0000 0.0000 -0.6407</transformation>
 				<inertia>
 					<mass>3.4074</mass>
@@ -409,7 +409,7 @@
 		<color> 1.0 1.0 1.0 </color>
 				</visualization_shape>
 				<collision_shape>
-				<transformation>0.7958 -0.0102 0.0937 0.0000 0.0000 -0.6407</transformation>
+					<transformation>0.0000 0.0850 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
 							<size>0.0500 0.1700 0.0500</size>
@@ -417,7 +417,7 @@
 					</geometry>
 				</collision_shape>
 			</body>
-			<body name="h_LeftToe">
+			<body name="LeftToe">
 				<transformation>0.8974 0.1261 0.0937 0.0000 0.0000 0.0000</transformation>
 				<inertia>
 					<mass>2.0954</mass>
@@ -433,7 +433,7 @@
 		<color> 1.0 1.0 1.0 </color>
 				</visualization_shape>
 				<collision_shape>
-				<transformation>0.8974 0.1261 0.0937 0.0000 0.0000 0.0000</transformation>
+					<transformation>0.0419 0.0000 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
 							<size>0.0838 0.0500 0.0500</size>
@@ -441,7 +441,7 @@
 					</geometry>
 				</collision_shape>
 			</body>
-			<body name="h_RightUpLeg">
+			<body name="RightUpLeg">
 				<transformation>0.0000 -0.0102 -0.0830 0.0000 0.0000 0.0000</transformation>
 				<inertia>
 					<mass>9.9759</mass>
@@ -457,7 +457,7 @@
 		<color> 1.0 1.0 1.0 </color>
 				</visualization_shape>
 				<collision_shape>
-				<transformation>0.0000 -0.0102 -0.0830 0.0000 0.0000 0.0000</transformation>
+					<transformation>0.1995 0.0000 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
 							<size>0.3990 0.0500 0.0500</size>
@@ -465,7 +465,7 @@
 					</geometry>
 				</collision_shape>
 			</body>
-			<body name="h_RightLeg">
+			<body name="RightLeg">
 				<transformation>0.3991 -0.0102 -0.0830 0.0000 0.0000 0.0000</transformation>
 				<inertia>
 					<mass>9.9172</mass>
@@ -481,7 +481,7 @@
 		<color> 1.0 1.0 1.0 </color>
 				</visualization_shape>
 				<collision_shape>
-				<transformation>0.3991 -0.0102 -0.0830 0.0000 0.0000 0.0000</transformation>
+					<transformation>0.1983 0.0000 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
 							<size>0.3967 0.0500 0.0500</size>
@@ -489,7 +489,7 @@
 					</geometry>
 				</collision_shape>
 			</body>
-			<body name="h_RightFoot">
+			<body name="RightFoot">
 				<transformation>0.7958 -0.0102 -0.0830 0.0000 0.0000 -0.6407</transformation>
 				<inertia>
 					<mass>3.4074</mass>
@@ -505,7 +505,7 @@
 		<color> 1.0 1.0 1.0 </color>
 				</visualization_shape>
 				<collision_shape>
-				<transformation>0.7958 -0.0102 -0.0830 0.0000 0.0000 -0.6407</transformation>
+					<transformation>0.0000 0.0850 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
 							<size>0.0500 0.1700 0.0500</size>
@@ -513,7 +513,7 @@
 					</geometry>
 				</collision_shape>
 			</body>
-			<body name="h_RightToe">
+			<body name="RightToe">
 				<transformation>0.8974 0.1261 -0.0830 0.0000 0.0000 0.0000</transformation>
 				<inertia>
 					<mass>2.0954</mass>
@@ -529,7 +529,7 @@
 		<color> 1.0 1.0 1.0 </color>
 				</visualization_shape>
 				<collision_shape>
-				<transformation>0.8974 0.1261 -0.0830 0.0000 0.0000 0.0000</transformation>
+					<transformation>0.0419 0.0000 0.0000  0 0 0</transformation>
 					<geometry>
 						<box>
 							<size>0.0838 0.0500 0.0500</size>
@@ -539,154 +539,154 @@
 			</body>
 			<joint type="free" name="j_Hips">
 				<parent>world</parent>
-				<child>h_Hips</child>
+				<child>Hips</child>
 				<init_pos>0 0 0 0 0 0</init_pos>
 				<init_vel>0 0 0 0 0 0</init_vel>
 			</joint>
 			<joint type="ball" name="j_Spine">
 				<transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-				<parent>h_Hips</parent>
-				<child>h_Spine</child>
+				<parent>Hips</parent>
+				<child>Spine</child>
 				<init_pos>0 0 0</init_pos>
 				<init_vel>0 0 0</init_vel>
 			</joint>
 			<joint type="ball" name="j_Spine1">
 				<transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-				<parent>h_Spine</parent>
-				<child>h_Spine1</child>
+				<parent>Spine</parent>
+				<child>Spine1</child>
 				<init_pos>0 0 0</init_pos>
 				<init_vel>0 0 0</init_vel>
 			</joint>
 			<joint type="ball" name="j_Spine2">
 				<transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-				<parent>h_Spine1</parent>
-				<child>h_Spine2</child>
+				<parent>Spine1</parent>
+				<child>Spine2</child>
 				<init_pos>0 0 0</init_pos>
 				<init_vel>0 0 0</init_vel>
 			</joint>
 			<joint type="ball" name="j_Neck">
 				<transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-				<parent>h_Spine2</parent>
-				<child>h_Neck</child>
+				<parent>Spine2</parent>
+				<child>Neck</child>
 				<init_pos>0 0 0</init_pos>
 				<init_vel>0 0 0</init_vel>
 			</joint>
 			<joint type="ball" name="j_Head">
 				<transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-				<parent>h_Neck</parent>
-				<child>h_Head</child>
+				<parent>Neck</parent>
+				<child>Head</child>
 				<init_pos>0 0 0</init_pos>
 				<init_vel>0 0 0</init_vel>
 			</joint>
 			<joint type="ball" name="j_LeftShoulder">
 				<transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-				<parent>h_Neck</parent>
-				<child>h_LeftShoulder</child>
+				<parent>Neck</parent>
+				<child>LeftShoulder</child>
 				<init_pos>0 0 0</init_pos>
 				<init_vel>0 0 0</init_vel>
 			</joint>
 			<joint type="ball" name="j_LeftArm">
 				<transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-				<parent>h_LeftShoulder</parent>
-				<child>h_LeftArm</child>
+				<parent>LeftShoulder</parent>
+				<child>LeftArm</child>
 				<init_pos>0 0 0</init_pos>
 				<init_vel>0 0 0</init_vel>
 			</joint>
 			<joint type="ball" name="j_LeftForeArm">
 				<transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-				<parent>h_LeftArm</parent>
-				<child>h_LeftForeArm</child>
+				<parent>LeftArm</parent>
+				<child>LeftForeArm</child>
 				<init_pos>0 0 0</init_pos>
 				<init_vel>0 0 0</init_vel>
 			</joint>
 			<joint type="ball" name="j_LeftHand">
 				<transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-				<parent>h_LeftForeArm</parent>
-				<child>h_LeftHand</child>
+				<parent>LeftForeArm</parent>
+				<child>LeftHand</child>
 				<init_pos>0 0 0</init_pos>
 				<init_vel>0 0 0</init_vel>
 			</joint>
 			<joint type="ball" name="j_RightShoulder">
 				<transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-				<parent>h_Neck</parent>
-				<child>h_RightShoulder</child>
+				<parent>Neck</parent>
+				<child>RightShoulder</child>
 				<init_pos>0 0 0</init_pos>
 				<init_vel>0 0 0</init_vel>
 			</joint>
 			<joint type="ball" name="j_RightArm">
 				<transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-				<parent>h_RightShoulder</parent>
-				<child>h_RightArm</child>
+				<parent>RightShoulder</parent>
+				<child>RightArm</child>
 				<init_pos>0 0 0</init_pos>
 				<init_vel>0 0 0</init_vel>
 			</joint>
 			<joint type="ball" name="j_RightForeArm">
 				<transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-				<parent>h_RightArm</parent>
-				<child>h_RightForeArm</child>
+				<parent>RightArm</parent>
+				<child>RightForeArm</child>
 				<init_pos>0 0 0</init_pos>
 				<init_vel>0 0 0</init_vel>
 			</joint>
 			<joint type="ball" name="j_RightHand">
 				<transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-				<parent>h_RightForeArm</parent>
-				<child>h_RightHand</child>
+				<parent>RightForeArm</parent>
+				<child>RightHand</child>
 				<init_pos>0 0 0</init_pos>
 				<init_vel>0 0 0</init_vel>
 			</joint>
 			<joint type="ball" name="j_LeftUpLeg">
 				<transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-				<parent>h_Hips</parent>
-				<child>h_LeftUpLeg</child>
+				<parent>Hips</parent>
+				<child>LeftUpLeg</child>
 				<init_pos>0 0 0</init_pos>
 				<init_vel>0 0 0</init_vel>
 			</joint>
 			<joint type="ball" name="j_LeftLeg">
 				<transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-				<parent>h_LeftUpLeg</parent>
-				<child>h_LeftLeg</child>
+				<parent>LeftUpLeg</parent>
+				<child>LeftLeg</child>
 				<init_pos>0 0 0</init_pos>
 				<init_vel>0 0 0</init_vel>
 			</joint>
 			<joint type="ball" name="j_LeftFoot">
 				<transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-				<parent>h_LeftLeg</parent>
-				<child>h_LeftFoot</child>
+				<parent>LeftLeg</parent>
+				<child>LeftFoot</child>
 				<init_pos>0 0 0</init_pos>
 				<init_vel>0 0 0</init_vel>
 			</joint>
 			<joint type="ball" name="j_LeftToe">
 				<transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-				<parent>h_LeftFoot</parent>
-				<child>h_LeftToe</child>
+				<parent>LeftFoot</parent>
+				<child>LeftToe</child>
 				<init_pos>0 0 0</init_pos>
 				<init_vel>0 0 0</init_vel>
 			</joint>
 			<joint type="ball" name="j_RightUpLeg">
 				<transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-				<parent>h_Hips</parent>
-				<child>h_RightUpLeg</child>
+				<parent>Hips</parent>
+				<child>RightUpLeg</child>
 				<init_pos>0 0 0</init_pos>
 				<init_vel>0 0 0</init_vel>
 			</joint>
 			<joint type="ball" name="j_RightLeg">
 				<transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-				<parent>h_RightUpLeg</parent>
-				<child>h_RightLeg</child>
+				<parent>RightUpLeg</parent>
+				<child>RightLeg</child>
 				<init_pos>0 0 0</init_pos>
 				<init_vel>0 0 0</init_vel>
 			</joint>
 			<joint type="ball" name="j_RightFoot">
 				<transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-				<parent>h_RightLeg</parent>
-				<child>h_RightFoot</child>
+				<parent>RightLeg</parent>
+				<child>RightFoot</child>
 				<init_pos>0 0 0</init_pos>
 				<init_vel>0 0 0</init_vel>
 			</joint>
 			<joint type="ball" name="j_RightToe">
 				<transformation>0.0 0.0 0.0 0.0 0.0 0.0</transformation>
-				<parent>h_RightFoot</parent>
-				<child>h_RightToe</child>
+				<parent>RightFoot</parent>
+				<child>RightToe</child>
 				<init_pos>0 0 0</init_pos>
 				<init_vel>0 0 0</init_vel>
 			</joint>
