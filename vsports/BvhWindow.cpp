@@ -124,7 +124,7 @@ BvhWindow(const char* bvh_path)
 	cout<<"BVH skeleton dofs : "<<bvhSkel->getNumDofs()<<endl;
 	cout<<"BVH skeleton numBodies : "<<bvhSkel->getNumBodyNodes()<<endl;
 	initDartNameIdMapping();
-	mMotionGenerator = new ICA::dart::MotionGenerator("basket_1", this->dartNameIdMap);
+	mMotionGenerator = new ICA::dart::MotionGenerator("basket_0", this->dartNameIdMap);
 	// cout<<bvhSkel->getPositions().transpose()<<endl;
 	for(int i=0;i<10;i++)
 	{
