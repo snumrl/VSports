@@ -34,7 +34,6 @@ public:
 
 	void initialize();
 
-	void applyKeyEvent();
 
 	void getActionFromNN(int index);
 
@@ -58,6 +57,10 @@ public:
 	dart::dynamics::SkeletonPtr makeGoalpost(Eigen::Vector3d position, std::string label);
 
 	void initDartNameIdMapping();
+
+	void applyKeyBoardEvent();
+
+	void applyMouseEvent();
 
 
 	dart::dynamics::SkeletonPtr floorSkel;
@@ -112,8 +115,13 @@ public:
     int mPrevX;
     int mPrevY;
 
+	int targetActionType;
+	int actionDelay;
+
     Eigen::VectorXd goal;
     ICA::dart::MotionGenerator* mMotionGenerator;
+
+	Eigen::Vector4d targetLocal;
 };
 
 #endif

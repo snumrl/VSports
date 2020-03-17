@@ -101,7 +101,8 @@ BvhWindow()
 // if (!GLEW_VERSION_2_1)  // check that the machine supports the 2.1 API.
 //   cout<<"Not ok with glew version"<<endl; // or handle the error in a nicer way
 //   cout<< glewGetString(err) <<endl; // or handle the error in a nicer way
-    this->goal.resize(26);
+	this->targetLocal.setZero();
+	this->goal.resize(2);
     this->goal.setZero();
 
 }
@@ -110,6 +111,8 @@ BvhWindow::
 BvhWindow(const char* bvh_path)
 :BvhWindow()
 {
+	targetActionType = 0;
+	actionDelay = 0;
 	bvhParser = new BVHparser(bvh_path, BVHType::BASKET);
 	bvhParser->writeSkelFile();
 	// cout<<bvhParser->skelFilePath<<endl;
@@ -124,7 +127,7 @@ BvhWindow(const char* bvh_path)
 	cout<<"BVH skeleton dofs : "<<bvhSkel->getNumDofs()<<endl;
 	cout<<"BVH skeleton numBodies : "<<bvhSkel->getNumBodyNodes()<<endl;
 	initDartNameIdMapping();
-	mMotionGenerator = new ICA::dart::MotionGenerator("basket_0", this->dartNameIdMap);
+	mMotionGenerator = new ICA::dart::MotionGenerator("basket_10", this->dartNameIdMap);
 	// cout<<bvhSkel->getPositions().transpose()<<endl;
 	for(int i=0;i<10;i++)
 	{
@@ -175,8 +178,8 @@ void
 BvhWindow::
 initGoalpost()
 {
-	redGoalpostSkel = SkelHelper::makeGoalpost(Eigen::Vector3d(-4.0, 0.0, 0.25 + floorDepth), "red");
-	blueGoalpostSkel = SkelHelper::makeGoalpost(Eigen::Vector3d(4.0, 0.0, 0.25 + floorDepth), "blue");
+	redGoalpostSkel = SkelHelper::makeGoalpost(Eigen::Vector3d(-8.0, 0.25 + floorDepth, 0.0), "red");
+	blueGoalpostSkel = SkelHelper::makeGoalpost(Eigen::Vector3d(8.0, 0.25 + floorDepth, 0.0), "blue");
 
 	mWorld->addSkeleton(redGoalpostSkel);
 	mWorld->addSkeleton(blueGoalpostSkel);
@@ -199,30 +202,43 @@ keyboard(unsigned char key, int x, int y)
 			// cout<<mCamera->up.transpose()<<endl;
 			break;
 		case 'w':
-			keyarr[int('w')] = PUSHED;
-			break;
-		case 's':
-			keyarr[int('s')] = PUSHED;
-			break;
-		case 'a':
-			keyarr[int('a')] = PUSHED;
-			break;
-		case 'd':
-			keyarr[int('d')] = PUSHED;
-			break;
-		case 'g':
-			keyarr[int('g')] = PUSHED;
-			break;
+            keyarr[int('w')] = PUSHED;
+            break;
+        case 's':
+            keyarr[int('s')] = PUSHED;
+            break;
+        case 'a':
+            keyarr[int('a')] = PUSHED;
+            break;
+        case 'd':
+            keyarr[int('d')] = PUSHED;
+            break;
+
+        case 'q': //dribble
+        {
+            targetActionType = 0;
+            actionDelay = 0;
+            break;
+        }
+        case 'e': //pass
+        {
+            targetActionType = 1;
+            actionDelay = 30;
+            break;
+        }
+        case 'r': //pass receive
+        {
+            targetActionType = 2;
+            actionDelay = 30;
+            break;
+        }
+        case 't': //shoot
+        {
+            targetActionType = 3;
+            actionDelay = 30;
+            break;
+        }
 		case 'h':
-			keyarr[int('h')] = PUSHED;
-			break;
-		case 'q':
-			keyarr[int('q')] = PUSHED;
-			break;
-		case 'e':
-			keyarr[int('e')] = PUSHED;
-			break;
-		case 'r':
 			mEnv->reset();
 			// mEnv->getCharacter(1)->getSkeleton()->setPositions(Eigen::Vector2d(0.0, 0.0));
 			// for(int i=0;i<4;i++){	
@@ -289,87 +305,108 @@ timer(int value)
 	SimWindow::timer(value);
 }
 
+
+
 void
 BvhWindow::
-applyKeyEvent()
+applyKeyBoardEvent()
 {
-	double power = 0.5;
-	if(keyarr[int('w')]==PUSHED)
-	{
-		// cout<<"@"<<endl;
-		mActions[0][1] += power;
-	}
-	if(keyarr[int('s')]==PUSHED)
-	{
-		mActions[0][1] += -power;
-	}
-	if(keyarr[int('a')]==PUSHED)
-	{
-		mActions[0][0] += -power;
-	}
-	if(keyarr[int('d')]==PUSHED)
-	{
-		mActions[0][0] += power;
-	}
+    double scale = 200.0;
+    
+    Eigen::Vector2d frontVec, rightVec;
 
-	// if(keyarr[int('q')]==PUSHED)
-	// {
-	// 	mActions[0][2] += -power;
-	// }
-	// if(keyarr[int('e')]==PUSHED)
-	// {
-	// 	mActions[0][2] += power;
-	// }
-	// if(keyarr[int('g')]==PUSHED)
-	// {
-	// 	mActions[0][3] = 0.7;
-	// }
-	// else
-	// {
-	// 	// mActions[0][3] = 0.0;
-	// }
 
-	if(mActions[0].segment(0,2).norm() > 1.0)
-		mActions[0].segment(0,2).normalize();
+    Eigen::Vector3d temp;
+    temp = (mCamera->lookAt - mCamera->eye);
+    frontVec[0] = temp[0];
+    frontVec[1] = temp[2];
 
-	// if(mActions[0].norm()>1.0)
-	// 	mActions[0].normalize();
-	// if
-	// {
-	// 	// mActions[0][3] -= 0.1;
-	// 	// if(mActions[0][3] < -0.1)
-	// 	// 	mActions[0][3] = -0.1;
-	// 	// mActions[0][3] = -0.1;
-	// }
-	// if(keyarr[int('h')]==PUSHED)
-	// {
-	// 	mActions[0][3] = 1.0;
-	// 	Eigen::Vector3d curVel = mEnv->getState(0);
-	// }
+    frontVec.normalize();
+
+    rightVec[0] = -frontVec[1];
+    rightVec[1] = frontVec[0];
+
+ 
+    // if(keyarr[int('w')] == PUSHED)
+    //     this->targetLocal.segment(0,2) += scale*frontVec;
+    // if(keyarr[int('s')] == PUSHED)
+    //     this->targetLocal.segment(0,2) += -scale*frontVec;
+    // if(keyarr[int('a')] == PUSHED)
+    //     this->targetLocal.segment(0,2) += -scale*rightVec;
+    // if(keyarr[int('d')] == PUSHED)
+    //     this->targetLocal.segment(0,2) += scale*rightVec;
+}
+void
+BvhWindow::
+applyMouseEvent()
+{
+    Eigen::Vector3d facing = mCamera->lookAt - mCamera->eye;
+    this->targetLocal[2] = facing[0];
+    this->targetLocal[3] = facing[2];
+    this->targetLocal.segment(2,2).normalize();
+    // std::cout<<targetLocal.segment(2,2).transpose()<<std::endl;
+}
+
+Eigen::Vector2d vec3dTo2d(Eigen::Vector3d vec3d)
+{
+	return Eigen::Vector2d(vec3d[0], vec3d[2]);
 }
 
 void
 BvhWindow::
 step()
 {
+	// this->targetLocal = Eigen::Vector4d(0.0, 0.0, 0.0, 0.0);
 
+	applyKeyBoardEvent();
+	applyMouseEvent();
+    actionDelay--;
+    if(actionDelay < -30)
+	{
+		targetActionType = 0;
+        actionDelay = 0;
+	}
 
-	applyKeyEvent();
+    // If non-terminal action goes to end, reset to dribble.
+    if(targetActionType == 0)
+        actionDelay = 0;
+
 
 	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
-	for(int i=0;i<1;i++)
+	// for(int i=0;i<1;i++)
+	// {
+	// 	// BVHmanager::setPositionFromBVH(mEnv->mWorld->getSkeleton(charNames[i]), bvhParser, bvhFrame++);
+	// }
+
+
+	// for(int i=0;i<mEnv->mNumChars;i++)
+	// {
+	// 	mEnv->setAction(i, mActions[i]);
+	// }
+	this->targetLocal.segment(0,2) = this->goal - vec3dTo2d(bvhSkel->getPositions().segment(3,3));
+	this->targetLocal.segment(0,2) *= 100.0;
+
+
+	//Shoot direction is fixed to goalpost
+	if(targetActionType == 3)
 	{
-		// BVHmanager::setPositionFromBVH(mEnv->mWorld->getSkeleton(charNames[i]), bvhParser, bvhFrame++);
+		this->targetLocal.segment(2,2) = Eigen::Vector2d(14.0-1.57,0.0)*0.8 - vec3dTo2d(bvhSkel->getPositions().segment(3,3));
+		this->targetLocal.segment(2,2).normalize();
+	}
+	else
+	{
+		this->targetLocal.segment(2,2) = this->targetLocal.segment(0,2).normalized();
 	}
 
 
-	for(int i=0;i<mEnv->mNumChars;i++)
-	{
-		mEnv->setAction(i, mActions[i]);
-	}
-	Eigen::VectorXd nextPosition = mMotionGenerator->generateNextPose();
+	std::cout<<"BVH skel position : "<<vec3dTo2d(bvhSkel->getPositions().segment(3,3)).transpose()<<endl;
+	std::cout<<"View direction  : "<<vec3dTo2d(mCamera->lookAt - mCamera->eye).transpose().normalized()<<endl;
+	
+	// std::cout<<"BVH skel position : "<<vec3dTo2d(bvhSkel->getPositions().segment(3,3)).transpose()<<endl;
+
+	Eigen::VectorXd nextPosition = mMotionGenerator->generateNextPose(this->targetLocal, targetActionType, actionDelay);
 	bvhSkel->setPositions(nextPosition);
-	cout<<nextPosition.transpose()<<endl;
+	// cout<<nextPosition.transpose()<<endl;
 
 	// mEnv->stepAtOnce();
 	// mEnv->getRewards();
@@ -442,7 +479,7 @@ display()
 	GUI::drawStringOnScreen(0.8, 0.8, to_string(mEnv->getElapsedTime()), true, Eigen::Vector3d::Zero());
 
 
-	GUI::drawVerticalLine(goal.segment(0,2), Eigen::Vector3d(1.0, 1.0, 1.0));
+	GUI::drawVerticalLine(this->goal.segment(0,2), Eigen::Vector3d(1.0, 1.0, 1.0));
 
 	glutSwapBuffers();
 	if(mTakeScreenShot)
@@ -522,14 +559,15 @@ mouse(int button, int state, int x, int y)
 
         this->goal[0] = objx1 + (objx2 - objx1)*(objy1)/(objy1-objy2);
         this->goal[1] = objz1 + (objz2 - objz1)*(objy1)/(objy1-objy2);
-        this->goal.segment(2,24).setZero();
-        // this->goal[25] = -1;
-        // this->goal[3] = 1;
+        // this->goal *= 100.0;
+        // this->goal.segment(2,24).setZero();
+        // // this->goal[25] = -1;
+        // // this->goal[3] = 1;
 
-        mMotionGenerator->mGoal = this->goal;
-        mMotionGenerator->mGoal.segment(0,2) *= 100.0;
+        // mMotionGenerator->mGoal = this->goal;
+        // mMotionGenerator->mGoal.segment(0,2) *= 100.0;
 
-       	std::cout<<"new goal: "<<this->goal.transpose()<<std::endl;
+       	// std::cout<<"new goal: "<<this->targetLocal..transpose()<<std::endl;
 	}
 	else
 	{

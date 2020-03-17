@@ -153,7 +153,7 @@ makeBasketBallFloor(double floorDepth)
 						absolutePathProject+"/data/models/BasketBallCourt_obj/basketballcourt.obj",
 						floor,
 						nullptr,
-						Eigen::Vector3d(15.0, 28.0, 0.01),
+						Eigen::Vector3d(15.0*0.8, 28.0*0.8, 0.01),
 						pb2j,
 						cb2j,
 						1.0,
@@ -213,7 +213,7 @@ MakeFreeJointBody(
 			std::string obj_path = obj_file;
 			const aiScene* mesh = MeshShape::loadMesh(std::string(obj_path));
 		// cout<<"2222"<<endl;
-			double scale = 7.5/385.0;
+			double scale = 7.5/385.0*0.8;
 			ShapePtr visual_shape = std::shared_ptr<MeshShape>(new MeshShape(Eigen::Vector3d(scale,scale,scale),mesh));
 			bn->createShapeNodeWith<VisualAspect>(visual_shape);
 		}else{
