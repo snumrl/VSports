@@ -17,11 +17,11 @@ int main(int argc, char** argv)
 
 	glutInit(&argc, argv);
 
-	if(argc==3)
+	if(argc==4)
 	{
 		if(strcmp(argv[1], "-bvh")==0)
 		{
-			BvhWindow* simwindow = new BvhWindow(argv[2]);
+			BvhWindow* simwindow = new BvhWindow(argv[2], argv[3]);
 			simwindow->initWindow(1000, 1000, "Render");
 			// simwindow->initialize();
 		}

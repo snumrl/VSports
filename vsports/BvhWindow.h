@@ -14,7 +14,7 @@
 class BvhWindow : public SimWindow{
 public:
 	BvhWindow();
-	BvhWindow(const char* bvh_path);
+	BvhWindow(const char* bvh_path, const char* nn_path);
 	void initWindow(int _w, int _h, char* _name) override;
 
 	void keyboard(unsigned char key, int x, int y) override;
@@ -121,7 +121,7 @@ public:
     Eigen::VectorXd goal;
     ICA::dart::MotionGenerator* mMotionGenerator;
 
-	Eigen::Vector4d targetLocal;
+	Eigen::VectorXd targetLocal;
 };
 
 #endif

@@ -101,6 +101,7 @@ BvhWindow()
 // if (!GLEW_VERSION_2_1)  // check that the machine supports the 2.1 API.
 //   cout<<"Not ok with glew version"<<endl; // or handle the error in a nicer way
 //   cout<< glewGetString(err) <<endl; // or handle the error in a nicer way
+	this->targetLocal.resize(10);
 	this->targetLocal.setZero();
 	this->goal.resize(2);
     this->goal.setZero();
@@ -108,7 +109,7 @@ BvhWindow()
 }
 
 BvhWindow::
-BvhWindow(const char* bvh_path)
+BvhWindow(const char* bvh_path, const char* nn_path)
 :BvhWindow()
 {
 	targetActionType = 0;
@@ -127,7 +128,7 @@ BvhWindow(const char* bvh_path)
 	cout<<"BVH skeleton dofs : "<<bvhSkel->getNumDofs()<<endl;
 	cout<<"BVH skeleton numBodies : "<<bvhSkel->getNumBodyNodes()<<endl;
 	initDartNameIdMapping();
-	mMotionGenerator = new ICA::dart::MotionGenerator("basket_10", this->dartNameIdMap);
+	mMotionGenerator = new ICA::dart::MotionGenerator(nn_path, this->dartNameIdMap);
 	// cout<<bvhSkel->getPositions().transpose()<<endl;
 	for(int i=0;i<10;i++)
 	{
@@ -311,7 +312,7 @@ void
 BvhWindow::
 applyKeyBoardEvent()
 {
-    double scale = 200.0;
+    double scale = 150.0;
     
     Eigen::Vector2d frontVec, rightVec;
 
@@ -327,14 +328,14 @@ applyKeyBoardEvent()
     rightVec[1] = frontVec[0];
 
  
-    // if(keyarr[int('w')] == PUSHED)
-    //     this->targetLocal.segment(0,2) += scale*frontVec;
-    // if(keyarr[int('s')] == PUSHED)
-    //     this->targetLocal.segment(0,2) += -scale*frontVec;
-    // if(keyarr[int('a')] == PUSHED)
-    //     this->targetLocal.segment(0,2) += -scale*rightVec;
-    // if(keyarr[int('d')] == PUSHED)
-    //     this->targetLocal.segment(0,2) += scale*rightVec;
+    if(keyarr[int('w')] == PUSHED)
+        this->targetLocal.segment(0,2) += scale*frontVec;
+    if(keyarr[int('s')] == PUSHED)
+        this->targetLocal.segment(0,2) += -scale*frontVec;
+    if(keyarr[int('a')] == PUSHED)
+        this->targetLocal.segment(0,2) += -scale*rightVec;
+    if(keyarr[int('d')] == PUSHED)
+        this->targetLocal.segment(0,2) += scale*rightVec;
 }
 void
 BvhWindow::
@@ -356,7 +357,7 @@ void
 BvhWindow::
 step()
 {
-	// this->targetLocal = Eigen::Vector4d(0.0, 0.0, 0.0, 0.0);
+	this->targetLocal.setZero();
 
 	applyKeyBoardEvent();
 	applyMouseEvent();
@@ -367,7 +368,7 @@ step()
         actionDelay = 0;
 	}
 
-    // If non-terminal action goes to end, reset to dribble.
+    // If terminal action goes to end, reset to dribble.
     if(targetActionType == 0)
         actionDelay = 0;
 
@@ -382,18 +383,27 @@ step()
 	// for(int i=0;i<mEnv->mNumChars;i++)
 	// {
 	// 	mEnv->setAction(i, mActions[i]);
-	// }
-	this->targetLocal.segment(0,2) = this->goal - vec3dTo2d(bvhSkel->getPositions().segment(3,3));
-	this->targetLocal.segment(0,2) *= 100.0;
 
 
+
+	// // }
+	// this->targetLocal.segment(0,2) = this->goal - vec3dTo2d(bvhSkel->getPositions().segment(3,3));
+	// this->targetLocal.segment(0,2) *= 100.0;
+
+
+	// std::cout<<"Target Vel : "<<this->targetLocal.segment(0,2).transpose()<<std::endl;
 	//Shoot direction is fixed to goalpost
 	if(targetActionType == 3)
 	{
-		this->targetLocal.segment(2,2) = Eigen::Vector2d(14.0-1.57,0.0)*0.8 - vec3dTo2d(bvhSkel->getPositions().segment(3,3));
-		this->targetLocal.segment(2,2).normalize();
+		// this->targetLocal.segment(2,2) = Eigen::Vector2d(14.0-1.57,0.0)*0.8 - vec3dTo2d(bvhSkel->getPositions().segment(3,3));
+		// this->targetLocal.segment(2,2).normalize();
+
+		this->targetLocal.segment(4,3) = bvhSkel->getPositions().segment(3,3)+Eigen::Vector3d(0.0, 0.5, 0.0);
+		this->targetLocal.segment(7,3) = Eigen::Vector3d(14.0-1.57, 10.0, 0.0)*0.8 - bvhSkel->getPositions().segment(3,3);
+		this->targetLocal.segment(4,3) *= 100.0;
+		this->targetLocal.segment(7,3) *= 20.0;
 	}
-	else
+	else if(targetActionType == 1)
 	{
 		this->targetLocal.segment(2,2) = this->targetLocal.segment(0,2).normalized();
 	}
@@ -479,7 +489,7 @@ display()
 	GUI::drawStringOnScreen(0.8, 0.8, to_string(mEnv->getElapsedTime()), true, Eigen::Vector3d::Zero());
 
 
-	GUI::drawVerticalLine(this->goal.segment(0,2), Eigen::Vector3d(1.0, 1.0, 1.0));
+	// GUI::drawVerticalLine(this->goal.segment(0,2), Eigen::Vector3d(1.0, 1.0, 1.0));
 
 	glutSwapBuffers();
 	if(mTakeScreenShot)
@@ -559,7 +569,7 @@ mouse(int button, int state, int x, int y)
 
         this->goal[0] = objx1 + (objx2 - objx1)*(objy1)/(objy1-objy2);
         this->goal[1] = objz1 + (objz2 - objz1)*(objy1)/(objy1-objy2);
-        // this->goal *= 100.0;
+
         // this->goal.segment(2,24).setZero();
         // // this->goal[25] = -1;
         // // this->goal[3] = 1;
