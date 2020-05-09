@@ -29,7 +29,7 @@ mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180),
 	initCharacters();
 	initGoalposts();
 	initFloor();
-	getNumState();
+	// getNumState();
 
 	mWorld->setTimeStep(1.0/mSimulationHz);
 
@@ -186,7 +186,7 @@ initFloor()
 	floorSkel = SkelHelper::makeBasketBallFloor();
 	// floorSkel = SkelHelper::makeFloor();
 	mWorld->addSkeleton(floorSkel);
-	// setSkelCollidable(floorSkel, false);
+	setSkelCollidable(floorSkel, true);
 }
 
 void 
@@ -194,7 +194,7 @@ Environment::
 initBall()
 {
 	ballSkel = SkelHelper::makeBall();
-	setSkelCollidable(ballSkel, false);
+	setSkelCollidable(ballSkel, true);
 	mWorld->addSkeleton(ballSkel);
 }
 
@@ -380,7 +380,7 @@ Environment::
 step()
 {
 	mTimeElapsed += 1.0 / (double)mSimulationHz;
-	
+	/*
 	for(int i=0;i<mCharacters.size();i++)
 	{
 		applyAction(i);
@@ -412,7 +412,7 @@ step()
 	{
 		mKicked[i] = max(0, mKicked[i]-1);
 	}
-
+*/
 	// cout<<mCharacters[0]->getSkeleton()->getForces().transpose()<<endl;
 
 	mWorld->step();
@@ -450,13 +450,13 @@ getState(int index)
 	// Eigen::VectorXd distanceWall(4);
 
 	// Ball's state
-	Eigen::Vector2d ballP, ballV;
+	Eigen::Vector3d ballP, ballV;
 	ballP = ballSkel->getPositions();
 	ballV = ballSkel->getVelocities();
 
-	Eigen::Vector2d relativeBallP, relativeBallV;
-	relativeBallP = ballP - p;
-	relativeBallV = ballV - v;
+	Eigen::Vector3d relativeBallP, relativeBallV;
+	// relativeBallP = ballP - p;
+	// relativeBallV = ballV - v;
 
 	std::string teamName = character->getName().substr(0,1);
 	// if(teamName == mGoalposts[0].first)

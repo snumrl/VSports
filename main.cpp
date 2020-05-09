@@ -1,4 +1,5 @@
-#include "vsports/BvhWindow.h"
+// #include "vsports/BvhWindow.h"
+#include "vsports/SingleBasketballWindow.h"
 #include "vsports/common.h"
 
 #include <GL/glut.h>
@@ -21,8 +22,8 @@ int main(int argc, char** argv)
 	{
 		if(strcmp(argv[1], "-bvh")==0)
 		{
-			BvhWindow* simwindow = new BvhWindow(argv[2], argv[3]);
-			simwindow->initWindow(1000, 1000, "Render");
+			SingleBasketballWindow* simwindow = new SingleBasketballWindow(argv[2], argv[3]);
+			simwindow->initWindow(1800, 1200, "Render");
 			// simwindow->initialize();
 		}
 	}

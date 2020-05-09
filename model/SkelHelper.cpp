@@ -31,10 +31,10 @@ makeBall(double floorDepth)
 	Eigen::Isometry3d cb2j;
 	cb2j.setIdentity();
 	cb2j.translation() += -position;
-	SkelMaker::makeFree2DJointBody(
+	SkelMaker::makeFreeJointBody(
 	"ball", ball, nullptr,
 	SHAPE_TYPE::BALL,
-	Eigen::Vector3d::UnitX()*0.08,
+	Eigen::Vector3d::UnitX()*0.12,
 	Eigen::Isometry3d::Identity(), cb2j);
 	return ball;
 }
@@ -142,14 +142,16 @@ makeBasketBallFloor(double floorDepth)
 	Eigen::Isometry3d cb2j;
 	pb2j.setIdentity();
 	cb2j.setIdentity();
+
 	// Eigen::Matrix3d mat = Eigen::AngleAxisd(M_PI/2.0, Eigen::Vector3d::UnitX());
 	cb2j.linear() *=  Eigen::AngleAxisd(M_PI/2.0, Eigen::Vector3d::UnitY()).toRotationMatrix();
 	cb2j.linear() *=  Eigen::AngleAxisd(-M_PI/2.0, Eigen::Vector3d::UnitX()).toRotationMatrix();
+	cb2j.translation() = Eigen::Vector3d(-0.46, 0.0, 0.0);
 	char resolved_path[PATH_MAX]; 
 	realpath("../", resolved_path);
 	std::string absolutePathProject = resolved_path;
 
-	SkelHelper::MakeFreeJointBody("floor", 
+	SkelHelper::MakeWeldJointBody("floor", 
 						absolutePathProject+"/data/models/BasketBallCourt_obj/basketballcourt.obj",
 						floor,
 						nullptr,
@@ -174,7 +176,7 @@ makeBasketBallFloor(double floorDepth)
 
 BodyNode* 
 SkelHelper::
-MakeFreeJointBody(
+MakeWeldJointBody(
 		const std::string& body_name,
 		const std::string& obj_file,
 		const dart::dynamics::SkeletonPtr& target_skel,
@@ -199,7 +201,7 @@ MakeFreeJointBody(
 	props.mT_ParentBodyToJoint = body_position;
 
 
-	bn = target_skel->createJointAndBodyNodePair<FreeJoint>(
+	bn = target_skel->createJointAndBodyNodePair<WeldJoint>(
 			parent,props,BodyNode::AspectProperties(body_name)).second;
 
 	if(contact)

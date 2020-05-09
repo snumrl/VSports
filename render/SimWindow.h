@@ -4,6 +4,7 @@
 #include "GLUTWindow.h"
 #include <string>
 #include "dart/simulation/simulation.hpp"
+#include "../vsports/common.h"
 class SimWindow : public GUI::GLUTWindow
 {
 public:

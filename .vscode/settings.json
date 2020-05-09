@@ -77,6 +77,12 @@
         "vec4d": "cpp",
         "vec4f": "cpp",
         "boundingbox": "cpp",
-        "boundingsphere": "cpp"
+        "boundingsphere": "cpp",
+        "program": "cpp",
+        "shader": "cpp",
+        "bufferobject": "cpp",
+        "image": "cpp",
+        "texture": "cpp",
+        "uniform": "cpp"
     }
 }

@@ -17,5 +17,9 @@ static void time_check_end()
 	std::cout<<elapsed_seconds.count()<<std::endl;
 }
 
+static Eigen::Vector2d vec3dTo2d(Eigen::Vector3d vec3d)
+{
+	return Eigen::Vector2d(vec3d[0], vec3d[2]);
+}
 
 #endif

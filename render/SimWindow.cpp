@@ -114,7 +114,14 @@ timer(int value)
 	// {
 	// 	// mWorld->step();
 	// }
-	glutTimerFunc(mDisplayTimeout, timerEvent, 1);
+	// std::cout<<"Simwindow timer :"<<std::endl;
+	// time_check_end();
+	// std::cout<<"In Simwindow Timer start"<<std::endl;
+	int adaptedDisplayTimeout = mDisplayTimeout-value;
+	glutTimerFunc(adaptedDisplayTimeout, timerEvent, 1);
+	
+	// std::cout<<"In Simwindow Timer end"<<std::endl;
+	// time_check_start();
 	// glutPostRedisplay();
 }
 

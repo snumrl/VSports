@@ -1,4 +1,4 @@
-#include "BvhWindow.h"
+#include "SingleBasketballWindow.h"
 #include "../render/GLfunctionsDART.h"
 #include "../model/SkelMaker.h"
 #include "../model/SkelHelper.h"
@@ -28,7 +28,7 @@ namespace np = boost::python::numpy;
 // double floorDepth = -0.1;
 
 void
-BvhWindow::
+SingleBasketballWindow::
 initWindow(int _w, int _h, char* _name)
 {
 	mWindows.push_back(this);
@@ -51,8 +51,8 @@ initWindow(int _w, int _h, char* _name)
 
 
 
-BvhWindow::
-BvhWindow()
+SingleBasketballWindow::
+SingleBasketballWindow()
 :SimWindow(), mIsNNLoaded(false)
 {
 	mEnv = new Environment(30, 180, 4);
@@ -106,11 +106,22 @@ BvhWindow()
 	this->goal.resize(2);
     this->goal.setZero();
 
+    for(int i=0;i<3;i++)
+    {
+        std::vector<Eigen::Isometry3d> prevHandTransform;
+        prevHandTransform.push_back(Eigen::Isometry3d::Identity());
+        prevHandTransform.push_back(Eigen::Isometry3d::Identity());
+        this->prevHandTransforms.push_back(prevHandTransform);
+    }
+
+
+    mEnv->mWorld->setGravity(Eigen::Vector3d(0.0, -9.81, 0.0));
+
 }
 
-BvhWindow::
-BvhWindow(const char* bvh_path, const char* nn_path)
-:BvhWindow()
+SingleBasketballWindow::
+SingleBasketballWindow(const char* bvh_path, const char* nn_path)
+:SingleBasketballWindow()
 {
 	targetActionType = 0;
 	actionDelay = 0;
@@ -143,7 +154,7 @@ BvhWindow(const char* bvh_path, const char* nn_path)
 }
 
 void
-BvhWindow::
+SingleBasketballWindow::
 initDartNameIdMapping()
 {    
 	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
@@ -163,7 +174,7 @@ initDartNameIdMapping()
 }
 
 void
-BvhWindow::
+SingleBasketballWindow::
 initCustomView()
 {
 	// mCamera->eye = Eigen::Vector3d(3.60468, -4.29576, 1.87037);
@@ -176,7 +187,7 @@ initCustomView()
 }
 
 void
-BvhWindow::
+SingleBasketballWindow::
 initGoalpost()
 {
 	redGoalpostSkel = SkelHelper::makeGoalpost(Eigen::Vector3d(-8.0, 0.25 + floorDepth, 0.0), "red");
@@ -189,7 +200,7 @@ initGoalpost()
 
 
 void
-BvhWindow::
+SingleBasketballWindow::
 keyboard(unsigned char key, int x, int y)
 {
 	SkeletonPtr manualSkel = mEnv->getCharacter(0)->getSkeleton();
@@ -261,7 +272,7 @@ keyboard(unsigned char key, int x, int y)
 	}
 }
 void
-BvhWindow::
+SingleBasketballWindow::
 keyboardUp(unsigned char key, int x, int y)
 {
 	SkeletonPtr manualSkel = mEnv->getCharacter(0)->getSkeleton();
@@ -295,11 +306,11 @@ keyboardUp(unsigned char key, int x, int y)
 	}
 }
 void
-BvhWindow::
+SingleBasketballWindow::
 timer(int value)
 {
 	if(mPlay)
-		step();
+		value = step();
 	// display();
 	// glutSwapBuffers();
 	glutPostRedisplay();
@@ -309,7 +320,7 @@ timer(int value)
 
 
 void
-BvhWindow::
+SingleBasketballWindow::
 applyKeyBoardEvent()
 {
     double scale = 150.0;
@@ -338,7 +349,7 @@ applyKeyBoardEvent()
         this->targetLocal.segment(0,2) += scale*rightVec;
 }
 void
-BvhWindow::
+SingleBasketballWindow::
 applyMouseEvent()
 {
     Eigen::Vector3d facing = mCamera->lookAt - mCamera->eye;
@@ -348,11 +359,13 @@ applyMouseEvent()
     // std::cout<<targetLocal.segment(2,2).transpose()<<std::endl;
 }
 
-
-void
-BvhWindow::
+int
+SingleBasketballWindow::
 step()
 {
+    // std::cout<<"RNN Time : "<<std::endl;
+    // time_check_start();
+	std::chrono::time_point<std::chrono::system_clock> m_time_check_s = std::chrono::system_clock::now();
 	this->targetLocal.setZero();
 
 	applyKeyBoardEvent();
@@ -401,28 +414,143 @@ step()
 	}
 	else if(targetActionType == 1)
 	{
-		this->targetLocal.segment(2,2) = this->targetLocal.segment(0,2).normalized();
+		this->targetLocal.segment(4,3) = bvhSkel->getPositions().segment(3,3)+Eigen::Vector3d(0.0, 0.5, 0.0);
+		this->targetLocal.segment(7,3) = Eigen::Vector3d(14.0-1.57, 1.0, 0.0)*0.8 - bvhSkel->getPositions().segment(3,3);
+		this->targetLocal.segment(4,3) *= 100.0;
+		this->targetLocal.segment(7,3) *= 20.0;
 	}
 
 
-	std::cout<<"BVH skel position : "<<vec3dTo2d(bvhSkel->getPositions().segment(3,3)).transpose()<<endl;
-	std::cout<<"View direction  : "<<vec3dTo2d(mCamera->lookAt - mCamera->eye).transpose().normalized()<<endl;
+	// std::cout<<"BVH skel position : "<<vec3dTo2d(bvhSkel->getPositions().segment(3,3)).transpose()<<endl;
+	// std::cout<<"View direction  : "<<vec3dTo2d(mCamera->lookAt - mCamera->eye).transpose().normalized()<<endl;
 	
 	// std::cout<<"BVH skel position : "<<vec3dTo2d(bvhSkel->getPositions().segment(3,3)).transpose()<<endl;
 
-	Eigen::VectorXd nextPosition = mMotionGenerator->generateNextPose(this->targetLocal, targetActionType, actionDelay);
-	bvhSkel->setPositions(nextPosition);
-	// cout<<nextPosition.transpose()<<endl;
+	auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(this->targetLocal, targetActionType, actionDelay);
+    Eigen::VectorXd nextPosition = nextPositionAndContacts.first;
+    Eigen::Vector4d nextContacts = nextPositionAndContacts.second;
 
-	// mEnv->stepAtOnce();
+    bvhSkel->setPositions(nextPosition);
+
+    bvhSkel->setVelocities(bvhSkel->getVelocities().setZero());
+
+
+    if(nextContacts[2]>=0.5 || nextContacts[3]>=0.5)
+    {
+        bool leftContact;
+
+        if(nextContacts[2]>=nextContacts[3])
+            leftContact = true;
+        else
+            leftContact = false;
+
+        cout<<"Contact info : "<<nextContacts.transpose()<<endl;
+
+        setBallPosition(leftContact);
+        setBallVelocity(leftContact);
+    }
+
+
+    // update prevHandTransform
+    updateHandTransform();
+
+	// cout<<nextPosition.transpose()<<endl;
+    // time_check_end();
+
+    // std::cout<<"Simulator Time : "<<std::endl;
+    // time_check_start();
+	mEnv->stepAtOnce();
+    // time_check_end();
+    // std::cout<<std::endl;
 	// mEnv->getRewards();
 
+
+    std::chrono::duration<double> elapsed_seconds;
+	elapsed_seconds = std::chrono::system_clock::now()-m_time_check_s;
+    int calTime = std::min((int)(1000*elapsed_seconds.count()), 33);
+	return calTime;
+}
+
+void 
+SingleBasketballWindow::
+setBallPosition(bool leftContact)
+{
+	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
+    Eigen::Isometry3d handTransform;
+ 
+    Eigen::VectorXd prevBallPosition = mEnv->ballSkel->getPositions();
+ 
+    if(leftContact)
+    {
+        handTransform = bvhSkel->getBodyNode("LeftHand")->getTransform();
+    }
+    else
+    {
+        handTransform = bvhSkel->getBodyNode("RightHand")->getTransform();
+    }
+
+
+
+    Eigen::VectorXd curBallPosition = mEnv->ballSkel->getPositions();
+    curBallPosition.segment(3,3) = handTransform * Eigen::Vector3d(0.10, 0.12, 0.0);
+    mEnv->ballSkel->setPositions(curBallPosition);
+}
+
+
+void 
+SingleBasketballWindow::
+setBallVelocity(bool leftContact)
+{
+	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
+    Eigen::Isometry3d handTransform;
+ 
+    Eigen::VectorXd prevBallPosition = mEnv->ballSkel->getPositions();
+ 
+    if(leftContact)
+    {
+        handTransform = bvhSkel->getBodyNode("LeftHand")->getTransform();
+        prevBallPosition.segment(3,3) = prevHandTransforms[2][0] * Eigen::Vector3d(0.10, 0.12, 0.0);
+    }
+    else
+    {
+        handTransform = bvhSkel->getBodyNode("RightHand")->getTransform();
+        prevBallPosition.segment(3,3) = prevHandTransforms[2][1] * Eigen::Vector3d(0.10, 0.12, 0.0);
+        // handIndex = bvhSkel->getIndexOf(bvhSkel->getBodyNode("RightHand")->getParentJoint()->getDof(0));
+    }
+
+
+
+    Eigen::VectorXd curBallPosition = mEnv->ballSkel->getPositions();
+
+    if(mEnv->mTimeElapsed != 0)
+    {
+        mEnv->ballSkel->setVelocities((curBallPosition - prevBallPosition)*15.0);
+    }
 }
 
 void
-BvhWindow::
+SingleBasketballWindow::
+updateHandTransform()
+{
+	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
+    for(int i=2;i>0;i--)
+    {
+        this->prevHandTransforms[i] = this->prevHandTransforms[i-1];
+    }
+    std::vector<Eigen::Isometry3d> prevHandTransform;
+    prevHandTransform.push_back(bvhSkel->getBodyNode("LeftHand")->getTransform());
+    prevHandTransform.push_back(bvhSkel->getBodyNode("RightHand")->getTransform());
+
+    this->prevHandTransforms[0] = prevHandTransform;
+}
+
+void
+SingleBasketballWindow::
 display()
 {
+
+    // time_check_end();
+    // time_check_start();
 	glClearColor(0.85, 0.85, 1.0, 1.0);
 	// glClearColor(1.0, 1.0, 1.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -464,7 +592,7 @@ display()
 
 	GUI::drawSkeleton(mEnv->floorSkel, Eigen::Vector3d(0.5, 1.0, 0.5), showCourtMesh, false);
 
-	// GUI::drawSkeleton(mEnv->ballSkel, Eigen::Vector3d(0.1, 0.1, 0.1));
+	GUI::drawSkeleton(mEnv->ballSkel, Eigen::Vector3d(0.9, 0.6, 0.0));
 
 	GUI::drawSkeleton(mEnv->mWorld->getSkeleton(charNames[0]));
 	// cout<<"3333"<<endl;
@@ -496,7 +624,7 @@ display()
 }
 
 std::string
-BvhWindow::
+SingleBasketballWindow::
 indexToStateString(int index)
 {
 	switch(index)
@@ -542,7 +670,7 @@ indexToStateString(int index)
 }
 
 void
-BvhWindow::
+SingleBasketballWindow::
 mouse(int button, int state, int x, int y) 
 {
     mPrevX = x;
@@ -583,7 +711,7 @@ mouse(int button, int state, int x, int y)
 
 
 void
-BvhWindow::
+SingleBasketballWindow::
 motion(int x, int y)
 {
 	SimWindow::motion(x, y);
