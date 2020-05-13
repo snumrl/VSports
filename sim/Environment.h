@@ -1,7 +1,10 @@
 #ifndef __VS_ENVIRONMENT_H__
 #define __VS_ENVIRONMENT_H__
 #include "Character2D.h"
+#include "Character3D.h"
 #include "BehaviorTree.h"
+#include "../extern/ICA/plugin/MotionGenerator.h"
+#include "../motion/BVHparser.h"
 
 // #define _ID_P 0
 // #define _ID_V 2
@@ -55,8 +58,7 @@ class AgentEnvWindow;
 class Environment
 {
 public:
-	Environment(int control_Hz=30, int simulation_Hz=900, int numChars = 4);
-	void initCharacters();
+	Environment(int control_Hz, int simulation_Hz, int numChars, std::string bvh_path, std::string nn_path);
 	void resetCharacterPositions();
 	void initGoalposts();
 	void initFloor();
@@ -88,8 +90,8 @@ public:
 
 	const dart::simulation::WorldPtr& getWorld(){return mWorld;}
 
-	Character2D* getCharacter(int index){return mCharacters[index];}
-	std::vector<Character2D*> getCharacters(){return mCharacters;}
+	Character3D* getCharacter(int index){return mCharacters[index];}
+	std::vector<Character3D*> getCharacters(){return mCharacters;}
 
 	int getControlHz(){return mControlHz;}
 	int getSimulationHz(){return mSimulationHz;}
@@ -107,7 +109,7 @@ public:
 	void dampBallVelocitiy(double dampPower);
 
 	Eigen::VectorXd normalizeNNState(Eigen::VectorXd state);
-	Eigen::VectorXd unNormalizeNNState(Eigen::VectorXd outSubgoal);
+	Eigen::VectorXd unNormalizeNNState(Eigen::VectorXd normalizedState);
 
 	void setVState(int index, Eigen::VectorXd latentState);
 
@@ -120,6 +122,10 @@ public:
 
 	int getNumBallTouch(){return mNumBallTouch;}
 
+	void updatePrevBallPositions(Eigen::Vector3d newBallPosition);
+	void updatePrevContacts(Eigen::Vector2d handContacts);
+	bool isCriticalPoint();
+
 public:
 	dart::simulation::WorldPtr mWorld;
 	int mNumChars;
@@ -128,7 +134,7 @@ public:
 	int mControlHz;
 	int mSimulationHz;
 
-	std::vector<Character2D*> mCharacters;
+	std::vector<Character3D*> mCharacters;
 
 	dart::dynamics::SkeletonPtr floorSkel;
 	dart::dynamics::SkeletonPtr ballSkel;
@@ -169,8 +175,46 @@ public:
 	int mNumBallTouch;
 
 	int endTime;
+
+
+
+
+
+
+
+	// added for motion
+	std::vector<Eigen::Vector3d> prevBallPositions;
+	Eigen::Vector3d curBallPosition;
+
+	Eigen::Vector3d criticalPoint_targetBallPosition;
+	Eigen::Vector3d criticalPoint_targetBallVelocity;
+	Eigen::Vector3d computeBallPosition();
+	void initDartNameIdMapping();
+
+	void initMotionGenerator(std::string dataPath);
+
+	std::map<std::string, int> dartNameIdMap;
+	bool prevContact;
+	bool curContact;
+
+
+    ICA::dart::MotionGenerator* mMotionGenerator;
+
+    BVHparser* mBvhParser;
+	void initCharacters(std::string bvhPath);
+
+	int criticalPointFrame;
+	int curFrame;
+
+	Eigen::Vector3d mTargetBallPosition;
+
+	void resetTargetBallPosition();
+	Eigen::Vector3d getTargetBallGlobalPosition();
+
+
 	// AgentEnvWindow* mWindow;
 };
 double getFacingAngleFromLocalState(Eigen::VectorXd curState);
 Eigen::VectorXd localStateToOriginState(Eigen::VectorXd localState, int mNumChars=6);
+double getBounceTime(double startPosition, double startVelocity, double upperbound);
 #endif

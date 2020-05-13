@@ -15,6 +15,9 @@
 // Include GLM
 #include <glm/glm.hpp>
 #include "../extern/ICA/plugin/MotionGenerator.h"
+#include "../extern/ICA/Utils/PathManager.h"
+#include "../extern/ICA/CharacterControl/MotionRepresentation.h"
+#include "../utils/Utils.h"
 using namespace glm;
 #include <iostream>
 #include <random>
@@ -53,10 +56,9 @@ initWindow(int _w, int _h, char* _name)
 
 SingleBasketballWindow::
 SingleBasketballWindow()
-:SimWindow(), mIsNNLoaded(false)
+:SimWindow(), mIsNNLoaded(false), mFrame(true)
 {
-	mEnv = new Environment(30, 180, 4);
-	mEnv->endTime = 300;
+
  	// srand (time(NULL));	
  	initCustomView();
 	initGoalpost();
@@ -83,15 +85,7 @@ SingleBasketballWindow()
 	p::exec("from Model import *",mns);
 	// cout<<"444444"<<endl;
 	controlOn = false;
-	mActions.resize(mEnv->mNumChars);
-	mActionNoises.resize(mEnv->mNumChars);
-	for(int i=0;i<mActions.size();i++)
-	{
-		mActions[i] = Eigen::VectorXd(3);
-		mActionNoises[i] = Eigen::VectorXd(3);
-		mActions[i].setZero();
-		mActionNoises[i].setZero();
-	}
+
 	this->vsHardcoded = false;
 
 	this->showCourtMesh = true;
@@ -105,6 +99,7 @@ SingleBasketballWindow()
 	this->targetLocal.setZero();
 	this->goal.resize(2);
     this->goal.setZero();
+    this->mTrackCharacter = true;
 
     for(int i=0;i<3;i++)
     {
@@ -115,7 +110,6 @@ SingleBasketballWindow()
     }
 
 
-    mEnv->mWorld->setGravity(Eigen::Vector3d(0.0, -9.81, 0.0));
 
 }
 
@@ -123,55 +117,81 @@ SingleBasketballWindow::
 SingleBasketballWindow(const char* bvh_path, const char* nn_path)
 :SingleBasketballWindow()
 {
+
+
+
+	mEnv = new Environment(30, 180, 1, bvh_path, nn_path);
+
+	mActions.resize(mEnv->mNumChars);
+	mStates.resize(mEnv->mNumChars);
+
 	targetActionType = 0;
 	actionDelay = 0;
-	bvhParser = new BVHparser(bvh_path, BVHType::BASKET);
-	bvhParser->writeSkelFile();
+	// bvhParser = new BVHparser(bvh_path, BVHType::BASKET);
+	// bvhParser->writeSkelFile();
+
 	// cout<<bvhParser->skelFilePath<<endl;
-	SkeletonPtr bvhSkel = dart::utils::SkelParser::readSkeleton(bvhParser->skelFilePath);
-	charNames.push_back(getFileName_(bvh_path));
+
+	// SkeletonPtr bvhSkel = dart::utils::SkelParser::readSkeleton(bvhParser->skelFilePath);
+	// charNames.push_back(getFileName_(bvh_path));
 	// cout<<charNames[0]<<endl;	
-	BVHmanager::setPositionFromBVH(bvhSkel, bvhParser, 0);
-	mEnv->mWorld->addSkeleton(bvhSkel);
+	// BVHmanager::setPositionFromBVH(bvhSkel, bvhParser, 0);
+	// mEnv->mWorld->addSkeleton(bvhSkel);
+
 
 	// cout<<"Before MotionGenerator"<<endl;
 	// exit(0);
-	cout<<"BVH skeleton dofs : "<<bvhSkel->getNumDofs()<<endl;
-	cout<<"BVH skeleton numBodies : "<<bvhSkel->getNumBodyNodes()<<endl;
-	initDartNameIdMapping();
-	mMotionGenerator = new ICA::dart::MotionGenerator(nn_path, this->dartNameIdMap);
+	// cout<<"BVH skeleton dofs : "<<bvhSkel->getNumDofs()<<endl;
+	// cout<<"BVH skeleton numBodies : "<<bvhSkel->getNumBodyNodes()<<endl;
+	// initDartNameIdMapping();
+	// mMotionGenerator = new ICA::dart::MotionGenerator(nn_path, this->dartNameIdMap);
+
 	// cout<<bvhSkel->getPositions().transpose()<<endl;
-	for(int i=0;i<10;i++)
-	{
-		BVHmanager::setPositionFromBVH(bvhSkel, bvhParser, 100+i);
-		Eigen::VectorXd bvhPosition = bvhSkel->getPositions();
-		// bvhPosition[3] -= 4.0;
-		// cout<<bvhPosition.transpose()<<endl;
-		mMotionGenerator->setCurrentPose(bvhPosition);
-		bvhSkel->setPositions(bvhPosition);
-	}
 
-}
 
-void
-SingleBasketballWindow::
-initDartNameIdMapping()
-{    
-	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
-	int curIndex = 0;
-	// cout<<bvhSkel->getNumBodyNodes()<<endl;
-	for(int i=0;i<bvhSkel->getNumBodyNodes();i++)
-	{
-		this->dartNameIdMap[bvhSkel->getBodyNode(i)->getName()] = curIndex;
-		curIndex += bvhSkel->getBodyNode(i)->getParentJoint()->getNumDofs();
-	}
+	/// Read training X data
+    std::string sub_dir = "data";
+    std::string xDataPath=  PathManager::getFilePath_data(nn_path, sub_dir, "xData.dat", 0 );
+    std::string xNormalPath=  PathManager::getFilePath_data(nn_path, sub_dir, "xNormal.dat");
 
-	// cout<<this->dartNameIdMap.size()<<endl;
-	// for(auto& nameMap : this->dartNameIdMap)
+    std::cout<<"xDataPath:"<<xDataPath<<std::endl;
+    
+    // if(! boost::filesystem::is_regular_file (xDataPath)) break;
+    this->xData.push_back(MotionRepresentation::readXData(xNormalPath, xDataPath, sub_dir));
+
+
+
+	// for(int i=0;i<10;i++)
 	// {
-	// 	cout<<nameMap.first<<" "<<nameMap.second<<endl;
+	// 	BVHmanager::setPositionFromBVH(mEnv->mCharacters[0]->getSkeleton(), mEnv->mBvhParser, 50+i);
+	// 	Eigen::VectorXd bvhPosition = mEnv->mCharacters[0]->getSkeleton()->getPositions();
+	// 	mEnv->mMotionGenerator->setCurrentPose(bvhPosition, this->xData[0][mFrame]);
+	// 	mEnv->mCharacters[0]->getSkeleton()->setPositions(bvhPosition);
+	// 	mFrame++;
 	// }
+
+
 }
+
+// void
+// SingleBasketballWindow::
+// initDartNameIdMapping()
+// {    
+// 	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
+// 	int curIndex = 0;
+// 	// cout<<bvhSkel->getNumBodyNodes()<<endl;
+// 	for(int i=0;i<bvhSkel->getNumBodyNodes();i++)
+// 	{
+// 		this->dartNameIdMap[bvhSkel->getBodyNode(i)->getName()] = curIndex;
+// 		curIndex += bvhSkel->getBodyNode(i)->getParentJoint()->getNumDofs();
+// 	}
+
+// 	// cout<<this->dartNameIdMap.size()<<endl;
+// 	// for(auto& nameMap : this->dartNameIdMap)
+// 	// {
+// 	// 	cout<<nameMap.first<<" "<<nameMap.second<<endl;
+// 	// }
+// }
 
 void
 SingleBasketballWindow::
@@ -225,29 +245,14 @@ keyboard(unsigned char key, int x, int y)
         case 'd':
             keyarr[int('d')] = PUSHED;
             break;
-
-        case 'q': //dribble
+		case 't':
         {
-            targetActionType = 0;
-            actionDelay = 0;
+            mTrackCharacter = !mTrackCharacter;
             break;
         }
-        case 'e': //pass
+		case 'r':
         {
-            targetActionType = 1;
-            actionDelay = 30;
-            break;
-        }
-        case 'r': //pass receive
-        {
-            targetActionType = 2;
-            actionDelay = 30;
-            break;
-        }
-        case 't': //shoot
-        {
-            targetActionType = 3;
-            actionDelay = 30;
+            mEnv->reset();
             break;
         }
 		case 'h':
@@ -266,6 +271,15 @@ keyboard(unsigned char key, int x, int y)
 			break;
 		case 'i':
 			showCourtMesh = !showCourtMesh;
+			break;
+
+		case ']':
+			mFrame += 100;
+			break;
+		case '[':
+			mFrame -= 100;
+			if(mFrame <0)
+				mFrame = 0;
 			break;
 
 		default: SimWindow::keyboard(key, x, y);
@@ -368,57 +382,21 @@ step()
 	std::chrono::time_point<std::chrono::system_clock> m_time_check_s = std::chrono::system_clock::now();
 	this->targetLocal.setZero();
 
-	applyKeyBoardEvent();
-	applyMouseEvent();
-    actionDelay--;
-    if(actionDelay < -30)
-	{
-		targetActionType = 0;
-        actionDelay = 0;
-	}
-
-    // If terminal action goes to end, reset to dribble.
-    if(targetActionType == 0)
-        actionDelay = 0;
-
-
-	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
-	// for(int i=0;i<1;i++)
+	// applyKeyBoardEvent();
+	// applyMouseEvent();
+ //    actionDelay--;
+ //    if(actionDelay < -30)
 	// {
-	// 	// BVHmanager::setPositionFromBVH(mEnv->mWorld->getSkeleton(charNames[i]), bvhParser, bvhFrame++);
+	// 	targetActionType = 0;
+ //        actionDelay = 0;
 	// }
 
-
-	// for(int i=0;i<mEnv->mNumChars;i++)
-	// {
-	// 	mEnv->setAction(i, mActions[i]);
-
+ //    // If terminal action goes to end, reset to dribble.
+ //    if(targetActionType == 0)
+ //        actionDelay = 0;
 
 
-	// // }
-	// this->targetLocal.segment(0,2) = this->goal - vec3dTo2d(bvhSkel->getPositions().segment(3,3));
-	// this->targetLocal.segment(0,2) *= 100.0;
-
-
-	// std::cout<<"Target Vel : "<<this->targetLocal.segment(0,2).transpose()<<std::endl;
-	//Shoot direction is fixed to goalpost
-	if(targetActionType == 3)
-	{
-		// this->targetLocal.segment(2,2) = Eigen::Vector2d(14.0-1.57,0.0)*0.8 - vec3dTo2d(bvhSkel->getPositions().segment(3,3));
-		// this->targetLocal.segment(2,2).normalize();
-
-		this->targetLocal.segment(4,3) = bvhSkel->getPositions().segment(3,3)+Eigen::Vector3d(0.0, 0.5, 0.0);
-		this->targetLocal.segment(7,3) = Eigen::Vector3d(14.0-1.57, 10.0, 0.0)*0.8 - bvhSkel->getPositions().segment(3,3);
-		this->targetLocal.segment(4,3) *= 100.0;
-		this->targetLocal.segment(7,3) *= 20.0;
-	}
-	else if(targetActionType == 1)
-	{
-		this->targetLocal.segment(4,3) = bvhSkel->getPositions().segment(3,3)+Eigen::Vector3d(0.0, 0.5, 0.0);
-		this->targetLocal.segment(7,3) = Eigen::Vector3d(14.0-1.57, 1.0, 0.0)*0.8 - bvhSkel->getPositions().segment(3,3);
-		this->targetLocal.segment(4,3) *= 100.0;
-		this->targetLocal.segment(7,3) *= 20.0;
-	}
+	// SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
 
 
 	// std::cout<<"BVH skel position : "<<vec3dTo2d(bvhSkel->getPositions().segment(3,3)).transpose()<<endl;
@@ -426,33 +404,16 @@ step()
 	
 	// std::cout<<"BVH skel position : "<<vec3dTo2d(bvhSkel->getPositions().segment(3,3)).transpose()<<endl;
 
-	auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(this->targetLocal, targetActionType, actionDelay);
-    Eigen::VectorXd nextPosition = nextPositionAndContacts.first;
-    Eigen::Vector4d nextContacts = nextPositionAndContacts.second;
+	// auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(this->targetLocal, targetActionType, actionDelay);
 
-    bvhSkel->setPositions(nextPosition);
+	mStates[0] = mEnv->getState(0);
+	std::cout<<mStates[0].transpose()<<std::endl;
 
-    bvhSkel->setVelocities(bvhSkel->getVelocities().setZero());
+	mEnv->setAction(0, Utils::toEigenVec(this->xData[0][mFrame]));
 
-
-    if(nextContacts[2]>=0.5 || nextContacts[3]>=0.5)
-    {
-        bool leftContact;
-
-        if(nextContacts[2]>=nextContacts[3])
-            leftContact = true;
-        else
-            leftContact = false;
-
-        cout<<"Contact info : "<<nextContacts.transpose()<<endl;
-
-        setBallPosition(leftContact);
-        setBallVelocity(leftContact);
-    }
-
-
+	
     // update prevHandTransform
-    updateHandTransform();
+    // updateHandTransform();
 
 	// cout<<nextPosition.transpose()<<endl;
     // time_check_end();
@@ -463,6 +424,7 @@ step()
     // time_check_end();
     // std::cout<<std::endl;
 	// mEnv->getRewards();
+	mFrame++;
 
 
     std::chrono::duration<double> elapsed_seconds;
@@ -471,78 +433,78 @@ step()
 	return calTime;
 }
 
-void 
-SingleBasketballWindow::
-setBallPosition(bool leftContact)
-{
-	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
-    Eigen::Isometry3d handTransform;
+// void 
+// SingleBasketballWindow::
+// setBallPosition(bool leftContact)
+// {
+// 	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
+//     Eigen::Isometry3d handTransform;
  
-    Eigen::VectorXd prevBallPosition = mEnv->ballSkel->getPositions();
+//     Eigen::VectorXd prevBallPosition = mEnv->ballSkel->getPositions();
  
-    if(leftContact)
-    {
-        handTransform = bvhSkel->getBodyNode("LeftHand")->getTransform();
-    }
-    else
-    {
-        handTransform = bvhSkel->getBodyNode("RightHand")->getTransform();
-    }
+//     if(leftContact)
+//     {
+//         handTransform = bvhSkel->getBodyNode("LeftHand")->getTransform();
+//     }
+//     else
+//     {
+//         handTransform = bvhSkel->getBodyNode("RightHand")->getTransform();
+//     }
 
 
 
-    Eigen::VectorXd curBallPosition = mEnv->ballSkel->getPositions();
-    curBallPosition.segment(3,3) = handTransform * Eigen::Vector3d(0.10, 0.12, 0.0);
-    mEnv->ballSkel->setPositions(curBallPosition);
-}
+//     Eigen::VectorXd curBallPosition = mEnv->ballSkel->getPositions();
+//     curBallPosition.segment(3,3) = handTransform * Eigen::Vector3d(0.10, 0.12, 0.0);
+//     mEnv->ballSkel->setPositions(curBallPosition);
+// }
 
 
-void 
-SingleBasketballWindow::
-setBallVelocity(bool leftContact)
-{
-	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
-    Eigen::Isometry3d handTransform;
+// void 
+// SingleBasketballWindow::
+// setBallVelocity(bool leftContact)
+// {
+// 	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
+//     Eigen::Isometry3d handTransform;
  
-    Eigen::VectorXd prevBallPosition = mEnv->ballSkel->getPositions();
+//     Eigen::VectorXd prevBallPosition = mEnv->ballSkel->getPositions();
  
-    if(leftContact)
-    {
-        handTransform = bvhSkel->getBodyNode("LeftHand")->getTransform();
-        prevBallPosition.segment(3,3) = prevHandTransforms[2][0] * Eigen::Vector3d(0.10, 0.12, 0.0);
-    }
-    else
-    {
-        handTransform = bvhSkel->getBodyNode("RightHand")->getTransform();
-        prevBallPosition.segment(3,3) = prevHandTransforms[2][1] * Eigen::Vector3d(0.10, 0.12, 0.0);
-        // handIndex = bvhSkel->getIndexOf(bvhSkel->getBodyNode("RightHand")->getParentJoint()->getDof(0));
-    }
+//     if(leftContact)
+//     {
+//         handTransform = bvhSkel->getBodyNode("LeftHand")->getTransform();
+//         prevBallPosition.segment(3,3) = prevHandTransforms[2][0] * Eigen::Vector3d(0.10, 0.12, 0.0);
+//     }
+//     else
+//     {
+//         handTransform = bvhSkel->getBodyNode("RightHand")->getTransform();
+//         prevBallPosition.segment(3,3) = prevHandTransforms[2][1] * Eigen::Vector3d(0.10, 0.12, 0.0);
+//         // handIndex = bvhSkel->getIndexOf(bvhSkel->getBodyNode("RightHand")->getParentJoint()->getDof(0));
+//     }
 
 
 
-    Eigen::VectorXd curBallPosition = mEnv->ballSkel->getPositions();
+//     Eigen::VectorXd curBallPosition = mEnv->ballSkel->getPositions();
 
-    if(mEnv->mTimeElapsed != 0)
-    {
-        mEnv->ballSkel->setVelocities((curBallPosition - prevBallPosition)*15.0);
-    }
-}
+//     if(mEnv->mTimeElapsed != 0)
+//     {
+//         mEnv->ballSkel->setVelocities((curBallPosition - prevBallPosition)*15.0);
+//     }
+// }
 
-void
-SingleBasketballWindow::
-updateHandTransform()
-{
-	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
-    for(int i=2;i>0;i--)
-    {
-        this->prevHandTransforms[i] = this->prevHandTransforms[i-1];
-    }
-    std::vector<Eigen::Isometry3d> prevHandTransform;
-    prevHandTransform.push_back(bvhSkel->getBodyNode("LeftHand")->getTransform());
-    prevHandTransform.push_back(bvhSkel->getBodyNode("RightHand")->getTransform());
+// void
+// SingleBasketballWindow::
+// updateHandTransform()
+// {
+// 	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
+//     for(int i=2;i>0;i--)
+//     {
+//         this->prevHandTransforms[i] = this->prevHandTransforms[i-1];
+//     }
+//     std::vector<Eigen::Isometry3d> prevHandTransform;
+//     prevHandTransform.push_back(bvhSkel->getBodyNode("LeftHand")->getTransform());
+//     prevHandTransform.push_back(bvhSkel->getBodyNode("RightHand")->getTransform());
 
-    this->prevHandTransforms[0] = prevHandTransform;
-}
+//     this->prevHandTransforms[0] = prevHandTransform;
+// }
 
 void
 SingleBasketballWindow::
@@ -556,9 +518,16 @@ display()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
 	initLights();
+	
+	std::vector<Character3D*> chars = mEnv->getCharacters();
+
+	if(mTrackCharacter)
+	{
+		mCamera->lookAt = chars[0]->getSkeleton()->getCOM();
+	}
+
 	mCamera->apply();
 
-	std::vector<Character2D*> chars = mEnv->getCharacters();
 
 
 	// for(int i=0;i<chars.size()-1;i++)
@@ -594,26 +563,44 @@ display()
 
 	GUI::drawSkeleton(mEnv->ballSkel, Eigen::Vector3d(0.9, 0.6, 0.0));
 
-	GUI::drawSkeleton(mEnv->mWorld->getSkeleton(charNames[0]));
+	GUI::drawSkeleton(chars[0]->getSkeleton());
+
+	GUI::drawSphere(0.3, mEnv->mTargetBallPosition, Eigen::Vector3d(0.0, 0.0, 1.0));
+
 	// cout<<"3333"<<endl;
 
 	// std::string scoreString
 	// = "Red : "+to_string((int)(mEnv->mAccScore[0] + mEnv->mAccScore[1]))+" |Blue : "+to_string((int)(mEnv->mAccScore[2]+mEnv->mAccScore[3]));
 
-	std::string scoreString
-	= "Red : "+to_string((mEnv->mAccScore[0]));//+" |Blue : "+to_string((int)(mEnv->mAccScore[1]));
+	// std::string scoreString
+	// = "Red : "+to_string((mEnv->mAccScore[0]));
+
+	//+" |Blue : "+to_string((int)(mEnv->mAccScore[1]));
 	// = "Red : "+to_string((getRNDFeatureDiff(0)));//+" |Blue : "+to_string((int)(mEnv->mAccScore[1]));
 	// cout<<"444444"<<endl;
 
 	// cout<<mEnv->getCharacters()[0]->getSkeleton()->getVelocities().transpose()<<endl;
 	// cout<<mActions[1][3]<<endl;
 
-	GUI::drawStringOnScreen(0.2, 0.8, scoreString, true, Eigen::Vector3d::Zero());
+	// GUI::drawStringOnScreen(0.2, 0.8, scoreString, true, Eigen::Vector3d::Zero());
 
 	GUI::drawStringOnScreen(0.8, 0.8, to_string(mEnv->getElapsedTime()), true, Eigen::Vector3d::Zero());
 
 
 	// GUI::drawVerticalLine(this->goal.segment(0,2), Eigen::Vector3d(1.0, 1.0, 1.0));
+
+
+    std::string curAction;
+    for(int i=4;i<4+8;i++)
+    {
+        if(xData[0][mFrame][i] >= 0.5)
+            curAction = std::to_string(i-4);
+    }
+    curAction = curAction+"     "+std::to_string(xData[0][mFrame][4+8+6]/30.0);
+    // xData[playingMotionSegment_Index][frame];
+
+    GUI::drawStringOnScreen(0.2, 0.85, curAction, true, Eigen::Vector3d(1,1,1));
+
 
 	glutSwapBuffers();
 	if(mTakeScreenShot)

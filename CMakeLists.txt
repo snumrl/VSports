@@ -37,11 +37,19 @@ add_subdirectory( pyvs )
 add_subdirectory( extern/ICA/plugin)
 
 
+#file(GLOB srcs
+#		"./*.cpp"
+#		"render/*.h" "render/*.cpp"
+#		"vsports/*.h" "vsports/*.cpp"
+#		"utils/*.h" "utils/*.cpp"
+#		"motion/*.h" "motion/*.cpp")
+
 file(GLOB srcs
 		"./*.cpp"
 		"render/*.h" "render/*.cpp"
-		"vsports/*.h" "vsports/*.cpp"
-		"vsports/common/*.h" "vsports/common/*.cpp"
+		"vsports/common.h"
+		"vsports/SingleBasketballWindow.h" "vsports/SingleBasketballWindow.cpp"
+		"utils/*.h" "utils/*.cpp"
 		"motion/*.h" "motion/*.cpp")
 
 add_executable(vsports ${srcs})

@@ -62,10 +62,10 @@ public:
 
 	void applyMouseEvent();
 
-    void setBallPosition(bool leftContact);
-    void setBallVelocity(bool leftContact);
+    // void setBallPosition(bool leftContact);
+    // void setBallVelocity(bool leftContact);
 
-    void updateHandTransform();
+    // void updateHandTransform();
 
 	dart::dynamics::SkeletonPtr floorSkel;
 	dart::dynamics::SkeletonPtr ballSkel;
@@ -128,6 +128,21 @@ public:
 	Eigen::VectorXd targetLocal;
 
     std::vector<std::vector<Eigen::Isometry3d>> prevHandTransforms;
+
+    std::vector<std::vector<std::vector<double>>> xData;
+
+    int mFrame;
+
+    bool mTrackCharacter;
+
+	std::vector<Eigen::VectorXd> mStates;
+
+    // Eigen::Vector3d curBallPosition;
+    // Eigen::Vector3d prevBallPosition;
+    // Eigen::Vector3d pprevBallPosition;
+    // Eigen::Vector3d ppprevBallPosition;
+
+
 };
 
 #endif

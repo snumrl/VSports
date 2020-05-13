@@ -32,6 +32,22 @@ drawSphere(double r)
 
 void
 GUI::
+drawSphere(double r, Eigen::Vector3d position, Eigen::Vector3d color)
+{
+	QUAD_OBJ_INIT;
+	gluQuadricDrawStyle(quadObj, GLU_FILL);
+	gluQuadricNormals(quadObj, GLU_SMOOTH);
+
+	glPushMatrix();
+	glTranslated(position[0], position[1], position[2]);
+	glColor3d(color[0], color[1], color[2]);
+	gluSphere(quadObj, r, 16, 16);
+	glPopMatrix();
+}
+
+
+void
+GUI::
 drawCube(const Eigen::Vector3d& _size)
 {
 	glScaled(_size[0], _size[1], _size[2]);

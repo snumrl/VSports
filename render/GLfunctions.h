@@ -11,6 +11,8 @@
 namespace GUI
 {
 	void drawSphere(double r);
+	void drawSphere(double r, Eigen::Vector3d position, Eigen::Vector3d color);
+
 	void drawCube(const Eigen::Vector3d& size);
 	void drawTetrahedron(const Eigen::Vector3d& p0,const Eigen::Vector3d& p1,const Eigen::Vector3d& p2,const Eigen::Vector3d& p3,const Eigen::Vector3d& color = Eigen::Vector3d(0.8,0.8,0.8));
 	void drawTriangle(const Eigen::Vector3d& p0,const Eigen::Vector3d& p1,const Eigen::Vector3d& p2,const Eigen::Vector3d& color = Eigen::Vector3d(0.8,0.8,0.8));
