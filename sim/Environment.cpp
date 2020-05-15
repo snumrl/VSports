@@ -29,6 +29,7 @@ Environment(int control_Hz, int simulation_Hz, int numChars, std::string bvh_pat
 mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0), endTime(15), prevContact(false), curContact(false),
 criticalPointFrame(0), curFrame(0)
 {
+	std::cout<<"Envionment Generation --- ";
 	srand((unsigned int)time(0));
 	initBall();
 	initGoalposts();
@@ -57,6 +58,7 @@ criticalPointFrame(0), curFrame(0)
 	this->reset();
 	this->criticalPoint_targetBallPosition = Eigen::Vector3d(0.0, 0.85, 0.0);
 	this->criticalPoint_targetBallVelocity = Eigen::Vector3d(0.0, 0.0, 0.0);
+	std::cout<<"Success"<<std::endl;
 }
 
 void
@@ -248,7 +250,6 @@ stepAtOnce()
 
 	if(isTerminalState())
 	{
-		sleep(2000);
 		reset();
 	}
 
@@ -329,7 +330,13 @@ Environment::
 getReward(int index, bool verbose)
 {
 	double reward = 0;
-
+	reward = exp(-(curBallPosition - mTargetBallPosition).norm());
+	if((curBallPosition - mTargetBallPosition).norm() < 0.3)
+	{
+		reward *= 100;
+		std::cout<<"Successed"<<std::endl;
+		mIsTerminalState = true;
+	}
 	return reward;
 }
 
@@ -479,8 +486,13 @@ isTerminalState()
 		mIsTerminalState = true;
 	}
 
-	if((mCharacters[0]->getSkeleton()->getCOM()-mTargetBallPosition).norm() > 100.0)
+	// if((mCharacters[0]->getSkeleton()->getCOM()-mTargetBallPosition).norm() > 20.0)
+	// 	mIsTerminalState = true;
+
+	if(abs(mCharacters[0]->getSkeleton()->getCOM()[2])>15.0*0.5*1.1 || 
+		abs(mCharacters[0]->getSkeleton()->getCOM()[0])>28.0*0.5*1.1)
 		mIsTerminalState = true;
+
 
 	return mIsTerminalState;
 }

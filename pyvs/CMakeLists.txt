@@ -3,7 +3,7 @@ project(pyvs)
 set(CMAKE_CXX_COMPILER /usr/bin/g++-7)
 
 add_compile_options(-fPIC)
-#add_compile_options(-std=gnu++11)
+add_compile_options(-std=gnu++11)
 add_compile_options(-Wdeprecated-declarations)
 add_compile_options(-DHAVE_CSTDDEF)
 
@@ -25,5 +25,5 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR})
 
 add_library(pyvs SHARED ${srcs})
 
-target_link_libraries(pyvs ${DART_LIBRARIES} ${Boost_LIBRARIES} ${EIGEN_LIBRARIES} ${PYTHON_LIBRARIES} sim model)
+target_link_libraries(pyvs ${DART_LIBRARIES} ${Boost_LIBRARIES} ${EIGEN_LIBRARIES} ${PYTHON_LIBRARIES} sim model plugin_ICA)
 set_target_properties(pyvs PROPERTIES PREFIX "" )

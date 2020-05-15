@@ -150,6 +150,7 @@ makeBasketBallFloor(double floorDepth)
 	char resolved_path[PATH_MAX]; 
 	realpath("../", resolved_path);
 	std::string absolutePathProject = resolved_path;
+	// std::cout<<absolutePathProject+"/data/models/BasketBallCourt_obj/basketballcourt.obj"<<std::endl;
 
 	SkelHelper::MakeWeldJointBody("floor", 
 						absolutePathProject+"/data/models/BasketBallCourt_obj/basketballcourt.obj",

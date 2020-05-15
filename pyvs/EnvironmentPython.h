@@ -6,6 +6,7 @@
 #include <boost/python.hpp>
 #include <boost/python/numpy.hpp>
 #include "WrapperFunctions.h"
+#include "Normalizer.h"
 
 class EnvironmentPython
 {
@@ -26,23 +27,24 @@ public:
 	void resets();
 	bool isTerminalState(int id);
 	np::ndarray getState(int id, int index);
-	np::ndarray getLocalState(int id, int index);
+	// np::ndarray getLocalState(int id, int index);
 	void setAction(np::ndarray np_array, int id, int index);
 	void setActions(np::ndarray np_array);
 	double getReward(int id, int index, int verbose);
 	double getNumIterations();
 
-	int getNumBallTouch(int id);
+	// int getNumBallTouch(int id);
 
 	void endOfIteration();
 
-	np::ndarray getHardcodedAction(int id, int index);
+	// np::ndarray getHardcodedAction(int id, int index);
 
-	void reconEnvFromState(int id, int index, np::ndarray curLocalState);
+	// void reconEnvFromState(int id, int index, np::ndarray curLocalState);
 
 	// For all slaves
 	void stepsAtOnce();
 
+	Normalizer* mNormalizer;
 private:
 	std::vector<Environment*> mSlaves;
 	int mNumSlaves;

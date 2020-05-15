@@ -1,4 +1,4 @@
-#include "SingleBasketballWindow.h"
+#include "SingleControlWindow.h"
 #include "../render/GLfunctionsDART.h"
 #include "../model/SkelMaker.h"
 #include "../model/SkelHelper.h"
@@ -31,7 +31,7 @@ namespace np = boost::python::numpy;
 // double floorDepth = -0.1;
 
 void
-SingleBasketballWindow::
+SingleControlWindow::
 initWindow(int _w, int _h, char* _name)
 {
 	mWindows.push_back(this);
@@ -54,8 +54,8 @@ initWindow(int _w, int _h, char* _name)
 
 
 
-SingleBasketballWindow::
-SingleBasketballWindow()
+SingleControlWindow::
+SingleControlWindow()
 :SimWindow(), mIsNNLoaded(false), mFrame(true)
 {
 
@@ -108,19 +108,37 @@ SingleBasketballWindow()
         prevHandTransform.push_back(Eigen::Isometry3d::Identity());
         this->prevHandTransforms.push_back(prevHandTransform);
     }
+    mNormalizer = new Normalizer("../extern/ICA/motions/basket_34/data/xNormal.dat", 
+								"../extern/ICA/motions/basket_34/data/yNormal.dat");
 
 
 
 }
 
-SingleBasketballWindow::
-SingleBasketballWindow(const char* bvh_path, const char* nn_path)
-:SingleBasketballWindow()
+SingleControlWindow::
+SingleControlWindow(const char* bvh_path, const char* nn_path,
+					const char* control_nn_path)
+:SingleControlWindow()
 {
-
-
-
 	mEnv = new Environment(30, 180, 1, bvh_path, nn_path);
+
+
+	p::str str = ("num_state = "+std::to_string(mEnv->getNumState())).c_str();
+	p::exec(str,mns);
+	str = ("num_action = "+std::to_string(mEnv->getNumAction())).c_str();
+	p::exec(str, mns);
+
+	nn_module = new boost::python::object[mEnv->mNumChars];
+	p::object *load = new p::object[mEnv->mNumChars];
+	// reset_hidden = new boost::python::object[mEnv->mNumChars];
+
+	for(int i=0;i<mEnv->mNumChars;i++)
+	{
+		nn_module[i] = p::eval("ActorCriticNN(num_state, num_action).cuda()", mns);
+		load[i] = nn_module[i].attr("load");
+	}
+
+
 
 	mActions.resize(mEnv->mNumChars);
 	mStates.resize(mEnv->mNumChars);
@@ -174,7 +192,7 @@ SingleBasketballWindow(const char* bvh_path, const char* nn_path)
 }
 
 // void
-// SingleBasketballWindow::
+// SingleControlWindow::
 // initDartNameIdMapping()
 // {    
 // 	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
@@ -194,7 +212,7 @@ SingleBasketballWindow(const char* bvh_path, const char* nn_path)
 // }
 
 void
-SingleBasketballWindow::
+SingleControlWindow::
 initCustomView()
 {
 	// mCamera->eye = Eigen::Vector3d(3.60468, -4.29576, 1.87037);
@@ -207,7 +225,7 @@ initCustomView()
 }
 
 void
-SingleBasketballWindow::
+SingleControlWindow::
 initGoalpost()
 {
 	redGoalpostSkel = SkelHelper::makeGoalpost(Eigen::Vector3d(-8.0, 0.25 + floorDepth, 0.0), "red");
@@ -220,7 +238,7 @@ initGoalpost()
 
 
 void
-SingleBasketballWindow::
+SingleControlWindow::
 keyboard(unsigned char key, int x, int y)
 {
 	SkeletonPtr manualSkel = mEnv->getCharacter(0)->getSkeleton();
@@ -286,7 +304,7 @@ keyboard(unsigned char key, int x, int y)
 	}
 }
 void
-SingleBasketballWindow::
+SingleControlWindow::
 keyboardUp(unsigned char key, int x, int y)
 {
 	SkeletonPtr manualSkel = mEnv->getCharacter(0)->getSkeleton();
@@ -320,7 +338,7 @@ keyboardUp(unsigned char key, int x, int y)
 	}
 }
 void
-SingleBasketballWindow::
+SingleControlWindow::
 timer(int value)
 {
 	if(mPlay)
@@ -334,7 +352,7 @@ timer(int value)
 
 
 void
-SingleBasketballWindow::
+SingleControlWindow::
 applyKeyBoardEvent()
 {
     double scale = 150.0;
@@ -363,7 +381,7 @@ applyKeyBoardEvent()
         this->targetLocal.segment(0,2) += scale*rightVec;
 }
 void
-SingleBasketballWindow::
+SingleControlWindow::
 applyMouseEvent()
 {
     Eigen::Vector3d facing = mCamera->lookAt - mCamera->eye;
@@ -374,7 +392,7 @@ applyMouseEvent()
 }
 
 int
-SingleBasketballWindow::
+SingleControlWindow::
 step()
 {
     // std::cout<<"RNN Time : "<<std::endl;
@@ -409,7 +427,9 @@ step()
 	mStates[0] = mEnv->getState(0);
 	// std::cout<<mStates[0].transpose()<<std::endl;
 
-	mEnv->setAction(0, Utils::toEigenVec(this->xData[0][mFrame]));
+	// mEnv->setAction(0, Utils::toEigenVec(this->xData[0][mFrame]));
+	getActionFromNN(0);
+	mEnv->setAction(0, mActions[0]);
 
 	
     // update prevHandTransform
@@ -434,7 +454,7 @@ step()
 }
 
 // void 
-// SingleBasketballWindow::
+// SingleControlWindow::
 // setBallPosition(bool leftContact)
 // {
 // 	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
@@ -460,7 +480,7 @@ step()
 
 
 // void 
-// SingleBasketballWindow::
+// SingleControlWindow::
 // setBallVelocity(bool leftContact)
 // {
 // 	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
@@ -491,7 +511,7 @@ step()
 // }
 
 // void
-// SingleBasketballWindow::
+// SingleControlWindow::
 // updateHandTransform()
 // {
 // 	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
@@ -507,7 +527,7 @@ step()
 // }
 
 void
-SingleBasketballWindow::
+SingleControlWindow::
 display()
 {
 
@@ -611,7 +631,7 @@ display()
 }
 
 std::string
-SingleBasketballWindow::
+SingleControlWindow::
 indexToStateString(int index)
 {
 	switch(index)
@@ -657,7 +677,7 @@ indexToStateString(int index)
 }
 
 void
-SingleBasketballWindow::
+SingleControlWindow::
 mouse(int button, int state, int x, int y) 
 {
     mPrevX = x;
@@ -698,9 +718,48 @@ mouse(int button, int state, int x, int y)
 
 
 void
-SingleBasketballWindow::
+SingleControlWindow::
 motion(int x, int y)
 {
 	SimWindow::motion(x, y);
 }
 
+
+void
+SingleControlWindow::
+getActionFromNN(int index)
+{
+	p::object get_action;
+
+	Eigen::VectorXd state = mEnv->getState(index);
+	Eigen::VectorXd normalizedState = mNormalizer->normalizeState(state);
+
+	Eigen::VectorXd mAction(mEnv->getNumAction());
+
+	get_action = nn_module[index].attr("get_action");
+
+	p::tuple shape = p::make_tuple(normalizedState.size());
+	np::dtype dtype = np::dtype::get_builtin<float>();
+	np::ndarray state_np = np::empty(shape, dtype);
+
+	float* dest = reinterpret_cast<float*>(state_np.get_data());
+	for(int j=0;j<normalizedState.size();j++)
+	{
+		dest[j] = normalizedState[j];
+	}
+
+	p::object temp = get_action(state_np);
+	np::ndarray action_np = np::from_object(temp);
+	float* srcs = reinterpret_cast<float*>(action_np.get_data());
+	for(int j=0;j<mAction.rows();j++)
+	{
+		mAction[j] = srcs[j];
+	}
+
+	mAction = mNormalizer->denormalizeAction(mAction);
+
+
+	// cout<<"Here?"<<endl;
+	mActions[index] = mAction;
+	// cout<<"NO"
+}

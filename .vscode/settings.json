@@ -84,6 +84,20 @@
         "image": "cpp",
         "texture": "cpp",
         "uniform": "cpp",
-        "primitiveset": "cpp"
+        "primitiveset": "cpp",
+        "cullsettings": "cpp",
+        "drawable": "cpp",
+        "geometry": "cpp",
+        "object": "cpp",
+        "observer": "cpp",
+        "plane": "cpp",
+        "quat": "cpp",
+        "referenced": "cpp",
+        "renderinfo": "cpp",
+        "state": "cpp",
+        "stateset": "cpp",
+        "view": "cpp",
+        "viewport": "cpp",
+        "ref_ptr": "cpp"
     }
 }

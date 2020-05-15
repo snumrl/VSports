@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 set(CMAKE_CXX_COMPILER /usr/bin/g++-7)
 
 add_compile_options(-fPIC)
-#add_compile_options(-std=gnu++11)
+add_compile_options(-std=gnu++11)
 add_compile_options(-Wdeprecated-declarations)
 add_compile_options(-DHAVE_CSTDDEF)
 project(vsports)
@@ -16,8 +16,8 @@ find_package(Eigen3 REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(GLUT REQUIRED)
 #find_package(GLEW REQUIRED)
+find_package(Boost 1.73.0 COMPONENTS filesystem python3 numpy3)
 find_package(DART REQUIRED COMPONENTS gui optimizer-ipopt CONFIG )
-find_package(Boost 1.66.0 COMPONENTS filesystem python3 numpy3)
 find_package(PythonLibs REQUIRED)
 
 include_directories(${EIGEN3_INCLUDE_DIR})
@@ -31,10 +31,10 @@ include_directories(plugin/ICA)
 include_directories(extern)
 
 
+add_subdirectory( extern/ICA/plugin )
 add_subdirectory( sim )
 add_subdirectory( model )
 add_subdirectory( pyvs )
-add_subdirectory( extern/ICA/plugin)
 
 
 #file(GLOB srcs
@@ -49,6 +49,7 @@ file(GLOB srcs
 		"render/*.h" "render/*.cpp"
 		"vsports/common.h"
 		"vsports/SingleBasketballWindow.h" "vsports/SingleBasketballWindow.cpp"
+		"vsports/SingleControlWindow.h" "vsports/SingleControlWindow.cpp"
 		"utils/*.h" "utils/*.cpp"
 		"motion/*.h" "motion/*.cpp")
 

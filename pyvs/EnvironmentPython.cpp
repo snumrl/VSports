@@ -8,15 +8,18 @@ EnvironmentPython::
 EnvironmentPython(int numAgent)
 	:mNumSlaves(8)
 {
-
 	dart::math::seedRand();
-	// omp_set_num_threads(mNumSlaves);
+	omp_set_num_threads(mNumSlaves);
+	// std::cout<<""
 	for(int i=0;i<mNumSlaves;i++)
 	{
-		mSlaves.push_back(new Environment(30, 180, numAgent, "", ""));
+		mSlaves.push_back(new Environment(30, 180, numAgent, "../data/motions/basketData/motion/s_004_1_1.bvh", "basket_34"));
 	}
 	mNumState = mSlaves[0]->getNumState();
 	mNumAction = mSlaves[0]->getNumAction();
+
+	mNormalizer = new Normalizer("../extern/ICA/motions/basket_34/data/xNormal.dat", 
+								"../extern/ICA/motions/basket_34/data/yNormal.dat");
 	// std::cout<<mNumState<<std::endl;
 	// exit()
 }
@@ -82,19 +85,27 @@ getState(int id, int index)
 	// std::cout<<"I got state"<<std::endl;
 	// std::cout<< toNumPyArray(mSlaves[id]->getState(index)).shape(0)<<std::endl;
 	// exit(0);
+	Eigen::VectorXd curState= mSlaves[id]->getState(index);
+	Eigen::VectorXd normalizedState = mNormalizer->normalizeState(curState);
+
+	std::cout<<"Normalized State : "<<std::endl;
+	std::cout<<normalizedState.transpose()<<std::endl;
+
 	return Wrapper::toNumPyArray(mSlaves[id]->getState(index));
 }
-np::ndarray
-EnvironmentPython::
-getLocalState(int id, int index)
-{
-	// std::cout<<"getState in wrapper"<<std::endl;
-	// mSlaves[id]->getState(index);
-	// std::cout<<"I got state"<<std::endl;
-	// std::cout<< toNumPyArray(mSlaves[id]->getState(index)).shape(0)<<std::endl;
-	// exit(0);
-	return Wrapper::toNumPyArray(mSlaves[id]->getLocalState(index));
-}
+// np::ndarray
+// EnvironmentPython::
+// getLocalState(int id, int index)
+// {
+// 	// std::cout<<"getState in wrapper"<<std::endl;
+// 	// mSlaves[id]->getState(index);
+// 	// std::cout<<"I got state"<<std::endl;
+// 	// std::cout<< toNumPyArray(mSlaves[id]->getState(index)).shape(0)<<std::endl;
+// 	// exit(0);
+// 	return Wrapper::toNumPyArray(mSlaves[id]->getLocalState(index));
+// }
+
+
 // np::ndarray
 // EnvironmentPython::
 // getSchedulerState(int id, int index)
@@ -122,7 +133,12 @@ void
 EnvironmentPython::
 setAction(np::ndarray np_array, int id, int index)
 {
-	mSlaves[id]->setAction(index, Wrapper::toEigenVector(np_array));
+	Eigen::VectorXd action = Wrapper::toEigenVector(np_array);
+	Eigen::VectorXd denormalizedAction = mNormalizer->denormalizeAction(action);
+	std::cout<<"Denormalized Action :"<<std::endl;
+	std::cout<<denormalizedAction.transpose()<<std::endl;
+
+	mSlaves[id]->setAction(index, denormalizedAction);
 }
 
 
@@ -145,12 +161,12 @@ getReward(int id, int index, int verbose)
 	return mSlaves[id]->getReward(index, verbose);
 }
 
-np::ndarray
-EnvironmentPython::
-getHardcodedAction(int id, int index)
-{
-	return Wrapper::toNumPyArray(mSlaves[id]->getActionFromBTree(index));
-}
+// np::ndarray
+// EnvironmentPython::
+// getHardcodedAction(int id, int index)
+// {
+// 	return Wrapper::toNumPyArray(mSlaves[id]->getActionFromBTree(index));
+// }
 
 // double
 // EnvironmentPython::
@@ -179,7 +195,7 @@ EnvironmentPython::
 stepsAtOnce()
 {
 	int num = getSimulationHz()/getControlHz();
-// #pragma omp parallel for
+#pragma omp parallel for
 	for(int id=0;id<mNumSlaves;++id)
 	{
 		// for(int j=0;j<num;j++)
@@ -219,19 +235,19 @@ getNumIterations()
 	return mSlaves[0]->mNumIterations;
 }
 
-void 
-EnvironmentPython::
-reconEnvFromState(int id, int index, np::ndarray curLocalState)
-{
-	mSlaves[id]->reconEnvFromState(index, Wrapper::toEigenVector(curLocalState));
-}
+// void 
+// EnvironmentPython::
+// reconEnvFromState(int id, int index, np::ndarray curLocalState)
+// {
+// 	mSlaves[id]->reconEnvFromState(index, Wrapper::toEigenVector(curLocalState));
+// }
 
-int
-EnvironmentPython::
-getNumBallTouch(int id)
-{
-	return mSlaves[id]->getNumBallTouch();
-}
+// int
+// EnvironmentPython::
+// getNumBallTouch(int id)
+// {
+// 	return mSlaves[id]->getNumBallTouch();
+// }
 
 // void 
 // EnvironmentPython::
@@ -253,15 +269,15 @@ getNumBallTouch(int id)
 // 	mSlaves[0]->getHindsightReward(toEigenVector(curHindsightState));
 // }
 
-class GlutInitClass
-{
-public:
-	GlutInitClass(){
-		int argc = 1;
-		char *argv[1] = {(char*)"Something"};
-		glutInit(&argc, argv);
-	}
-};
+// class GlutInitClass
+// {
+// public:
+// 	GlutInitClass(){
+// 		int argc = 1;
+// 		char *argv[1] = {(char*)"Something"};
+// 		glutInit(&argc, argv);
+// 	}
+// };
 
 
 
@@ -280,7 +296,7 @@ BOOST_PYTHON_MODULE(pyvs)
 		.def("reset",&EnvironmentPython::reset)
 		.def("isTerminalState",&EnvironmentPython::isTerminalState)
 		.def("getState",&EnvironmentPython::getState)
-		.def("getLocalState",&EnvironmentPython::getLocalState)
+		// .def("getLocalState",&EnvironmentPython::getLocalState)
 		// .def("getSchedulerState",&EnvironmentPython::getSchedulerState)
 		// .def("getLinearActorState",&EnvironmentPython::getLinearActorState)
 		.def("setAction",&EnvironmentPython::setAction)
@@ -292,15 +308,13 @@ BOOST_PYTHON_MODULE(pyvs)
 		.def("step",&EnvironmentPython::step)
 		.def("resets",&EnvironmentPython::resets)
 		.def("getNumIterations",&EnvironmentPython::getNumIterations)
-		.def("getHardcodedAction",&EnvironmentPython::getHardcodedAction)
-		.def("reconEnvFromState",&EnvironmentPython::reconEnvFromState)
+		// .def("getHardcodedAction",&EnvironmentPython::getHardcodedAction)
+		// .def("reconEnvFromState",&EnvironmentPython::reconEnvFromState)
 		// .def("setLinearActorState",&EnvironmentPython::setLinearActorState)
 		.def("endOfIteration",&EnvironmentPython::endOfIteration)
-		.def("getNumBallTouch",&EnvironmentPython::getNumBallTouch);
+		// .def("getNumBallTouch",&EnvironmentPython::getNumBallTouch);
 		// .def("setHindsightGoal",&EnvironmentPython::setHindsightGoal)
 		// .def("getHindsightState",&EnvironmentPython::getHindsightState)
-		// .def("getHindsightReward",&EnvironmentPython::getHindsightReward);
-
-	class_<GlutInitClass>("GlutInitClass", init<>());
-
+		// .def("getHindsightReward",&EnvironmentPython::getHindsightReward)
+		;
 }
