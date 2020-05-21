@@ -20,6 +20,8 @@ using namespace dart::dynamics;
 using namespace dart::collision;
 using namespace dart::constraint;
 
+#define RESET_ADAPTING_FRAME 10
+
 // p.rows() + v.rows() + ballP.rows() + ballV.rows() +
 // 	ballPossession.rows() + kickable.rows() + goalpostPositions.rows()
 
@@ -79,9 +81,14 @@ initMotionGenerator(std::string dataPath)
 
 	BVHmanager::setPositionFromBVH(mCharacters[0]->getSkeleton(), mBvhParser, 50);
 	Eigen::VectorXd bvhPosition = mCharacters[0]->getSkeleton()->getPositions();
-	for(int i=0;i<5;i++)
+	for(int i=0;i<RESET_ADAPTING_FRAME;i++)
 		mMotionGenerator->setCurrentPose(bvhPosition, Utils::toStdVec(targetZeroVec));
-	mCharacters[0]->getSkeleton()->setPositions(bvhPosition);
+
+	Eigen::VectorXd zeroAction = mActions[0];
+	zeroAction.setZero();
+	auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(zeroAction));
+    Eigen::VectorXd nextPosition = nextPositionAndContacts.first;
+    mCharacters[0]->getSkeleton()->setPositions(nextPosition);
 	curFrame++;
 }
 
@@ -623,13 +630,19 @@ resetCharacterPositions()
 	criticalPoint_targetBallPosition = curBallPosition;
 	criticalPoint_targetBallVelocity.setZero();
 
-	for(int i=0;i<5;i++)
+	for(int i=0;i<RESET_ADAPTING_FRAME;i++)
 		mMotionGenerator->setCurrentPose(standPosition, curBallPosition);
 
-	for(int i=0;i<mNumChars;i++)
-	{
-		mCharacters[i]->getSkeleton()->setPositions(standPosition);
-	}
+	Eigen::VectorXd zeroAction = mActions[0];
+	zeroAction.setZero();
+	auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(zeroAction));
+    Eigen::VectorXd nextPosition = nextPositionAndContacts.first;
+    mCharacters[0]->getSkeleton()->setPositions(nextPosition);
+
+	// for(int i=0;i<mNumChars;i++)
+	// {
+	// 	mCharacters[i]->getSkeleton()->setPositions(standPosition);
+	// }
 
 	curFrame = 0;
 	criticalPointFrame = 0;

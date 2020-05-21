@@ -37,8 +37,8 @@ Tensor = FloatTensor
 LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 
-nnCount = 1
-nndir = "../nn"+str(nnCount)
+nnCount = 2
+nndir = "../nn/nn"+str(nnCount)
 
 if not exists(nndir):
 	mkdir(nndir)
@@ -202,10 +202,10 @@ class RL(object):
 		self.originalCount  = [0, 0]
 
 	def loadModel(self,path,index):
-		self.model[index].load('../nn'+str(nnCount)+'/'+path+'_'+str(self.indexToNetDic[index%self.num_agents])+'.pt')
+		self.model[index].load('../nn/nn'+str(nnCount)+'/'+path+'_'+str(self.indexToNetDic[index%self.num_agents])+'.pt')
 
 	def loadTargetModel(self,path,index):
-		self.target_model[self.indexToNetDic[index]].load('../nn'+str(nnCount)+'/'+path+'_'+str(self.indexToNetDic[index%self.num_agents])+'.pt')
+		self.target_model[self.indexToNetDic[index]].load('../nn/nn'+str(nnCount)+'/'+path+'_'+str(self.indexToNetDic[index%self.num_agents])+'.pt')
 
 	def loadTargetPolicy(self,path):
 		for i in range(self.num_policy):
@@ -217,12 +217,12 @@ class RL(object):
 
 	def saveModel(self):
 		for i in range(self.num_policy):
-			self.target_model[i].save('../nn'+str(nnCount)+'/'+'current_'+str(i)+'.pt')
+			self.target_model[i].save('../nn/nn'+str(nnCount)+'/'+'current_'+str(i)+'.pt')
 
 			if self.max_return_epoch == self.num_evaluation:
-				self.target_model[i].save('../nn'+str(nnCount)+'/'+'max_'+str(i)+'.pt')
+				self.target_model[i].save('../nn/nn'+str(nnCount)+'/'+'max_'+str(i)+'.pt')
 			if self.num_evaluation%10 == 0:
-				self.target_model[i].save('../nn'+str(nnCount)+'/'+str(self.num_evaluation)+'_'+str(i)+'.pt')
+				self.target_model[i].save('../nn/nn'+str(nnCount)+'/'+str(self.num_evaluation)+'_'+str(i)+'.pt')
 
 
 
