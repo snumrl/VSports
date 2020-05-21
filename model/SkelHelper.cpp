@@ -146,7 +146,7 @@ makeBasketBallFloor(double floorDepth)
 	// Eigen::Matrix3d mat = Eigen::AngleAxisd(M_PI/2.0, Eigen::Vector3d::UnitX());
 	cb2j.linear() *=  Eigen::AngleAxisd(M_PI/2.0, Eigen::Vector3d::UnitY()).toRotationMatrix();
 	cb2j.linear() *=  Eigen::AngleAxisd(-M_PI/2.0, Eigen::Vector3d::UnitX()).toRotationMatrix();
-	cb2j.translation() = Eigen::Vector3d(-0.46, 0.0, 0.0);
+	// cb2j.translation() = Eigen::Vector3d(-0.46, 0.0, 0.0);
 	char resolved_path[PATH_MAX]; 
 	realpath("../", resolved_path);
 	std::string absolutePathProject = resolved_path;
@@ -156,7 +156,7 @@ makeBasketBallFloor(double floorDepth)
 						absolutePathProject+"/data/models/BasketBallCourt_obj/basketballcourt.obj",
 						floor,
 						nullptr,
-						Eigen::Vector3d(15.0*0.8, 28.0*0.8, 0.01),
+						Eigen::Vector3d(15.0, 28.0, 0.01),
 						pb2j,
 						cb2j,
 						1.0,
@@ -216,9 +216,15 @@ MakeWeldJointBody(
 			std::string obj_path = obj_file;
 			const aiScene* mesh = MeshShape::loadMesh(std::string(obj_path));
 		// cout<<"2222"<<endl;
-			double scale = 7.5/385.0*0.8;
+			double scale = 7.5/385.0*1.0;
 			ShapePtr visual_shape = std::shared_ptr<MeshShape>(new MeshShape(Eigen::Vector3d(scale,scale,scale),mesh));
-			bn->createShapeNodeWith<VisualAspect>(visual_shape);
+			// bn->createShapeNodeWith<VisualAspect>(visual_shape);
+			auto vsn = bn->createShapeNodeWith<VisualAspect>(visual_shape);
+			Eigen::Isometry3d T_visual;
+			T_visual.setIdentity();
+			T_visual.translation() = Eigen::Vector3d(0.0, 0.58, 0.0);
+			vsn->setRelativeTransform(T_visual);
+
 		}else{
 			std::string obj_path = obj_file;
 			const aiScene* mesh = MeshShape::loadMesh(std::string(obj_path));

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.6)
+cmake_minimum_required(VERSION 3.9)
 project(sim)
 set(CMAKE_CXX_COMPILER /usr/bin/g++-7)
 

@@ -613,3 +613,50 @@ drawVerticalLine(const Eigen::Vector2d& point, const Eigen::Vector3d& color)
 	glEnd();
 	glPopMatrix();
 }
+
+
+void
+GUI::drawCoordinate(Eigen::Vector3d center, double length)
+{
+    // glEnable(GL_LIGHTING);
+    glPushMatrix();
+    glTranslatef(center[0], center[1], center[2]);
+
+    glBegin(GL_LINES);
+    glColor3f(1.0, 0,0);
+    glVertex3f(0,0,0);
+    glVertex3f(length,0,0);
+    glEnd();
+
+    // glBegin(GL_LINES);
+    // glColor3f(0.8, 0.3,0.3);
+    // glVertex3f(0,0,0);
+    // glVertex3f(-length,0,0);
+    // glEnd();
+
+    glBegin(GL_LINES);
+    glColor3f(0, 1.0,0);
+    glVertex3f(0,0,0);
+    glVertex3f(0,length,0);
+    glEnd();
+
+    // glBegin(GL_LINES);
+    // glColor3f(0.3, 0.8,0.3);
+    // glVertex3f(0,0,0);
+    // glVertex3f(0,-length,0);
+    // glEnd();
+
+    glBegin(GL_LINES);
+    glColor3f(0, 0,1.0);
+    glVertex3f(0,0,0);
+    glVertex3f(0,0,length);
+    glEnd();
+
+    // glBegin(GL_LINES);
+    // glColor3f(0.3, 0.3,0.8);
+    // glVertex3f(0,0,0);
+    // glVertex3f(0,0,-length);
+    // glEnd();
+
+    glPopMatrix();
+}

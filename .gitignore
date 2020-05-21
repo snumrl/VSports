@@ -38,6 +38,7 @@ CMakeFiles/*
 .idea/*
 log/*
 nn/*
+nn*/*.pt
 pyvs/*.so
 model/*.so
 sim/*.a

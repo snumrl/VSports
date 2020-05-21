@@ -6,7 +6,7 @@
 
 EnvironmentPython::
 EnvironmentPython(int numAgent)
-	:mNumSlaves(8)
+	:mNumSlaves(4)
 {
 	dart::math::seedRand();
 	omp_set_num_threads(mNumSlaves);
@@ -18,8 +18,6 @@ EnvironmentPython(int numAgent)
 	mNumState = mSlaves[0]->getNumState();
 	mNumAction = mSlaves[0]->getNumAction();
 
-	mNormalizer = new Normalizer("../extern/ICA/motions/basket_34/data/xNormal.dat", 
-								"../extern/ICA/motions/basket_34/data/yNormal.dat");
 	// std::cout<<mNumState<<std::endl;
 	// exit()
 }
@@ -85,13 +83,20 @@ getState(int id, int index)
 	// std::cout<<"I got state"<<std::endl;
 	// std::cout<< toNumPyArray(mSlaves[id]->getState(index)).shape(0)<<std::endl;
 	// exit(0);
-	Eigen::VectorXd curState= mSlaves[id]->getState(index);
-	Eigen::VectorXd normalizedState = mNormalizer->normalizeState(curState);
+	// Eigen::VectorXd curState= mSlaves[id]->getState(index);
+	// Eigen::VectorXd normalizedState = mNormalizer->normalizeState(curState);
 
-	std::cout<<"Normalized State : "<<std::endl;
-	std::cout<<normalizedState.transpose()<<std::endl;
+	// std::cout<<"Original State : "<<std::endl;
+	// std::cout<<curState.transpose()<<std::endl;
+	// std::cout<<"Mean value :"<<std::endl;
+	// std::cout<<mNormalizer->yMean.transpose()<<std::endl;
 
-	return Wrapper::toNumPyArray(mSlaves[id]->getState(index));
+	// std::cout<<"std value :"<<std::endl;
+	// std::cout<<mNormalizer->yStd.transpose()<<std::endl;
+	// std::cout<<"Normalized State : "<<std::endl;
+	// std::cout<<normalizedState.transpose()<<std::endl;
+
+	return Wrapper::toNumPyArray(mSlaves[id]->getNormalizedState(index));
 }
 // np::ndarray
 // EnvironmentPython::
@@ -134,9 +139,21 @@ EnvironmentPython::
 setAction(np::ndarray np_array, int id, int index)
 {
 	Eigen::VectorXd action = Wrapper::toEigenVector(np_array);
-	Eigen::VectorXd denormalizedAction = mNormalizer->denormalizeAction(action);
-	std::cout<<"Denormalized Action :"<<std::endl;
-	std::cout<<denormalizedAction.transpose()<<std::endl;
+
+	Eigen::VectorXd ex_action(19);
+	ex_action.setZero();
+	ex_action.segment(0,4) = action;
+
+	// Eigen::VectorXd denormalizedAction = mSlaves[id]->mNormalizer->denormalizeAction(action);
+	Eigen::VectorXd denormalizedAction = mSlaves[id]->mNormalizer->denormalizeAction(ex_action);
+
+	// std::cout<<"Output Action :"<<std::endl;
+	// std::cout<<action.transpose()<<std::endl;
+
+
+	// std::cout<<"Denormalized Action :"<<std::endl;
+	// std::cout<<denormalizedAction.transpose()<<std::endl;
+	// std::cout<<"========================="<<std::endl;
 
 	mSlaves[id]->setAction(index, denormalizedAction);
 }
@@ -195,7 +212,7 @@ EnvironmentPython::
 stepsAtOnce()
 {
 	int num = getSimulationHz()/getControlHz();
-#pragma omp parallel for
+// #pragma omp parallel for
 	for(int id=0;id<mNumSlaves;++id)
 	{
 		// for(int j=0;j<num;j++)

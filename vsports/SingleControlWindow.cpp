@@ -125,7 +125,8 @@ SingleControlWindow(const char* bvh_path, const char* nn_path,
 
 	p::str str = ("num_state = "+std::to_string(mEnv->getNumState())).c_str();
 	p::exec(str,mns);
-	str = ("num_action = "+std::to_string(mEnv->getNumAction())).c_str();
+	// str = ("num_action = "+std::to_string(mEnv->getNumAction())).c_str();
+	str = "num_action = 4";
 	p::exec(str, mns);
 
 	nn_module = new boost::python::object[mEnv->mNumChars];
@@ -137,6 +138,8 @@ SingleControlWindow(const char* bvh_path, const char* nn_path,
 		nn_module[i] = p::eval("ActorCriticNN(num_state, num_action).cuda()", mns);
 		load[i] = nn_module[i].attr("load");
 	}
+	load[0](control_nn_path);
+	std::cout<<"Loaded control nn : "<<control_nn_path<<std::endl;
 
 
 
@@ -431,6 +434,7 @@ step()
 	getActionFromNN(0);
 	mEnv->setAction(0, mActions[0]);
 
+
 	
     // update prevHandTransform
     // updateHandTransform();
@@ -443,7 +447,7 @@ step()
 	mEnv->stepAtOnce();
     // time_check_end();
     // std::cout<<std::endl;
-	// mEnv->getRewards();
+	mEnv->getRewards();
 	mFrame++;
 
 
@@ -548,6 +552,7 @@ display()
 
 	mCamera->apply();
 
+	GUI::drawCoordinate(Eigen::Vector3d(0.0, 0.015, 0.0), 1.0);
 
 
 	// for(int i=0;i<chars.size()-1;i++)
@@ -585,6 +590,18 @@ display()
 
 	GUI::drawSkeleton(chars[0]->getSkeleton());
 
+	Eigen::Isometry3d rootIsometry = ICA::dart::getBaseToRootMatrix(mEnv->mMotionGenerator->motionGenerators[0]->mMotionSegment->getLastPose()->getRoot());
+
+	glPushMatrix();
+	Eigen::Vector3d rootPosition = 0.01*rootIsometry.translation();
+	glTranslated(rootPosition[0], rootPosition[1], rootPosition[2]);
+	Eigen::AngleAxisd rootAA(rootIsometry.linear());
+	glRotated(180/M_PI*rootAA.angle(), rootAA.axis()[0], rootAA.axis()[1], rootAA.axis()[2]);
+	// std::cout<<rootAA.angle()<<", "<<rootAA.axis().transpose()<<std::endl;
+	GUI::drawCoordinate(Eigen::Vector3d::Zero(), 0.2);
+
+	glPopMatrix();
+
 	GUI::drawSphere(0.3, mEnv->mTargetBallPosition, Eigen::Vector3d(0.0, 0.0, 1.0));
 
 	// cout<<"3333"<<endl;
@@ -620,6 +637,10 @@ display()
     // xData[playingMotionSegment_Index][frame];
 
     GUI::drawStringOnScreen(0.2, 0.85, curAction, true, Eigen::Vector3d(1,1,1));
+
+    std::string score = "Score : "+to_string(mEnv->mAccScore[0]);
+   
+    GUI::drawStringOnScreen(0.2, 0.75, score, true, Eigen::Vector3d(1,1,1));
 
 
 	glutSwapBuffers();
@@ -731,32 +752,44 @@ getActionFromNN(int index)
 {
 	p::object get_action;
 
-	Eigen::VectorXd state = mEnv->getState(index);
-	Eigen::VectorXd normalizedState = mNormalizer->normalizeState(state);
+	Eigen::VectorXd state = mEnv->getNormalizedState(index);
+	// Eigen::VectorXd normalizedState = mNormalizer->normalizeState(state);
+	// std::cout<<normalizedState.transpose()<<std::endl;
+	// std::cout<<mEnv->mStates[0].segment(8,3).transpose()<<" // "<<mEnv->mStates[0].segment(146,3).transpose()<<std::endl;
 
 	Eigen::VectorXd mAction(mEnv->getNumAction());
+	mAction.setZero();
 
 	get_action = nn_module[index].attr("get_action");
 
-	p::tuple shape = p::make_tuple(normalizedState.size());
+	p::tuple shape = p::make_tuple(state.size());
 	np::dtype dtype = np::dtype::get_builtin<float>();
 	np::ndarray state_np = np::empty(shape, dtype);
 
 	float* dest = reinterpret_cast<float*>(state_np.get_data());
-	for(int j=0;j<normalizedState.size();j++)
+	for(int j=0;j<state.size();j++)
 	{
-		dest[j] = normalizedState[j];
+		dest[j] = state[j];
 	}
 
 	p::object temp = get_action(state_np);
 	np::ndarray action_np = np::from_object(temp);
 	float* srcs = reinterpret_cast<float*>(action_np.get_data());
-	for(int j=0;j<mAction.rows();j++)
+	// for(int j=0;j<mAction.rows();j++)
+	// {
+	// 	mAction[j] = srcs[j];
+	// }
+
+	// mAction = mNormalizer->denormalizeAction(mAction);
+
+
+	for(int j=0;j<4;j++)
 	{
 		mAction[j] = srcs[j];
 	}
 
 	mAction = mNormalizer->denormalizeAction(mAction);
+	// std::
 
 
 	// cout<<"Here?"<<endl;

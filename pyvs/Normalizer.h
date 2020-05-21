@@ -7,7 +7,7 @@ class Normalizer
 	public:
 	Normalizer(std::string xNormalPath, std::string yNormalPath);
 	Eigen::VectorXd normalizeState(Eigen::VectorXd state);
-	Eigen::VectorXd denormalizeState(Eigen::VectorXd state);
+	// Eigen::VectorXd denormalizeState(Eigen::VectorXd state);
 
 	// Eigen::VectorXd normalizeAction();
 	Eigen::VectorXd denormalizeAction(Eigen::VectorXd action);

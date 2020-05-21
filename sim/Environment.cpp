@@ -50,7 +50,7 @@ criticalPointFrame(0), curFrame(0)
 		prevBallPositions[i].setZero();
 	}
 	mTargetBallPosition.setZero();
-	this->endTime = 1000;
+	this->endTime = 20;
 
 	this->initCharacters(bvh_path);
 	this->initMotionGenerator(nn_path);
@@ -58,7 +58,13 @@ criticalPointFrame(0), curFrame(0)
 	this->reset();
 	this->criticalPoint_targetBallPosition = Eigen::Vector3d(0.0, 0.85, 0.0);
 	this->criticalPoint_targetBallVelocity = Eigen::Vector3d(0.0, 0.0, 0.0);
+	criticalPointFrame = 0;
+	curFrame = 0;
 	std::cout<<"Success"<<std::endl;
+
+
+	mNormalizer = new Normalizer("../extern/ICA/motions/basket_34/data/xNormal.dat", 
+								"../extern/ICA/motions/basket_34/data/yNormal.dat");
 }
 
 void
@@ -73,7 +79,8 @@ initMotionGenerator(std::string dataPath)
 
 	BVHmanager::setPositionFromBVH(mCharacters[0]->getSkeleton(), mBvhParser, 50);
 	Eigen::VectorXd bvhPosition = mCharacters[0]->getSkeleton()->getPositions();
-	mMotionGenerator->setCurrentPose(bvhPosition, Utils::toStdVec(targetZeroVec));
+	for(int i=0;i<5;i++)
+		mMotionGenerator->setCurrentPose(bvhPosition, Utils::toStdVec(targetZeroVec));
 	mCharacters[0]->getSkeleton()->setPositions(bvhPosition);
 	curFrame++;
 }
@@ -119,8 +126,14 @@ initCharacters(std::string bvhPath)
 
 
 	mActions.resize(mNumChars);
+	for(int i=0;i<mNumChars;i++)
+	{
+		mActions[i].resize(19);
+	}
 	mStates.resize(mNumChars);
 	mLocalStates.resize(mNumChars);
+	mAccScore.resize(mNumChars);
+	mAccScore.setZero();
 
 	// initBehaviorTree();
 }
@@ -248,10 +261,10 @@ stepAtOnce()
 	}
 	curFrame++;
 
-	if(isTerminalState())
-	{
-		reset();
-	}
+	// if(isTerminalState())
+	// {
+	// 	reset();
+	// }
 
 	// getRewards();
 	// cout<<"Here?"<<endl;
@@ -275,8 +288,8 @@ getState(int index)
 
 	Motion::Root root = ms->getLastPose()->getRoot();
 
-	Eigen::Isometry3d baseToRoot = mMotionGenerator->getBaseToRootMatrix(root);
-	Eigen::Vector3d relCurBallPosition = baseToRoot.inverse()*curBallPosition;
+	Eigen::Isometry3d baseToRoot = ICA::dart::getBaseToRootMatrix(root);
+	Eigen::Vector3d relCurBallPosition = baseToRoot.inverse()*(curBallPosition*100.0);
 
 	ICAPosition.segment(MotionRepresentation::posOffset,3) = relCurBallPosition;
 
@@ -288,8 +301,21 @@ getState(int index)
 	// std::cout<<"##############"<<std::endl;
 	// std::cout<<mTargetBallPosition<<std::endl;
 	// std::cout<<relTargetPosition<<std::endl;
+	// std::cout<<"relTargetPosition : "<<relTargetPosition.transpose()<<std::endl;
 
-	state.resize(ICAPosition.rows() + relTargetPosition.rows());
+	Eigen::Vector6d goalpostPositions;
+	goalpostPositions.segment(0,3) = Eigen::Vector3d(14.0 -1.0, 3.0, 0.0);
+	goalpostPositions.segment(3,3) = Eigen::Vector3d(-14.0 +1.0, 3.0, 0.0);
+
+
+	goalpostPositions *= 100.0;
+
+	goalpostPositions.segment(0,3) = baseToRoot.inverse() * ((Eigen::Vector3d) goalpostPositions.segment(0,3));
+	goalpostPositions.segment(3,3) = baseToRoot.inverse() * ((Eigen::Vector3d) goalpostPositions.segment(3,3));
+
+
+
+	state.resize(ICAPosition.rows() + relTargetPosition.rows() + goalpostPositions.rows());
 	
 	int curIndex = 0;
 	for(int i=0;i<ICAPosition.rows();i++)
@@ -302,12 +328,26 @@ getState(int index)
 		state[curIndex] = relTargetPosition[i];
 		curIndex++;
 	}
+	for(int i=0;i<goalpostPositions.rows();i++)
+	{
+		state[curIndex] = goalpostPositions[i];
+		curIndex++;
+	}
 
 
 
 	mStates[index] = state;
 	// cout<<"getState end"<<endl;
 	return state;
+}
+
+Eigen::VectorXd
+Environment::
+getNormalizedState(int index)
+{
+	// std::cout<<mNormalizer->normalizeState(getState(index)).transpose()<<std::endl;
+	return mNormalizer->normalizeState(getState(index));
+	// return getState(index);
 }
 
 Eigen::Vector2d
@@ -330,14 +370,22 @@ Environment::
 getReward(int index, bool verbose)
 {
 	double reward = 0;
-	reward = exp(-(curBallPosition - mTargetBallPosition).norm());
-	if((curBallPosition - mTargetBallPosition).norm() < 0.3)
+	// reward = exp(-(curBallPosition - mTargetBallPosition).norm());
+	// if((curBallPosition - mTargetBallPosition).norm() < 0.3)
+	// {
+	// 	reward *= 100;
+	// 	std::cout<<"Successed"<<std::endl;
+	// 	mIsTerminalState = true;
+	// }
+	reward = exp(-(mCharacters[0]->getSkeleton()->getCOM() - mTargetBallPosition).norm());
+	if((curBallPosition - mTargetBallPosition).norm() < 1.0)
 	{
 		reward *= 100;
 		std::cout<<"Successed"<<std::endl;
 		mIsTerminalState = true;
 	}
-	return reward;
+
+	return 0.01*reward;
 }
 
 
@@ -376,11 +424,21 @@ void
 Environment::
 applyAction(int index)
 {
+	for(int i=4;i<12;i++)
+	{
+		mActions[index][i] = 0;
+	}
+	mActions[index][4] = 1;
+
+	mActions[index][18] = 0;
+
+	mActions[index].segment(4+8,6).setZero();
 
 	auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(mActions[index]));
     Eigen::VectorXd nextPosition = nextPositionAndContacts.first;
     Eigen::Vector4d nextContacts = nextPositionAndContacts.second.segment(0,4);
 
+    // std::cout<<mActions[index].transpose()<<std::endl;
 
 
 
@@ -413,7 +471,7 @@ applyAction(int index)
             // std::cout<<"this->pprevBallPosition : "<<this->pprevBallPosition.transpose()<<std::endl;
             // std::cout<<"this->ppprevBallPosition : "<<this->ppprevBallPosition.transpose()<<std::endl;
             
-            criticalPointFrame = curFrame;
+            criticalPointFrame = curFrame-1;
     	}
 
     // }
@@ -507,6 +565,8 @@ reset()
 
 	mAccScore.setZero();
 	mNumBallTouch = 0;
+
+	mMotionGenerator->clear();
 	resetTargetBallPosition();
 	resetCharacterPositions();
 }
@@ -516,20 +576,24 @@ void
 Environment::
 resetTargetBallPosition()
 {
-	double xRange = 28.0*0.8*0.5*0.8;
-	double zRange = 15.0*0.8*0.5*0.8;
+	double xRange = 28.0*0.5*0.8;
+	double zRange = 15.0*0.5*0.8;
 
 	mTargetBallPosition[0] = (double) rand()/RAND_MAX * xRange*2.0 - xRange;
 	mTargetBallPosition[1] = 0.0;
 	mTargetBallPosition[2] = (double) rand()/RAND_MAX * zRange*2.0 - zRange;
+
+	// mTargetBallPosition = Eigen::Vector3d(-14.0 +1.5, 3.0, 0.0);
+	// goalpostPositions.segment(3,3) = Eigen::Vector3d(-14.0*0.8 +1.0, 3.0*0.8, 0.0);
+
 }
 
 void 
 Environment::
 resetCharacterPositions()
 {
-	double xRange = 28.0*0.8*0.5*0.8;
-	double zRange = 15.0*0.8*0.5*0.8;	
+	double xRange = 28.0*0.5*0.8;
+	double zRange = 15.0*0.5*0.8;	
 
 
 
@@ -542,13 +606,33 @@ resetCharacterPositions()
 	Eigen::VectorXd targetZeroVec(19);
 	targetZeroVec.setZero();
 
-	mMotionGenerator->setCurrentPose(standPosition, Utils::toStdVec(targetZeroVec));
 
+	curBallPosition[0] = (double) rand()/RAND_MAX * xRange*2.0 - xRange;
+	curBallPosition[2] = (double) rand()/RAND_MAX * zRange*2.0 - zRange;
+	curBallPosition[1] = 0.895;
+
+	Eigen::Vector6d ballPosition = ballSkel->getPositions();
+	ballPosition.setZero();
+	ballPosition.segment(3,3) = curBallPosition;
+	ballSkel->setPositions(ballPosition);
+
+	for(int i=0;i<3;i++)
+	{
+		updatePrevBallPositions(curBallPosition);
+	}
+	criticalPoint_targetBallPosition = curBallPosition;
+	criticalPoint_targetBallVelocity.setZero();
+
+	for(int i=0;i<5;i++)
+		mMotionGenerator->setCurrentPose(standPosition, curBallPosition);
 
 	for(int i=0;i<mNumChars;i++)
 	{
 		mCharacters[i]->getSkeleton()->setPositions(standPosition);
 	}
+
+	curFrame = 0;
+	criticalPointFrame = 0;
 
 }
 Eigen::VectorXd

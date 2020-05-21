@@ -44,7 +44,7 @@ public:
 	// For all slaves
 	void stepsAtOnce();
 
-	Normalizer* mNormalizer;
+	// Normalizer* mNormalizer;
 private:
 	std::vector<Environment*> mSlaves;
 	int mNumSlaves;

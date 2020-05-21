@@ -5,6 +5,7 @@
 #include "BehaviorTree.h"
 #include "../extern/ICA/plugin/MotionGenerator.h"
 #include "../motion/BVHparser.h"
+#include "../pyvs/Normalizer.h"
 
 // #define _ID_P 0
 // #define _ID_V 2
@@ -76,6 +77,9 @@ public:
 	Eigen::VectorXd getState(int index);
 	Eigen::VectorXd getLocalState(int index);
 
+
+	Eigen::VectorXd getNormalizedState(int index);
+
 	double getReward(int index, bool verbose = true);
 	std::vector<double> getRewards();
 
@@ -86,8 +90,9 @@ public:
 	void applyAction(int index);
 
 	int getNumState(int index = 0){return getState(index).size();}
+	// int getNumAction(int index = 0){return getAction(index).rows();}
 	int getNumAction(int index = 0){return getAction(index).rows();}
-
+// 
 	const dart::simulation::WorldPtr& getWorld(){return mWorld;}
 
 	Character3D* getCharacter(int index){return mCharacters[index];}
@@ -175,6 +180,8 @@ public:
 	int mNumBallTouch;
 
 	int endTime;
+
+	Normalizer* mNormalizer;
 
 
 

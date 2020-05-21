@@ -93,8 +93,8 @@ class ActorCriticNN(nn.Module):
 		# self.rnn = nn.LSTM(self.num_policyInput, self.hidden_size, num_layers=self.num_layers)
 		# self.cur_hidden = self.init_hidden(1)
 
-		num_h1 = 128
-		num_h2 = 128
+		num_h1 = 256
+		num_h2 = 256
 		# num_h3 = 256
 
 		self.policy = nn.Sequential(
@@ -118,8 +118,8 @@ class ActorCriticNN(nn.Module):
 		)
 
 
-		# self.log_std = nn.Parameter(-1.0 * torch.ones(num_actions))
-		self.log_std = nn.Parameter(Tensor([0, 0, -2]))
+		self.log_std = nn.Parameter(-1.0 * torch.ones(num_actions))
+		# self.log_std = nn.Parameter(Tensor([0, 0, -2]))
 
 		# self.rnn.apply(weights_init)
 		self.policy.apply(weights_init)
@@ -130,7 +130,7 @@ class ActorCriticNN(nn.Module):
 
 		batch_size = x.size()[0];
 
-		self.log_std = nn.Parameter(Tensor([0, 0, -2]))
+		# self.log_std = nn.Parameter(Tensor([0, 0, -2]))
 		# k = np.exp(-0.01*num_eval)
 		# rnnOutput, out_hidden = self.rnn(x.view(1, batch_size,-1), in_hidden)
 		return MultiVariateNormal(self.policy(x).unsqueeze(0),self.log_std.exp()), self.value(x)

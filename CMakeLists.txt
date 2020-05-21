@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.9)
 set(CMAKE_CXX_COMPILER /usr/bin/g++-7)
 
 add_compile_options(-fPIC)
