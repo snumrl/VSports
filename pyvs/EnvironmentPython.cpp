@@ -140,12 +140,12 @@ setAction(np::ndarray np_array, int id, int index)
 {
 	Eigen::VectorXd action = Wrapper::toEigenVector(np_array);
 
-	Eigen::VectorXd ex_action(19);
-	ex_action.setZero();
-	ex_action.segment(0,4) = action;
+	// Eigen::VectorXd ex_action(19);
+	// ex_action.setZero();
+	// ex_action.segment(0,4) = action;
 
-	// Eigen::VectorXd denormalizedAction = mSlaves[id]->mNormalizer->denormalizeAction(action);
-	Eigen::VectorXd denormalizedAction = mSlaves[id]->mNormalizer->denormalizeAction(ex_action);
+	Eigen::VectorXd denormalizedAction = mSlaves[id]->mNormalizer->denormalizeAction(action);
+	// Eigen::VectorXd denormalizedAction = mSlaves[id]->mNormalizer->denormalizeAction(ex_action);
 
 	// std::cout<<"Output Action :"<<std::endl;
 	// std::cout<<action.transpose()<<std::endl;

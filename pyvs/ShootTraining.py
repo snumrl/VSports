@@ -89,8 +89,8 @@ class RL(object):
 		self.num_agents = 1
 		self.env = Env(self.num_agents)
 		self.num_state = self.env.getNumState()
-		# self.num_action = self.env.getNumAction()
-		self.num_action = 4
+		self.num_action = self.env.getNumAction()
+		# self.num_action = 4
 		self.num_policy = 1
 
 		# self.policy = [None]*num_policy
@@ -961,7 +961,7 @@ def plot(y,title,num_fig=1,ylim=True):
 	
 	plt.plot(temp_y,'r')
 
-	plt.savefig("../nn"+str(nnCount)+"/"+"result.png", format="png")
+	plt.savefig("../nn/nn"+str(nnCount)+"/"+"result.png", format="png")
 
 	# plt.show()
 	if ylim:

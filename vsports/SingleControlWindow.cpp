@@ -125,8 +125,8 @@ SingleControlWindow(const char* bvh_path, const char* nn_path,
 
 	p::str str = ("num_state = "+std::to_string(mEnv->getNumState())).c_str();
 	p::exec(str,mns);
-	// str = ("num_action = "+std::to_string(mEnv->getNumAction())).c_str();
-	str = "num_action = 4";
+	str = ("num_action = "+std::to_string(mEnv->getNumAction())).c_str();
+	// str = "num_action = 4";
 	p::exec(str, mns);
 
 	nn_module = new boost::python::object[mEnv->mNumChars];
@@ -775,20 +775,20 @@ getActionFromNN(int index)
 	p::object temp = get_action(state_np);
 	np::ndarray action_np = np::from_object(temp);
 	float* srcs = reinterpret_cast<float*>(action_np.get_data());
-	// for(int j=0;j<mAction.rows();j++)
-	// {
-	// 	mAction[j] = srcs[j];
-	// }
-
-	// mAction = mNormalizer->denormalizeAction(mAction);
-
-
-	for(int j=0;j<4;j++)
+	for(int j=0;j<mAction.rows();j++)
 	{
 		mAction[j] = srcs[j];
 	}
 
 	mAction = mNormalizer->denormalizeAction(mAction);
+
+
+	// for(int j=0;j<4;j++)
+	// {
+	// 	mAction[j] = srcs[j];
+	// }
+
+	// mAction = mNormalizer->denormalizeAction(mAction);
 	// std::
 
 
