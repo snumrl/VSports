@@ -133,9 +133,14 @@ initCharacters(std::string bvhPath)
 
 
 	mActions.resize(mNumChars);
+	mPrevActions.resize(mNumChars);
 	for(int i=0;i<mNumChars;i++)
 	{
 		mActions[i].resize(19);
+		mPrevActions[i].resize(19);
+
+		mActions[i].setZero();
+		mPrevActions[i].setZero();
 	}
 	mStates.resize(mNumChars);
 	mLocalStates.resize(mNumChars);
@@ -254,18 +259,24 @@ stepAtOnce()
 {
 	// cout<<"Start"<<endl;
 
+
 	for(int i=0;i<mCharacters.size();i++)
 	{
 		applyAction(i);
 	}
-	
-
+	// std::cout<<mPrevActions[0].transpose()<<std::endl;
+	// std::cout<<mActions[0].transpose()<<std::endl;
+	// std::cout<<std::endl;
 
 	int sim_per_control = this->getSimulationHz()/this->getControlHz();
 	for(int i=0;i<sim_per_control;i++)
 	{
 		this->step();
 	}
+	mPrevActions = mActions;
+	// std::copy(mActions.begin(), mActions.end(), mPrevActions.begin());
+
+
 	curFrame++;
 
 	// if(isTerminalState())
@@ -321,8 +332,16 @@ getState(int index)
 	goalpostPositions.segment(3,3) = baseToRoot.inverse() * ((Eigen::Vector3d) goalpostPositions.segment(3,3));
 
 
+	Eigen::VectorXd curActionType(8);
+	curActionType.setZero();
+	for(int i=0;i<curActionType.size();i++)
+	{
+		if(mPrevActions[0][4+i] > 0.5)
+			curActionType[i] = 1;
+	}
+	// assert(curActionType.norm()==1);
 
-	state.resize(ICAPosition.rows() + relTargetPosition.rows() + goalpostPositions.rows());
+	state.resize(ICAPosition.rows() + relTargetPosition.rows() + goalpostPositions.rows() + curActionType.rows());
 	
 	int curIndex = 0;
 	for(int i=0;i<ICAPosition.rows();i++)
@@ -340,7 +359,11 @@ getState(int index)
 		state[curIndex] = goalpostPositions[i];
 		curIndex++;
 	}
-
+	for(int i=0;i<curActionType.rows();i++)
+	{
+		state[curIndex] = curActionType[i];
+		curIndex++;
+	}
 
 
 	mStates[index] = state;
@@ -377,20 +400,20 @@ Environment::
 getReward(int index, bool verbose)
 {
 	double reward = 0;
-	// reward = exp(-(curBallPosition - mTargetBallPosition).norm());
-	// if((curBallPosition - mTargetBallPosition).norm() < 0.3)
+	reward = exp(-(curBallPosition - mTargetBallPosition).norm());
+	if((curBallPosition - mTargetBallPosition).norm() < 0.3)
+	{
+		reward = 100;
+		std::cout<<"Successed"<<std::endl;
+		mIsTerminalState = true;
+	}
+	// reward = exp(-(mCharacters[0]->getSkeleton()->getCOM() - mTargetBallPosition).norm());
+	// if((curBallPosition - mTargetBallPosition).norm() < 1.0)
 	// {
 	// 	reward *= 100;
 	// 	std::cout<<"Successed"<<std::endl;
 	// 	mIsTerminalState = true;
 	// }
-	reward = exp(-(mCharacters[0]->getSkeleton()->getCOM() - mTargetBallPosition).norm());
-	if((curBallPosition - mTargetBallPosition).norm() < 1.0)
-	{
-		reward *= 100;
-		std::cout<<"Successed"<<std::endl;
-		mIsTerminalState = true;
-	}
 
 	return 0.01*reward;
 }
@@ -431,15 +454,15 @@ void
 Environment::
 applyAction(int index)
 {
-	for(int i=4;i<12;i++)
-	{
-		mActions[index][i] = 0;
-	}
-	mActions[index][4] = 1;
+		// for(int i=4;i<12;i++)
+		// {
+		// 	mActions[index][i] = 0;
+		// }
+		// mActions[index][4] = 1;
 
-	mActions[index][18] = 0;
+	// mActions[index][18] = 0;
 
-	mActions[index].segment(4+8,6).setZero();
+	// mActions[index].segment(4+8,6).setZero();
 
 	auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(mActions[index]));
     Eigen::VectorXd nextPosition = nextPositionAndContacts.first;
@@ -451,11 +474,18 @@ applyAction(int index)
 
 
     int curActionType = 0;
+    int maxIndex = 0;
+    double maxValue = -100;
     for(int i=4;i<12;i++)
     {
-        if(mActions[index][i] >= 0.5)
-            curActionType = i-4;
+        if(mActions[index][i] > maxValue)
+        {
+            maxValue = mActions[index][i];
+            maxIndex = i;
+        }
     }
+
+    curActionType = maxIndex-4;
 
     //Update ball Positions
    	updatePrevBallPositions(nextPositionAndContacts.second.segment(4,3));
@@ -576,6 +606,8 @@ reset()
 	mMotionGenerator->clear();
 	resetTargetBallPosition();
 	resetCharacterPositions();
+	for(int i=0;i<mNumChars;i++)
+		mPrevActions[i].setZero();
 }
 
 
@@ -648,23 +680,23 @@ resetCharacterPositions()
 	criticalPointFrame = 0;
 
 }
-Eigen::VectorXd
-Environment::
-normalizeNNState(Eigen::VectorXd state)
-{
-	Eigen::VectorXd normalizedState = state;
+// Eigen::VectorXd
+// Environment::
+// normalizeNNState(Eigen::VectorXd state)
+// {
+// 	Eigen::VectorXd normalizedState = state;
 
-	return normalizedState;
-}
+// 	return normalizedState;
+// }
 
 
-Eigen::VectorXd
-Environment::
-unNormalizeNNState(Eigen::VectorXd normalizedState)
-{
-	Eigen::VectorXd unNormalizedState = normalizedState;
-	return unNormalizedState;
-}
+// Eigen::VectorXd
+// Environment::
+// unNormalizeNNState(Eigen::VectorXd normalizedState)
+// {
+// 	Eigen::VectorXd unNormalizedState = normalizedState;
+// 	return unNormalizedState;
+// }
 
 Eigen::VectorXd softMax(Eigen::VectorXd input)
 {

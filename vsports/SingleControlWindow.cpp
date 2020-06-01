@@ -121,29 +121,57 @@ SingleControlWindow(const char* bvh_path, const char* nn_path,
 :SingleControlWindow()
 {
 	mEnv = new Environment(30, 180, 1, bvh_path, nn_path);
+	reducedDim = false;
 
 
 	p::str str = ("num_state = "+std::to_string(mEnv->getNumState())).c_str();
 	p::exec(str,mns);
-	str = ("num_action = "+std::to_string(mEnv->getNumAction())).c_str();
-	// str = "num_action = 4";
+
+
+	if(reducedDim)
+		str = "num_action = 4";
+	else
+		str = ("num_action = "+std::to_string(mEnv->getNumAction())).c_str();
 	p::exec(str, mns);
 
-	nn_module = new boost::python::object[mEnv->mNumChars];
-	p::object *load = new p::object[mEnv->mNumChars];
+	nn_module_0 = new boost::python::object[mEnv->mNumChars];
+	nn_module_1 = new boost::python::object[mEnv->mNumChars];
+	nn_module_2 = new boost::python::object[mEnv->mNumChars];
+	p::object *load_0 = new p::object[mEnv->mNumChars];
+	p::object *load_1 = new p::object[mEnv->mNumChars];
+	p::object *load_2 = new p::object[mEnv->mNumChars];
 	// reset_hidden = new boost::python::object[mEnv->mNumChars];
 
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module[i] = p::eval("ActorCriticNN(num_state, num_action).cuda()", mns);
-		load[i] = nn_module[i].attr("load");
+		nn_module_0[i] = p::eval("ActorCriticNN(num_state, 8).cuda()", mns);
+		load_0[i] = nn_module_0[i].attr("load");
 	}
-	load[0](control_nn_path);
+	for(int i=0;i<mEnv->mNumChars;i++)
+	{
+		nn_module_1[i] = p::eval("ActorCriticNN(num_state+8, 4).cuda()", mns);
+		load_1[i] = nn_module_1[i].attr("load");
+	}
+	for(int i=0;i<mEnv->mNumChars;i++)
+	{
+		nn_module_2[i] = p::eval("ActorCriticNN(num_state+8+4, num_action-8-4).cuda()", mns);
+		load_2[i] = nn_module_2[i].attr("load");
+	}
+
+
+	load_0[0](string(control_nn_path) + "_0.pt");
+	load_1[0](string(control_nn_path) + "_1.pt");
+	load_2[0](string(control_nn_path) + "_2.pt");
 	std::cout<<"Loaded control nn : "<<control_nn_path<<std::endl;
 
 
 
 	mActions.resize(mEnv->mNumChars);
+	for(int i=0;i<mActions.size();i++)
+	{
+		mActions[i].resize(mEnv->getNumAction());
+		mActions[i].setZero();
+	}
 	mStates.resize(mEnv->mNumChars);
 
 	targetActionType = 0;
@@ -627,14 +655,29 @@ display()
 	// GUI::drawVerticalLine(this->goal.segment(0,2), Eigen::Vector3d(1.0, 1.0, 1.0));
 
 
-    std::string curAction;
+    // std::string curAction;
+    // for(int i=4;i<4+8;i++)
+    // {
+    //     if(xData[0][mFrame][i] >= 0.5)
+    //         curAction = std::to_string(i-4);
+    // }
+    // curAction = curAction+"     "+std::to_string(xData[0][mFrame][4+8+6]/30.0);
+
+    std::string curAction = "-1";
+
+    int maxIndex = 0;
+    double maxValue = -100;
     for(int i=4;i<4+8;i++)
     {
-        if(xData[0][mFrame][i] >= 0.5)
-            curAction = std::to_string(i-4);
+        if(mActions[0][i]> maxValue)
+        {
+        	maxValue= mActions[0][i];
+        	maxIndex = i;
+        }
     }
-    curAction = curAction+"     "+std::to_string(xData[0][mFrame][4+8+6]/30.0);
-    // xData[playingMotionSegment_Index][frame];
+    curAction = std::to_string(maxIndex-4);
+    curAction = curAction+"     "+std::to_string(mActions[0][4+8+6]/30.0);
+
 
     GUI::drawStringOnScreen(0.2, 0.85, curAction, true, Eigen::Vector3d(1,1,1));
 
@@ -745,22 +788,38 @@ motion(int x, int y)
 	SimWindow::motion(x, y);
 }
 
+Eigen::VectorXd
+SingleControlWindow::
+toOneHotVector(Eigen::VectorXd action)
+{
+    int maxIndex = 0;
+    double maxValue = -100;
+    for(int i=0;i<action.size();i++)
+    {
+        if(action[i]> maxValue)
+        {
+        	maxValue= action[i];
+        	maxIndex = i;
+        }
+    }
+    Eigen::VectorXd result(action.size());
+    result.setZero();
+    result[maxIndex] = 1.0;
+    return result;
+}
 
 void
 SingleControlWindow::
 getActionFromNN(int index)
 {
-	p::object get_action;
+	p::object get_action_0;
 
 	Eigen::VectorXd state = mEnv->getNormalizedState(index);
-	// Eigen::VectorXd normalizedState = mNormalizer->normalizeState(state);
-	// std::cout<<normalizedState.transpose()<<std::endl;
-	// std::cout<<mEnv->mStates[0].segment(8,3).transpose()<<" // "<<mEnv->mStates[0].segment(146,3).transpose()<<std::endl;
 
 	Eigen::VectorXd mAction(mEnv->getNumAction());
 	mAction.setZero();
 
-	get_action = nn_module[index].attr("get_action");
+	get_action_0 = nn_module_0[index].attr("get_action");
 
 	p::tuple shape = p::make_tuple(state.size());
 	np::dtype dtype = np::dtype::get_builtin<float>();
@@ -772,27 +831,141 @@ getActionFromNN(int index)
 		dest[j] = state[j];
 	}
 
-	p::object temp = get_action(state_np);
+	p::object temp = get_action_0(state_np);
 	np::ndarray action_np = np::from_object(temp);
 	float* srcs = reinterpret_cast<float*>(action_np.get_data());
-	for(int j=0;j<mAction.rows();j++)
+
+	for(int j=0;j<8;j++)
 	{
 		mAction[j] = srcs[j];
 	}
 
+	mAction.segment(0,8) = toOneHotVector(mAction.segment(0,8));
+
+	///////////////
+
+	Eigen::VectorXd state_1(state.size()+8);
+	state_1.segment(0,state.size()) = state;
+	state_1.segment(state.size(),8) = mAction.segment(0,8);
+
+	p::object get_action_1;
+
+	get_action_1 = nn_module_1[index].attr("get_action");
+
+	p::tuple shape_1 = p::make_tuple(state_1.size());
+	np::ndarray state_np_1 = np::empty(shape_1, dtype);
+
+	float* dest_1 = reinterpret_cast<float*>(state_np_1.get_data());
+	for(int j=0;j<state_1.size();j++)
+	{
+		dest_1[j] = state_1[j];
+	}
+
+	temp = get_action_1(state_np_1);
+	np::ndarray action_np_1 = np::from_object(temp);
+	float* srcs_1 = reinterpret_cast<float*>(action_np_1.get_data());
+
+	for(int j=8;j<8+4;j++)
+	{
+		mAction[j] = srcs_1[j-8];
+	}
+
+	///////////////
+
+	Eigen::VectorXd state_2(state.size()+8+4);
+	state_2.segment(0,state_1.size()) = state_1;
+	state_2.segment(state_1.size(),4) = mAction.segment(8,4);
+
+	p::object get_action_2;
+
+	get_action_2 = nn_module_2[index].attr("get_action");
+
+	p::tuple shape_2 = p::make_tuple(state_2.size());
+	np::ndarray state_np_2 = np::empty(shape_2, dtype);
+
+	float* dest_2 = reinterpret_cast<float*>(state_np_2.get_data());
+	for(int j=0;j<state_2.size();j++)
+	{
+		dest_2[j] = state_2[j];
+	}
+
+	temp = get_action_2(state_np_2);
+	np::ndarray action_np_2 = np::from_object(temp);
+	float* srcs_2 = reinterpret_cast<float*>(action_np_2.get_data());
+
+	for(int j=8+4;j<mAction.size();j++)
+	{
+		mAction[j] = srcs_2[j-12];
+	}
+
+
+
 	mAction = mNormalizer->denormalizeAction(mAction);
-
-
-	// for(int j=0;j<4;j++)
-	// {
-	// 	mAction[j] = srcs[j];
-	// }
-
-	// mAction = mNormalizer->denormalizeAction(mAction);
-	// std::
-
-
-	// cout<<"Here?"<<endl;
+	// std::cout<<mAction.segment(0,4).transpose()<<std::endl;
+	// std::cout<<mAction.segment(4,8).transpose()<<std::endl;
+	// std::cout<<mAction.segment(12,7).transpose()<<std::endl;
+	// std::cout<<std::endl;
 	mActions[index] = mAction;
-	// cout<<"NO"
 }
+
+
+
+// void
+// SingleControlWindow::
+// getActionFromNN(int index)
+// {
+// 	p::object get_action;
+
+// 	Eigen::VectorXd state = mEnv->getNormalizedState(index);
+// 	// Eigen::VectorXd normalizedState = mNormalizer->normalizeState(state);
+// 	// std::cout<<normalizedState.transpose()<<std::endl;
+// 	// std::cout<<mEnv->mStates[0].segment(8,3).transpose()<<" // "<<mEnv->mStates[0].segment(146,3).transpose()<<std::endl;
+
+// 	Eigen::VectorXd mAction(mEnv->getNumAction());
+// 	mAction.setZero();
+
+// 	get_action = nn_module[index].attr("get_action");
+
+// 	p::tuple shape = p::make_tuple(state.size());
+// 	np::dtype dtype = np::dtype::get_builtin<float>();
+// 	np::ndarray state_np = np::empty(shape, dtype);
+
+// 	float* dest = reinterpret_cast<float*>(state_np.get_data());
+// 	for(int j=0;j<state.size();j++)
+// 	{
+// 		dest[j] = state[j];
+// 	}
+
+// 	p::object temp = get_action(state_np);
+// 	np::ndarray action_np = np::from_object(temp);
+// 	float* srcs = reinterpret_cast<float*>(action_np.get_data());
+
+
+
+// 	if(reducedDim)
+// 	{
+// 		for(int j=0;j<4;j++)
+// 		{
+// 			mAction[j] = srcs[j];
+// 		}
+// 	}
+// 	else
+// 	{
+// 		for(int j=0;j<mAction.rows();j++)
+// 		{
+// 			mAction[j] = srcs[j];
+// 		}
+// 	}
+
+// 	mAction = mNormalizer->denormalizeAction(mAction);
+// 	// std::cout<<mAction.transpose()<<std::endl;
+
+
+// 	// mAction = mNormalizer->denormalizeAction(mAction);
+// 	// std::
+
+
+// 	// cout<<"Here?"<<endl;
+// 	mActions[index] = mAction;
+// 	// cout<<"NO"
+// }

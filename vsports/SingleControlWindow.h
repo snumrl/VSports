@@ -88,7 +88,9 @@ public:
 	std::vector<Eigen::VectorXd> mActionNoises;
 
 	boost::python::object mm,mns,sys_module;
-	boost::python::object *nn_module;
+	boost::python::object *nn_module_0;
+	boost::python::object *nn_module_1;
+	boost::python::object *nn_module_2;
 
 	// boost::python::object mm,mns,sys_module;
 	boost::python::object target_rnd_nn_module;
@@ -139,6 +141,10 @@ public:
 	std::vector<Eigen::VectorXd> mStates;
 
 	Normalizer* mNormalizer;
+
+	bool reducedDim;
+
+	Eigen::VectorXd toOneHotVector(Eigen::VectorXd action);
 
     // Eigen::Vector3d curBallPosition;
     // Eigen::Vector3d prevBallPosition;

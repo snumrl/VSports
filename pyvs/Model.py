@@ -80,6 +80,7 @@ class SimulationNN(nn.Module):
 		return p.cpu().detach().numpy()
 
 
+
 # Current state, goal state -> (subgoal state - current state)* weight of state
 class ActorCriticNN(nn.Module):
 	def __init__(self, num_states, num_actions):
@@ -93,8 +94,8 @@ class ActorCriticNN(nn.Module):
 		# self.rnn = nn.LSTM(self.num_policyInput, self.hidden_size, num_layers=self.num_layers)
 		# self.cur_hidden = self.init_hidden(1)
 
-		num_h1 = 256
-		num_h2 = 256
+		num_h1 = 128
+		num_h2 = 128
 		# num_h3 = 256
 
 		self.policy = nn.Sequential(
@@ -118,7 +119,7 @@ class ActorCriticNN(nn.Module):
 		)
 
 
-		self.log_std = nn.Parameter(-1.0 * torch.ones(num_actions))
+		self.log_std = nn.Parameter(0.0 * torch.ones(num_actions))
 		# self.log_std = nn.Parameter(Tensor([0, 0, -2]))
 
 		# self.rnn.apply(weights_init)
@@ -136,7 +137,7 @@ class ActorCriticNN(nn.Module):
 		return MultiVariateNormal(self.policy(x).unsqueeze(0),self.log_std.exp()), self.value(x)
 		# return MultiVariateNormal(self.policy(rnnOutput).unsqueeze(0),self.log_std.exp()), self.value(rnnOutput), out_hidden
 	def load(self,path):
-		# print('load nn {}'.format(path))
+		print('load nn {}'.format(path))
 		self.load_state_dict(torch.load(path))
 
 	def save(self,path):

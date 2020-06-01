@@ -113,8 +113,8 @@ public:
 	void boundBallVelocitiy(double maxVel);
 	void dampBallVelocitiy(double dampPower);
 
-	Eigen::VectorXd normalizeNNState(Eigen::VectorXd state);
-	Eigen::VectorXd unNormalizeNNState(Eigen::VectorXd normalizedState);
+	// Eigen::VectorXd normalizeNNState(Eigen::VectorXd state);
+	// Eigen::VectorXd unNormalizeNNState(Eigen::VectorXd normalizedState);
 
 	void setVState(int index, Eigen::VectorXd latentState);
 
@@ -217,6 +217,8 @@ public:
 
 	void resetTargetBallPosition();
 	Eigen::Vector3d getTargetBallGlobalPosition();
+
+	std::vector<Eigen::VectorXd> mPrevActions;
 
 
 	// AgentEnvWindow* mWindow;

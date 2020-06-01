@@ -36,10 +36,10 @@ np::ndarray Wrapper::toNumPyArray(const std::vector<Eigen::VectorXd>& val)
 	int n =val.size();
 	int m = val[0].rows();
 	p::tuple shape = p::make_tuple(n,m);
-	np::dtype dtype = np::dtype::get_builtin<float>();
+	np::dtype dtype = np::dtype::get_builtin<double>();
 	np::ndarray array = np::empty(shape,dtype);
 
-	float* dest = reinterpret_cast<float*>(array.get_data());
+	double* dest = reinterpret_cast<double*>(array.get_data());
 	int index = 0;
 	for(int i=0;i<n;i++)
 	{
@@ -60,7 +60,7 @@ np::ndarray Wrapper::toNumPyArray(const std::vector<Eigen::MatrixXd>& val)
 	np::dtype dtype = np::dtype::get_builtin<float>();
 	np::ndarray array = np::empty(shape,dtype);
 
-	float* dest = reinterpret_cast<float*>(array.get_data());
+	double* dest = reinterpret_cast<double*>(array.get_data());
 	int index = 0;
 	for(int i=0;i<n;i++)
 		for(int j=0;j<m;j++)
@@ -131,10 +131,10 @@ np::ndarray Wrapper::toNumPyArray(const Eigen::VectorXd& vec)
 {
 	int n = vec.rows();
 	p::tuple shape = p::make_tuple(n);
-	np::dtype dtype = np::dtype::get_builtin<float>();
+	np::dtype dtype = np::dtype::get_builtin<double>();
 	np::ndarray array = np::empty(shape,dtype);
 
-	float* dest = reinterpret_cast<float*>(array.get_data());
+	double* dest = reinterpret_cast<double*>(array.get_data());
 	for(int i =0;i<n;i++)
 	{
 		dest[i] = vec[i];
@@ -149,10 +149,10 @@ np::ndarray Wrapper::toNumPyArray(const Eigen::MatrixXd& matrix)
 	int m = matrix.cols();
 
 	p::tuple shape = p::make_tuple(n,m);
-	np::dtype dtype = np::dtype::get_builtin<float>();
+	np::dtype dtype = np::dtype::get_builtin<double>();
 	np::ndarray array = np::empty(shape,dtype);
 
-	float* dest = reinterpret_cast<float*>(array.get_data());
+	double* dest = reinterpret_cast<double*>(array.get_data());
 	int index = 0;
 	for(int i=0;i<n;i++)
 	{
@@ -171,10 +171,10 @@ np::ndarray Wrapper::toNumPyArray(const Eigen::Isometry3d& T)
 	int m = 4;
 
 	p::tuple shape = p::make_tuple(n,m);
-	np::dtype dtype = np::dtype::get_builtin<float>();
+	np::dtype dtype = np::dtype::get_builtin<double>();
 	np::ndarray array = np::empty(shape,dtype);
 
-	float* dest = reinterpret_cast<float*>(array.get_data());
+	double* dest = reinterpret_cast<double*>(array.get_data());
 	int index = 0;
 	Eigen::Matrix3d R = T.linear();
 	Eigen::Vector3d p = T.translation();
@@ -189,7 +189,7 @@ Eigen::VectorXd Wrapper::toEigenVector(const np::ndarray& array)
 {
 	Eigen::VectorXd vec(array.shape(0));
 
-	float* srcs = reinterpret_cast<float*>(array.get_data());
+	double* srcs = reinterpret_cast<double*>(array.get_data());
 
 	for(int i=0;i<array.shape(0);i++)
 	{
@@ -202,7 +202,7 @@ std::vector<Eigen::VectorXd> Wrapper::toEigenVectorVector(const np::ndarray& arr
 	std::vector<Eigen::VectorXd> mat;
 	mat.resize(array.shape(0));
 	
-	float* srcs = reinterpret_cast<float*>(array.get_data());
+	double* srcs = reinterpret_cast<double*>(array.get_data());
 	int index = 0;
 	
 	for(int i=0;i<array.shape(0);i++){

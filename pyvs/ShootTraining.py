@@ -37,7 +37,7 @@ Tensor = FloatTensor
 LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 
-nnCount = 2
+nnCount = 4
 nndir = "../nn/nn"+str(nnCount)
 
 if not exists(nndir):
@@ -221,7 +221,7 @@ class RL(object):
 
 			if self.max_return_epoch == self.num_evaluation:
 				self.target_model[i].save('../nn/nn'+str(nnCount)+'/'+'max_'+str(i)+'.pt')
-			if self.num_evaluation%10 == 0:
+			if self.num_evaluation%100 == 0:
 				self.target_model[i].save('../nn/nn'+str(nnCount)+'/'+str(self.num_evaluation)+'_'+str(i)+'.pt')
 
 

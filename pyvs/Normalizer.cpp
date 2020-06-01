@@ -35,7 +35,7 @@ Eigen::VectorXd
 Normalizer::
 normalizeState(Eigen::VectorXd state)
 {
-	assert(state.rows() == dimY+9);
+	assert(state.rows() == dimY+9+8);
 	Eigen::VectorXd normalizedState(state.rows());
 
 	normalizedState.segment(0, dimY) = state.segment(0, dimY) - yMean;
@@ -51,6 +51,7 @@ normalizeState(Eigen::VectorXd state)
 
 
 	normalizedState.segment(dimY+3,6) = state.segment(dimY+3, 6)/(1400.0/sqrt(3.0));
+	normalizedState.segment(dimY+9,8) = state.segment(dimY+9,8);
 
 
 	return normalizedState;
@@ -83,19 +84,31 @@ normalizeState(Eigen::VectorXd state)
 // }
 
 
-Eigen::VectorXd 
+Eigen::VectorXd
 Normalizer::
 denormalizeAction(Eigen::VectorXd action)
 {
 	assert(action.rows() == dimX);
+	// std::cout<<"------------------"<<std::endl;
+	// std::cout<<action.transpose()<<std::endl;
+
+	Eigen::VectorXd allignedAction(action.rows());
+	allignedAction.segment(4,8) = action.segment(0,8);
+	allignedAction.segment(0,4) = action.segment(8,4);
+	allignedAction.segment(12,dimX-12) = action.segment(12,dimX-12);
+
 	Eigen::VectorXd denormalizedAction(action.rows());
+
+	// std::cout<<allignedAction.transpose()<<std::endl;
+	// std::cout<<std::endl;
+
 	// std::cout<<xMean.transpose()<<std::endl;
 	// std::cout<<xStd.transpose()<<std::endl;
 	// exit(0);
-	denormalizedAction = action.cwiseProduct(xStd);
+	denormalizedAction = allignedAction.cwiseProduct(xStd);
 	denormalizedAction = denormalizedAction + xMean;
 
-
+	denormalizedAction.segment(4,8) = allignedAction.segment(4,8);
 	return denormalizedAction;
 }
 
