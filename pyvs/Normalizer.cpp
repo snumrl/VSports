@@ -7,7 +7,7 @@ Normalizer::Normalizer(std::string xNormalPath, std::string yNormalPath)
 {
 	std::ifstream in;
 	dimX = 19;
-	dimY = 146;
+	dimY = 154;
 
 	in.open(xNormalPath);
 
@@ -35,7 +35,7 @@ Eigen::VectorXd
 Normalizer::
 normalizeState(Eigen::VectorXd state)
 {
-	assert(state.rows() == dimY+9+8);
+	assert(state.rows() == dimY+9);
 	Eigen::VectorXd normalizedState(state.rows());
 
 	normalizedState.segment(0, dimY) = state.segment(0, dimY) - yMean;
@@ -51,7 +51,7 @@ normalizeState(Eigen::VectorXd state)
 
 
 	normalizedState.segment(dimY+3,6) = state.segment(dimY+3, 6)/(1400.0/sqrt(3.0));
-	normalizedState.segment(dimY+9,8) = state.segment(dimY+9,8);
+	// normalizedState.segment(dimY+9,8) = state.segment(dimY+9,8);
 
 
 	return normalizedState;

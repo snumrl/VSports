@@ -32,6 +32,7 @@ Thumbs.db
 ######################
 build/*
 Videos/*
+teamviewer/*
 cmake-build-debug/*
 cmake-build-release/*
 CMakeFiles/*

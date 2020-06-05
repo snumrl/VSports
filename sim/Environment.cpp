@@ -65,8 +65,8 @@ criticalPointFrame(0), curFrame(0)
 	std::cout<<"Success"<<std::endl;
 
 
-	mNormalizer = new Normalizer("../extern/ICA/motions/basket_34/data/xNormal.dat", 
-								"../extern/ICA/motions/basket_34/data/yNormal.dat");
+	mNormalizer = new Normalizer("../extern/ICA/motions/basket_51/data/xNormal.dat", 
+								"../extern/ICA/motions/basket_51/data/yNormal.dat");
 }
 
 void
@@ -87,7 +87,7 @@ initMotionGenerator(std::string dataPath)
 	Eigen::VectorXd zeroAction = mActions[0];
 	zeroAction.setZero();
 	auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(zeroAction));
-    Eigen::VectorXd nextPosition = nextPositionAndContacts.first;
+    Eigen::VectorXd nextPosition = std::get<0>(nextPositionAndContacts);
     mCharacters[0]->getSkeleton()->setPositions(nextPosition);
 	curFrame++;
 }
@@ -142,6 +142,9 @@ initCharacters(std::string bvhPath)
 		mActions[i].setZero();
 		mPrevActions[i].setZero();
 	}
+
+	mCurActionTypes.resize(mNumChars);
+
 	mStates.resize(mNumChars);
 	mLocalStates.resize(mNumChars);
 	mAccScore.resize(mNumChars);
@@ -334,14 +337,15 @@ getState(int index)
 
 	Eigen::VectorXd curActionType(8);
 	curActionType.setZero();
-	for(int i=0;i<curActionType.size();i++)
-	{
-		if(mPrevActions[0][4+i] > 0.5)
-			curActionType[i] = 1;
-	}
+	// for(int i=0;i<curActionType.size();i++)
+	// {
+	// 	if(mPrevActions[0][4+i] > 0.5)
+	// 		curActionType[i] = 1;
+	// }
+	curActionType[mCurActionTypes[index]] = 1;
 	// assert(curActionType.norm()==1);
 
-	state.resize(ICAPosition.rows() + relTargetPosition.rows() + goalpostPositions.rows() + curActionType.rows());
+	state.resize(ICAPosition.rows() + relTargetPosition.rows() + goalpostPositions.rows());
 	
 	int curIndex = 0;
 	for(int i=0;i<ICAPosition.rows();i++)
@@ -359,11 +363,11 @@ getState(int index)
 		state[curIndex] = goalpostPositions[i];
 		curIndex++;
 	}
-	for(int i=0;i<curActionType.rows();i++)
-	{
-		state[curIndex] = curActionType[i];
-		curIndex++;
-	}
+	// for(int i=0;i<curActionType.rows();i++)
+	// {
+	// 	state[curIndex] = curActionType[i];
+	// 	curIndex++;
+	// }
 
 
 	mStates[index] = state;
@@ -400,20 +404,20 @@ Environment::
 getReward(int index, bool verbose)
 {
 	double reward = 0;
-	reward = exp(-(curBallPosition - mTargetBallPosition).norm());
-	if((curBallPosition - mTargetBallPosition).norm() < 0.3)
+	// reward = exp(-(curBallPosition - mTargetBallPosition).norm());
+	// if((curBallPosition - mTargetBallPosition).norm() < 0.3)
+	// {
+	// 	reward = 100;
+	// 	std::cout<<"Successed"<<std::endl;
+	// 	mIsTerminalState = true;
+	// }
+	reward = exp(-(mCharacters[0]->getSkeleton()->getCOM() - mTargetBallPosition).norm());
+	if((curBallPosition - mTargetBallPosition).norm() < 1.0)
 	{
 		reward = 100;
 		std::cout<<"Successed"<<std::endl;
 		mIsTerminalState = true;
 	}
-	// reward = exp(-(mCharacters[0]->getSkeleton()->getCOM() - mTargetBallPosition).norm());
-	// if((curBallPosition - mTargetBallPosition).norm() < 1.0)
-	// {
-	// 	reward *= 100;
-	// 	std::cout<<"Successed"<<std::endl;
-	// 	mIsTerminalState = true;
-	// }
 
 	return 0.01*reward;
 }
@@ -465,33 +469,34 @@ applyAction(int index)
 	// mActions[index].segment(4+8,6).setZero();
 
 	auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(mActions[index]));
-    Eigen::VectorXd nextPosition = nextPositionAndContacts.first;
-    Eigen::Vector4d nextContacts = nextPositionAndContacts.second.segment(0,4);
+    Eigen::VectorXd nextPosition = std::get<0>(nextPositionAndContacts);
+    Eigen::Vector4d nextContacts = std::get<1>(nextPositionAndContacts).segment(0,4);
+    mCurActionTypes[index] = std::get<2>(nextPositionAndContacts);
 
     // std::cout<<mActions[index].transpose()<<std::endl;
 
 
 
 
-    int curActionType = 0;
-    int maxIndex = 0;
-    double maxValue = -100;
-    for(int i=4;i<12;i++)
-    {
-        if(mActions[index][i] > maxValue)
-        {
-            maxValue = mActions[index][i];
-            maxIndex = i;
-        }
-    }
+    // int curActionType = 0;
+    // int maxIndex = 0;
+    // double maxValue = -100;
+    // for(int i=4;i<12;i++)
+    // {
+    //     if(mActions[index][i] > maxValue)
+    //     {
+    //         maxValue = mActions[index][i];
+    //         maxIndex = i;
+    //     }
+    // }
 
-    curActionType = maxIndex-4;
+    // curActionType = maxIndex-4;
 
     //Update ball Positions
-   	updatePrevBallPositions(nextPositionAndContacts.second.segment(4,3));
+   	updatePrevBallPositions(std::get<1>(nextPositionAndContacts).segment(4,3));
 
     //Update hand Contacts;
-    updatePrevContacts(nextPositionAndContacts.second.segment(2,2));
+    updatePrevContacts(std::get<1>(nextPositionAndContacts).segment(2,2));
     
 
 
@@ -514,7 +519,7 @@ applyAction(int index)
     // }
 
 
-	if(curActionType != 0 && !curContact)
+	if(mCurActionTypes[index] != 0 && !curContact)
 	{
 		curBallPosition = computeBallPosition();
 	}
@@ -668,7 +673,7 @@ resetCharacterPositions()
 	Eigen::VectorXd zeroAction = mActions[0];
 	zeroAction.setZero();
 	auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(zeroAction));
-    Eigen::VectorXd nextPosition = nextPositionAndContacts.first;
+    Eigen::VectorXd nextPosition = std::get<0>(nextPositionAndContacts);
     mCharacters[0]->getSkeleton()->setPositions(nextPosition);
 
 	// for(int i=0;i<mNumChars;i++)
@@ -818,8 +823,12 @@ double getBounceTime(double startPosition, double startVelocity, double upperbou
 	double v = startVelocity;
 	double up = t2;
 	double down = t1;
+	int maxIter = 30;
 	while(abs(h + v*t1 - g/2.0*pow(t1,2))>1E-3)
 	{
+		if(maxIter < 0)
+			break;
+		maxIter--;
 		if(h + v*t1 - g/2.0*pow(t1,2) > 0)
 		{
 			down = t1;

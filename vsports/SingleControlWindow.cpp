@@ -426,6 +426,11 @@ int
 SingleControlWindow::
 step()
 {
+	if(mEnv->isTerminalState())
+	{
+		sleep(1);
+		mEnv->reset();
+	}
     // std::cout<<"RNN Time : "<<std::endl;
     // time_check_start();
 	std::chrono::time_point<std::chrono::system_clock> m_time_check_s = std::chrono::system_clock::now();
@@ -458,9 +463,9 @@ step()
 	mStates[0] = mEnv->getState(0);
 	// std::cout<<mStates[0].transpose()<<std::endl;
 
-	// mEnv->setAction(0, Utils::toEigenVec(this->xData[0][mFrame]));
-	getActionFromNN(0);
-	mEnv->setAction(0, mActions[0]);
+	mEnv->setAction(0, Utils::toEigenVec(this->xData[0][mFrame]));
+	// getActionFromNN(0);
+	// mEnv->setAction(0, mActions[0]);
 
 
 	
@@ -477,6 +482,7 @@ step()
     // std::cout<<std::endl;
 	mEnv->getRewards();
 	mFrame++;
+
 
 
     std::chrono::duration<double> elapsed_seconds;
@@ -655,28 +661,28 @@ display()
 	// GUI::drawVerticalLine(this->goal.segment(0,2), Eigen::Vector3d(1.0, 1.0, 1.0));
 
 
-    // std::string curAction;
-    // for(int i=4;i<4+8;i++)
-    // {
-    //     if(xData[0][mFrame][i] >= 0.5)
-    //         curAction = std::to_string(i-4);
-    // }
-    // curAction = curAction+"     "+std::to_string(xData[0][mFrame][4+8+6]/30.0);
-
-    std::string curAction = "-1";
-
-    int maxIndex = 0;
-    double maxValue = -100;
+    std::string curAction;
     for(int i=4;i<4+8;i++)
     {
-        if(mActions[0][i]> maxValue)
-        {
-        	maxValue= mActions[0][i];
-        	maxIndex = i;
-        }
+        if(xData[0][mFrame][i] >= 0.5)
+            curAction = std::to_string(i-4);
     }
-    curAction = std::to_string(maxIndex-4);
-    curAction = curAction+"     "+std::to_string(mActions[0][4+8+6]/30.0);
+    curAction = curAction+"     "+std::to_string(xData[0][mFrame][4+8+6]/30.0);
+
+    // std::string curAction = "-1";
+
+    // int maxIndex = 0;
+    // double maxValue = -100;
+    // for(int i=4;i<4+8;i++)
+    // {
+    //     if(mActions[0][i]> maxValue)
+    //     {
+    //     	maxValue= mActions[0][i];
+    //     	maxIndex = i;
+    //     }
+    // }
+    // curAction = std::to_string(maxIndex-4);
+    // curAction = curAction+"     "+std::to_string(mActions[0][4+8+6]/30.0);
 
 
     GUI::drawStringOnScreen(0.2, 0.85, curAction, true, Eigen::Vector3d(1,1,1));
@@ -815,6 +821,7 @@ getActionFromNN(int index)
 	p::object get_action_0;
 
 	Eigen::VectorXd state = mEnv->getNormalizedState(index);
+	// std::cout<<state.segment(155,8).transpose()<<std::endl;
 
 	Eigen::VectorXd mAction(mEnv->getNumAction());
 	mAction.setZero();
@@ -905,6 +912,7 @@ getActionFromNN(int index)
 	// std::cout<<mAction.segment(4,8).transpose()<<std::endl;
 	// std::cout<<mAction.segment(12,7).transpose()<<std::endl;
 	// std::cout<<std::endl;
+	// std::cout<<"-------------"<<std::endl;	
 	mActions[index] = mAction;
 }
 

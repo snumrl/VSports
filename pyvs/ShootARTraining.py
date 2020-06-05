@@ -37,7 +37,7 @@ Tensor = FloatTensor
 LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 
-nnCount = 5
+nnCount = 7
 baseDir = "../nn_ar"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -373,9 +373,9 @@ class RL(object):
 				for j in range(self.num_agents):
 					self.env.setAction(actions[i*self.num_agents+j], i, j);
 
-			# print(actions[0])
-			# print("==============================")
-			actions = np.concatenate((actions_0, actions_1, actions_2), axis=1)
+			# print(actions_0[0])
+			# print("-----------------------------")
+			# actions = np.concatenate((actions_0, actions_1, actions_2), axis=1)
 
 			self.env.stepsAtOnce()
 

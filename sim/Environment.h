@@ -220,6 +220,7 @@ public:
 
 	std::vector<Eigen::VectorXd> mPrevActions;
 
+	std::vector<int> mCurActionTypes;
 
 	// AgentEnvWindow* mWindow;
 };
