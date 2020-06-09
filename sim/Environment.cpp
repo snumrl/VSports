@@ -150,6 +150,12 @@ initCharacters(std::string bvhPath)
 	mAccScore.resize(mNumChars);
 	mAccScore.setZero();
 
+	mPrevCOMs.resize(mNumChars);
+	for(int i=0;i<mNumChars;i++)
+	{
+		mPrevCOMs[i] = mCharacters[i]->getSkeleton()->getCOM();
+	}
+
 	// initBehaviorTree();
 }
 
@@ -194,6 +200,7 @@ initBall()
 	ballSkel = SkelHelper::makeBall();
 	setSkelCollidable(ballSkel, true);
 	mWorld->addSkeleton(ballSkel);
+	mPrevBallPosition = ballSkel->getCOM();
 }
 
 void
@@ -407,11 +414,50 @@ getReward(int index, bool verbose)
 	// reward = exp(-(curBallPosition - mTargetBallPosition).norm());
 	// if((curBallPosition - mTargetBallPosition).norm() < 0.3)
 	// {
+	// reward = 100;
+	// std::cout<<"Successed"<<std::endl;
+	// mIsTerminalState = true;
+	// }
+	// reward = exp(-(mCharacters[0]->getSkeleton()->getCOM() - mTargetBallPosition).norm());
+	// if((mCharacters[0]->getSkeleton()->getCOM() - mTargetBallPosition).norm() < 1.0)
+	// {
+	// reward = 100;
+	// std::cout<<"Successed"<<std::endl;
+	// mIsTerminalState = true;
+	// }
+
+	// Eigen::Vector3d curCOM = mCharacters[0]->getSkeleton()->getCOM();
+
+	// Eigen::Vector3d targetBallDirection = mTargetBallPosition - curCOM;
+	// // targetBallDirection[1] = 0;
+	// if(targetBallDirection.norm() != 0)
+	// 	targetBallDirection.normalize();
+
+	// Eigen::Vector3d curDirection = 30.0 *(curCOM - mPrevCOMs[index]);
+	// // curDirection[1] = 0;
+
+
+	// double theta = acos(targetBallDirection.dot(curDirection.normalized()));
+	// reward = 0.5*exp(- theta) * curDirection.norm();
+	// if((curCOM - mTargetBallPosition).norm() < 1.0)
+	// {
 	// 	reward = 100;
 	// 	std::cout<<"Successed"<<std::endl;
 	// 	mIsTerminalState = true;
 	// }
-	reward = exp(-(mCharacters[0]->getSkeleton()->getCOM() - mTargetBallPosition).norm());
+
+
+	Eigen::Vector3d targetBallDirection = mTargetBallPosition - curBallPosition;
+	// targetBallDirection[1] = 0;
+	if(targetBallDirection.norm() != 0)
+		targetBallDirection.normalize();
+
+	Eigen::Vector3d curDirection = 30.0 *(curBallPosition - mPrevBallPosition);
+	// curDirection[1] = 0;
+
+
+	// double theta = acos(targetBallDirection.dot(curDirection.normalized()));
+	reward = 0.1*max(0.0, targetBallDirection.dot(curDirection));
 	if((curBallPosition - mTargetBallPosition).norm() < 1.0)
 	{
 		reward = 100;
@@ -468,6 +514,11 @@ applyAction(int index)
 
 	// mActions[index].segment(4+8,6).setZero();
 
+	mPrevBallPosition = ballSkel->getCOM();
+	for(int i=0;i<mNumChars;i++)
+	{
+		mPrevCOMs[i] = mCharacters[i]->getSkeleton()->getCOM();
+	}
 	auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(mActions[index]));
     Eigen::VectorXd nextPosition = std::get<0>(nextPositionAndContacts);
     Eigen::Vector4d nextContacts = std::get<1>(nextPositionAndContacts).segment(0,4);
@@ -509,6 +560,10 @@ applyAction(int index)
     	{
             this-> criticalPoint_targetBallPosition = this->prevBallPositions[0];
             this-> criticalPoint_targetBallVelocity = (this->prevBallPositions[0] - this->prevBallPositions[2])*15*1.5;
+            if(this-> criticalPoint_targetBallVelocity.norm() >30)
+            {
+            	this->criticalPoint_targetBallVelocity = 30.0 * this->criticalPoint_targetBallVelocity.normalized();
+            }
             // std::cout<<"this->prevBallPosition : "<<this->prevBallPosition.transpose()<<std::endl;
             // std::cout<<"this->pprevBallPosition : "<<this->pprevBallPosition.transpose()<<std::endl;
             // std::cout<<"this->ppprevBallPosition : "<<this->ppprevBallPosition.transpose()<<std::endl;
@@ -668,13 +723,19 @@ resetCharacterPositions()
 	criticalPoint_targetBallVelocity.setZero();
 
 	for(int i=0;i<RESET_ADAPTING_FRAME;i++)
-		mMotionGenerator->setCurrentPose(standPosition, curBallPosition);
+		mMotionGenerator->setCurrentPose(standPosition);
 
 	Eigen::VectorXd zeroAction = mActions[0];
 	zeroAction.setZero();
 	auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(zeroAction));
     Eigen::VectorXd nextPosition = std::get<0>(nextPositionAndContacts);
     mCharacters[0]->getSkeleton()->setPositions(nextPosition);
+
+	for(int i=0;i<mNumChars;i++)
+	{
+		mPrevCOMs[i] = mCharacters[i]->getSkeleton()->getCOM();
+	}
+	mPrevBallPosition = ballSkel->getCOM();
 
 	// for(int i=0;i<mNumChars;i++)
 	// {

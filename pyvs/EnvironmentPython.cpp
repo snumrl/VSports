@@ -6,7 +6,7 @@
 
 EnvironmentPython::
 EnvironmentPython(int numAgent)
-	:mNumSlaves(4)
+	:mNumSlaves(1)
 {
 	dart::math::seedRand();
 	omp_set_num_threads(mNumSlaves);
@@ -160,6 +160,7 @@ setAction(np::ndarray np_array, int id, int index)
 
 	// std::cout<<"Output Action :"<<std::endl;
 	// std::cout<<action.transpose()<<std::endl;
+	// std::cout<<"-----------------------------"<<std::endl;
 
 
 	// std::cout<<"Denormalized Action :"<<std::endl;

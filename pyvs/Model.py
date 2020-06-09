@@ -94,8 +94,8 @@ class ActorCriticNN(nn.Module):
 		# self.rnn = nn.LSTM(self.num_policyInput, self.hidden_size, num_layers=self.num_layers)
 		# self.cur_hidden = self.init_hidden(1)
 
-		num_h1 = 128
-		num_h2 = 128
+		num_h1 = 256
+		num_h2 = 256
 		# num_h3 = 256
 
 		self.policy = nn.Sequential(
@@ -153,7 +153,7 @@ class ActorCriticNN(nn.Module):
 		# print(p.loc.cpu().detach().numpy())
 
 		# return p.sample().cpu().detach().numpy()
-		return p.loc.cpu().detach().numpy()
+		return p.loc.cpu().detach().numpy().astype(np.float32)
 
 	def get_value(self, s):
 		ts = torch.tensor(s)

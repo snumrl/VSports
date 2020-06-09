@@ -189,7 +189,7 @@ Eigen::VectorXd Wrapper::toEigenVector(const np::ndarray& array)
 {
 	Eigen::VectorXd vec(array.shape(0));
 
-	double* srcs = reinterpret_cast<double*>(array.get_data());
+	float* srcs = reinterpret_cast<float*>(array.get_data());
 
 	for(int i=0;i<array.shape(0);i++)
 	{
@@ -202,7 +202,7 @@ std::vector<Eigen::VectorXd> Wrapper::toEigenVectorVector(const np::ndarray& arr
 	std::vector<Eigen::VectorXd> mat;
 	mat.resize(array.shape(0));
 	
-	double* srcs = reinterpret_cast<double*>(array.get_data());
+	float* srcs = reinterpret_cast<float*>(array.get_data());
 	int index = 0;
 	
 	for(int i=0;i<array.shape(0);i++){

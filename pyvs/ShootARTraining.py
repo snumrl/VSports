@@ -37,7 +37,7 @@ Tensor = FloatTensor
 LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 
-nnCount = 7
+nnCount = 13
 baseDir = "../nn_ar"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -87,7 +87,7 @@ class Buffer(object):
 class RL(object):
 	def __init__(self):
 		np.random.seed(seed = int(time.time()))
-		self.num_slaves = 4
+		self.num_slaves = 1
 		self.num_agents = 1
 		self.env = Env(self.num_agents)
 		self.num_state = self.env.getNumState()
@@ -369,12 +369,12 @@ class RL(object):
 
 
 			actions = np.concatenate((actions_0_oneHot, actions_1, actions_2), axis=1)
+			actions = actions.astype(np.float32)
 			for i in range(self.num_slaves):
 				for j in range(self.num_agents):
 					self.env.setAction(actions[i*self.num_agents+j], i, j);
 
-			# print(actions_0[0])
-			# print("-----------------------------")
+
 			# actions = np.concatenate((actions_0, actions_1, actions_2), axis=1)
 
 			self.env.stepsAtOnce()

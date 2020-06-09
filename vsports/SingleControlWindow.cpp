@@ -108,8 +108,8 @@ SingleControlWindow()
         prevHandTransform.push_back(Eigen::Isometry3d::Identity());
         this->prevHandTransforms.push_back(prevHandTransform);
     }
-    mNormalizer = new Normalizer("../extern/ICA/motions/basket_34/data/xNormal.dat", 
-								"../extern/ICA/motions/basket_34/data/yNormal.dat");
+    mNormalizer = new Normalizer("../extern/ICA/motions/basket_51/data/xNormal.dat", 
+								"../extern/ICA/motions/basket_51/data/yNormal.dat");
 
 
 
@@ -463,9 +463,9 @@ step()
 	mStates[0] = mEnv->getState(0);
 	// std::cout<<mStates[0].transpose()<<std::endl;
 
-	mEnv->setAction(0, Utils::toEigenVec(this->xData[0][mFrame]));
-	// getActionFromNN(0);
-	// mEnv->setAction(0, mActions[0]);
+	// mEnv->setAction(0, Utils::toEigenVec(this->xData[0][mFrame]));
+	getActionFromNN(0);
+	mEnv->setAction(0, mActions[0]);
 
 
 	
@@ -662,27 +662,34 @@ display()
 
 
     std::string curAction;
-    for(int i=4;i<4+8;i++)
+
+    bool useXData = false;
+    if(useXData)
     {
-        if(xData[0][mFrame][i] >= 0.5)
-            curAction = std::to_string(i-4);
+	    for(int i=4;i<4+8;i++)
+	    {
+	        if(xData[0][mFrame][i] >= 0.5)
+	            curAction = std::to_string(i-4);
+	    }
+	    curAction = curAction+"     "+std::to_string(xData[0][mFrame][4+8+6]/30.0);
     }
-    curAction = curAction+"     "+std::to_string(xData[0][mFrame][4+8+6]/30.0);
+    else
+    {
 
-    // std::string curAction = "-1";
+	    int maxIndex = 0;
+	    double maxValue = -100;
+	    for(int i=4;i<4+8;i++)
+	    {
+	        if(mActions[0][i]> maxValue)
+	        {
+	        	maxValue= mActions[0][i];
+	        	maxIndex = i;
+	        }
+	    }
+	    curAction = std::to_string(maxIndex-4);
+	    curAction = curAction+"     "+std::to_string(mActions[0][4+8+6]/30.0);
+    }
 
-    // int maxIndex = 0;
-    // double maxValue = -100;
-    // for(int i=4;i<4+8;i++)
-    // {
-    //     if(mActions[0][i]> maxValue)
-    //     {
-    //     	maxValue= mActions[0][i];
-    //     	maxIndex = i;
-    //     }
-    // }
-    // curAction = std::to_string(maxIndex-4);
-    // curAction = curAction+"     "+std::to_string(mActions[0][4+8+6]/30.0);
 
 
     GUI::drawStringOnScreen(0.2, 0.85, curAction, true, Eigen::Vector3d(1,1,1));

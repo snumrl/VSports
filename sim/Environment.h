@@ -221,6 +221,9 @@ public:
 	std::vector<Eigen::VectorXd> mPrevActions;
 
 	std::vector<int> mCurActionTypes;
+	std::vector<Eigen::Vector3d> mPrevCOMs;
+
+	Eigen::Vector3d mPrevBallPosition;
 
 	// AgentEnvWindow* mWindow;
 };
