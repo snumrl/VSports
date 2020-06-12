@@ -11,7 +11,7 @@
 class EnvironmentPython
 {
 public:
-	EnvironmentPython(int numAgent);
+	EnvironmentPython(int numAgent, std::string motion_nn_path);
 	// For general properties
 	int getNumState();
 	int getNumAction();

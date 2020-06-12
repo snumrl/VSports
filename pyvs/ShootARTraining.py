@@ -37,7 +37,7 @@ Tensor = FloatTensor
 LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 
-nnCount = 13
+nnCount = 17
 baseDir = "../nn_ar"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -85,11 +85,11 @@ class Buffer(object):
 		self.buffer.clear()
 
 class RL(object):
-	def __init__(self):
+	def __init__(self, motion_nn):
 		np.random.seed(seed = int(time.time()))
 		self.num_slaves = 1
 		self.num_agents = 1
-		self.env = Env(self.num_agents)
+		self.env = Env(self.num_agents, motion_nn)
 		self.num_state = self.env.getNumState()
 		self.num_action = self.env.getNumAction()
 		self.num_policy = 1
@@ -914,18 +914,24 @@ import argparse
 if __name__=="__main__":
 	# print("111111111111")
 	# exit(0)
-	rl = RL()
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-m','--model',help='model path')
 	# parser.add_argument('-p','--policy',help='pretrained pollicy path')
 	parser.add_argument('-iter','--iteration',help='num iterations')
 	parser.add_argument('-n','--name',help='name of training setting')
+	parser.add_argument('-motion', '--motion', help='motion nn path')
 	# print("222222222222")
 
 	args =parser.parse_args()
 
 	graph_name = ''
 	
+	if args.motion is None:
+		print("Please specify the motion nn path")
+		exit(0)
+
+	rl = RL(args.motion)
+
 	if args.model is not None:
 		for k in range(rl.num_agents):
 			rl.loadTargetModels(args.model, k)
@@ -939,9 +945,10 @@ if __name__=="__main__":
 		rl.num_evaluation = int(args.iteration)
 		for i in range(int(args.iteration)):
 			rl.env.endOfIteration()
-
 	else:
 		rl.saveModels()
+
+
 	print('num states: {}, num actions: {}'.format(rl.env.getNumState(),rl.env.getNumAction()))
 	# for i in range(ppo.max_iteration-5):
 	for i in range(5000000):

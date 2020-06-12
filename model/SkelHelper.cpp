@@ -222,7 +222,7 @@ MakeWeldJointBody(
 			auto vsn = bn->createShapeNodeWith<VisualAspect>(visual_shape);
 			Eigen::Isometry3d T_visual;
 			T_visual.setIdentity();
-			T_visual.translation() = Eigen::Vector3d(0.0, 0.58, 0.0);
+			T_visual.translation() = Eigen::Vector3d(0.035, 0.58, 0.0);
 			vsn->setRelativeTransform(T_visual);
 
 		}else{

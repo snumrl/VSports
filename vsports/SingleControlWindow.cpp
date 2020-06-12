@@ -108,8 +108,6 @@ SingleControlWindow()
         prevHandTransform.push_back(Eigen::Isometry3d::Identity());
         this->prevHandTransforms.push_back(prevHandTransform);
     }
-    mNormalizer = new Normalizer("../extern/ICA/motions/basket_51/data/xNormal.dat", 
-								"../extern/ICA/motions/basket_51/data/yNormal.dat");
 
 
 
@@ -122,7 +120,6 @@ SingleControlWindow(const char* bvh_path, const char* nn_path,
 {
 	mEnv = new Environment(30, 180, 1, bvh_path, nn_path);
 	reducedDim = false;
-
 
 	p::str str = ("num_state = "+std::to_string(mEnv->getNumState())).c_str();
 	p::exec(str,mns);
@@ -249,8 +246,8 @@ initCustomView()
 	// mCamera->eye = Eigen::Vector3d(3.60468, -4.29576, 1.87037);
 	// mCamera->lookAt = Eigen::Vector3d(-0.0936473, 0.158113, 0.293854);
 	// mCamera->up = Eigen::Vector3d(-0.132372, 0.231252, 0.963847);
-	mCamera->eye = Eigen::Vector3d(-10.0, 5.0, 10.0);
-	mCamera->lookAt = Eigen::Vector3d(0.0, 0.0, 0.0);
+	mCamera->eye = Eigen::Vector3d(5.0, 8.0, 18.0);
+	mCamera->lookAt = Eigen::Vector3d(5.0, 0.0, 0.0);
 	mCamera->up = Eigen::Vector3d(0.0, 1.0, 0.0);
 
 }
@@ -464,6 +461,7 @@ step()
 	// std::cout<<mStates[0].transpose()<<std::endl;
 
 	// mEnv->setAction(0, Utils::toEigenVec(this->xData[0][mFrame]));
+	// std::cout<<Utils::toEigenVec(this->xData[0][mFrame]).transpose()<<std::endl;
 	getActionFromNN(0);
 	mEnv->setAction(0, mActions[0]);
 
@@ -687,7 +685,7 @@ display()
 	        }
 	    }
 	    curAction = std::to_string(maxIndex-4);
-	    curAction = curAction+"     "+std::to_string(mActions[0][4+8+6]/30.0);
+	    curAction = curAction+"     "+std::to_string(mEnv->mActions[0][4+8+6]/30.0);
     }
 
 
@@ -914,7 +912,7 @@ getActionFromNN(int index)
 
 
 
-	mAction = mNormalizer->denormalizeAction(mAction);
+	mAction = mEnv->mNormalizer->denormalizeAction(mAction);
 	// std::cout<<mAction.segment(0,4).transpose()<<std::endl;
 	// std::cout<<mAction.segment(4,8).transpose()<<std::endl;
 	// std::cout<<mAction.segment(12,7).transpose()<<std::endl;

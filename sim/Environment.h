@@ -225,6 +225,9 @@ public:
 
 	Eigen::Vector3d mPrevBallPosition;
 
+	std::vector<int> mCurCriticalActionTimes;
+	void computeCurCriticalActionTimes();
+
 	// AgentEnvWindow* mWindow;
 };
 double getFacingAngleFromLocalState(Eigen::VectorXd curState);

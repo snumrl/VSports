@@ -5,7 +5,7 @@
 #include <GL/glut.h>
 
 EnvironmentPython::
-EnvironmentPython(int numAgent)
+EnvironmentPython(int numAgent, std::string motion_nn_path)
 	:mNumSlaves(1)
 {
 	dart::math::seedRand();
@@ -13,7 +13,7 @@ EnvironmentPython(int numAgent)
 	// std::cout<<""
 	for(int i=0;i<mNumSlaves;i++)
 	{
-		mSlaves.push_back(new Environment(30, 180, numAgent, "../data/motions/basketData/motion/s_004_1_1.bvh", "basket_51"));
+		mSlaves.push_back(new Environment(30, 180, numAgent, "../data/motions/basketData/motion/s_004_1_1.bvh", motion_nn_path));
 	}
 	mNumState = mSlaves[0]->getNumState();
 	mNumAction = mSlaves[0]->getNumAction();
@@ -143,7 +143,7 @@ setAction(np::ndarray np_array, int id, int index)
 
 	Eigen::VectorXd action = Wrapper::toEigenVector(np_array);
 	Eigen::VectorXd denormalizedAction;
-	Eigen::VectorXd ex_action(19);
+	Eigen::VectorXd ex_action(action.rows());
 	if(reducedDim)
 	{
 		ex_action.setZero();
@@ -317,7 +317,7 @@ BOOST_PYTHON_MODULE(pyvs)
 	Py_Initialize();
 	np::initialize();
 
-	class_<EnvironmentPython>("Env", init<int>())
+	class_<EnvironmentPython>("Env", init<int, std::string>())
 		.def("getNumState",&EnvironmentPython::getNumState)
 		.def("getNumAction",&EnvironmentPython::getNumAction)
 		.def("getSimulationHz",&EnvironmentPython::getSimulationHz)

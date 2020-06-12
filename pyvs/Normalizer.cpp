@@ -6,8 +6,8 @@
 Normalizer::Normalizer(std::string xNormalPath, std::string yNormalPath)
 {
 	std::ifstream in;
-	dimX = 19;
-	dimY = 154;
+	dimX = 20;
+	dimY = 154+1;
 
 	in.open(xNormalPath);
 
@@ -35,7 +35,7 @@ Eigen::VectorXd
 Normalizer::
 normalizeState(Eigen::VectorXd state)
 {
-	assert(state.rows() == dimY+9);
+	assert(state.rows() == dimY+9+1);
 	Eigen::VectorXd normalizedState(state.rows());
 
 	normalizedState.segment(0, dimY) = state.segment(0, dimY) - yMean;
@@ -51,6 +51,7 @@ normalizeState(Eigen::VectorXd state)
 
 
 	normalizedState.segment(dimY+3,6) = state.segment(dimY+3, 6)/(1400.0/sqrt(3.0));
+	normalizedState[dimY+9] = state[dimY+9]/30.0;
 	// normalizedState.segment(dimY+9,8) = state.segment(dimY+9,8);
 
 
@@ -84,6 +85,7 @@ normalizeState(Eigen::VectorXd state)
 // }
 
 
+// ad-hoc setting. the action type part is different from other part.
 Eigen::VectorXd
 Normalizer::
 denormalizeAction(Eigen::VectorXd action)
@@ -109,6 +111,37 @@ denormalizeAction(Eigen::VectorXd action)
 	denormalizedAction = denormalizedAction + xMean;
 
 	denormalizedAction.segment(4,8) = allignedAction.segment(4,8);
+	denormalizedAction[19] = allignedAction[19];
 	return denormalizedAction;
 }
+
+
+// Eigen::VectorXd
+// Normalizer::
+// normalizeAction(Eigen::VectorXd action)
+// {
+// 	assert(action.rows() == dimX);
+// 	// std::cout<<"------------------"<<std::endl;
+// 	// std::cout<<action.transpose()<<std::endl;
+
+// 	// Eigen::VectorXd allignedAction(action.rows());
+// 	// allignedAction.segment(4,8) = action.segment(0,8);
+// 	// allignedAction.segment(0,4) = action.segment(8,4);
+// 	// allignedAction.segment(12,dimX-12) = action.segment(12,dimX-12);
+
+// 	Eigen::VectorXd normalizedAction(action.rows());
+
+// 	// std::cout<<allignedAction.transpose()<<std::endl;
+// 	// std::cout<<std::endl;
+
+// 	// std::cout<<xMean.transpose()<<std::endl;
+// 	// std::cout<<xStd.transpose()<<std::endl;
+
+// 	// exit(0);
+// 	normalizedAction = action - xMean;
+// 	normalizedAction = action.cwiseProduct(xStd.cwiseInverse());
+
+// 	// normalizedAction[18] = action[18];
+// 	return normalizedAction;
+// }
 
