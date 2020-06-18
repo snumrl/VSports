@@ -660,3 +660,24 @@ GUI::drawCoordinate(Eigen::Vector3d center, double length)
 
     glPopMatrix();
 }
+
+void GUI::draw2dCircle(Eigen::Vector3d center, Eigen::Vector3d xAxis, Eigen::Vector3d yAxis, double radius, bool filled)
+{
+    glPushMatrix();
+
+    if(filled) glBegin(GL_POLYGON);
+    else glBegin(GL_LINES);
+
+    double splitNum= 100;
+    double angle=0.0;
+    for (int i=0; i<splitNum; i++)
+    {
+        Eigen::Vector3d point= center+ radius* std::cos(angle)* xAxis+ radius*std::sin(angle)*yAxis;
+        glVertex3d(point[0], point[1], point[2]);
+        angle += (1.0/splitNum)*2*M_PI;
+    }
+    glEnd();
+    glPopMatrix();
+
+
+}

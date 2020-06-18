@@ -131,6 +131,8 @@ public:
 	void updatePrevContacts(Eigen::Vector2d handContacts);
 	bool isCriticalPoint();
 
+	bool isCriticalAction(int actionType);
+
 public:
 	dart::simulation::WorldPtr mWorld;
 	int mNumChars;
@@ -150,7 +152,7 @@ public:
 	std::vector<Eigen::VectorXd> mSimpleStates;
 	std::vector<Eigen::VectorXd> mForces;
 
-	double floorDepth = -0.1;
+	double floorDepth = 0.0;
 
 	bool mIsTerminalState;
 
@@ -180,6 +182,9 @@ public:
 	int mNumBallTouch;
 
 	int endTime;
+
+	std::vector<bool> mPrevBallPossessions;
+	std::vector<bool> mCurBallPossessions;
 
 	Normalizer* mNormalizer;
 
@@ -227,6 +232,16 @@ public:
 
 	std::vector<int> mCurCriticalActionTimes;
 	void computeCurCriticalActionTimes();
+
+	// the player who carried the ball
+	int mPrevPlayer;
+
+	std::vector<bool> mDribbled;
+
+	bool mIsFoulState;
+
+	bool isFoulState();
+	// int mCurPlayer;
 
 	// AgentEnvWindow* mWindow;
 };

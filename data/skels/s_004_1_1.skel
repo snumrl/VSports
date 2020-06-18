@@ -8,7 +8,7 @@
 		<skeleton name="s_004_1_1">
 			<transformation>0 0 0 0 0 0</transformation>
 			<body name="Hips">
-				<transformation>0.0000 -0.0048 0.0054 0 0 0</transformation>
+				<transformation>0.0000 0.0400 0.0054 0 0 0</transformation>
 				<inertia>
 					<mass>4.0000</mass>
 					<offset>0.0 0 0.0</offset>
@@ -32,7 +32,7 @@
 				</collision_shape>
 			</body>
 			<body name="Spine">
-				<transformation>0.1203 -0.0065 0.0054 0.0000 0.0000 -0.0008</transformation>
+				<transformation>0.1203 0.0384 0.0054 0.0000 0.0000 -0.0008</transformation>
 				<inertia>
 					<mass>5.0000</mass>
 					<offset>0.0 0 0.0</offset>
@@ -56,7 +56,7 @@
 				</collision_shape>
 			</body>
 			<body name="Spine1">
-				<transformation>0.2734 -0.0066 0.0054 0.0000 0.0000 -0.0008</transformation>
+				<transformation>0.2734 0.0382 0.0054 0.0000 0.0000 -0.0008</transformation>
 				<inertia>
 					<mass>5.0000</mass>
 					<offset>0.0 0 0.0</offset>
@@ -80,7 +80,7 @@
 				</collision_shape>
 			</body>
 			<body name="Spine2">
-				<transformation>0.4266 -0.0067 0.0054 0.0000 0.0000 0.0783</transformation>
+				<transformation>0.4266 0.0381 0.0054 0.0000 0.0000 0.0783</transformation>
 				<inertia>
 					<mass>5.0000</mass>
 					<offset>0.0 0 0.0</offset>
@@ -104,7 +104,7 @@
 				</collision_shape>
 			</body>
 			<body name="Neck">
-				<transformation>0.6257 0.0089 0.0054 0 0 0</transformation>
+				<transformation>0.6257 0.0538 0.0054 0 0 0</transformation>
 				<inertia>
 					<mass>4.0000</mass>
 					<offset>0.0 0 0.0</offset>
@@ -128,7 +128,7 @@
 				</collision_shape>
 			</body>
 			<body name="Head">
-				<transformation>0.6950 0.0089 0.0054 0.0000 0.0000 0.0000</transformation>
+				<transformation>0.6950 0.0538 0.0054 0.0000 0.0000 0.0000</transformation>
 				<inertia>
 					<mass>8.0000</mass>
 					<offset>0.0 0 0.0</offset>
@@ -154,7 +154,7 @@
 				</collision_shape>
 			</body>
 			<body name="LeftShoulder">
-				<transformation>0.5637 0.0160 0.0782 -0.0000 0.0000 0.0000</transformation>
+				<transformation>0.5637 0.0608 0.0782 -0.0000 0.0000 0.0000</transformation>
 				<inertia>
 					<mass>3.5270</mass>
 					<offset>0.0 0 0.0</offset>
@@ -178,7 +178,7 @@
 				</collision_shape>
 			</body>
 			<body name="LeftArm">
-				<transformation>0.7048 0.0160 0.0782 0.0000 0.0000 0.0000</transformation>
+				<transformation>0.7048 0.0608 0.0782 0.0000 0.0000 0.0000</transformation>
 				<inertia>
 					<mass>7.1450</mass>
 					<offset>0.0 0 0.0</offset>
@@ -202,7 +202,7 @@
 				</collision_shape>
 			</body>
 			<body name="LeftForeArm">
-				<transformation>0.9906 0.0160 0.0782 0.0000 0.0000 0.0000</transformation>
+				<transformation>0.9906 0.0608 0.0782 0.0000 0.0000 0.0000</transformation>
 				<inertia>
 					<mass>6.7730</mass>
 					<offset>0.0 0 0.0</offset>
@@ -226,7 +226,7 @@
 				</collision_shape>
 			</body>
 			<body name="LeftHand">
-				<transformation>1.2615 0.0160 0.0782 0.0000 -0.0152 -0.0195</transformation>
+				<transformation>1.2615 0.0608 0.0782 0.0000 -0.0152 -0.0195</transformation>
 				<inertia>
 					<mass>2.3898</mass>
 					<offset>0.0 0 0.0</offset>
@@ -250,7 +250,7 @@
 				</collision_shape>
 			</body>
 			<body name="RightShoulder">
-				<transformation>0.5637 0.0160 -0.0675 0.0000 -0.0000 0.0000</transformation>
+				<transformation>0.5637 0.0609 -0.0675 0.0000 -0.0000 0.0000</transformation>
 				<inertia>
 					<mass>3.5270</mass>
 					<offset>0.0 0 0.0</offset>
@@ -274,7 +274,7 @@
 				</collision_shape>
 			</body>
 			<body name="RightArm">
-				<transformation>0.7048 0.0160 -0.0675 0.0000 0.0000 0.0000</transformation>
+				<transformation>0.7048 0.0609 -0.0675 0.0000 0.0000 0.0000</transformation>
 				<inertia>
 					<mass>7.1450</mass>
 					<offset>0.0 0 0.0</offset>
@@ -298,7 +298,7 @@
 				</collision_shape>
 			</body>
 			<body name="RightForeArm">
-				<transformation>0.9906 0.0160 -0.0675 0.0000 0.0000 0.0000</transformation>
+				<transformation>0.9906 0.0609 -0.0675 0.0000 0.0000 0.0000</transformation>
 				<inertia>
 					<mass>6.7730</mass>
 					<offset>0.0 0 0.0</offset>
@@ -322,7 +322,7 @@
 				</collision_shape>
 			</body>
 			<body name="RightHand">
-				<transformation>1.2615 0.0160 -0.0675 0.0000 0.0152 -0.0195</transformation>
+				<transformation>1.2615 0.0609 -0.0675 0.0000 0.0152 -0.0195</transformation>
 				<inertia>
 					<mass>2.3898</mass>
 					<offset>0.0 0 0.0</offset>
@@ -346,7 +346,7 @@
 				</collision_shape>
 			</body>
 			<body name="LeftUpLeg">
-				<transformation>0.0000 -0.0102 0.0937 0.0000 0.0000 0.0000</transformation>
+				<transformation>0.0000 0.0346 0.0937 0.0000 0.0000 0.0000</transformation>
 				<inertia>
 					<mass>9.9759</mass>
 					<offset>0.0 0 0.0</offset>
@@ -370,7 +370,7 @@
 				</collision_shape>
 			</body>
 			<body name="LeftLeg">
-				<transformation>0.3991 -0.0102 0.0937 0.0000 0.0000 0.0000</transformation>
+				<transformation>0.3991 0.0346 0.0937 0.0000 0.0000 0.0000</transformation>
 				<inertia>
 					<mass>9.9172</mass>
 					<offset>0.0 0 0.0</offset>
@@ -394,7 +394,7 @@
 				</collision_shape>
 			</body>
 			<body name="LeftFoot">
-				<transformation>0.7958 -0.0102 0.0937 0.0000 0.0000 -0.6407</transformation>
+				<transformation>0.7958 0.0346 0.0937 0.0000 0.0000 -0.6407</transformation>
 				<inertia>
 					<mass>3.4074</mass>
 					<offset>0.0 0 0.0</offset>
@@ -418,7 +418,7 @@
 				</collision_shape>
 			</body>
 			<body name="LeftToe">
-				<transformation>0.8974 0.1261 0.0937 0.0000 0.0000 0.0000</transformation>
+				<transformation>0.8974 0.1709 0.0937 0.0000 0.0000 0.0000</transformation>
 				<inertia>
 					<mass>2.0954</mass>
 					<offset>0.0 0 0.0</offset>
@@ -442,7 +442,7 @@
 				</collision_shape>
 			</body>
 			<body name="RightUpLeg">
-				<transformation>0.0000 -0.0102 -0.0830 0.0000 0.0000 0.0000</transformation>
+				<transformation>0.0000 0.0346 -0.0830 0.0000 0.0000 0.0000</transformation>
 				<inertia>
 					<mass>9.9759</mass>
 					<offset>0.0 0 0.0</offset>
@@ -466,7 +466,7 @@
 				</collision_shape>
 			</body>
 			<body name="RightLeg">
-				<transformation>0.3991 -0.0102 -0.0830 0.0000 0.0000 0.0000</transformation>
+				<transformation>0.3991 0.0346 -0.0830 0.0000 0.0000 0.0000</transformation>
 				<inertia>
 					<mass>9.9172</mass>
 					<offset>0.0 0 0.0</offset>
@@ -490,7 +490,7 @@
 				</collision_shape>
 			</body>
 			<body name="RightFoot">
-				<transformation>0.7958 -0.0102 -0.0830 0.0000 0.0000 -0.6407</transformation>
+				<transformation>0.7958 0.0346 -0.0830 0.0000 0.0000 -0.6407</transformation>
 				<inertia>
 					<mass>3.4074</mass>
 					<offset>0.0 0 0.0</offset>
@@ -514,7 +514,7 @@
 				</collision_shape>
 			</body>
 			<body name="RightToe">
-				<transformation>0.8974 0.1261 -0.0830 0.0000 0.0000 0.0000</transformation>
+				<transformation>0.8974 0.1709 -0.0830 0.0000 0.0000 0.0000</transformation>
 				<inertia>
 					<mass>2.0954</mass>
 					<offset>0.0 0 0.0</offset>

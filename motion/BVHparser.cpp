@@ -248,7 +248,7 @@ BVHparser::BVHparser(const char* path, BVHType bvhType)
 	s = istringstream(line);
 	s >> bvh_keyword; s >> offx; s >> offy; s >> offz;
 	if(mBvhType == BVHType::BASKET)
-		rootNode->setOffset(offx, offy-90, offz);
+		rootNode->setOffset(offx, offy-85.5177, offz);
 	else
 		rootNode->setOffset(offx, offy, offz);
 

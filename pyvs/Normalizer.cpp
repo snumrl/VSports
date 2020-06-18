@@ -35,7 +35,7 @@ Eigen::VectorXd
 Normalizer::
 normalizeState(Eigen::VectorXd state)
 {
-	assert(state.rows() == dimY+9+1);
+	assert(state.rows() == dimY+12+1+3 +2+8);
 	Eigen::VectorXd normalizedState(state.rows());
 
 	normalizedState.segment(0, dimY) = state.segment(0, dimY) - yMean;
@@ -47,11 +47,19 @@ normalizeState(Eigen::VectorXd state)
 	normalizedState[dimY+0] = state[dimY+0] /(1400.0/sqrt(3.0));
 	normalizedState[dimY+1] = state[dimY+1] /(200.0/sqrt(3.0));
 	normalizedState[dimY+2] = state[dimY+2] /(750.0/sqrt(3.0));
+
+	normalizedState[dimY+3] = state[dimY+3] /(1400.0/sqrt(3.0));
+	normalizedState[dimY+4] = state[dimY+4] /(200.0/sqrt(3.0));
+	normalizedState[dimY+5] = state[dimY+5] /(750.0/sqrt(3.0));
+
 	// normalizedState.segment(dimY, 3) = normalizedState.segment(dimY, 3).cwiseProduct(yStd.segment(ballOffset, 3).cwiseInverse());
 
 
-	normalizedState.segment(dimY+3,6) = state.segment(dimY+3, 6)/(1400.0/sqrt(3.0));
-	normalizedState[dimY+9] = state[dimY+9]/30.0;
+	normalizedState.segment(dimY+6,6) = state.segment(dimY+6, 6)/(1400.0/sqrt(3.0));
+	normalizedState[dimY+12] = state[dimY+12]/30.0;
+
+	normalizedState.segment(dimY+13,3) = state.segment(dimY+13,3)/100.0 * 4.0;
+	normalizedState.segment(dimY+16,10) = state.segment(dimY+16,10);
 	// normalizedState.segment(dimY+9,8) = state.segment(dimY+9,8);
 
 

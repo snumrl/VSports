@@ -27,6 +27,7 @@ from pyvs import Env
 from IPython import embed
 import json
 from Model import *
+from pathlib import Path
 
 
 use_cuda = torch.cuda.is_available()
@@ -37,7 +38,7 @@ Tensor = FloatTensor
 LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 
-nnCount = 17
+nnCount = 20
 baseDir = "../nn_ar"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -882,7 +883,7 @@ import matplotlib.pyplot as plt
 plt.ion()
 
 
-def plot(y,title,num_fig=1,ylim=True):
+def plot(y,title,num_fig=1,ylim=True,path=""):
 	temp_y = np.zeros(y.shape)
 	if y.shape[0]>5:
 		temp_y[0] = y[0]
@@ -899,7 +900,7 @@ def plot(y,title,num_fig=1,ylim=True):
 	
 	plt.plot(temp_y,'r')
 
-	plt.savefig(nndir+"/"+"result.png", format="png")
+	plt.savefig(path, format="png")
 
 	# plt.show()
 	if ylim:
@@ -951,9 +952,16 @@ if __name__=="__main__":
 
 	print('num states: {}, num actions: {}'.format(rl.env.getNumState(),rl.env.getNumAction()))
 	# for i in range(ppo.max_iteration-5):
+
+	result_figure = nndir+"/"+"result.png"
+	result_figure_num = 0
+	while Path(result_figure).is_file():
+		result_figure = nndir+"/"+"result_{}.png".format(result_figure_num)
+		result_figure_num+=1
+
 	for i in range(5000000):
 		rl.train()
 		rewards = rl.evaluate()
-		plot(rewards, graph_name + 'Reward',0,False)
+		plot(rewards, graph_name + 'Reward',0,False, path=result_figure)
 		# plot_winrate(winRate, graph_name + 'vs Hardcoded Winrate',1,False)
 

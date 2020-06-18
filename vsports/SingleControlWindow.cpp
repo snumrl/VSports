@@ -321,6 +321,7 @@ keyboard(unsigned char key, int x, int y)
 
 		case ']':
 			mFrame += 100;
+			step();
 			break;
 		case '[':
 			mFrame -= 100;
@@ -423,7 +424,7 @@ int
 SingleControlWindow::
 step()
 {
-	if(mEnv->isTerminalState())
+	if(mEnv->isTerminalState() || mEnv->isFoulState())
 	{
 		sleep(1);
 		mEnv->reset();
@@ -636,6 +637,19 @@ display()
 
 	GUI::drawSphere(0.3, mEnv->mTargetBallPosition, Eigen::Vector3d(0.0, 0.0, 1.0));
 
+	glPushMatrix();
+	glTranslated(mEnv->mTargetBallPosition[0], 0, mEnv->mTargetBallPosition[2]);
+	glBegin(GL_LINES);
+    glColor3f(0.0, 0.0, 0.0);
+    glVertex3f(0,0,0);
+    glVertex3f(0,mEnv->mTargetBallPosition[1],0);
+    glEnd();
+    glPopMatrix();
+
+    Eigen::Vector3d targetBall2DPosition = mEnv->mTargetBallPosition;
+    targetBall2DPosition[1] = 0;
+	GUI::drawSphere(0.05, targetBall2DPosition, Eigen::Vector3d(0.0, 0.0, 0.0));
+
 	// cout<<"3333"<<endl;
 
 	// std::string scoreString
@@ -826,7 +840,7 @@ getActionFromNN(int index)
 	p::object get_action_0;
 
 	Eigen::VectorXd state = mEnv->getNormalizedState(index);
-	// std::cout<<state.segment(155,8).transpose()<<std::endl;
+	// std::cout<<state.segment(155,6).transpose()<<std::endl;
 
 	Eigen::VectorXd mAction(mEnv->getNumAction());
 	mAction.setZero();
