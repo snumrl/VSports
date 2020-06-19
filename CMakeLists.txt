@@ -5,7 +5,7 @@ add_compile_options(-fPIC)
 add_compile_options(-std=gnu++11)
 add_compile_options(-Wdeprecated-declarations)
 add_compile_options(-DHAVE_CSTDDEF)
-project(vsports)
+project(vsports_18)
 
 SET(CMAKE_BUILD_TYPE Release CACHE STRING
 	"Choose the type of build, options are: None Debug Release."
@@ -53,5 +53,5 @@ file(GLOB srcs
 		"utils/*.h" "utils/*.cpp"
 		"motion/*.h" "motion/*.cpp")
 
-add_executable(vsports ${srcs})
-target_link_libraries(vsports ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${DART_LIBRARIES} ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} sim pyvs model plugin_ICA)
+add_executable(vsports_18 ${srcs})
+target_link_libraries(vsports_18 ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} ${DART_LIBRARIES} ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} sim pyvs model plugin_ICA)

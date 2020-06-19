@@ -81,6 +81,8 @@ initMotionGenerator(std::string dataPath)
 	Eigen::VectorXd targetZeroVec(20);
 	targetZeroVec.setZero();
 
+	targetZeroVec[4+4] = 1;
+
 	BVHmanager::setPositionFromBVH(mCharacters[0]->getSkeleton(), mBvhParser, 50);
 	Eigen::VectorXd bvhPosition = mCharacters[0]->getSkeleton()->getPositions();
 	for(int i=0;i<RESET_ADAPTING_FRAME;i++)
@@ -170,6 +172,19 @@ initCharacters(std::string bvhPath)
 		mPrevBallPossessions[i] = false;
 		mCurBallPossessions[i] =false;
 		mDribbled[i] = false;
+	}
+
+	prevContact.resize(mNumChars);
+	curContact.resize(mNumChars);
+
+	mLFootDetached.resize(mNumChars);
+	mRFootDetached.resize(mNumChars);
+	for(int i=0;i<mNumChars;i++)
+	{
+		prevContact[i] = false;
+		curContact[i] = false;
+		mLFootDetached[i] = false;
+		mRFootDetached[i] = false;
 	}
 	// initBehaviorTree();
 }
@@ -394,8 +409,8 @@ getState(int index)
 
 	// ballVelocity/=4.0;
 
-	state.resize(ICAPosition.rows() + relTargetPosition.rows() + relBallTargetPosition.rows() + goalpostPositions.rows() + 1 + ballVelocity.rows()
-			+2+curActionType.rows());
+	state.resize(ICAPosition.rows() + relTargetPosition.rows() + relBallTargetPosition.rows() + goalpostPositions.rows() + 1 + 3);
+	 //+ ballVelocity.rows()+2+curActionType.rows());
 	
 	int curIndex = 0;
 	for(int i=0;i<ICAPosition.rows();i++)
@@ -420,24 +435,32 @@ getState(int index)
 	}
 	state[curIndex]=mCurCriticalActionTimes[index]/30.0;
 	curIndex++;
+
+
+
 	for(int i=0;i<ballVelocity.rows();i++)
 	{
 		state[curIndex] = ballVelocity[i];
 		curIndex++;
 	}
-	state[curIndex] = mDribbled[index];
-	curIndex++;
-	state[curIndex] = mPrevPlayer == index? 1 : 0;
-	curIndex++;
+	// state[curIndex] = mDribbled[index];
+	// curIndex++;
+	// state[curIndex] = mPrevPlayer == index? 1 : 0;
+	// curIndex++;
 
-	// std::cout<<"Critical action time : "<<state[curIndex-1]<<std::endl;
 
-	for(int i=0;i<curActionType.rows();i++)
-	{
-		state[curIndex] = curActionType[i];
-		curIndex++;
-	}
+	// // std::cout<<"Critical action time : "<<state[curIndex-1]<<std::endl;
 
+	// for(int i=0;i<curActionType.rows();i++)
+	// {
+	// 	state[curIndex] = curActionType[i];
+	// 	curIndex++;
+	// }
+
+	// state[curIndex] = mLFootDetached[index];
+	// curIndex++;
+	// state[curIndex] = mRFootDetached[index];
+	// curIndex++;
 
 	mStates[index] = state;
 	// cout<<"getState end"<<endl;
@@ -579,11 +602,11 @@ void
 Environment::
 applyAction(int index)
 {
-	// for(int i=4;i<12;i++)
-	// {
-	// 	mActions[index][i] = 0;
-	// }
-	// mActions[index][4] = 1;
+	for(int i=4;i<12;i++)
+	{
+		mActions[index][i] = 0;
+	}
+	mActions[index][4] = 1;
 
 	// mActions[index][18] = 0;
 
@@ -664,7 +687,7 @@ applyAction(int index)
    	updatePrevBallPositions(std::get<1>(nextPositionAndContacts).segment(4,3));
 
     //Update hand Contacts;
-    updatePrevContacts(std::get<1>(nextPositionAndContacts).segment(2,2));
+    updatePrevContacts(index, std::get<1>(nextPositionAndContacts).segment(2,2));
     
 
 
@@ -711,6 +734,8 @@ applyAction(int index)
 	if(curActionType == 0)
 	{
 		mDribbled[index] = true;
+		mLFootDetached[index] = false;
+		mRFootDetached[index] = false;
 	}
 	if(curActionType == 1 || curActionType == 3)
 	{
@@ -728,7 +753,7 @@ applyAction(int index)
     // if(curActionType == 1 || curActionType == 3)
     // {
     	//Let's check if this is critical point or not
-    	if(prevContact && !curContact)
+    	if(prevContact[index] && !curContact[index])
     	{
             this-> criticalPoint_targetBallPosition = this->prevBallPositions[0];
             this-> criticalPoint_targetBallVelocity = (this->prevBallPositions[0] - this->prevBallPositions[2])*15*1.5;
@@ -917,6 +942,7 @@ resetCharacterPositions()
 
 	Eigen::VectorXd targetZeroVec(20);
 	targetZeroVec.setZero();
+	targetZeroVec[4+4] = 1;
 
 
 	if(useHalfCourt)
@@ -945,7 +971,7 @@ resetCharacterPositions()
 	criticalPoint_targetBallVelocity.setZero();
 
 	for(int i=0;i<RESET_ADAPTING_FRAME;i++)
-		mMotionGenerator->setCurrentPose(standPosition);
+		mMotionGenerator->setCurrentPose(standPosition, Utils::toStdVec(targetZeroVec));
 
 	Eigen::VectorXd zeroAction = mActions[0];
 	zeroAction.setZero();
@@ -964,6 +990,9 @@ resetCharacterPositions()
 		mPrevBallPossessions[i] = false;
 		mCurBallPossessions[i] =false;
 		mDribbled[i] = false;
+
+		mLFootDetached[i] = false;
+		mRFootDetached[i] = false;
 	}
 	// for(int i=0;i<mNumChars;i++)
 	// {
@@ -1019,14 +1048,14 @@ updatePrevBallPositions(Eigen::Vector3d newBallPosition)
 
 void
 Environment::
-updatePrevContacts(Eigen::Vector2d handContacts)
+updatePrevContacts(int index, Eigen::Vector2d handContacts)
 {
-	prevContact = curContact;
+	prevContact[index] = curContact[index];
 
 	if(handContacts[0]>0.5 || handContacts[1]>0.5)
-		curContact = true;
+		curContact[index] = true;
 	else
-		curContact = false;
+		curContact[index] = false;
 }
 
 
@@ -1186,6 +1215,37 @@ computeCurCriticalActionTimes()
 	}
 	// std::cout<<"mCurCriticalActionTimes[index] "<<mCurCriticalActionTimes[0]<<std::endl;
 
+}
+
+EnvironmentPackage::EnvironmentPackage()
+{
+
+}
+
+void
+EnvironmentPackage::
+saveEnvironment(Environment* env)
+{
+	// this->skelPosition = env-> skelPosition;
+	this->mActions = env-> mActions;
+	this->mPrevBallPossessions = env-> mPrevBallPossessions;
+	this->mCurBallPossessions = env-> mCurBallPossessions;
+	this->prevBallPositions = env-> prevBallPositions;
+	this->curBallPosition = env-> curBallPosition;
+	this->criticalPoint_targetBallPosition = env-> criticalPoint_targetBallPosition;
+	this->criticalPoint_targetBallVelocity = env-> criticalPoint_targetBallVelocity;
+	this->prevContact = env-> prevContact;
+	this->curContact = env-> curContact;
+	this->criticalPointFrame = env-> criticalPointFrame;
+	this->curFrame = env-> curFrame;
+	this->mTargetBallPosition = env-> mTargetBallPosition;
+	this->mPrevActions = env-> mPrevActions;
+	this->mCurActionTypes = env-> mCurActionTypes;
+	this->mPrevCOMs = env-> mPrevCOMs;
+	this->mPrevBallPosition = env-> mPrevBallPosition;
+	this->mCurCriticalActionTimes = env-> mCurCriticalActionTimes;
+	this->mPrevPlayer = env-> mPrevPlayer;
+	this->mDribbled = env-> mDribbled;
 }
 
 // Eigen::Vector3d 

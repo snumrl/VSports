@@ -26,6 +26,7 @@ public:
 	void reset(int id);
 	void resets();
 	bool isTerminalState(int id);
+	bool isFoulState(int id);
 	np::ndarray getState(int id, int index);
 	// np::ndarray getLocalState(int id, int index);
 	void setAction(np::ndarray np_array, int id, int index);

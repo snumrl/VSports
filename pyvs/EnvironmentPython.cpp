@@ -74,6 +74,14 @@ isTerminalState(int id)
 	return mSlaves[id]->isTerminalState();
 }
 
+bool
+EnvironmentPython::
+isFoulState(int id)
+{
+	return mSlaves[id]->isFoulState();
+}
+
+
 np::ndarray
 EnvironmentPython::
 getState(int id, int index)
@@ -324,6 +332,7 @@ BOOST_PYTHON_MODULE(pyvs)
 		.def("getControlHz",&EnvironmentPython::getControlHz)
 		.def("reset",&EnvironmentPython::reset)
 		.def("isTerminalState",&EnvironmentPython::isTerminalState)
+		.def("isFoulState",&EnvironmentPython::isFoulState)
 		.def("getState",&EnvironmentPython::getState)
 		// .def("getLocalState",&EnvironmentPython::getLocalState)
 		// .def("getSchedulerState",&EnvironmentPython::getSchedulerState)

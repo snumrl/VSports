@@ -38,8 +38,8 @@ Tensor = FloatTensor
 LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 
-nnCount = 21
-baseDir = "../nn_ar"
+nnCount = 0
+baseDir = "../nn_f_ar"
 nndir = baseDir + "/nn"+str(nnCount)
 
 if not exists(baseDir):
@@ -403,7 +403,7 @@ class RL(object):
 					self.env.reset(i)
 
 
-				if self.env.isTerminalState(i) is False and self.env.isFoulState(i) is False:
+				if self.env.isTerminalState(i) is False:
 					for k in range(self.num_agents):
 						if teamDic[k] == learningTeam:
 							self.episodes_0[i][k].push(states_0[i*self.num_agents+k], actions_0[i*self.num_agents+k],\

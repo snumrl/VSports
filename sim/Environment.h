@@ -52,6 +52,52 @@
 #define _ID_OP_V 19
 // #define _ID_FACING_V 21
 // #define _ID_SLOWED 22
+class Environment;
+
+class EnvironmentPackage
+{
+public:
+	EnvironmentPackage();
+	void saveEnvironment(Environment* env);
+	void restoreEnvironment(Environment* env);
+	Eigen::VectorXd skelPosition;
+
+	std::vector<Eigen::VectorXd> mActions;
+
+	std::vector<bool> mPrevBallPossessions;
+	std::vector<bool> mCurBallPossessions;
+
+
+	// added for motion
+	std::vector<Eigen::Vector3d> prevBallPositions;
+	Eigen::Vector3d curBallPosition;
+
+	Eigen::Vector3d criticalPoint_targetBallPosition;
+	Eigen::Vector3d criticalPoint_targetBallVelocity;
+
+	std::vector<bool> prevContact;
+	std::vector<bool> curContact;
+
+	int criticalPointFrame;
+	int curFrame;
+
+	Eigen::Vector3d mTargetBallPosition;
+
+
+	std::vector<Eigen::VectorXd> mPrevActions;
+
+	std::vector<int> mCurActionTypes;
+	std::vector<Eigen::Vector3d> mPrevCOMs;
+
+	Eigen::Vector3d mPrevBallPosition;
+
+	std::vector<int> mCurCriticalActionTimes;
+
+	// the player who carried the ball
+	int mPrevPlayer;
+
+	std::vector<bool> mDribbled;
+};
 
 
 typedef std::pair<std::string, Eigen::Vector3d> GoalpostInfo;
@@ -128,7 +174,7 @@ public:
 	int getNumBallTouch(){return mNumBallTouch;}
 
 	void updatePrevBallPositions(Eigen::Vector3d newBallPosition);
-	void updatePrevContacts(Eigen::Vector2d handContacts);
+	void updatePrevContacts(int index, Eigen::Vector2d handContacts);
 	bool isCriticalPoint();
 
 	bool isCriticalAction(int actionType);
@@ -206,8 +252,8 @@ public:
 	void initMotionGenerator(std::string dataPath);
 
 	std::map<std::string, int> dartNameIdMap;
-	bool prevContact;
-	bool curContact;
+	std::vector<bool> prevContact;
+	std::vector<bool> curContact;
 
 
     ICA::dart::MotionGenerator* mMotionGenerator;
@@ -241,6 +287,11 @@ public:
 	bool mIsFoulState;
 
 	bool isFoulState();
+
+	void goToPrevSituation();
+
+	std::vector<bool> mLFootDetached;
+	std::vector<bool> mRFootDetached;
 	// int mCurPlayer;
 
 	// AgentEnvWindow* mWindow;

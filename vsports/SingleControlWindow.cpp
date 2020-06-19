@@ -424,7 +424,7 @@ int
 SingleControlWindow::
 step()
 {
-	if(mEnv->isTerminalState() || mEnv->isFoulState())
+	if(mEnv->isTerminalState())// || mEnv->isFoulState())
 	{
 		sleep(1);
 		mEnv->reset();
