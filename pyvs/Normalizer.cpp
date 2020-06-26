@@ -6,8 +6,8 @@
 Normalizer::Normalizer(std::string xNormalPath, std::string yNormalPath)
 {
 	std::ifstream in;
-	dimX = 20;
-	dimY = 154+1;
+	dimX = 4;
+	dimY = 146;
 
 	in.open(xNormalPath);
 
@@ -35,7 +35,8 @@ Eigen::VectorXd
 Normalizer::
 normalizeState(Eigen::VectorXd state)
 {
-	assert(state.rows() == dimY+12+1 + 3);//+3 +2+8);
+	// assert(state.rows() == dimY+12+1 + 3);//+3 +2+8);
+	assert(state.rows() == dimY+3+ 6);//+3 +2+8);
 	Eigen::VectorXd normalizedState(state.rows());
 
 	normalizedState.segment(0, dimY) = state.segment(0, dimY) - yMean;
@@ -48,17 +49,23 @@ normalizeState(Eigen::VectorXd state)
 	normalizedState[dimY+1] = state[dimY+1] /(200.0/sqrt(3.0));
 	normalizedState[dimY+2] = state[dimY+2] /(750.0/sqrt(3.0));
 
-	normalizedState[dimY+3] = state[dimY+3] /(1400.0/sqrt(3.0));
-	normalizedState[dimY+4] = state[dimY+4] /(200.0/sqrt(3.0));
-	normalizedState[dimY+5] = state[dimY+5] /(750.0/sqrt(3.0));
+	for(int i=0;i<6;i++)
+	{
+		normalizedState[dimY+3+i] = state[dimY+3+i] /500.0;
+	}
 
-	// normalizedState.segment(dimY, 3) = normalizedState.segment(dimY, 3).cwiseProduct(yStd.segment(ballOffset, 3).cwiseInverse());
+
+	// normalizedState[dimY+3] = state[dimY+3] /(1400.0/sqrt(3.0));
+	// normalizedState[dimY+4] = state[dimY+4] /(200.0/sqrt(3.0));
+	// normalizedState[dimY+5] = state[dimY+5] /(750.0/sqrt(3.0));
+
+	// // normalizedState.segment(dimY, 3) = normalizedState.segment(dimY, 3).cwiseProduct(yStd.segment(ballOffset, 3).cwiseInverse());
 
 
-	normalizedState.segment(dimY+6,6) = state.segment(dimY+6, 6)/(1400.0/sqrt(3.0));
-	normalizedState[dimY+12] = state[dimY+12]/30.0;
+	// normalizedState.segment(dimY+6,6) = state.segment(dimY+6, 6)/(1400.0/sqrt(3.0));
+	// normalizedState[dimY+12] = state[dimY+12]/30.0;
 
-	normalizedState.segment(dimY+13,3) = state.segment(dimY+13,3)/100.0 * 4.0;
+	// normalizedState.segment(dimY+13,3) = state.segment(dimY+13,3)/100.0 * 4.0;
 	// normalizedState.segment(dimY+16,10) = state.segment(dimY+16,10);
 	// normalizedState.segment(dimY+9,8) = state.segment(dimY+9,8);
 
@@ -102,10 +109,10 @@ denormalizeAction(Eigen::VectorXd action)
 	// std::cout<<"------------------"<<std::endl;
 	// std::cout<<action.transpose()<<std::endl;
 
-	Eigen::VectorXd allignedAction(action.rows());
-	allignedAction.segment(4,8) = action.segment(0,8);
-	allignedAction.segment(0,4) = action.segment(8,4);
-	allignedAction.segment(12,dimX-12) = action.segment(12,dimX-12);
+	// Eigen::VectorXd allignedAction(action.rows());
+	// allignedAction.segment(4,8) = action.segment(0,8);
+	// allignedAction.segment(0,4) = action.segment(8,4);
+	// allignedAction.segment(12,dimX-12) = action.segment(12,dimX-12);
 
 	Eigen::VectorXd denormalizedAction(action.rows());
 
@@ -115,11 +122,13 @@ denormalizeAction(Eigen::VectorXd action)
 	// std::cout<<xMean.transpose()<<std::endl;
 	// std::cout<<xStd.transpose()<<std::endl;
 	// exit(0);
-	denormalizedAction = allignedAction.cwiseProduct(xStd);
-	denormalizedAction = denormalizedAction + xMean;
+	denormalizedAction = action.cwiseProduct(xStd);
+	denormalizedAction = action + xMean;
 
-	denormalizedAction.segment(4,8) = allignedAction.segment(4,8);
-	denormalizedAction[19] = allignedAction[19];
+	denormalizedAction.segment(2,2).normalize();
+
+	// denormalizedAction.segment(4,8) = allignedAction.segment(4,8);
+	// denormalizedAction[19] = allignedAction[19];
 	return denormalizedAction;
 }
 

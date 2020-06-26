@@ -28,6 +28,7 @@ public:
 	bool isTerminalState(int id);
 	bool isFoulState(int id);
 	np::ndarray getState(int id, int index);
+	np::ndarray getHeightMapState(int id, int index);
 	// np::ndarray getLocalState(int id, int index);
 	void setAction(np::ndarray np_array, int id, int index);
 	void setActions(np::ndarray np_array);
@@ -44,6 +45,8 @@ public:
 
 	// For all slaves
 	void stepsAtOnce();
+
+	void goBackEnvironment(int id);
 
 	// Normalizer* mNormalizer;
 private:

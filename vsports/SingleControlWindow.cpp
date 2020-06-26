@@ -36,7 +36,7 @@ initWindow(int _w, int _h, char* _name)
 {
 	mWindows.push_back(this);
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA | GLUT_MULTISAMPLE | GLUT_ACCUM);
-	glutInitWindowPosition(500, 100);
+	glutInitWindowPosition(200, 100);
 	glutInitWindowSize(_w, _h);
 	mWinIDs.push_back(glutCreateWindow(_name));
 	// glutHideWindow();
@@ -139,26 +139,36 @@ SingleControlWindow(const char* bvh_path, const char* nn_path,
 	p::object *load_2 = new p::object[mEnv->mNumChars];
 	// reset_hidden = new boost::python::object[mEnv->mNumChars];
 
+
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module_0[i] = p::eval("ActorCriticNN(num_state, 8).cuda()", mns);
+		nn_module_0[i] = p::eval("ActorCriticNN(num_state, num_action).cuda()", mns);
 		load_0[i] = nn_module_0[i].attr("load");
 	}
-	for(int i=0;i<mEnv->mNumChars;i++)
-	{
-		nn_module_1[i] = p::eval("ActorCriticNN(num_state+8, 4).cuda()", mns);
-		load_1[i] = nn_module_1[i].attr("load");
-	}
-	for(int i=0;i<mEnv->mNumChars;i++)
-	{
-		nn_module_2[i] = p::eval("ActorCriticNN(num_state+8+4, num_action-8-4).cuda()", mns);
-		load_2[i] = nn_module_2[i].attr("load");
-	}
 
 
-	load_0[0](string(control_nn_path) + "_0.pt");
-	load_1[0](string(control_nn_path) + "_1.pt");
-	load_2[0](string(control_nn_path) + "_2.pt");
+
+	// for(int i=0;i<mEnv->mNumChars;i++)
+	// {
+	// 	nn_module_0[i] = p::eval("ActorCriticNN(num_state, 8).cuda()", mns);
+	// 	load_0[i] = nn_module_0[i].attr("load");
+	// }
+	// for(int i=0;i<mEnv->mNumChars;i++)
+	// {
+	// 	nn_module_1[i] = p::eval("ActorCriticNN(num_state+8, 4).cuda()", mns);
+	// 	load_1[i] = nn_module_1[i].attr("load");
+	// }
+	// for(int i=0;i<mEnv->mNumChars;i++)
+	// {
+	// 	nn_module_2[i] = p::eval("ActorCriticNN(num_state+8+4, num_action-8-4).cuda()", mns);
+	// 	load_2[i] = nn_module_2[i].attr("load");
+	// }
+
+
+	load_0[0](string(control_nn_path));
+	// load_0[0](string(control_nn_path) + "_0.pt");
+	// load_1[0](string(control_nn_path) + "_1.pt");
+	// load_2[0](string(control_nn_path) + "_2.pt");
 	std::cout<<"Loaded control nn : "<<control_nn_path<<std::endl;
 
 
@@ -301,16 +311,22 @@ keyboard(unsigned char key, int x, int y)
             mEnv->reset();
             break;
         }
+        case 'q':
+        {
+        	std::cout<<"Go Back!"<<std::endl;
+        	mEnv->goBackEnvironment();
+        	break;
+        }
+
+		case 'g':
+			mEnv->genObstacleNearCharacter();
+			break;
 		case 'h':
-			mEnv->reset();
-			// mEnv->getCharacter(1)->getSkeleton()->setPositions(Eigen::Vector2d(0.0, 0.0));
-			// for(int i=0;i<4;i++){	
-			// 	reset_hidden[i]();
-			// }
+			mEnv->removeOldestObstacle();
+			break;
 
-
-			// reset_hidden[2]();
-			// reset_hidden[3]();
+		case 'b':
+			mEnv->resetTargetBallPosition();
 			break;
 		case 'l':
 			controlOn = !controlOn;
@@ -458,7 +474,7 @@ step()
 
 	// auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(this->targetLocal, targetActionType, actionDelay);
 
-	mStates[0] = mEnv->getState(0);
+	// mStates[0] = mEnv->getState(0);
 	// std::cout<<mStates[0].transpose()<<std::endl;
 
 	// mEnv->setAction(0, Utils::toEigenVec(this->xData[0][mFrame]));
@@ -570,11 +586,24 @@ display()
 
     // time_check_end();
     // time_check_start();
-	glClearColor(0.85, 0.85, 1.0, 1.0);
+	// glClearColor(0.85, 0.85, 1.0, 1.0);
+	glClearColor(0.05, 0.04, 0.05, 1.0);
 	// glClearColor(1.0, 1.0, 1.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glEnable(GL_LINE_SMOOTH);
+
 	initLights();
+
+	GLfloat fogColor[4] = {0.0f,0.0f,0.0f,1.0f};
+
+	glFogi(GL_FOG_MODE, GL_LINEAR);
+	glFogfv(GL_FOG_COLOR, fogColor);
+	glHint(GL_FOG_HINT, GL_DONT_CARE); glFogf(GL_FOG_START, 80.0f); // Fog Start Depth
+	glFogf(GL_FOG_END, 130.0f); // Fog End Depth
+	glEnable(GL_FOG);
+
 	
 	std::vector<Character3D*> chars = mEnv->getCharacters();
 
@@ -617,7 +646,9 @@ display()
 	// cout<<endl;
 
 
-	GUI::drawSkeleton(mEnv->floorSkel, Eigen::Vector3d(0.5, 1.0, 0.5), showCourtMesh, false);
+	GUI::drawSkeleton(mEnv->floorSkel, Eigen::Vector3d(0.25, 0.1, 0.25));
+	// GUI::drawSkeleton(mEnv->floorSkel, Eigen::Vector3d(0.5, 1.0, 0.5), showCourtMesh, false);
+	GUI::drawAuxLine(3.0);
 
 	GUI::drawSkeleton(mEnv->ballSkel, Eigen::Vector3d(0.9, 0.6, 0.0));
 
@@ -667,7 +698,7 @@ display()
 
 	// GUI::drawStringOnScreen(0.2, 0.8, scoreString, true, Eigen::Vector3d::Zero());
 
-	GUI::drawStringOnScreen(0.8, 0.8, to_string(mEnv->getElapsedTime()), true, Eigen::Vector3d::Zero());
+	GUI::drawStringOnScreen(0.8, 0.8, to_string(mEnv->getElapsedTime()), true, Eigen::Vector3d::Ones());
 
 
 	// GUI::drawVerticalLine(this->goal.segment(0,2), Eigen::Vector3d(1.0, 1.0, 1.0));
@@ -704,11 +735,29 @@ display()
 
 
 
-    GUI::drawStringOnScreen(0.2, 0.85, curAction, true, Eigen::Vector3d(1,1,1));
+    // GUI::drawStringOnScreen(0.2, 0.85, curAction, true	, Eigen::Vector3d(1,1,1));
 
     std::string score = "Score : "+to_string(mEnv->mAccScore[0]);
    
     GUI::drawStringOnScreen(0.2, 0.75, score, true, Eigen::Vector3d(1,1,1));
+
+    for(int i=0;i<mEnv->mObstacles.size();i++)
+    {
+    	glPushMatrix();
+    	glTranslated(mEnv->mObstacles[i][0], 0.0, mEnv->mObstacles[i][2]);
+    	GUI::drawCylinder(0.5, 1.0, Eigen::Vector3d(0.5, 0.5, 0.5));
+    	glPopMatrix();
+    }
+
+
+    // Draw height Map
+    // std::vector<Eigen::Vector3d> heightMap = mEnv->getHeightMapGrids(0);
+    // for(int idx=0;idx<heightMap.size();idx++)
+    // {
+    // 	GUI::drawSphere(0.05, heightMap[idx], Eigen::Vector3d::Ones()*(1.0 - mEnv->mHeightMaps[0][idx/32][idx%32]), 8, 4);
+    // }
+
+    // GUI::drawSphere(0.1, mEnv->mCharacters[0]->getSkeleton()->getRootBodyNode()->getCOM(), Eigen::Vector3d::Zero());
 
 
 	glutSwapBuffers();
@@ -861,68 +910,68 @@ getActionFromNN(int index)
 	np::ndarray action_np = np::from_object(temp);
 	float* srcs = reinterpret_cast<float*>(action_np.get_data());
 
-	for(int j=0;j<8;j++)
+	for(int j=0;j<4;j++)
 	{
 		mAction[j] = srcs[j];
 	}
 
-	mAction.segment(0,8) = toOneHotVector(mAction.segment(0,8));
+	// mAction.segment(0,4) = toOneHotVector(mAction.segment(0,4));
 
-	///////////////
+	// ///////////////
 
-	Eigen::VectorXd state_1(state.size()+8);
-	state_1.segment(0,state.size()) = state;
-	state_1.segment(state.size(),8) = mAction.segment(0,8);
+	// Eigen::VectorXd state_1(state.size()+8);
+	// state_1.segment(0,state.size()) = state;
+	// state_1.segment(state.size(),8) = mAction.segment(0,8);
 
-	p::object get_action_1;
+	// p::object get_action_1;
 
-	get_action_1 = nn_module_1[index].attr("get_action");
+	// get_action_1 = nn_module_1[index].attr("get_action");
 
-	p::tuple shape_1 = p::make_tuple(state_1.size());
-	np::ndarray state_np_1 = np::empty(shape_1, dtype);
+	// p::tuple shape_1 = p::make_tuple(state_1.size());
+	// np::ndarray state_np_1 = np::empty(shape_1, dtype);
 
-	float* dest_1 = reinterpret_cast<float*>(state_np_1.get_data());
-	for(int j=0;j<state_1.size();j++)
-	{
-		dest_1[j] = state_1[j];
-	}
+	// float* dest_1 = reinterpret_cast<float*>(state_np_1.get_data());
+	// for(int j=0;j<state_1.size();j++)
+	// {
+	// 	dest_1[j] = state_1[j];
+	// }
 
-	temp = get_action_1(state_np_1);
-	np::ndarray action_np_1 = np::from_object(temp);
-	float* srcs_1 = reinterpret_cast<float*>(action_np_1.get_data());
+	// temp = get_action_1(state_np_1);
+	// np::ndarray action_np_1 = np::from_object(temp);
+	// float* srcs_1 = reinterpret_cast<float*>(action_np_1.get_data());
 
-	for(int j=8;j<8+4;j++)
-	{
-		mAction[j] = srcs_1[j-8];
-	}
+	// for(int j=8;j<8+4;j++)
+	// {
+	// 	mAction[j] = srcs_1[j-8];
+	// }
 
-	///////////////
+	// ///////////////
 
-	Eigen::VectorXd state_2(state.size()+8+4);
-	state_2.segment(0,state_1.size()) = state_1;
-	state_2.segment(state_1.size(),4) = mAction.segment(8,4);
+	// Eigen::VectorXd state_2(state.size()+8+4);
+	// state_2.segment(0,state_1.size()) = state_1;
+	// state_2.segment(state_1.size(),4) = mAction.segment(8,4);
 
-	p::object get_action_2;
+	// p::object get_action_2;
 
-	get_action_2 = nn_module_2[index].attr("get_action");
+	// get_action_2 = nn_module_2[index].attr("get_action");
 
-	p::tuple shape_2 = p::make_tuple(state_2.size());
-	np::ndarray state_np_2 = np::empty(shape_2, dtype);
+	// p::tuple shape_2 = p::make_tuple(state_2.size());
+	// np::ndarray state_np_2 = np::empty(shape_2, dtype);
 
-	float* dest_2 = reinterpret_cast<float*>(state_np_2.get_data());
-	for(int j=0;j<state_2.size();j++)
-	{
-		dest_2[j] = state_2[j];
-	}
+	// float* dest_2 = reinterpret_cast<float*>(state_np_2.get_data());
+	// for(int j=0;j<state_2.size();j++)
+	// {
+	// 	dest_2[j] = state_2[j];
+	// }
 
-	temp = get_action_2(state_np_2);
-	np::ndarray action_np_2 = np::from_object(temp);
-	float* srcs_2 = reinterpret_cast<float*>(action_np_2.get_data());
+	// temp = get_action_2(state_np_2);
+	// np::ndarray action_np_2 = np::from_object(temp);
+	// float* srcs_2 = reinterpret_cast<float*>(action_np_2.get_data());
 
-	for(int j=8+4;j<mAction.size();j++)
-	{
-		mAction[j] = srcs_2[j-12];
-	}
+	// for(int j=8+4;j<mAction.size();j++)
+	// {
+	// 	mAction[j] = srcs_2[j-12];
+	// }
 
 
 

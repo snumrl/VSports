@@ -54,11 +54,22 @@
 // #define _ID_SLOWED 22
 class Environment;
 
+// class HeightMap
+// {
+// public:
+// 	HeightMap(int numGrid=32, double range=5.0);
+// 	std::vector<Eigen::Vector3d> getMapGrids(Eigen::Vector3d charPos, double charAngle, std::vector<Eigen::Vector3d> obstacles);
+// 	double** mMap;
+// 	int mNumGrid;
+// 	int mRange;
+// };
+
 class EnvironmentPackage
 {
 public:
 	EnvironmentPackage();
 	void saveEnvironment(Environment* env);
+	void copyEnvironmentPackage(EnvironmentPackage* envPack);
 	void restoreEnvironment(Environment* env);
 	Eigen::VectorXd skelPosition;
 
@@ -97,6 +108,12 @@ public:
 	int mPrevPlayer;
 
 	std::vector<bool> mDribbled;
+	std::vector<bool> mLFootDetached;
+	std::vector<bool> mRFootDetached;
+	std::vector<Eigen::Vector3d> mObstacles;
+	std::vector<double> mCurHeadingAngle;
+	std::vector<double**> mHeightMaps;
+
 };
 
 
@@ -109,6 +126,7 @@ public:
 	void resetCharacterPositions();
 	void initGoalposts();
 	void initFloor();
+	void initSimpleFloor();
 	void initBall();
 
 	void step();
@@ -292,6 +310,34 @@ public:
 
 	std::vector<bool> mLFootDetached;
 	std::vector<bool> mRFootDetached;
+
+
+	void genObstacleNearCharacter();
+	void removeOldestObstacle();
+
+	void genObstaclesToTargetDir(int numObstacles);
+
+
+	std::vector<Eigen::Vector3d> mObstacles;
+
+	std::vector<double> mCurHeadingAngle;
+
+	std::vector<double**> mHeightMaps;
+	int mNumGrids = 32;
+	double mMapRange = 8.0; 
+
+
+	void updateHeightMap(int index);
+	std::vector<Eigen::Vector3d> getHeightMapGrids(int index);
+
+
+	std::vector<float> getHeightMapState(int index);
+
+	std::vector<EnvironmentPackage*> mPrevEnvSituations;
+
+	void saveEnvironment();
+	void goBackEnvironment();
+
 	// int mCurPlayer;
 
 	// AgentEnvWindow* mWindow;

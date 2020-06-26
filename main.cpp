@@ -32,7 +32,7 @@ int main(int argc, char** argv)
 		if(strcmp(argv[1], "-bvh")==0)
 		{
 			SingleControlWindow* simwindow = new SingleControlWindow(argv[2], argv[3], argv[4]);
-			simwindow->initWindow(1800, 1200, "Render");
+			simwindow->initWindow(1200, 900, "Render");
 			// simwindow->initialize();
 		}
 	}

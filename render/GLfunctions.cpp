@@ -32,7 +32,7 @@ drawSphere(double r)
 
 void
 GUI::
-drawSphere(double r, Eigen::Vector3d position, Eigen::Vector3d color)
+drawSphere(double r, Eigen::Vector3d position, Eigen::Vector3d color, int slices, int stacks)
 {
 	QUAD_OBJ_INIT;
 	gluQuadricDrawStyle(quadObj, GLU_FILL);
@@ -41,7 +41,7 @@ drawSphere(double r, Eigen::Vector3d position, Eigen::Vector3d color)
 	glPushMatrix();
 	glTranslated(position[0], position[1], position[2]);
 	glColor3d(color[0], color[1], color[2]);
-	gluSphere(quadObj, r, 16, 16);
+	gluSphere(quadObj, r, slices, stacks);
 	glPopMatrix();
 }
 
@@ -680,4 +680,28 @@ void GUI::draw2dCircle(Eigen::Vector3d center, Eigen::Vector3d xAxis, Eigen::Vec
     glPopMatrix();
 
 
+}
+
+void GUI::drawAuxLine(double gridSize, const Eigen::Vector3d& color)
+{
+	for(double i= -200;i<200;i+= gridSize)
+	{
+	 	glLineWidth (2);
+		drawLine(Eigen::Vector3d(-200, 0.05, i), Eigen::Vector3d(200.0, 0.05, i), color);
+	}
+	for(double i= -200;i<200;i+= gridSize)
+	{
+	 	glLineWidth (2);
+		drawLine(Eigen::Vector3d(i, 0.05, -200), Eigen::Vector3d(i, 0.05, 200), color);
+	}
+
+}
+
+void GUI::drawCylinder(double _radius, double _height, const Eigen::Vector3d& color, int slices, int stacks)
+{
+	// GLUquadricObj *quadratic;
+	// quadratic = gluNewQuadric();
+	glRotatef(270.0f, 1.0f, 0.0f, 0.0f);
+	glColor3f(color[0],color[1],color[2]);
+	gluCylinder(quadObj,_radius,_radius,_height,32,32);
 }

@@ -175,6 +175,50 @@ makeBasketBallFloor(double floorDepth)
 	return floor;
 }
 
+
+
+SkeletonPtr
+SkelHelper::
+makeSimpleFloor(double floorDepth)
+{
+	SkeletonPtr floor = Skeleton::create("floor");
+	Eigen::Isometry3d pb2j;
+	Eigen::Isometry3d cb2j;
+	pb2j.setIdentity();
+	cb2j.setIdentity();
+
+	// Eigen::Matrix3d mat = Eigen::AngleAxisd(M_PI/2.0, Eigen::Vector3d::UnitX());
+	cb2j.linear() *=  Eigen::AngleAxisd(M_PI/2.0, Eigen::Vector3d::UnitY()).toRotationMatrix();
+	cb2j.linear() *=  Eigen::AngleAxisd(-M_PI/2.0, Eigen::Vector3d::UnitX()).toRotationMatrix();
+	// cb2j.translation() = Eigen::Vector3d(-0.46, 0.0, 0.0);
+	char resolved_path[PATH_MAX]; 
+	realpath("../", resolved_path);
+	std::string absolutePathProject = resolved_path;
+	// std::cout<<absolutePathProject+"/data/models/BasketBallCourt_obj/basketballcourt.obj"<<std::endl;
+
+	SkelHelper::MakeWeldJointBody("floor", 
+						"None",
+						floor,
+						nullptr,
+						Eigen::Vector3d(2000.0, 2000.0, 0.01),
+						pb2j,
+						cb2j,
+						1.0,
+						true,
+						true);
+
+	// Eigen::Vector3d position = Eigen::Vector3d(0.0, 0.0, floorDepth);
+	// Eigen::Isometry3d cb2j;
+	// cb2j.setIdentity();
+	// cb2j.translation() += -position;
+	// SkelMaker::makeWeldJointBody(
+	// "floor", floor, nullptr,
+	// SHAPE_TYPE::BOX,
+	// Eigen::Vector3d(14.0, 0.01, 15.0),
+	// Eigen::Isometry3d::Identity(), cb2j);
+	return floor;
+}
+
 BodyNode* 
 SkelHelper::
 MakeWeldJointBody(

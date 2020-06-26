@@ -106,6 +106,20 @@ getState(int id, int index)
 
 	return Wrapper::toNumPyArray(mSlaves[id]->getNormalizedState(index));
 }
+
+np::ndarray	
+EnvironmentPython::
+getHeightMapState(int id, int index)
+{
+	return Wrapper::toNumPyArray(mSlaves[id]->getHeightMapState(index));
+}
+
+void
+EnvironmentPython::
+goBackEnvironment(int id)
+{
+	mSlaves[id]->goBackEnvironment();
+}
 // np::ndarray
 // EnvironmentPython::
 // getLocalState(int id, int index)
@@ -346,6 +360,7 @@ BOOST_PYTHON_MODULE(pyvs)
 		.def("step",&EnvironmentPython::step)
 		.def("resets",&EnvironmentPython::resets)
 		.def("getNumIterations",&EnvironmentPython::getNumIterations)
+		.def("goBackEnvironment",&EnvironmentPython::goBackEnvironment)
 		// .def("getHardcodedAction",&EnvironmentPython::getHardcodedAction)
 		// .def("reconEnvFromState",&EnvironmentPython::reconEnvFromState)
 		// .def("setLinearActorState",&EnvironmentPython::setLinearActorState)

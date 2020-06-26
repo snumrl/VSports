@@ -40,6 +40,7 @@ CMakeFiles/*
 log/*
 nn/*
 nn_ar/*
+nn_obstacle/*
 pyvs/*.so
 model/*.so
 sim/*.a

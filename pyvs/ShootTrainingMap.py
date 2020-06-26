@@ -39,8 +39,8 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 
 
-nnCount = 3
-baseDir = "../nn_obstacle"
+nnCount = 2
+baseDir = "../nn_obstacle_map"
 nndir = baseDir + "/nn"+str(nnCount)
 
 if not exists(baseDir):
