@@ -1,3 +1,4 @@
+#undef NDEBUG
 #include "Normalizer.h"
 #include "../extern/ICA/plugin/MotionGenerator.h"
 #include <iostream>
@@ -31,11 +32,12 @@ Normalizer::Normalizer(std::string xNormalPath, std::string yNormalPath)
 	in.close();
 }
 
-Eigen::VectorXd 
+/*Eigen::VectorXd 
 Normalizer::
 normalizeState(Eigen::VectorXd state)
 {
-	assert(state.rows() == dimY+12+1 + 3);//+3 +2+8);
+	assert(state.rows() == dimY+12+1 + 3 + 8 +4);//+3 +2+8);
+	// assert(state.rows() == dimY+12+1 + 3);
 	Eigen::VectorXd normalizedState(state.rows());
 
 	normalizedState.segment(0, dimY) = state.segment(0, dimY) - yMean;
@@ -59,13 +61,18 @@ normalizeState(Eigen::VectorXd state)
 	normalizedState[dimY+12] = state[dimY+12]/30.0;
 
 	normalizedState.segment(dimY+13,3) = state.segment(dimY+13,3)/100.0 * 4.0;
+
+	normalizedState.segment(dimY+16,12) = state.segment(dimY+16,12);
+
+
+
 	// normalizedState.segment(dimY+16,10) = state.segment(dimY+16,10);
 	// normalizedState.segment(dimY+9,8) = state.segment(dimY+9,8);
 
 
 	return normalizedState;
 }
-
+*/
 
 // Eigen::VectorXd 
 // Normalizer::

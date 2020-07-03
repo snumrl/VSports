@@ -458,7 +458,9 @@ step()
 
 	// auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(this->targetLocal, targetActionType, actionDelay);
 
-	mStates[0] = mEnv->getState(0);
+	// mStates[0] = mEnv->getState(0);
+
+
 	// std::cout<<mStates[0].transpose()<<std::endl;
 
 	// mEnv->setAction(0, Utils::toEigenVec(this->xData[0][mFrame]));
@@ -623,10 +625,11 @@ display()
 
 	GUI::drawSkeleton(chars[0]->getSkeleton());
 
-	Eigen::Isometry3d rootIsometry = ICA::dart::getBaseToRootMatrix(mEnv->mMotionGenerator->motionGenerators[0]->mMotionSegment->getLastPose()->getRoot());
+	// Eigen::Isometry3d rootIsometry = ICA::dart::getBaseToRootMatrix(mEnv->mMotionGenerator->motionGenerators[0]->mMotionSegment->getLastPose()->getRoot());
+	Eigen::Isometry3d rootIsometry = mEnv->mCharacters[0]->getSkeleton()->getRootBodyNode()->getWorldTransform();
 
 	glPushMatrix();
-	Eigen::Vector3d rootPosition = 0.01*rootIsometry.translation();
+	Eigen::Vector3d rootPosition = rootIsometry.translation();
 	glTranslated(rootPosition[0], rootPosition[1], rootPosition[2]);
 	Eigen::AngleAxisd rootAA(rootIsometry.linear());
 	glRotated(180/M_PI*rootAA.angle(), rootAA.axis()[0], rootAA.axis()[1], rootAA.axis()[2]);
@@ -692,9 +695,9 @@ display()
 	    double maxValue = -100;
 	    for(int i=4;i<4+8;i++)
 	    {
-	        if(mActions[0][i]> maxValue)
+	        if(mEnv->mActions[0][i]> maxValue)
 	        {
-	        	maxValue= mActions[0][i];
+	        	maxValue= mEnv->mActions[0][i];
 	        	maxIndex = i;
 	        }
 	    }
@@ -704,11 +707,15 @@ display()
 
 
 
-    GUI::drawStringOnScreen(0.2, 0.85, curAction, true, Eigen::Vector3d(1,1,1));
+    GUI::drawStringOnScreen(0.2, 0.25, std::to_string(mEnv->mActions[0][4+8+6]/30.0), true, Eigen::Vector3d(1,1,1));
 
     std::string score = "Score : "+to_string(mEnv->mAccScore[0]);
    
     GUI::drawStringOnScreen(0.2, 0.75, score, true, Eigen::Vector3d(1,1,1));
+
+	showAvailableActions();
+
+	GUI::drawBoxOnScreen(0.2+0.6*((double)mEnv->mCurActionTypes[0] / 8), 0.2, Eigen::Vector2d(6.0, 4.0),Eigen::Vector3d(1.0, 1.0, 1.0));
 
 
 	glutSwapBuffers();
@@ -839,8 +846,9 @@ getActionFromNN(int index)
 {
 	p::object get_action_0;
 
-	Eigen::VectorXd state = mEnv->getNormalizedState(index);
+	Eigen::VectorXd state = mEnv->getState(index);
 	// std::cout<<state.segment(155,6).transpose()<<std::endl;
+	// std::cout<<state.segment(mEnv->mCharacters[0]->getSkeleton()->getNumDofs(),12).transpose()<<std::endl;
 
 	Eigen::VectorXd mAction(mEnv->getNumAction());
 	mAction.setZero();
@@ -935,6 +943,25 @@ getActionFromNN(int index)
 	mActions[index] = mAction;
 }
 
+
+void
+SingleControlWindow::
+showAvailableActions()
+{
+	std::vector<int> aa = mEnv->bsm[0]->getAvailableActions();
+	int numActionTypes = 8;
+	for(int i=0;i<numActionTypes;i++)
+	{
+		// if( i == mEnv->mCurActionTypes[0])
+		// 	GUI::drawStringOnScreen_Big(-0.01 + 0.2+0.6*(((double) i)/numActionTypes), 0.2, mEnv->actionNameMap[i], Eigen::Vector3d::UnitZ());
+		// else 
+		if(std::find(aa.begin(), aa.end(), i) != aa.end())
+			GUI::drawStringOnScreen_Big(-0.01 + 0.2+0.6*(((double) i)/numActionTypes), 0.2, mEnv->actionNameMap[i], Eigen::Vector3d::Ones());
+		else
+			GUI::drawStringOnScreen_Big(-0.01 + 0.2+0.6*(((double) i)/numActionTypes), 0.2, mEnv->actionNameMap[i], Eigen::Vector3d(0.5, 0.5, 0.5));
+
+	}
+}
 
 
 // void

@@ -215,6 +215,71 @@ GUI::drawStringOnScreen_small(float _x, float _y, const std::string &_s, const E
 	glMatrixMode(oldMode);
 }
 
+void
+GUI::drawStringOnScreen_Big(float _x, float _y, const std::string &_s, const Eigen::Vector3d& color)
+{
+	glColor3f(color[0], color[1], color[2]);
+
+	// draws text on the screen
+	GLint oldMode;
+	glGetIntegerv(GL_MATRIX_MODE, &oldMode);
+	glMatrixMode(GL_PROJECTION);
+
+	glPushMatrix();
+	glLoadIdentity();
+	gluOrtho2D(0.0, 1.0, 0.0, 1.0);
+
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+	glRasterPos2f(_x, _y);
+
+	unsigned int length = _s.length();
+	for(unsigned int c =0; c<length; c++)
+	{
+		glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, _s.at(c));
+	}
+	glPopMatrix();
+
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glMatrixMode(oldMode);
+}
+
+
+void
+GUI::drawBoxOnScreen(float _x, float _y, Eigen::Vector2d size, const Eigen::Vector3d& color)
+{
+	glColor3f(color[0], color[1], color[2]);
+
+	// draws text on the screen
+	GLint oldMode;
+	glGetIntegerv(GL_MATRIX_MODE, &oldMode);
+	glMatrixMode(GL_PROJECTION);
+
+	glPushMatrix();
+	glLoadIdentity();
+	gluOrtho2D(-100, 100, -100, 100);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glColor3f(1, 1, 1);
+
+	double x = 2.0*_x - 1.0;
+	double y = 2.0*_y - 1.0;
+	glBegin(GL_LINE_STRIP);
+	    glVertex3f(x * 100.0 + size[0], y * 100.0 + size[1], 0.0f); 
+	    glVertex3f(x * 100.0 + size[0], y * 100.0 + -size[1], 0.0f); 
+	    glVertex3f(x * 100.0 + -size[0], y * 100.0 + -size[1], 0.0f); 
+	    glVertex3f(x * 100.0 + -size[0], y * 100.0 + size[1], 0.0f); 
+	    glVertex3f(x * 100.0 + size[0], y * 100.0 + size[1], 0.0f); 
+	glEnd();   
+	glPopMatrix();
+
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glMatrixMode(oldMode);
+}
 
 void
 GUI::drawMapOnScreen(Eigen::VectorXd minimap, int numRows, int numCols)

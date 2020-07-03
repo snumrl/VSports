@@ -10,6 +10,7 @@
 #include "../extern/ICA/plugin/MotionGenerator.h"
 #include "../pyvs/Normalizer.h"
 
+
 // #include <GL/glut.h>
 // #include <GL/glew.h>
 class SingleControlWindow : public SimWindow{
@@ -145,6 +146,8 @@ public:
 	bool reducedDim;
 
 	Eigen::VectorXd toOneHotVector(Eigen::VectorXd action);
+
+	void showAvailableActions();
 
     // Eigen::Vector3d curBallPosition;
     // Eigen::Vector3d prevBallPosition;

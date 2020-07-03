@@ -104,7 +104,7 @@ getState(int id, int index)
 	// std::cout<<"Normalized State : "<<std::endl;
 	// std::cout<<normalizedState.transpose()<<std::endl;
 
-	return Wrapper::toNumPyArray(mSlaves[id]->getNormalizedState(index));
+	return Wrapper::toNumPyArray(mSlaves[id]->getState(index));
 }
 // np::ndarray
 // EnvironmentPython::

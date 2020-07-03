@@ -38,7 +38,7 @@ Tensor = FloatTensor
 LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 
-nnCount = 21
+nnCount = 25
 baseDir = "../nn_ar"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -368,11 +368,16 @@ class RL(object):
 
 
 
-
 			actions = np.concatenate((actions_0_oneHot, actions_1, actions_2), axis=1)
 			actions = actions.astype(np.float32)
 			for i in range(self.num_slaves):
 				for j in range(self.num_agents):
+					# if np.any(np.isnan(actions[i*self.num_agents+j])):
+						# print(states_1[i*self.num_agents+j])
+						# print(actions_1[i*self.num_agents+j])
+						# print(actions_2[i*self.num_agents+j])
+						# print(actions[i*self.num_agents+j])
+						# print("ShootArTraining nan action")
 					self.env.setAction(actions[i*self.num_agents+j], i, j);
 
 
@@ -400,10 +405,11 @@ class RL(object):
 							self.episodes_0[i][k] = RNNEpisodeBuffer()
 							self.episodes_1[i][k] = RNNEpisodeBuffer()
 							self.episodes_2[i][k] = RNNEpisodeBuffer()
+					print("nan", file=sys.stderr)
 					self.env.reset(i)
 
 
-				if self.env.isTerminalState(i) is False and self.env.isFoulState(i) is False:
+				if self.env.isTerminalState(i) is False:
 					for k in range(self.num_agents):
 						if teamDic[k] == learningTeam:
 							self.episodes_0[i][k].push(states_0[i*self.num_agents+k], actions_0[i*self.num_agents+k],\

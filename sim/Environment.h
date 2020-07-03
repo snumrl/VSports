@@ -52,6 +52,25 @@
 #define _ID_OP_V 19
 // #define _ID_FACING_V 21
 // #define _ID_SLOWED 22
+
+enum BasketballState{
+	POSITIONING, BALL_CATCH_1, DRIBBLE, BALL_CATCH_2
+};
+
+std::vector<int> getAvailableAction(BasketballState bs);
+
+class BStateMachine
+{
+public:
+	BStateMachine();
+	BasketballState curState;
+	int transition(int action, bool transitState = false); 	// return applied action. if it is not availble, it returns prev action
+	int getStateWithInt();
+	bool isAvailable(int action);
+	std::vector<int> getAvailableActions();
+	int prevAction;
+};
+
 class Environment;
 
 class EnvironmentPackage
@@ -59,6 +78,7 @@ class EnvironmentPackage
 public:
 	EnvironmentPackage();
 	void saveEnvironment(Environment* env);
+	void copyEnvironmentPackage(EnvironmentPackage* envPack);
 	void restoreEnvironment(Environment* env);
 	Eigen::VectorXd skelPosition;
 
@@ -71,12 +91,13 @@ public:
 	// added for motion
 	std::vector<Eigen::Vector3d> prevBallPositions;
 	Eigen::Vector3d curBallPosition;
+	Eigen::Vector3d curBallVelocity;
 
 	Eigen::Vector3d criticalPoint_targetBallPosition;
 	Eigen::Vector3d criticalPoint_targetBallVelocity;
 
-	std::vector<bool> prevContact;
-	std::vector<bool> curContact;
+	std::vector<int> prevContact;
+	std::vector<int> curContact;
 
 	int criticalPointFrame;
 	int curFrame;
@@ -97,6 +118,11 @@ public:
 	int mPrevPlayer;
 
 	std::vector<bool> mDribbled;
+	std::vector<bool> mLFootDetached;
+	std::vector<bool> mRFootDetached;
+	std::vector<Eigen::Vector3d> mObstacles;
+	std::vector<double> mCurHeadingAngle;
+	std::vector<double**> mHeightMaps;
 };
 
 
@@ -234,6 +260,7 @@ public:
 
 	Normalizer* mNormalizer;
 
+	std::map<int, std::string> actionNameMap;
 
 
 
@@ -243,6 +270,7 @@ public:
 	// added for motion
 	std::vector<Eigen::Vector3d> prevBallPositions;
 	Eigen::Vector3d curBallPosition;
+	Eigen::Vector3d curBallVelocity;
 
 	Eigen::Vector3d criticalPoint_targetBallPosition;
 	Eigen::Vector3d criticalPoint_targetBallVelocity;
@@ -252,8 +280,8 @@ public:
 	void initMotionGenerator(std::string dataPath);
 
 	std::map<std::string, int> dartNameIdMap;
-	std::vector<bool> prevContact;
-	std::vector<bool> curContact;
+	std::vector<int> prevContact;
+	std::vector<int> curContact;
 
 
     ICA::dart::MotionGenerator* mMotionGenerator;
@@ -270,6 +298,7 @@ public:
 	Eigen::Vector3d getTargetBallGlobalPosition();
 
 	std::vector<Eigen::VectorXd> mPrevActions;
+	std::vector<int> mPrevActionTypes;
 
 	std::vector<int> mCurActionTypes;
 	std::vector<Eigen::Vector3d> mPrevCOMs;
@@ -292,6 +321,37 @@ public:
 
 	std::vector<bool> mLFootDetached;
 	std::vector<bool> mRFootDetached;
+
+	std::vector<BStateMachine*> bsm;
+
+	void genObstacleNearCharacter();
+	void removeOldestObstacle();
+
+	void genObstaclesToTargetDir(int numObstacles);
+
+
+	std::vector<Eigen::Vector3d> mObstacles;
+
+	std::vector<double> mCurHeadingAngle;
+
+	std::vector<double**> mHeightMaps;
+	int mNumGrids = 32;
+	double mMapRange = 8.0; 
+
+
+	void updateHeightMap(int index);
+	std::vector<Eigen::Vector3d> getHeightMapGrids(int index);
+
+
+	std::vector<float> getHeightMapState(int index);
+
+	std::vector<EnvironmentPackage*> mPrevEnvSituations;
+
+	void saveEnvironment();
+	void goBackEnvironment();
+
+	Eigen::Vector3d computeHandBallPosition(int index);
+
 	// int mCurPlayer;
 
 	// AgentEnvWindow* mWindow;
