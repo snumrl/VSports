@@ -38,7 +38,7 @@ Tensor = FloatTensor
 LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 
-nnCount = 25
+nnCount = 26
 baseDir = "../nn_ar"
 nndir = baseDir + "/nn"+str(nnCount)
 

@@ -80,8 +80,6 @@ public:
 	void saveEnvironment(Environment* env);
 	void copyEnvironmentPackage(EnvironmentPackage* envPack);
 	void restoreEnvironment(Environment* env);
-	Eigen::VectorXd skelPosition;
-
 	std::vector<Eigen::VectorXd> mActions;
 
 	std::vector<bool> mPrevBallPossessions;
@@ -122,7 +120,13 @@ public:
 	std::vector<bool> mRFootDetached;
 	std::vector<Eigen::Vector3d> mObstacles;
 	std::vector<double> mCurHeadingAngle;
-	std::vector<double**> mHeightMaps;
+	// std::vector<double**> mHeightMaps;
+
+	std::vector<bool> mLFootContacting;
+	std::vector<bool> mRFootContacting;
+
+	std::vector<Eigen::Vector3d> mLLastFootPosition;
+	std::vector<Eigen::Vector3d> mRLastFootPosition;
 };
 
 
@@ -319,8 +323,8 @@ public:
 
 	void goToPrevSituation();
 
-	std::vector<bool> mLFootDetached;
-	std::vector<bool> mRFootDetached;
+	// std::vector<bool> mLFootDetached;
+	// std::vector<bool> mRFootDetached;
 
 	std::vector<BStateMachine*> bsm;
 
@@ -337,7 +341,8 @@ public:
 	std::vector<double**> mHeightMaps;
 	int mNumGrids = 32;
 	double mMapRange = 8.0; 
-
+	std::vector<bool> mLFootDetached;
+	std::vector<bool> mRFootDetached;
 
 	void updateHeightMap(int index);
 	std::vector<Eigen::Vector3d> getHeightMapGrids(int index);
@@ -352,6 +357,11 @@ public:
 
 	Eigen::Vector3d computeHandBallPosition(int index);
 
+	std::vector<bool> mLFootContacting;
+	std::vector<bool> mRFootContacting;
+
+	std::vector<Eigen::Vector3d> mLLastFootPosition;
+	std::vector<Eigen::Vector3d> mRLastFootPosition;
 	// int mCurPlayer;
 
 	// AgentEnvWindow* mWindow;

@@ -63,6 +63,14 @@ criticalPointFrame(0), curFrame(0), mIsFoulState(false)
 	curFrame = 0;
 	this->reset();
 
+	mPrevEnvSituations.resize(mNumChars);
+	for(int i=0;i<2;i++)
+	{
+		mPrevEnvSituations[i] = new EnvironmentPackage();
+		mPrevEnvSituations[i]->saveEnvironment(this);
+		// exit(0);
+	}
+
 	mPrevPlayer= -1;
 	std::cout<<"Success"<<std::endl;
 
@@ -201,11 +209,24 @@ initCharacters(std::string bvhPath)
 	{
 		bsm[i] = new BStateMachine();
 	}
+	mLFootContacting.resize(mNumChars);
+	mRFootContacting.resize(mNumChars);
+	mLLastFootPosition.resize(mNumChars);
+	mRLastFootPosition.resize(mNumChars);
+
 	for(int i=0;i<mNumChars;i++)
 	{
 		prevContact[i] = -1;
 		curContact[i] = -1;
+
+		mLFootContacting[i] = false;
+		mRFootContacting[i] = false;
+
+		mLLastFootPosition[i].setZero();
+		mRLastFootPosition[i].setZero();
 	}
+
+
 	// initBehaviorTree();
 }
 
@@ -319,6 +340,7 @@ stepAtOnce()
 {
 	// cout<<"Start"<<endl;
 
+	saveEnvironment();
 
 	for(int i=0;i<mCharacters.size();i++)
 	{
@@ -838,7 +860,7 @@ applyAction(int index)
 	// }
     // if(bsm[index]->curState = BasketballState::)
     // std::cout<<curContact[index]<<std::endl;
-    
+
 
     if(mCurActionTypes[index] == 4 || mCurActionTypes[index] == 5)
     {
@@ -860,59 +882,105 @@ applyAction(int index)
 
     // check rule violation
 
-/*    //double dribble
-    if(mPrevPlayer== index && !mPrevBallPossessions[index] && mCurBallPossessions[index])
-    {
-    	// std::cout<<"Foul : double dribble"<<std::endl;
-		// mIsTerminalState = true;
-		mIsFoulState = true;
-    }
+    //double dribble
+ //    if(mPrevPlayer== index && !mPrevBallPossessions[index] && mCurBallPossessions[index])
+ //    {
+ //    	// std::cout<<"Foul : double dribble"<<std::endl;
+	// 	// mIsTerminalState = true;
+	// 	mIsFoulState = true;
+ //    }
 
-	// pass recieve
-	if(mCurActionTypes[index] == 2 && mCurBallPossessions[index])
-		mPrevPlayer = index;
+	// // pass recieve
+	// if(mCurActionTypes[index] == 2 && mCurBallPossessions[index])
+	// 	mPrevPlayer = index;
 
-	// predict ball possession before pass recieve
-	if(mPrevPlayer != index && mCurBallPossessions[index])
+	// // predict ball possession before pass recieve
+	// if(mPrevPlayer != index && mCurBallPossessions[index])
+	// {
+	// 	// std::cout<<"Getting ball before pass receive"<<std::endl;
+	// 	// mIsTerminalState = true;
+	// 	mIsFoulState = true;
+	// }
+	SkeletonPtr skel = mCharacters[index]->getSkeleton();
+	if(std::get<1>(nextPositionAndContacts)[0] > 0.5)
 	{
-		// std::cout<<"Getting ball before pass receive"<<std::endl;
-		// mIsTerminalState = true;
-		mIsFoulState = true;
+		if(!mLFootContacting[index])
+			mLLastFootPosition[index] = skel->getBodyNode("LeftToe")->getWorldTransform().translation();
+		mLFootContacting[index] = true;
+	}
+	else
+	{
+		mLFootContacting[index] = false;
 	}
 
-	if(mDribbled[index] && mCurActionTypes[index] == 6)
+	if(std::get<1>(nextPositionAndContacts)[1] > 0.5)
+	{
+		if(!mRFootContacting[index])
+			mRLastFootPosition[index] = skel->getBodyNode("RightToe")->getWorldTransform().translation();
+		mRFootContacting[index] = true;
+	}
+	else
+	{
+		mRFootContacting[index] = false;
+	}
+
+
+/*
+	if(mCurActionTypes[index] == 6)
 	{
 		if(std::get<1>(nextPositionAndContacts)[0] < 0.5)
 		{
 			// std::cout<<"Foul : Walking"<<std::endl;
 			mIsFoulState = true;
-			// mIsTerminalState = true;
+			mIsTerminalState = true;
 		}
-	}
-	if(mDribbled[index] && mCurActionTypes[index] == 7)
+		}
+		if(mCurActionTypes[index] == 7)
 	{
 		if(std::get<1>(nextPositionAndContacts)[1] < 0.5)
 		{
 			// std::cout<<"Foul : Walking"<<std::endl;
 			mIsFoulState = true;
-			// mIsTerminalState = true;
+			mIsTerminalState = true;
 		}
 	}
-	if(mCurActionTypes[index] == 0)
+
+	if(mLFootContacting[index])
 	{
-		mDribbled[index] = true;
-		mLFootDetached[index] = false;
-		mRFootDetached[index] = false;
-	}
-	if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
-	{
-		if(!mCurBallPossessions[index])
+		Eigen::Vector3d curLFootPosition = skel->getBodyNode("LeftToe")->getWorldTransform().translation();
+		// std::cout<<(curLFootPosition - mLLastFootPosition[index]).norm()<<std::endl;
+		if((curLFootPosition - mLLastFootPosition[index]).norm()>0.15)
 		{
-			mDribbled[index] = false;
-			mPrevPlayer = -1;
+			mIsTerminalState = true;
 		}
 	}
+
+	if(mRFootContacting[index])
+	{
+		Eigen::Vector3d curRFootPosition = skel->getBodyNode("RightToe")->getWorldTransform().translation();
+		if((curRFootPosition - mRLastFootPosition[index]).norm()>0.15)
+		{
+			mIsTerminalState = true;
+		}
+	}
+
 */
+
+	// if(mCurActionTypes[index] == 0)
+	// {
+	// 	mDribbled[index] = true;
+	// 	mLFootDetached[index] = false;
+	// 	mRFootDetached[index] = false;
+	// }
+	// if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
+	// {
+	// 	if(!mCurBallPossessions[index])
+	// 	{
+	// 		mDribbled[index] = false;
+	// 			mPrevPlayer = -1;
+	// 	}
+	// }
+
 
 
 
@@ -1254,6 +1322,14 @@ resetCharacterPositions()
 		mRFootDetached[i] = false;
 		bsm[i]->curState = BasketballState::POSITIONING;
 		bsm[i]->prevAction = 4;
+
+
+		mLFootContacting[i] = false;
+		mRFootContacting[i] = false;
+
+		mLLastFootPosition[i].setZero();
+		mRLastFootPosition[i].setZero();
+
 	}
 	// for(int i=0;i<mNumChars;i++)
 	// {
@@ -1500,7 +1576,7 @@ computeCurCriticalActionTimes()
 	    else
 	    {
 	    	// mCurCriticalActionTimes[index] = (int) (mActions[index][4+8+6]+0.5);
-	    	mCurCriticalActionTimes[index] = 30;
+	    	mCurCriticalActionTimes[index] = 15;
     		if(mActions[index][4+8+6] + 0.5 < 0)
     			mCurCriticalActionTimes[index]--;
 	    }
@@ -1515,17 +1591,6 @@ computeCurCriticalActionTimes()
 
 EnvironmentPackage::EnvironmentPackage()
 {
-	int mNumChars = 1;
-	int mNumGrids = 32;
-	mHeightMaps.resize(mNumChars);
-	for(int i=0;i<mNumChars;i++)
-	{
-		mHeightMaps[i] = (double**)malloc(mNumGrids*sizeof(double*));
-		for(int idx=0;idx<mNumGrids;idx++)
-		{
-			mHeightMaps[i][idx] = (double*)malloc(mNumGrids*sizeof(double));
-		}
-	}
 }
 
 void
@@ -1555,6 +1620,12 @@ saveEnvironment(Environment* env)
 	this->mRFootDetached = env->mRFootDetached;
 	this->mObstacles = env->mObstacles;
 	this->mCurHeadingAngle = env->mCurHeadingAngle;
+
+	this->mLFootContacting = env->mLFootContacting;
+	this->mRFootContacting = env->mRFootContacting;
+	this->mLLastFootPosition = env->mLLastFootPosition;
+	this->mRLastFootPosition = env->mRLastFootPosition;
+
 	env->mMotionGenerator->motionGenerators[0]->saveHiddenState();
 }
 
@@ -1586,6 +1657,13 @@ copyEnvironmentPackage(EnvironmentPackage* envPack)
 	this->mRFootDetached = envPack->mRFootDetached;
 	this->mObstacles = envPack->mObstacles;
 	this->mCurHeadingAngle = envPack->mCurHeadingAngle;
+
+
+	this->mLFootContacting = envPack->mLFootContacting;
+	this->mRFootContacting = envPack->mRFootContacting;
+	this->mLLastFootPosition = envPack->mLLastFootPosition;
+	this->mRLastFootPosition = envPack->mRLastFootPosition;
+
 }
 
 void
@@ -1615,6 +1693,11 @@ restoreEnvironment(Environment* env)
 	env->mRFootDetached = this->mRFootDetached;
 	env->mObstacles = this->mObstacles;
 	env->mCurHeadingAngle = this->mCurHeadingAngle;
+	
+	env->mLFootContacting = this->mLFootContacting;
+	env->mRFootContacting = this->mRFootContacting;
+	env->mLLastFootPosition = this->mLLastFootPosition;
+	env->mRLastFootPosition = this->mRLastFootPosition;
 
 	env->mMotionGenerator->motionGenerators[0]->restoreHiddenState();
 
