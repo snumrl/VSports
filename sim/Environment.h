@@ -362,6 +362,10 @@ public:
 
 	std::vector<Eigen::Vector3d> mLLastFootPosition;
 	std::vector<Eigen::Vector3d> mRLastFootPosition;
+
+
+	bool ballGravityChecker(int index);
+	std::vector<double> prevFreeBallPositions;
 	// int mCurPlayer;
 
 	// AgentEnvWindow* mWindow;

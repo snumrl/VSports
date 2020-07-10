@@ -7,10 +7,18 @@ add_compile_options(-fPIC)
 add_compile_options(-Wdeprecated-declarations)
 add_compile_options(-DHAVE_CSTDDEF)
 
-SET(CMAKE_BUILD_TYPE Release CACHE STRING
-	"Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel."
-#	FORCE
-	)
+#SET(CMAKE_BUILD_TYPE Release CACHE STRING
+#	"Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel."
+##	FORCE
+#	)
+
+if (NOT EXISTS ${CMAKE_BINARY_DIR}/CMakeCache.txt)
+  if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
+  endif()
+endif()
+
+
 find_package(Eigen3 REQUIRED)
 find_package(DART REQUIRED COMPONENTS gui optimizer-ipopt CONFIG)
 

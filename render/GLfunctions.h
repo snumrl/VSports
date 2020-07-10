@@ -41,6 +41,9 @@ namespace GUI
 	void drawCoordinate(Eigen::Vector3d center, double length = 1.0);
 	void draw2dCircle(Eigen::Vector3d center, Eigen::Vector3d xAxis, Eigen::Vector3d yAxis, double radius, bool filled);
 
+
+	void drawDefaultArrow(Eigen::Vector3d start, Eigen::Vector3d end, double width, const Eigen::Vector3d& color);
+
 };
 
 Eigen::Vector3d degreeToRgb(double degree, bool forValue = false);

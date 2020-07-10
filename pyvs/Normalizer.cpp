@@ -7,8 +7,8 @@
 Normalizer::Normalizer(std::string xNormalPath, std::string yNormalPath)
 {
 	std::ifstream in;
-	dimX = 20;
-	dimY = 154+1;
+	dimX = 18;
+	dimY = 147;
 
 	in.open(xNormalPath);
 
@@ -110,9 +110,9 @@ denormalizeAction(Eigen::VectorXd action)
 	// std::cout<<action.transpose()<<std::endl;
 
 	Eigen::VectorXd allignedAction(action.rows());
-	allignedAction.segment(4,8) = action.segment(0,8);
-	allignedAction.segment(0,4) = action.segment(8,4);
-	allignedAction.segment(12,dimX-12) = action.segment(12,dimX-12);
+	allignedAction.segment(4,6) = action.segment(0,6);
+	allignedAction.segment(0,4) = action.segment(6,4);
+	allignedAction.segment(10,dimX-10) = action.segment(10,dimX-10);
 
 	Eigen::VectorXd denormalizedAction(action.rows());
 
@@ -125,8 +125,8 @@ denormalizeAction(Eigen::VectorXd action)
 	denormalizedAction = allignedAction.cwiseProduct(xStd);
 	denormalizedAction = denormalizedAction + xMean;
 
-	denormalizedAction.segment(4,8) = allignedAction.segment(4,8);
-	denormalizedAction[19] = allignedAction[19];
+	denormalizedAction.segment(4,6) = allignedAction.segment(4,6);
+	denormalizedAction[17] = allignedAction[17];
 	return denormalizedAction;
 }
 

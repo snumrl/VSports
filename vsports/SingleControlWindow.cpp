@@ -141,17 +141,17 @@ SingleControlWindow(const char* bvh_path, const char* nn_path,
 
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module_0[i] = p::eval("ActorCriticNN(num_state, 8).cuda()", mns);
+		nn_module_0[i] = p::eval("ActorCriticNN(num_state, 6).cuda()", mns);
 		load_0[i] = nn_module_0[i].attr("load");
 	}
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module_1[i] = p::eval("ActorCriticNN(num_state+8, 4).cuda()", mns);
+		nn_module_1[i] = p::eval("ActorCriticNN(num_state+6, 4).cuda()", mns);
 		load_1[i] = nn_module_1[i].attr("load");
 	}
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module_2[i] = p::eval("ActorCriticNN(num_state+8+4, num_action-8-4).cuda()", mns);
+		nn_module_2[i] = p::eval("ActorCriticNN(num_state+6+4, num_action-6-4).cuda()", mns);
 		load_2[i] = nn_module_2[i].attr("load");
 	}
 
@@ -686,25 +686,26 @@ display()
 
 	// GUI::drawVerticalLine(this->goal.segment(0,2), Eigen::Vector3d(1.0, 1.0, 1.0));
 
+	int numActions = 6;
 
     std::string curAction;
 
     bool useXData = false;
     if(useXData)
     {
-	    for(int i=4;i<4+8;i++)
+	    for(int i=4;i<4+numActions;i++)
 	    {
 	        if(xData[0][mFrame][i] >= 0.5)
 	            curAction = std::to_string(i-4);
 	    }
-	    curAction = curAction+"     "+std::to_string(xData[0][mFrame][4+8+6]/30.0);
+	    curAction = curAction+"     "+std::to_string(xData[0][mFrame][4+numActions+6]/30.0);
     }
     else
     {
 
 	    int maxIndex = 0;
 	    double maxValue = -100;
-	    for(int i=4;i<4+8;i++)
+	    for(int i=4;i<4+numActions;i++)
 	    {
 	        if(mEnv->mActions[0][i]> maxValue)
 	        {
@@ -713,12 +714,26 @@ display()
 	        }
 	    }
 	    curAction = std::to_string(maxIndex-4);
-	    curAction = curAction+"     "+std::to_string(mEnv->mActions[0][4+8+6]/30.0);
+	    curAction = curAction+"     "+std::to_string(mEnv->mActions[0][4+numActions+6]/30.0);
     }
+	if(mEnv->mCurActionTypes[0] == 1 || mEnv->mCurActionTypes[0] == 3 )
+	{
+		Eigen::Vector3d ballTargetPosition = mEnv->mActions[0].segment(10,3)/100.0;
+		Eigen::Vector3d ballTargetVelocity = mEnv->mActions[0].segment(10+3,3)/100.0;
+		Eigen::Isometry3d rootTransform = mEnv->mCharacters[0]->getSkeleton()->getRootBodyNode()->getWorldTransform();
+		ballTargetPosition = rootTransform * ballTargetPosition;
+		ballTargetVelocity = rootTransform.linear() * ballTargetVelocity;
+
+		// std::cout<<ballTargetPosition.transpose()<<std::endl;
+		// std::cout<<ballTargetVelocity.transpose()<<std::endl;
+		// std::cout<<std::endl;
+		GUI::drawArrow3D(ballTargetPosition, ballTargetVelocity, ballTargetVelocity.norm()/8.0, 0.05, Eigen::Vector3d(1.0, 0.0, 0.0), 0.08);
+	}
 
 
 
-    GUI::drawStringOnScreen(0.2, 0.25, std::to_string(mEnv->mActions[0][4+8+6]/30.0), true, Eigen::Vector3d(1,1,1));
+
+    GUI::drawStringOnScreen(0.2, 0.25, std::to_string(mEnv->mActions[0][4+numActions+6]/30.0), true, Eigen::Vector3d(1,1,1));
 
     std::string score = "Score : "+to_string(mEnv->mAccScore[0]);
    
@@ -858,6 +873,8 @@ getActionFromNN(int index)
 	p::object get_action_0;
 
 	Eigen::VectorXd state = mEnv->getState(index);
+
+	int numActions = 6;
 	// std::cout<<state.segment(155,6).transpose()<<std::endl;
 	// std::cout<<state.segment(mEnv->mCharacters[0]->getSkeleton()->getNumDofs(),12).transpose()<<std::endl;
 
@@ -880,18 +897,18 @@ getActionFromNN(int index)
 	np::ndarray action_np = np::from_object(temp);
 	float* srcs = reinterpret_cast<float*>(action_np.get_data());
 
-	for(int j=0;j<8;j++)
+	for(int j=0;j<numActions;j++)
 	{
 		mAction[j] = srcs[j];
 	}
 
-	mAction.segment(0,8) = toOneHotVector(mAction.segment(0,8));
+	mAction.segment(0,numActions) = toOneHotVector(mAction.segment(0,numActions));
 
 	///////////////
 
-	Eigen::VectorXd state_1(state.size()+8);
+	Eigen::VectorXd state_1(state.size()+numActions);
 	state_1.segment(0,state.size()) = state;
-	state_1.segment(state.size(),8) = mAction.segment(0,8);
+	state_1.segment(state.size(),numActions) = mAction.segment(0,numActions);
 
 	p::object get_action_1;
 
@@ -910,16 +927,16 @@ getActionFromNN(int index)
 	np::ndarray action_np_1 = np::from_object(temp);
 	float* srcs_1 = reinterpret_cast<float*>(action_np_1.get_data());
 
-	for(int j=8;j<8+4;j++)
+	for(int j=numActions;j<numActions+4;j++)
 	{
-		mAction[j] = srcs_1[j-8];
+		mAction[j] = srcs_1[j-numActions];
 	}
 
 	///////////////
 
-	Eigen::VectorXd state_2(state.size()+8+4);
+	Eigen::VectorXd state_2(state.size()+numActions+4);
 	state_2.segment(0,state_1.size()) = state_1;
-	state_2.segment(state_1.size(),4) = mAction.segment(8,4);
+	state_2.segment(state_1.size(),4) = mAction.segment(numActions,4);
 
 	p::object get_action_2;
 
@@ -938,9 +955,9 @@ getActionFromNN(int index)
 	np::ndarray action_np_2 = np::from_object(temp);
 	float* srcs_2 = reinterpret_cast<float*>(action_np_2.get_data());
 
-	for(int j=8+4;j<mAction.size();j++)
+	for(int j=numActions+4;j<mAction.size();j++)
 	{
-		mAction[j] = srcs_2[j-12];
+		mAction[j] = srcs_2[j-4-numActions];
 	}
 
 

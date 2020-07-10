@@ -38,7 +38,7 @@ Tensor = FloatTensor
 LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 
-nnCount = 26
+nnCount = 30
 baseDir = "../nn_ar"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -127,7 +127,7 @@ class RL(object):
 
 
 		# num action types 
-		self.num_action_0 = 8
+		self.num_action_0 = 6
 		self.num_action_1 = 4
 		self.num_action_2 = self.num_action - self.num_action_0 - self.num_action_1;
 

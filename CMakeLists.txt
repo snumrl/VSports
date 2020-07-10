@@ -7,9 +7,18 @@ add_compile_options(-Wdeprecated-declarations)
 add_compile_options(-DHAVE_CSTDDEF)
 project(vsports)
 
-SET(CMAKE_BUILD_TYPE Release CACHE STRING
-	"Choose the type of build, options are: None Debug Release."
-	)
+#SET(CMAKE_BUILD_TYPE Release CACHE STRING
+#	"Choose the type of build, options are: None Debug Release."
+#	)
+
+
+if (NOT EXISTS ${CMAKE_BINARY_DIR}/CMakeCache.txt)
+  if (NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "" FORCE)
+  endif()
+endif()
+
+
 add_definitions(-DVSPORTS_HOME_DIR="${CMAKE_HOME_DIRECTORY}")
 
 find_package(Eigen3 REQUIRED)
