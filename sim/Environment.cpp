@@ -226,6 +226,9 @@ initCharacters(std::string bvhPath)
 		mRLastFootPosition[i].setZero();
 	}
 
+	mActionGlobalBallPosition.resize(mNumChars);
+	mActionGlobalBallVelocity.resize(mNumChars);
+
 
 	// initBehaviorTree();
 }
@@ -627,7 +630,7 @@ getReward(int index, bool verbose)
 	// mIsTerminalState = true;
 	// }
 	// reward = exp(-(mCharacters[0]->getSkeleton()->getCOM() - mTargetBallPosition).norm());
-	// if((mCharacters[0]->getSkeleton()->getCOM() - mTargetBallPosition).norm() < 1.0)
+	// if((mCharacters[0]->getSkeleton()->getCOM () - mTargetBallPosition).norm() < 1.0)
 	// {
 	// reward = 100;
 	// std::cout<<"Successed"<<std::endl;
@@ -968,7 +971,7 @@ applyAction(int index)
 	{
 		Eigen::Vector3d curLFootPosition = skel->getBodyNode("LeftToe")->getWorldTransform().translation();
 		// std::cout<<(curLFootPosition - mLLastFootPosition[index]).norm()<<std::endl;
-		if((curLFootPosition - mLLastFootPosition[index]).norm()>0.15)
+		if((curLFootPosition - mLLastFootPosition[index]).norm()>0.25)
 		{
 			mIsTerminalState = true;
 		}
@@ -977,7 +980,7 @@ applyAction(int index)
 	if(mRFootContacting[index])
 	{
 		Eigen::Vector3d curRFootPosition = skel->getBodyNode("RightToe")->getWorldTransform().translation();
-		if((curRFootPosition - mRLastFootPosition[index]).norm()>0.15)
+		if((curRFootPosition - mRLastFootPosition[index]).norm()>0.25)
 		{
 			mIsTerminalState = true;
 		}
@@ -1233,7 +1236,7 @@ setAction(int index, const Eigen::VectorXd& a)
     }
 
 
-	computeCurCriticalActionTimes();
+	computeCriticalActionTimes();
     if(isCriticalAction(curActionType))
     {
     	if(mActions[index][4+6+6]== 0)
@@ -1619,7 +1622,7 @@ double getBounceTime(double startPosition, double startVelocity, double upperbou
 
 void 
 Environment::
-computeCurCriticalActionTimes()
+computeCriticalActionTimes()
 {
 	// std::cout<<"mActions[index][4+8+6] "<<mActions[0][4+8+6]<<std::endl;
 	for(int index=0;index<mNumChars;index++)
@@ -1650,19 +1653,32 @@ computeCurCriticalActionTimes()
 	    // }
 	    // prevActionType = maxIndex-4;
 
+    	Eigen::Isometry3d rootT = mCharacters[index]->getSkeleton()->getRootBodyNode()->getWorldTransform();
 	    if(mCurActionTypes[index] == mPrevActionTypes[index])
 	    {
 	    	if(isCriticalAction(mCurActionTypes[index]))
 	    	{
 	    		mCurCriticalActionTimes[index]--;
+	    		Eigen::Vector3d curActionGlobalBallPosition = rootT * ((Eigen::Vector3d)mActions[index].segment(4+6,3)/100.0);
+	    		Eigen::Vector3d curActionGlobalBallVelocity = rootT.linear() * (mActions[index].segment(4+6+3,3)/100.0);
+
+	    		mActionGlobalBallPosition[index] = 0.8 * mActionGlobalBallPosition[index] + 0.2 * curActionGlobalBallPosition;
+	    		mActionGlobalBallVelocity[index] = 0.8 * mActionGlobalBallVelocity[index] + 0.2 * curActionGlobalBallVelocity;
+	    		mActions[index].segment(4+6,3) = rootT.inverse() *mActionGlobalBallPosition[index];
+	    		mActions[index].segment(4+6+3,3) = rootT.linear().inverse() * mActionGlobalBallVelocity[index];
+	    		mActions[index].segment(4+6,6) *= 100.0;
 	    	}
 	    }
 	    else
 	    {
 	    	// mCurCriticalActionTimes[index] = (int) (mActions[index][4+8+6]+0.5);
-	    	mCurCriticalActionTimes[index] = 15;
-    		if(mActions[index][4+6+6] + 0.5 < 0)
-    			mCurCriticalActionTimes[index]--;
+	    	mCurCriticalActionTimes[index] = 20;
+    		
+    		if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
+    		{
+    			mActionGlobalBallPosition[index] = rootT * ((Eigen::Vector3d)mActions[index].segment(4+6,3)/100.0);
+    			mActionGlobalBallVelocity[index] = rootT.linear() * (mActions[index].segment(4+6+3,3)/100.0);
+    		}
 	    }
 	    if(!isCriticalAction(mCurActionTypes[index]))
 	    	mCurCriticalActionTimes[index] = 0;

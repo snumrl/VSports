@@ -310,7 +310,7 @@ public:
 	Eigen::Vector3d mPrevBallPosition;
 
 	std::vector<int> mCurCriticalActionTimes;
-	void computeCurCriticalActionTimes();
+	void computeCriticalActionTimes();
 
 	// the player who carried the ball
 	int mPrevPlayer;
@@ -366,6 +366,9 @@ public:
 
 	bool ballGravityChecker(int index);
 	std::vector<double> prevFreeBallPositions;
+
+	std::vector<Eigen::Vector3d> mActionGlobalBallPosition;
+	std::vector<Eigen::Vector3d> mActionGlobalBallVelocity;
 	// int mCurPlayer;
 
 	// AgentEnvWindow* mWindow;
