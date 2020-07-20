@@ -103,11 +103,15 @@ initMotionGenerator(std::string dataPath)
 	BVHmanager::setPositionFromBVH(mCharacters[0]->getSkeleton(), mBvhParser, 50);
 	Eigen::VectorXd bvhPosition = mCharacters[0]->getSkeleton()->getPositions();
 	for(int i=0;i<RESET_ADAPTING_FRAME;i++)
-		mMotionGenerator->setCurrentPose(bvhPosition, Utils::toStdVec(targetZeroVec));
+		mMotionGenerator->setCurrentPose(bvhPosition, Utils::toStdVec(dribbleDefaultVec));
 
-	Eigen::VectorXd zeroAction = mActions[0];
-	zeroAction.setZero();
-	auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(zeroAction));
+
+	for(int i=0;i<RESET_ADAPTING_FRAME;i++)
+		mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(dribbleDefaultVec));
+
+	// Eigen::VectorXd zeroAction = mActions[0];
+	// zeroAction.setZero();
+	auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(dribbleDefaultVec));
     Eigen::VectorXd nextPosition = std::get<0>(nextPositionAndContacts);
     mCharacters[0]->getSkeleton()->setPositions(nextPosition);
 	curFrame++;
@@ -157,8 +161,8 @@ initCharacters(std::string bvhPath)
 	mPrevActions.resize(mNumChars);
 	for(int i=0;i<mNumChars;i++)
 	{
-		mActions[i].resize(18);
-		mPrevActions[i].resize(18);
+		mActions[i].resize(20);
+		mPrevActions[i].resize(20);
 
 		mActions[i].setZero();
 		mPrevActions[i].setZero();
@@ -224,10 +228,27 @@ initCharacters(std::string bvhPath)
 
 		mLLastFootPosition[i].setZero();
 		mRLastFootPosition[i].setZero();
+
+
 	}
 
 	mActionGlobalBallPosition.resize(mNumChars);
 	mActionGlobalBallVelocity.resize(mNumChars);
+
+	mChangeContactIsActive.resize(mNumChars);
+
+	for(int i=0;i<mNumChars;i++)
+	{
+		mChangeContactIsActive[i] = false;
+	}
+	
+	dribbleDefaultVec.resize(18);
+	dribbleDefaultVec.setZero();
+	//**action Type
+
+	// dribbleDefaultVec.segment(0,2) = Eigen::Vector2d(30.0, 0.0);
+	dribbleDefaultVec.segment(2,2) = Eigen::Vector2d(50.0, -50.0);
+	dribbleDefaultVec[4] = 1.0;
 
 
 	// initBehaviorTree();
@@ -391,6 +412,16 @@ getState(int index)
 
 	Eigen::Vector4d contacts = ICAPosition.segment(0,4);
 
+	contacts.segment(2,2).setZero();
+	if(curContact[index] == 0 || curContact[index] == 2)
+	{
+		contacts[2] = 1.0;
+	}
+	if(curContact[index] == 1 || curContact[index] == 2)
+	{
+		contacts[3] = 1.0;
+	}
+
 	// Motion::Root root = ms->getLastPose()->getRoot();
 
 	// Eigen::Isometry3d baseToRoot = ICA::dart::getBaseToRootMatrix(root);
@@ -455,7 +486,7 @@ getState(int index)
 
 	// goalpostPositions/= 100.0;
 
-	Eigen::VectorXd curActionType(8);
+	Eigen::VectorXd curActionType(6);
 	curActionType.setZero();
 	// for(int i=0;i<curActionType.size();i++)
 	// {
@@ -463,7 +494,7 @@ getState(int index)
 	// 		curActionType[i] = 1;
 	// }
 
-	curActionType[mPrevActionTypes[index]] = 1;
+	curActionType[mCurActionTypes[index]] = 1;
 	// assert(curActionType.norm()==1);
 
 	// std::cout<<"BallPossession : "<<ICAPosition[8+3+8]<<std::endl;
@@ -477,7 +508,7 @@ getState(int index)
 	}
 	else
 	{	
-		curBallVelocity = 30.0 * (curBallPosition - prevBallPositions[0]);
+		curBallVelocity = 30.0 * (curBallPosition - prevBallPositions[1]);
 		if(curBallVelocity.norm() > 8.5)
 			curBallVelocity.setZero();
 		ballVelocity = rootT.linear().inverse()* curBallVelocity;
@@ -494,18 +525,19 @@ getState(int index)
 	curSMState.setZero();
 	curSMState[bsm[index]->getStateWithInt()] = 1.0;
 
-	Eigen::VectorXd availableActions(8);
+	Eigen::VectorXd availableActions(6);
 	availableActions.setZero();
 	std::vector<int> availableActionList = bsm[index]->getAvailableActions();
 	for(int i=0;i<availableActionList.size();i++)
 	{
-		availableActions[availableActionList[i]] = 1;
+		if(availableActionList[i] < 6)
+			availableActions[availableActionList[i]] = 1;
 	}
 	// std::cout<<" Cur state is "<<bsm[index]->curState<<std::endl;
 	// std::cout<<availableActions.transpose()<<std::endl;
 
 	state.resize(skelPosition.rows() + relCurBallPosition.rows() + relTargetPosition.rows() + relBallToTargetPosition.rows() + goalpostPositions.rows() 
-		+ contacts.rows() + 1 + 1 + 3 +curActionType.rows()+curSMState.rows()+availableActions.rows());
+		+ contacts.rows() + 1 + 1 + 3 +curActionType.rows()+curSMState.rows()+availableActions.rows() + 1);
 	 //+ ballVelocity.rows()+2+curActionType.rows());
 	
 	int curIndex = 0;
@@ -587,6 +619,30 @@ getState(int index)
 	// 		std::cout<<"Nan State"<<std::endl;
 	// 	}
 	// }
+	if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
+	{
+		if(mCurCriticalActionTimes[index] == 10.0)
+		{
+			mChangeContactIsActive[index] = true;
+		}
+		else if(mCurActionTypes[index] < -5.0)
+		{
+			mChangeContactIsActive[index] = false;
+		}
+	}
+	else
+	{
+		mChangeContactIsActive[index] = false;
+	}
+
+	state[curIndex] = mChangeContactIsActive[index];
+	curIndex++;
+	// std::cout<<std::setprecision(3);
+	// std::cout<<state.segment(skelPosition.size(), 20).transpose()<<std::endl;
+	// std::cout<<state.segment(skelPosition.size() + 20, 4).transpose()<<std::endl;
+	// std::cout<<state.segment(skelPosition.size() + 24, state.size() - skelPosition.size()- 24).transpose()<<std::endl;
+	// std::cout<<state.segment(skelPosition.size() +40, state.size()-40).transpose()<<std::endl;
+	// std::cout<<std::endl;
 
 	mStates[index] = state;
 	// cout<<"getState end"<<endl;
@@ -670,11 +726,12 @@ getReward(int index, bool verbose)
 
 	// double theta = acos(targetBallDirection.dot(curDirection.normalized()));
 	
-	reward = 0.002*targetBallDirection.dot(curBallVelocity);
+	reward = 0.001*targetBallDirection.dot(curBallVelocity);
 	// reward = max(0.0, reward);
 
-
-	if((curBallPosition - mTargetBallPosition).norm() < 0.3)
+	Eigen::Vector3d targetBallPosition = mTargetBallPosition - curBallPosition;
+	targetBallPosition[1] = 0.0;
+	if((targetBallPosition).norm() < 0.3)
 	{
 		// if(!mCurBallPossessions[index])
 		// {
@@ -753,30 +810,39 @@ applyAction(int index)
 	{
 		mPrevCOMs[i] = mCharacters[i]->getSkeleton()->getRootBodyNode()->getCOM();
 		mPrevBallPossessions[i] = mCurBallPossessions[i];
+	    // mPrevLHandTranform[index] = mCharacters[i]->getSkeleton()->getBodyNode("LeftHand")->getWorldTransform();
+	    // mPrevRHandTranform[index] = mCharacters[i]->getSkeleton()->getBodyNode("RightHand")->getWorldTransform();
+
 	}
 
 
+	Eigen::VectorXd mgAction = mActions[index].segment(0,18);
 
-	auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(mActions[index]));
+	auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(mgAction));
     Eigen::VectorXd nextPosition = std::get<0>(nextPositionAndContacts);
+
+    mCharacters[index]->mSkeleton->setPositions(nextPosition);
+    mCharacters[index]->mSkeleton->setVelocities(mCharacters[0]->mSkeleton->getVelocities().setZero());
+
+
     Eigen::Vector4d nextContacts = std::get<1>(nextPositionAndContacts).segment(0,4);
     // mCurActionTypes[index] = std::get<2>(nextPositionAndContacts);
 	mCurBallPossessions[index] = std::get<3>(nextPositionAndContacts);
 	if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
 	{
-		if(mCurCriticalActionTimes[index] > 0)
-			mCurBallPossessions[index] = true;
-		else
-			mCurBallPossessions[index] = false;
+		// if(mCurCriticalActionTimes[index] > 0)
+		// 	mCurBallPossessions[index] = true;
+		// else
+		// 	mCurBallPossessions[index] = false;
 	}
 	if(mCurActionTypes[index] == 2)
 	{
-		if(mCurCriticalActionTimes[index] > 0)
-		{
-			mCurBallPossessions[index] = false;
-		}
-		else
-			mCurBallPossessions[index] = true;
+		// if(mCurCriticalActionTimes[index] > 0)
+		// {
+		// 	mCurBallPossessions[index] = false;
+		// }
+		// else
+		// 	mCurBallPossessions[index] = true;
 	}
 	if(mCurActionTypes[index] == 4 || mCurActionTypes[index] == 5)
 	{
@@ -821,42 +887,62 @@ applyAction(int index)
 
 
     //Update hand Contacts;
-    updatePrevContacts(index, std::get<1>(nextPositionAndContacts).segment(2,2));
+    if(mChangeContactIsActive[index])
+    {
+    	updatePrevContacts(index, mActions[index].segment(18,2));
+    	if(curContact[index] == -1)
+    	{
+    		mChangeContactIsActive[index] = false;
+    	}
+
+    }
+    else
+    {
+    	if((mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3) 
+    		&& mCurCriticalActionTimes[index]<10
+    		&& !mChangeContactIsActive[index])
+    	{
+    		updatePrevContacts(index, Eigen::Vector2d::Zero());
+    	}
+    	else
+   			updatePrevContacts(index, std::get<1>(nextPositionAndContacts).segment(2,2));
+    }
+
     // std::cout<<curContact[index]<<std::endl;
     // std::cout<<mCurBallPossessions[index]<<std::endl;
 
-    if(curContact[index] == -1)
-    {
-    	if(mCurActionTypes[index]==6 || mCurActionTypes[index] == 7)
-    	{
-    		curContact[index] = prevContact[index];
-    		if(prevContact[index] == -1)
-    			mIsTerminalState = true;
-    	}
-    	if(mCurActionTypes[index]==1 || mCurActionTypes[index] == 3)
-    	{
-			if(mCurCriticalActionTimes[index]<10 && mCurCriticalActionTimes[index]>0)
-    		{
-    			curContact[index] = prevContact[index];
-    			if(prevContact[index] == -1)
-    				mIsTerminalState = true;
-    		}		
-			else
-				curContact[index] = -1;
+   //  if(curContact[index] == -1)
+   //  {
+   //  	if(mCurActionTypes[index]==6 || mCurActionTypes[index] == 7)
+   //  	{
+   //  		curContact[index] = prevContact[index];
+   //  		if(prevContact[index] == -1)
+   //  			mIsTerminalState = true;
+   //  	}
+   //  	if(mCurActionTypes[index]==1 || mCurActionTypes[index] == 3)
+   //  	{
+			// // if(mCurCriticalActionTimes[index]<10 && mCurCriticalActionTimes[index]>0)
+   // //  		{
+   // //  			curContact[index] = prevContact[index];
+   // //  			if(prevContact[index] == -1)
+   // //  				mIsTerminalState = true;
+   // //  		}		
+			// // else
+			// // 	curContact[index] = -1;
 
-    	}
+   //  	}
 
-    	// if(mCurActionTypes[index] == 1 ||mCurActionTypes[index] == 3 && mCurCriticalActionTimes[index]>0)
-    	// {
-    	// 	curContact[index] = prevContact[index];
-    	// }
-    	// else if(mCurActionTypes[index] == 2 && mCurCriticalActionTimes[index]<=0)
-    	// {
-    	// 	curContact[index] = prevContact[index];
-    	// }
-    }
+   //  	// if(mCurActionTypes[index] == 1 ||mCurActionTypes[index] == 3 && mCurCriticalActionTimes[index]>0)
+   //  	// {
+   //  	// 	curContact[index] = prevContact[index];
+   //  	// }
+   //  	// else if(mCurActionTypes[index] == 2 && mCurCriticalActionTimes[index]<=0)
+   //  	// {
+   //  	// 	curContact[index] = prevContact[index];
+   //  	// }
+   //  }
 
-    if(curContact[index] >= 0)
+    /*if(curContact[index] >= 0)
     {
     	if(mCurActionTypes[index]==1 || mCurActionTypes[index] == 3)
     	{
@@ -869,6 +955,9 @@ applyAction(int index)
     			curContact[index] = -1;
     	}
     }
+*/
+
+
  //   	if(mCurActionTypes[index] == 2)
 	// {
 	// }
@@ -882,7 +971,42 @@ applyAction(int index)
     }
     else if(curContact[index] >= 0)
     {
-    	updatePrevBallPositions(computeHandBallPosition(index));
+    // 	if(mCurActionTypes[index] ==1 || mCurActionTypes[index] == 3)
+    // 	{
+    // 		if(mCurCriticalActionTimes[index] == 1)
+    // 		{
+    // 			Eigen::Isometry3d curHandTransform;
+    // 			if(curContact[index] == 0)
+    // 			{
+    // 				curHandTransform = mCharacters[index]->getSkeleton()->getBodyNode("LeftHand")->getWorldTransform();
+    // 			}
+    // 			else if(curContact[index] == 1)
+    // 			{
+    // 				curHandTransform = mCharacters[index]->getSkeleton()->getBodyNode("RightHand")->getWorldTransform();
+    // 			}
+    // 			else
+    // 			{
+    // 				updatePrevBallPositions(computeHandBallPosition(index));
+    // 			}
+
+				// Eigen::Vector3d handProjectedBallPosition = curHandTransform.inverse() * prevBallPositions[0];
+				// handProjectedBallPosition[1] = 0.0;
+				// Eigen::Vector3d handCenter = Eigen::Vector3d(0.05,0.0,0.0);
+				// Eigen::Vector3d ballOffset = (handProjectedBallPosition-handCenter).normalized()* 0.15;
+				// ballOffset[1] = 0.23;
+				// ballOffset += handCenter;
+				// updatePrevBallPositions(curHandTransform*ballOffset);
+    // 		}
+    // 		else
+    // 		{
+    // 			updatePrevBallPositions(computeHandBallPosition(index));
+    // 		}
+
+    // 	}
+    // 	else
+    // 	{
+    		updatePrevBallPositions(computeHandBallPosition(index));
+    	// }
     }
     else if(mCurActionTypes[index] == 0)
     {
@@ -896,6 +1020,26 @@ applyAction(int index)
     {
     	updatePrevBallPositions(computeBallPosition());
     }
+
+
+    Eigen::Vector6d ballPosition;
+    ballPosition.setZero();
+
+    ballPosition.segment(3,3) = curBallPosition;
+
+    ballSkel->setPositions(ballPosition);
+
+    Eigen::Vector6d zeroVelocity;
+    zeroVelocity.setZero();
+    ballSkel->setVelocities(zeroVelocity);
+
+  //   if(mCurBallPossessions[index])
+		// mPrevPlayer = index;
+
+    mPrevActionTypes[index] = mCurActionTypes[index];
+
+
+
 
 
     // check rule violation
@@ -971,7 +1115,7 @@ applyAction(int index)
 	{
 		Eigen::Vector3d curLFootPosition = skel->getBodyNode("LeftToe")->getWorldTransform().translation();
 		// std::cout<<(curLFootPosition - mLLastFootPosition[index]).norm()<<std::endl;
-		if((curLFootPosition - mLLastFootPosition[index]).norm()>0.25)
+		if((curLFootPosition - mLLastFootPosition[index]).norm()>0.35)
 		{
 			mIsTerminalState = true;
 		}
@@ -980,19 +1124,23 @@ applyAction(int index)
 	if(mRFootContacting[index])
 	{
 		Eigen::Vector3d curRFootPosition = skel->getBodyNode("RightToe")->getWorldTransform().translation();
-		if((curRFootPosition - mRLastFootPosition[index]).norm()>0.25)
+		if((curRFootPosition - mRLastFootPosition[index]).norm()>0.35)
 		{
 			mIsTerminalState = true;
 		}
 	}
 
 
-	if(!ballGravityChecker(index))
+/*	if(!ballGravityChecker(index))
 	{
-		bsm[index]->prevAction = 4;
-		bsm[index]->curState = BasketballState::POSITIONING;
-	}
+		// bsm[index]->prevAction = 4;
+		// bsm[index]->curState = BasketballState::POSITIONING;
+		bsm[index]->prevAction = 0;
+		bsm[index]->curState = BasketballState::DRIBBLE;
 
+		// std::cout<<"Ball floating"<<std::endl;
+	}
+*/
 	// if(mCurBallPossessions[index] && curContact[index] == -1)
 	// {
 	// 	if(mCurActionTypes[index] != 0)
@@ -1070,29 +1218,6 @@ applyAction(int index)
 
 
 
-    Eigen::Vector6d ballPosition;
-    ballPosition.setZero();
-
-    ballPosition.segment(3,3) = curBallPosition;
-
-
-
-    mCharacters[0]->mSkeleton->setPositions(nextPosition);
-    mCharacters[0]->mSkeleton->setVelocities(mCharacters[0]->mSkeleton->getVelocities().setZero());
-
-
-
-    ballSkel->setPositions(ballPosition);
-
-    Eigen::Vector6d zeroVelocity;
-    zeroVelocity.setZero();
-    ballSkel->setVelocities(zeroVelocity);
-
-    if(mCurBallPossessions[index])
-		mPrevPlayer = index;
-
-    mPrevActionTypes[index] = mCurActionTypes[index];
-
 }
 
 bool
@@ -1117,7 +1242,7 @@ ballGravityChecker(int index)
 		{
 			double prevBallVelocity = prevFreeBallPositions[1] - prevFreeBallPositions[3];
 			double curBallVelocity = prevFreeBallPositions[0] - prevFreeBallPositions[2];
-			if(curBallVelocity >= prevBallVelocity)
+			if(curBallVelocity >= prevBallVelocity+0.05)
 			{
 				// std::cout<<"BALL ignored gravity"<<std::endl;
 				return false;
@@ -1179,10 +1304,11 @@ setAction(int index, const Eigen::VectorXd& a)
     // std::cout<<"Original action : "<< maxIndex-4<<std::endl;
 
     curActionType = maxIndex-4;
+    curActionType = 3;
 
     if(isCriticalAction(mPrevActionTypes[index]))
     {
-    	if(mCurCriticalActionTimes[index] > -5)
+    	if(mCurCriticalActionTimes[index] > -10)
     		curActionType = mPrevActionTypes[index];
     	else
     	{
@@ -1219,16 +1345,45 @@ setAction(int index, const Eigen::VectorXd& a)
     }
     else
     {
-    	mActions[index].segment(2,2).normalize();
+    	// if(mActions[index].segment(2,2).norm() != 0)
+    	// mActions[index].segment(2,2).normalize();
     }
 
-    mActions[index].segment(4,6).setZero();
+    if(mActions[index].segment(0,2).norm() > 120.0)
+    {
+    	mActions[index].segment(0,2) *= 120.0/mActions[index].segment(0,2).norm();
+    }
+
+    mActions[index].segment(2,2) = Eigen::Vector2d(50.0, -50.0);
+
+    if(mActions[index].segment(2,2).norm() > 100.0)
+    {
+    	mActions[index].segment(2,2) *= 100.0/mActions[index].segment(2,2).norm();
+    }
+
+	mActions[index].segment(4,6).setZero();
+
     mActions[index][4+curActionType] = 1.0;
 
-    if(mActions[index].segment(2,2).norm() != 0)
+
+    if(mActions[index].segment(10,3).norm()>200.0)
     {
-    	mActions[index].segment(2,2).normalize();
+    	mActions[index].segment(10,3) *= 200.0/mActions[index].segment(10,3).norm();
     }
+
+    if(mActions[index].segment(13,3).norm()>1000.0)
+    {
+    	mActions[index].segment(13,3) *= 1000.0/mActions[index].segment(13,3).norm();
+    }
+
+    if(curActionType != 1 && curActionType != 3)
+
+    // if(mActions[index].segment(2,2).norm() != 0)
+    // {
+    // 	mActions[index].segment(2,2).normalize();
+    // }
+
+    // mActions[index].segment(2,2) = Eigen::Vector2d(1.0, 0.0);
 
     if(!isCriticalAction(curActionType))
     {
@@ -1239,13 +1394,17 @@ setAction(int index, const Eigen::VectorXd& a)
 	computeCriticalActionTimes();
     if(isCriticalAction(curActionType))
     {
-    	if(mActions[index][4+6+6]== 0)
-    		mActions[index][4+6+6+1] = 1;
+    	if(mActions[index][16]== 0)
+    		mActions[index][16+1] = 1;
     	else
-    		mActions[index][4+6+6+1] = 0;
+    		mActions[index][16+1] = 0;
     }
     else
-    	mActions[index][4+6+6+1] = 0;
+    	mActions[index][16+1] = 0;
+
+    //** contact
+   	for(int i=0;i<2;i++)
+   		mActions[index][18+i] >= 0.0 ? 1.0 : 0.0;
 
 
 }
@@ -1259,6 +1418,8 @@ isTerminalState()
 	{
 		mIsTerminalState = true;
 	}
+	if(mCurActionTypes[0] != 3)
+		mIsTerminalState= true;
 
 	// if((mCharacters[0]->getSkeleton()->getCOM()-mTargetBallPosition).norm() > 20.0)
 	// 	mIsTerminalState = true;
@@ -1298,12 +1459,24 @@ reset()
 	{
 		mActions[i].setZero();
 		mPrevActions[i].setZero();
-		mActions[i][4+4] = 1.0;
-		mPrevActions[i][4+4] = 1.0;
+		// mActions[i][4+4] = 1.0;
+		// mPrevActions[i][4+4] = 1.0;
 
-		mCurActionTypes[i] = 4;
-		mPrevActionTypes[i] = 4;
-		mCurCriticalActionTimes[i] = 0;
+		// mCurActionTypes[i] = 4;
+		// mPrevActionTypes[i] = 4;
+		int curDefaultActionType = 3;
+
+		mActions[i][4+curDefaultActionType] = 1.0;
+		mPrevActions[i][4+0] = 1.0;
+
+		mCurActionTypes[i] = curDefaultActionType;
+		mPrevActionTypes[i] = 0;
+
+		mCurCriticalActionTimes[i] = 30;
+		mChangeContactIsActive[i] = false;
+
+		curContact[i] = -1;
+		prevFreeBallPositions.clear();
 	}
 }
 
@@ -1384,12 +1557,14 @@ resetCharacterPositions()
 	criticalPoint_targetBallVelocity.setZero();
 
 	for(int i=0;i<RESET_ADAPTING_FRAME;i++)
-		mMotionGenerator->setCurrentPose(standPosition, Utils::toStdVec(targetZeroVec));
+		mMotionGenerator->setCurrentPose(standPosition, Utils::toStdVec(dribbleDefaultVec));
 
-	Eigen::VectorXd zeroAction = mActions[0];
-	zeroAction.setZero();
-	zeroAction[4+4] = 1;
-	auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(zeroAction));
+	for(int i=0;i<RESET_ADAPTING_FRAME;i++)
+		mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(dribbleDefaultVec));
+	// Eigen::VectorXd zeroAction = mActions[0];
+	// zeroAction.setZero();
+	// zeroAction[4+4] = 1;
+	auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(dribbleDefaultVec));
     Eigen::VectorXd nextPosition = std::get<0>(nextPositionAndContacts);
     mCharacters[0]->getSkeleton()->setPositions(nextPosition);
 
@@ -1407,9 +1582,12 @@ resetCharacterPositions()
 
 		mLFootDetached[i] = false;
 		mRFootDetached[i] = false;
-		bsm[i]->curState = BasketballState::POSITIONING;
-		bsm[i]->prevAction = 4;
+		// bsm[i]->curState = BasketballState::POSITIONING;
+		// bsm[i]->prevAction = 4;
 
+
+		bsm[i]->curState = BasketballState::DRIBBLE;
+		bsm[i]->prevAction = 0;
 
 		mLFootContacting[i] = false;
 		mRFootContacting[i] = false;
@@ -1662,8 +1840,8 @@ computeCriticalActionTimes()
 	    		Eigen::Vector3d curActionGlobalBallPosition = rootT * ((Eigen::Vector3d)mActions[index].segment(4+6,3)/100.0);
 	    		Eigen::Vector3d curActionGlobalBallVelocity = rootT.linear() * (mActions[index].segment(4+6+3,3)/100.0);
 
-	    		mActionGlobalBallPosition[index] = 0.8 * mActionGlobalBallPosition[index] + 0.2 * curActionGlobalBallPosition;
-	    		mActionGlobalBallVelocity[index] = 0.8 * mActionGlobalBallVelocity[index] + 0.2 * curActionGlobalBallVelocity;
+	    		mActionGlobalBallPosition[index] = 0.5 * mActionGlobalBallPosition[index] + 0.5 * curActionGlobalBallPosition;
+	    		mActionGlobalBallVelocity[index] = 0.5 * mActionGlobalBallVelocity[index] + 0.5 * curActionGlobalBallVelocity;
 	    		mActions[index].segment(4+6,3) = rootT.inverse() *mActionGlobalBallPosition[index];
 	    		mActions[index].segment(4+6+3,3) = rootT.linear().inverse() * mActionGlobalBallVelocity[index];
 	    		mActions[index].segment(4+6,6) *= 100.0;
@@ -1672,8 +1850,7 @@ computeCriticalActionTimes()
 	    else
 	    {
 	    	// mCurCriticalActionTimes[index] = (int) (mActions[index][4+8+6]+0.5);
-	    	mCurCriticalActionTimes[index] = 20;
-    		
+	    	mCurCriticalActionTimes[index] = 30;
     		if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
     		{
     			mActionGlobalBallPosition[index] = rootT * ((Eigen::Vector3d)mActions[index].segment(4+6,3)/100.0);
@@ -1901,8 +2078,12 @@ saveEnvironment()
 
 BStateMachine::BStateMachine()
 {
-	curState = BasketballState::POSITIONING;
-	prevAction = 4;
+	// curState = BasketballState::POSITIONING;
+	// prevAction = 4;
+
+
+	curState = BasketballState::DRIBBLE;
+	prevAction = 0;
 }
 
 int

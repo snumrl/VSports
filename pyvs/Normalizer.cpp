@@ -17,6 +17,8 @@ Normalizer::Normalizer(std::string xNormalPath, std::string yNormalPath)
 
 	Basic::readNormal(in, xMean, xStd);
 
+
+
 	in.close();
 
 
@@ -105,16 +107,22 @@ Eigen::VectorXd
 Normalizer::
 denormalizeAction(Eigen::VectorXd action)
 {
-	assert(action.rows() == dimX);
+	int offset = 2;
+	// std::cout<<action.rows()<<std::endl;
+
+	assert(action.rows()+offset-2 == dimX);
+
 	// std::cout<<"------------------"<<std::endl;
 	// std::cout<<action.transpose()<<std::endl;
 
-	Eigen::VectorXd allignedAction(action.rows());
+	Eigen::VectorXd allignedAction(16);
 	allignedAction.segment(4,6) = action.segment(0,6);
 	allignedAction.segment(0,4) = action.segment(6,4);
-	allignedAction.segment(10,dimX-10) = action.segment(10,dimX-10);
+	allignedAction.segment(10,6) = action.segment(10,6);
 
-	Eigen::VectorXd denormalizedAction(action.rows());
+
+
+	Eigen::VectorXd denormalizedAction(16);
 
 	// std::cout<<allignedAction.transpose()<<std::endl;
 	// std::cout<<std::endl;
@@ -122,12 +130,18 @@ denormalizeAction(Eigen::VectorXd action)
 	// std::cout<<xMean.transpose()<<std::endl;
 	// std::cout<<xStd.transpose()<<std::endl;
 	// exit(0);
-	denormalizedAction = allignedAction.cwiseProduct(xStd);
-	denormalizedAction = denormalizedAction + xMean;
+	denormalizedAction = allignedAction.cwiseProduct(xStd.segment(0,16));
+	denormalizedAction = denormalizedAction + xMean.segment(0,16);
 
 	denormalizedAction.segment(4,6) = allignedAction.segment(4,6);
-	denormalizedAction[17] = allignedAction[17];
-	return denormalizedAction;
+	
+
+	Eigen::VectorXd extendedAction(16+offset+2);
+	extendedAction.setZero();
+	extendedAction.segment(0,16) = denormalizedAction;
+	extendedAction.segment(16+offset,2) = action.segment(16,2);
+	// exit(0);
+	return extendedAction;
 }
 
 

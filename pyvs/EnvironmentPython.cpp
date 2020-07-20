@@ -152,16 +152,17 @@ setAction(np::ndarray np_array, int id, int index)
 	Eigen::VectorXd action = Wrapper::toEigenVector(np_array);
 	Eigen::VectorXd denormalizedAction;
 	Eigen::VectorXd ex_action(action.rows());
-	if(reducedDim)
-	{
-		ex_action.setZero();
-		ex_action.segment(0,4) = action;
-		denormalizedAction = mSlaves[id]->mNormalizer->denormalizeAction(ex_action);
-	}
-	else
-	{
+	// if(reducedDim)
+	// {
+	// 	ex_action.setZero();
+	// 	ex_action.segment(0,4) = action;
+	// 	denormalizedAction = mSlaves[id]->mNormalizer->denormalizeAction(ex_action);
+	// }
+	// else
+	// {
+	//** we change the dimension of action in denormalizeAction
 		denormalizedAction = mSlaves[id]->mNormalizer->denormalizeAction(action);
-	}
+	// }
 
 
 	// Eigen::VectorXd denormalizedAction = mSlaves[id]->mNormalizer->denormalizeAction(ex_action);

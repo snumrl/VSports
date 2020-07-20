@@ -369,7 +369,15 @@ public:
 
 	std::vector<Eigen::Vector3d> mActionGlobalBallPosition;
 	std::vector<Eigen::Vector3d> mActionGlobalBallVelocity;
+
+	std::vector<bool> mChangeContactIsActive;
+
+
+	// std::vector<Eigen::Isometry3d> mPrevLHandTranform;
+	// std::vector<Eigen::Isometry3d> mPrevRHandTranform;
 	// int mCurPlayer;
+
+	Eigen::VectorXd dribbleDefaultVec;
 
 	// AgentEnvWindow* mWindow;
 };

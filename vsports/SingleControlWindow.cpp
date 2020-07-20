@@ -56,7 +56,7 @@ initWindow(int _w, int _h, char* _name)
 
 SingleControlWindow::
 SingleControlWindow()
-:SimWindow(), mIsNNLoaded(false), mFrame(true)
+:SimWindow(), mIsNNLoaded(false), mFrame(680)
 {
 
  	// srand (time(NULL));	
@@ -128,7 +128,7 @@ SingleControlWindow(const char* bvh_path, const char* nn_path,
 	if(reducedDim)
 		str = "num_action = 4";
 	else
-		str = ("num_action = "+std::to_string(mEnv->getNumAction())).c_str();
+		str = ("num_action = "+std::to_string(mEnv->getNumAction()-2)).c_str();
 	p::exec(str, mns);
 
 	nn_module_0 = new boost::python::object[mEnv->mNumChars];
@@ -329,7 +329,26 @@ keyboard(unsigned char key, int x, int y)
 		case 'i':
 			showCourtMesh = !showCourtMesh;
 			break;
-
+		case 'p':
+			// int numActions =6;
+			int curAction;
+		    for(int i=4;i<4+6;i++)
+		    {
+		        if(xData[0][mFrame+10][i] >= 0.5)
+		            curAction = i-4;
+		    }
+		    while(curAction!=1 && curAction!=2 && curAction!=3)
+		    {
+		    	mFrame++;
+		    	for(int i=4;i<4+6;i++)
+			    {
+			        if(xData[0][mFrame+10][i] >= 0.5)
+			        {
+			            curAction = i-4;
+			        }
+			    }
+		    }
+			break;
 		case ']':
 			mFrame += 100;
 			step();
@@ -440,6 +459,7 @@ step()
 		sleep(1);
 		mEnv->reset();
 	}
+	// std::cout<<"mFrame : "<<mFrame<<std::endl;
     // std::cout<<"RNN Time : "<<std::endl;
     // time_check_start();
 	std::chrono::time_point<std::chrono::system_clock> m_time_check_s = std::chrono::system_clock::now();
@@ -474,10 +494,13 @@ step()
 
 	// std::cout<<mStates[0].transpose()<<std::endl;
 
-	// mEnv->setAction(0, Utils::toEigenVec(this->xData[0][mFrame]));
+	// mEnv->bsm[0]->curState = BasketballState::BALL_CATCH_1;
+	// mActions[0] = Utils::toEigenVec(this->xData[0][mFrame]);
+	// mEnv->mActions[0] = Utils::toEigenVec(this->xData[0][mFrame]);
 	// std::cout<<Utils::toEigenVec(this->xData[0][mFrame]).transpose()<<std::endl;
 	getActionFromNN(0);
 	mEnv->setAction(0, mActions[0]);
+
 
 
 	
@@ -683,6 +706,15 @@ display()
 
 	GUI::drawStringOnScreen(0.8, 0.8, to_string(mEnv->getElapsedTime()), true, Eigen::Vector3d::Zero());
 
+	if(mEnv->curContact[0]==0 || mEnv->curContact[0]==2)
+	{
+		GUI::drawSphere(0.1, mEnv->mCharacters[0]->getSkeleton()->getBodyNode("LeftHand")->getWorldTransform().translation(), Eigen::Vector3d::Zero());
+	}
+	if(mEnv->curContact[0]==1 || mEnv->curContact[0]==2)
+	{
+		GUI::drawSphere(0.1, mEnv->mCharacters[0]->getSkeleton()->getBodyNode("RightHand")->getWorldTransform().translation(), Eigen::Vector3d::Zero());
+	}
+
 
 	// GUI::drawVerticalLine(this->goal.segment(0,2), Eigen::Vector3d(1.0, 1.0, 1.0));
 
@@ -738,6 +770,7 @@ display()
     std::string score = "Score : "+to_string(mEnv->mAccScore[0]);
    
     GUI::drawStringOnScreen(0.2, 0.75, score, true, Eigen::Vector3d(1,1,1));
+    GUI::drawStringOnScreen(0.2, 0.55, std::to_string(mEnv->mCurBallPossessions[0]), true, Eigen::Vector3d(1,1,1));
 
 	showAvailableActions();
 
@@ -878,7 +911,7 @@ getActionFromNN(int index)
 	// std::cout<<state.segment(155,6).transpose()<<std::endl;
 	// std::cout<<state.segment(mEnv->mCharacters[0]->getSkeleton()->getNumDofs(),12).transpose()<<std::endl;
 
-	Eigen::VectorXd mAction(mEnv->getNumAction());
+	Eigen::VectorXd mAction(4+6+8);
 	mAction.setZero();
 
 	get_action_0 = nn_module_0[index].attr("get_action");
@@ -962,13 +995,13 @@ getActionFromNN(int index)
 
 
 
-	mAction = mEnv->mNormalizer->denormalizeAction(mAction);
+	// mAction = mEnv->mNormalizer->denormalizeAction(mAction);
 	// std::cout<<mAction.segment(0,4).transpose()<<std::endl;
 	// std::cout<<mAction.segment(4,8).transpose()<<std::endl;
 	// std::cout<<mAction.segment(12,7).transpose()<<std::endl;
 	// std::cout<<std::endl;
 	// std::cout<<"-------------"<<std::endl;	
-	mActions[index] = mAction;
+	mActions[index] = mEnv->mNormalizer->denormalizeAction(mAction);
 }
 
 
