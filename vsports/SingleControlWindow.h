@@ -149,6 +149,9 @@ public:
 
 	void showAvailableActions();
 
+
+	void getControlMeanStdByActionType(int actionType);
+
     // Eigen::Vector3d curBallPosition;
     // Eigen::Vector3d prevBallPosition;
     // Eigen::Vector3d pprevBallPosition;

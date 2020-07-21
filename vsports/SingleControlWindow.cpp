@@ -6,7 +6,7 @@
 #include <dart/dart.hpp>
 #include <dart/utils/utils.hpp>
 #include "../motion/BVHmanager.h"
-
+#include <numeric>
 // #include "./common/loadShader.h"
 // #include <GL/glew.h>
 #include <GL/glut.h>
@@ -205,7 +205,10 @@ SingleControlWindow(const char* bvh_path, const char* nn_path,
     // if(! boost::filesystem::is_regular_file (xDataPath)) break;
     this->xData.push_back(MotionRepresentation::readXData(xNormalPath, xDataPath, sub_dir));
 
-
+    // getControlMeanStdByActionType(0);
+    // getControlMeanStdByActionType(1);
+    // getControlMeanStdByActionType(3);
+    // exit(0);
 
 	// for(int i=0;i<10;i++)
 	// {
@@ -1084,3 +1087,69 @@ showAvailableActions()
 // 	mActions[index] = mAction;
 // 	// cout<<"NO"
 // }
+
+int getActionTypeFromVec(std::vector<double> vec)
+{
+	int maxValue = -100;
+	int maxIndex = 0;
+	for(int i=4;i<4+6;i++)
+	{
+		if(vec[i]>maxValue)
+		{
+			maxIndex = i;
+			maxValue = vec[i];
+		}
+	}
+	return maxIndex-4;
+}
+
+void
+SingleControlWindow::
+getControlMeanStdByActionType(int actionType)
+{
+	// std::cout<<this->xData[0].size()<<std::endl;
+	std::vector<std::vector<double>> total;
+	for(int i=0;i<this->xData[0].size();i++)
+	{
+		int curActionType = getActionTypeFromVec(this->xData[0][i]);
+
+		if(curActionType == actionType)
+		{
+			total.push_back(this->xData[0][i]);
+		}
+	}
+
+	std::vector<std::vector<double>> totalTranspose;
+
+	// std::cout<<total[0].size()<<std::endl;
+	for(int j=0;j<total[0].size();j++)
+	{
+		std::vector<double> row;
+		for(int i=0;i<total.size();i++)
+		{
+			// std::cout<<i<<" "<<j<<std::endl;
+			row.push_back(total[i][j]);
+		}
+		totalTranspose.push_back(row);
+	}
+
+	for(int i=0;i<totalTranspose.size();i++)
+	{
+		std::cout<<i<<" th :";
+		double sum = std::accumulate(totalTranspose[i].begin(), totalTranspose[i].end(), 0.0);
+		double mean = sum/totalTranspose[i].size();
+
+		std::vector<double> diff(totalTranspose[i].size());
+		std::transform(totalTranspose[i].begin(), totalTranspose[i].end(), diff.begin(),
+		               std::bind2nd(std::minus<double>(), mean));
+
+		double sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
+		double stdev = std::sqrt(sq_sum/(diff.size()-1));
+		std::cout<<mean<<", "<<stdev<<" / "<<mean+2*stdev<<std::endl;
+	}
+	// exit(0);
+
+
+	// double sum = std::accumulate(total.begin(), _InputIterator __last, _Tp __init)
+
+}

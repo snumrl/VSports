@@ -83,7 +83,7 @@ class SimulationNN(nn.Module):
 
 # Current state, goal state -> (subgoal state - current state)* weight of state
 class ActorCriticNN(nn.Module):
-	def __init__(self, num_states, num_actions):
+	def __init__(self, num_states, num_actions, log_std = 0.0):
 		super(ActorCriticNN, self).__init__()
 
 		self.num_policyInput = num_states
@@ -119,7 +119,7 @@ class ActorCriticNN(nn.Module):
 		)
 
 
-		self.log_std = nn.Parameter(0.0 * torch.ones(num_actions))
+		self.log_std = nn.Parameter(log_std * torch.ones(num_actions))
 		# self.log_std = nn.Parameter(Tensor([0, 0, -2]))
 
 		# self.rnn.apply(weights_init)
@@ -147,11 +147,12 @@ class ActorCriticNN(nn.Module):
 	def get_action(self,s):
 		ts = torch.tensor(s)
 
+		# embed()
+		# exit(0)
 		p, _v= self.forward(ts.unsqueeze(0))
 
 		# self.cur_hidden = new_hidden
 		# print(p.loc.cpu().detach().numpy())
-
 		# return p.sample().cpu().detach().numpy()
 		return p.loc.cpu().detach().numpy().astype(np.float32)
 

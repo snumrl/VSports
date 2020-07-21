@@ -38,7 +38,7 @@ Tensor = FloatTensor
 LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 
-nnCount = 6
+nnCount = 10
 baseDir = "../nn_ar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -153,10 +153,14 @@ class RL(object):
 		acc_num_action = 0
 		for h in range(self.num_h):
 			for j in range(self.num_policy):
-				self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h])
+				if h == 2 :
+					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], -1.0)
+				else:
+					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h])
 				acc_num_action += self.num_action[h]
 				if use_cuda:
 					self.target_model[h][j].cuda()
+
 
 		# for i in range(self.num_policy):
 		# 	self.target_model_1[i] = ActorCriticNN(self.num_state + self.num_action_0, self.num_action_1)
