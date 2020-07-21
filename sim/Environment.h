@@ -379,6 +379,7 @@ public:
 
 	Eigen::VectorXd dribbleDefaultVec;
 
+	Eigen::Isometry3d getRootT(int index);
 	// AgentEnvWindow* mWindow;
 };
 double getFacingAngleFromLocalState(Eigen::VectorXd curState);

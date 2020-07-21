@@ -504,6 +504,9 @@ step()
 	getActionFromNN(0);
 	mEnv->setAction(0, mActions[0]);
 
+	std::cout<<mEnv->mActions[0].segment(0,10).transpose()<<std::endl;
+	std::cout<<mEnv->mActions[0].segment(10,8).transpose()<<std::endl;
+
 
 
 	
@@ -663,7 +666,8 @@ display()
 	GUI::drawSkeleton(chars[0]->getSkeleton());
 
 	// Eigen::Isometry3d rootIsometry = ICA::dart::getBaseToRootMatrix(mEnv->mMotionGenerator->motionGenerators[0]->mMotionSegment->getLastPose()->getRoot());
-	Eigen::Isometry3d rootIsometry = mEnv->mCharacters[0]->getSkeleton()->getRootBodyNode()->getWorldTransform();
+	// Eigen::Isometry3d rootIsometry = mEnv->mCharacters[0]->getSkeleton()->getRootBodyNode()->getWorldTransform();
+	Eigen::Isometry3d rootIsometry = mEnv->getRootT(0);
 
 	glPushMatrix();
 	Eigen::Vector3d rootPosition = rootIsometry.translation();
@@ -755,9 +759,8 @@ display()
 	{
 		Eigen::Vector3d ballTargetPosition = mEnv->mActions[0].segment(10,3)/100.0;
 		Eigen::Vector3d ballTargetVelocity = mEnv->mActions[0].segment(10+3,3)/100.0;
-		Eigen::Isometry3d rootTransform = mEnv->mCharacters[0]->getSkeleton()->getRootBodyNode()->getWorldTransform();
-		ballTargetPosition = rootTransform * ballTargetPosition;
-		ballTargetVelocity = rootTransform.linear() * ballTargetVelocity;
+		ballTargetPosition = rootIsometry * ballTargetPosition;
+		ballTargetVelocity = rootIsometry.linear() * ballTargetVelocity;
 
 		// std::cout<<ballTargetPosition.transpose()<<std::endl;
 		// std::cout<<ballTargetVelocity.transpose()<<std::endl;
@@ -1145,7 +1148,7 @@ getControlMeanStdByActionType(int actionType)
 
 		double sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
 		double stdev = std::sqrt(sq_sum/(diff.size()-1));
-		std::cout<<mean<<", "<<stdev<<" / "<<mean+2*stdev<<std::endl;
+		std::cout<<mean<<", "<<stdev<<" / "<<mean+2*stdev<<", "<<mean-2*stdev<<std::endl;
 	}
 	// exit(0);
 

@@ -430,7 +430,7 @@ getState(int index)
 
 
 	SkeletonPtr skel = mCharacters[index]->getSkeleton();
-	Eigen::Isometry3d rootT = skel->getRootBodyNode()->getWorldTransform();
+	Eigen::Isometry3d rootT = getRootT(index);
 
 	std::vector<std::string> EEJoints;
 	EEJoints.push_back("LeftHand");
@@ -1866,7 +1866,7 @@ computeCriticalActionTimes()
 	    // prevActionType = maxIndex-4;
 
 		double interp = 0.0;
-    	Eigen::Isometry3d rootT = mCharacters[index]->getSkeleton()->getRootBodyNode()->getWorldTransform();
+    	Eigen::Isometry3d rootT = getRootT(index);
 	    if(mCurActionTypes[index] == mPrevActionTypes[index])
 	    {
 	    	if(isCriticalAction(mCurActionTypes[index]))
@@ -2360,6 +2360,30 @@ Environment::genObstaclesToTargetDir(int numObstacles)
 		obstaclePosition[1] = 0.0;
 		mObstacles.push_back(obstaclePosition);
 	}
+}
+
+Eigen::Isometry3d
+Environment::
+getRootT(int index)
+{
+	SkeletonPtr skel = mCharacters[index]->getSkeleton();
+
+	Eigen::Isometry3d rootT = skel->getRootBodyNode()->getWorldTransform();
+
+	Eigen::Vector3d front = rootT.linear()*Eigen::Vector3d::UnitY();
+	front[1] = 0.0;
+	front.normalize();
+
+
+	Eigen::Isometry3d rootIsometry;
+
+	rootIsometry.linear() << front[0], 0.0, -front[2],
+							0.0, 1.0, 0.0,
+							front[2], 0.0, front[0];
+
+	rootIsometry.translation() = rootT.translation();
+	rootIsometry.translation()[1] = 0.0;
+	return rootIsometry;
 }
 
 
