@@ -16,7 +16,7 @@
 class SingleControlWindow : public SimWindow{
 public:
 	SingleControlWindow();
-	SingleControlWindow(const char* bvh_path, const char* nn_path, const char* control_nn_path);
+	SingleControlWindow(const char* nn_path, const char* control_nn_path);
 	void initWindow(int _w, int _h, char* _name) override;
 
 	void keyboard(unsigned char key, int x, int y) override;

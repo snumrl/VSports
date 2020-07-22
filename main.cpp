@@ -27,14 +27,14 @@ int main(int argc, char** argv)
 			// simwindow->initialize();
 		}
 	}
-	else if(argc==5)
+	else if(argc==3)
 	{
-		if(strcmp(argv[1], "-bvh")==0)
-		{
-			SingleControlWindow* simwindow = new SingleControlWindow(argv[2], argv[3], argv[4]);
+		// if(strcmp(argv[1], "-bvh")==0)
+		// {
+			SingleControlWindow* simwindow = new SingleControlWindow(argv[1], argv[2]);
 			simwindow->initWindow(1800, 1200, "Render");
 			// simwindow->initialize();
-		}
+		// }
 	}
 	glutMainLoop();
 }

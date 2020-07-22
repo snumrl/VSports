@@ -114,11 +114,12 @@ SingleControlWindow()
 }
 
 SingleControlWindow::
-SingleControlWindow(const char* bvh_path, const char* nn_path,
+SingleControlWindow(const char* nn_path,
 					const char* control_nn_path)
 :SingleControlWindow()
 {
-	mEnv = new Environment(30, 180, 1, bvh_path, nn_path);
+
+	mEnv = new Environment(30, 180, 1, "../data/motions/basketData/motion/s_004_1_1.bvh", nn_path);
 	reducedDim = false;
 
 	p::str str = ("num_state = "+std::to_string(mEnv->getNumState())).c_str();

@@ -95,7 +95,7 @@ initMotionGenerator(std::string dataPath)
 	initDartNameIdMapping();
 	mMotionGenerator = new ICA::dart::MotionGenerator(dataPath, this->dartNameIdMap);
 
-	Eigen::VectorXd targetZeroVec(18);
+	Eigen::VectorXd targetZeroVec(14);
 	targetZeroVec.setZero();
 
 	targetZeroVec[4+4] = 1;
@@ -1394,6 +1394,7 @@ setAction(int index, const Eigen::VectorXd& a)
 
 
     mActions[index][11] = max(50.0,  mActions[index][11]);
+    mActions[index][10] = max(50.0,  mActions[index][10]);
     if(mActions[index].segment(10,3).norm()>200.0)
     {
     	mActions[index].segment(10,3) *= 200.0/mActions[index].segment(10,3).norm();
@@ -1506,7 +1507,7 @@ reset()
 		mCurActionTypes[i] = curDefaultActionType;
 		mPrevActionTypes[i] = 0;
 
-		mCurCriticalActionTimes[i] = 30;
+		mCurCriticalActionTimes[i] = 60;
 		mChangeContactIsActive[i] = false;
 
 		curContact[i] = -1;
@@ -1565,28 +1566,21 @@ resetCharacterPositions()
 	targetZeroVec[4+4] = 1;
 
 
-	if(useHalfCourt)
-	{
-		curBallPosition[0] = (double) rand()/RAND_MAX * xRange*1.0;
-		curBallPosition[2] = (double) rand()/RAND_MAX * zRange*1.0;
-	}
-	else
-	{
-		curBallPosition[0] = (double) rand()/RAND_MAX * xRange*2.0 - xRange;
-		curBallPosition[2] = (double) rand()/RAND_MAX * zRange*2.0 - zRange;
-	}
+	// if(useHalfCourt)
+	// {
+	// 	curBallPosition[0] = (double) rand()/RAND_MAX * xRange*1.0;
+	// 	curBallPosition[2] = (double) rand()/RAND_MAX * zRange*1.0;
+	// }
+	// else
+	// {
+	// 	curBallPosition[0] = (double) rand()/RAND_MAX * xRange*2.0 - xRange;
+	// 	curBallPosition[2] = (double) rand()/RAND_MAX * zRange*2.0 - zRange;
+	// }
 
-	curBallPosition[1] = 0.895;
+	// curBallPosition[1] = 0.895;
 
-	Eigen::Vector6d ballPosition = ballSkel->getPositions();
-	ballPosition.setZero();
-	ballPosition.segment(3,3) = curBallPosition;
-	ballSkel->setPositions(ballPosition);
 
-	for(int i=0;i<3;i++)
-	{
-		updatePrevBallPositions(curBallPosition);
-	}
+
 	criticalPoint_targetBallPosition = curBallPosition;
 	criticalPoint_targetBallVelocity.setZero();
 
@@ -1601,6 +1595,16 @@ resetCharacterPositions()
 	auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(dribbleDefaultVec));
     Eigen::VectorXd nextPosition = std::get<0>(nextPositionAndContacts);
     mCharacters[0]->getSkeleton()->setPositions(nextPosition);
+    curBallPosition = std::get<1>(nextPositionAndContacts).segment(4,3);
+	for(int i=0;i<3;i++)
+	{
+		updatePrevBallPositions(curBallPosition);
+	}
+
+	Eigen::Vector6d ballPosition = ballSkel->getPositions();
+	ballPosition.setZero();
+	ballPosition.segment(3,3) = curBallPosition;
+	ballSkel->setPositions(ballPosition);
 
 	for(int i=0;i<mNumChars;i++)
 	{
@@ -1636,7 +1640,7 @@ resetCharacterPositions()
 	// }
 
 	curFrame = 0;
-	criticalPointFrame = 0;
+	criticalPointFrame = 0; 
 	// std::cout<<"B"<<std::endl;
 
 }
@@ -1885,7 +1889,7 @@ computeCriticalActionTimes()
 	    else
 	    {
 	    	// mCurCriticalActionTimes[index] = (int) (mActions[index][4+8+6]+0.5);
-	    	mCurCriticalActionTimes[index] = 30;
+	    	mCurCriticalActionTimes[index] = 60;
     		if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
     		{
     			mActionGlobalBallPosition[index] = rootT * ((Eigen::Vector3d)mActions[index].segment(4+6,3)/100.0);
