@@ -129,7 +129,7 @@ SingleControlWindow(const char* nn_path,
 	if(reducedDim)
 		str = "num_action = 4";
 	else
-		str = ("num_action = "+std::to_string(mEnv->getNumAction()-2)).c_str();
+		str = ("num_action = "+std::to_string(mEnv->getNumAction()-1)).c_str();
 	p::exec(str, mns);
 
 	nn_module_0 = new boost::python::object[mEnv->mNumChars];
@@ -738,7 +738,7 @@ display()
 	        if(xData[0][mFrame][i] >= 0.5)
 	            curAction = std::to_string(i-4);
 	    }
-	    curAction = curAction+"     "+std::to_string(xData[0][mFrame][4+numActions+6]/30.0);
+	    curAction = curAction+"     "+std::to_string(xData[0][mFrame][4+numActions+4]/30.0);
     }
     else
     {
@@ -754,12 +754,12 @@ display()
 	        }
 	    }
 	    curAction = std::to_string(maxIndex-4);
-	    curAction = curAction+"     "+std::to_string(mEnv->mActions[0][4+numActions+6]/30.0);
+	    curAction = curAction+"     "+std::to_string(mEnv->mActions[0][4+numActions+4]/30.0);
     }
 	if(mEnv->mCurActionTypes[0] == 1 || mEnv->mCurActionTypes[0] == 3 )
 	{
-		Eigen::Vector3d ballTargetPosition = mEnv->mActions[0].segment(10,3)/100.0;
-		Eigen::Vector3d ballTargetVelocity = mEnv->mActions[0].segment(10+3,3)/100.0;
+		Eigen::Vector3d ballTargetPosition = Eigen::Vector3d(0.0, mEnv->mActions[0][13]/100.0, 0.0);
+		Eigen::Vector3d ballTargetVelocity = mEnv->mActions[0].segment(10,3)/100.0;
 		ballTargetPosition = rootIsometry * ballTargetPosition;
 		ballTargetVelocity = rootIsometry.linear() * ballTargetVelocity;
 
@@ -772,7 +772,7 @@ display()
 
 
 
-    GUI::drawStringOnScreen(0.2, 0.25, std::to_string(mEnv->mActions[0][4+numActions+6]/30.0), true, Eigen::Vector3d(1,1,1));
+    GUI::drawStringOnScreen(0.2, 0.25, std::to_string(mEnv->mActions[0][4+numActions+4]/30.0), true, Eigen::Vector3d(1,1,1));
 
     std::string score = "Score : "+to_string(mEnv->mAccScore[0]);
    
@@ -918,7 +918,7 @@ getActionFromNN(int index)
 	// std::cout<<state.segment(155,6).transpose()<<std::endl;
 	// std::cout<<state.segment(mEnv->mCharacters[0]->getSkeleton()->getNumDofs(),12).transpose()<<std::endl;
 
-	Eigen::VectorXd mAction(4+6+8);
+	Eigen::VectorXd mAction(16);
 	mAction.setZero();
 
 	get_action_0 = nn_module_0[index].attr("get_action");

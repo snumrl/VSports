@@ -367,7 +367,7 @@ public:
 	bool ballGravityChecker(int index);
 	std::vector<double> prevFreeBallPositions;
 
-	std::vector<Eigen::Vector3d> mActionGlobalBallPosition;
+	std::vector<double> mActionGlobalBallPosition;
 	std::vector<Eigen::Vector3d> mActionGlobalBallVelocity;
 
 	std::vector<bool> mChangeContactIsActive;

@@ -95,7 +95,7 @@ initMotionGenerator(std::string dataPath)
 	initDartNameIdMapping();
 	mMotionGenerator = new ICA::dart::MotionGenerator(dataPath, this->dartNameIdMap);
 
-	Eigen::VectorXd targetZeroVec(14);
+	Eigen::VectorXd targetZeroVec(15);
 	targetZeroVec.setZero();
 
 	targetZeroVec[4+4] = 1;
@@ -161,8 +161,8 @@ initCharacters(std::string bvhPath)
 	mPrevActions.resize(mNumChars);
 	for(int i=0;i<mNumChars;i++)
 	{
-		mActions[i].resize(20);
-		mPrevActions[i].resize(20);
+		mActions[i].resize(17);
+		mPrevActions[i].resize(17);
 
 		mActions[i].setZero();
 		mPrevActions[i].setZero();
@@ -242,7 +242,7 @@ initCharacters(std::string bvhPath)
 		mChangeContactIsActive[i] = false;
 	}
 	
-	dribbleDefaultVec.resize(18);
+	dribbleDefaultVec.resize(15);
 	dribbleDefaultVec.setZero();
 	//**action Type
 
@@ -816,7 +816,7 @@ applyAction(int index)
 	}
 
 
-	Eigen::VectorXd mgAction = mActions[index].segment(0,18);
+	Eigen::VectorXd mgAction = mActions[index].segment(0,15);
 
 	auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(mgAction));
     Eigen::VectorXd nextPosition = std::get<0>(nextPositionAndContacts);
@@ -834,6 +834,10 @@ applyAction(int index)
 		// 	mCurBallPossessions[index] = true;
 		// else
 		// 	mCurBallPossessions[index] = false;
+		if(mCurCriticalActionTimes[index] < -10)
+		{
+			mCurBallPossessions[index] = false;
+		}
 	}
 	if(mCurActionTypes[index] == 2)
 	{
@@ -896,7 +900,7 @@ applyAction(int index)
     //Update hand Contacts;
     if(mChangeContactIsActive[index] && false)
     {
-    	updatePrevContacts(index, mActions[index].segment(18,2));
+    	updatePrevContacts(index, mActions[index].segment(14,2));
     	if(curContact[index] == -1)
     	{
     		mChangeContactIsActive[index] = false;
@@ -914,6 +918,13 @@ applyAction(int index)
     	}
     	else
    			updatePrevContacts(index, std::get<1>(nextPositionAndContacts).segment(2,2));
+
+    }
+
+    if((mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3) 
+    		&& mCurCriticalActionTimes[index]<-10)
+    {
+    	curContact[index] = -1;
     }
 
     // std::cout<<curContact[index]<<std::endl;
@@ -1393,18 +1404,26 @@ setAction(int index, const Eigen::VectorXd& a)
     mActions[index][4+curActionType] = 1.0;
 
 
-    mActions[index][11] = max(50.0,  mActions[index][11]);
-    mActions[index][10] = max(50.0,  mActions[index][10]);
-    if(mActions[index].segment(10,3).norm()>200.0)
+    // mActions[index][11] = max(50.0,  mActions[index][11]);
+    // mActions[index][10] = max(50.0,  mActions[index][10]);
+    // if(mActions[index].segment(10,3).norm()>200.0)
+    // {
+    // 	mActions[index].segment(10,3) *= 200.0/mActions[index].segment(10,3).norm();
+    // }
+
+    if(mActions[index].segment(10,3).norm()>1300.0)
     {
-    	mActions[index].segment(10,3) *= 200.0/mActions[index].segment(10,3).norm();
+    	mActions[index].segment(10,3) *= 1300.0/mActions[index].segment(13,3).norm();
     }
 
-    if(mActions[index].segment(13,3).norm()>1300.0)
+    if(mActions[index][13] > 250.0)
     {
-    	mActions[index].segment(13,3) *= 1300.0/mActions[index].segment(13,3).norm();
+    	mActions[index][13]  = 250.0;
     }
-
+    else if(mActions[index][13] < 50.0)
+    {
+    	mActions[index][13] = 50.0;
+    }
 
 
 
@@ -1427,19 +1446,19 @@ setAction(int index, const Eigen::VectorXd& a)
 
 
 	computeCriticalActionTimes();
-    if(isCriticalAction(curActionType))
-    {
-    	if(mActions[index][16]== 0)
-    		mActions[index][16+1] = 1;
-    	else
-    		mActions[index][16+1] = 0;
-    }
-    else
-    	mActions[index][16+1] = 0;
+    // if(isCriticalAction(curActionType))
+    // {
+    // 	if(mActions[index][16]== 0)
+    // 		mActions[index][16+1] = 1;
+    // 	else
+    // 		mActions[index][16+1] = 0;
+    // }
+    // else
+    // 	mActions[index][16+1] = 0;
 
     //** contact
    	for(int i=0;i<2;i++)
-   		mActions[index][18+i] >= 0.0 ? 1.0 : 0.0;
+   		mActions[index][15+i] >= 0.0 ? 1.0 : 0.0;
 
 
 }
@@ -1507,7 +1526,7 @@ reset()
 		mCurActionTypes[i] = curDefaultActionType;
 		mPrevActionTypes[i] = 0;
 
-		mCurCriticalActionTimes[i] = 60;
+		mCurCriticalActionTimes[i] = 30;
 		mChangeContactIsActive[i] = false;
 
 		curContact[i] = -1;
@@ -1561,7 +1580,7 @@ resetCharacterPositions()
 
 
 
-	Eigen::VectorXd targetZeroVec(18);
+	Eigen::VectorXd targetZeroVec(14);
 	targetZeroVec.setZero();
 	targetZeroVec[4+4] = 1;
 
@@ -1869,36 +1888,37 @@ computeCriticalActionTimes()
 	    // }
 	    // prevActionType = maxIndex-4;
 
-		double interp = 0.0;
+		double interp = 0.5;
     	Eigen::Isometry3d rootT = getRootT(index);
 	    if(mCurActionTypes[index] == mPrevActionTypes[index])
 	    {
 	    	if(isCriticalAction(mCurActionTypes[index]))
 	    	{
 	    		mCurCriticalActionTimes[index]--;
-	    		Eigen::Vector3d curActionGlobalBallPosition = rootT * ((Eigen::Vector3d)mActions[index].segment(4+6,3)/100.0);
-	    		Eigen::Vector3d curActionGlobalBallVelocity = rootT.linear() * (mActions[index].segment(4+6+3,3)/100.0);
+	    		double curActionGlobalBallPosition = mActions[index][13]/100.0;
+	    		Eigen::Vector3d curActionGlobalBallVelocity = rootT.linear() * (mActions[index].segment(4+6,3)/100.0);
 
 	    		mActionGlobalBallPosition[index] = (1.0-interp) * mActionGlobalBallPosition[index] + interp * curActionGlobalBallPosition;
 	    		mActionGlobalBallVelocity[index] = (1.0-interp) * mActionGlobalBallVelocity[index] + interp * curActionGlobalBallVelocity;
-	    		mActions[index].segment(4+6,3) = rootT.inverse() *mActionGlobalBallPosition[index];
-	    		mActions[index].segment(4+6+3,3) = rootT.linear().inverse() * mActionGlobalBallVelocity[index];
-	    		mActions[index].segment(4+6,6) *= 100.0;
+	    		// mActions[index].segment(4+6,3) = rootT.inverse() *mActionGlobalBallPosition[index];
+	    		mActions[index].segment(4+6,3) = rootT.linear().inverse() * mActionGlobalBallVelocity[index];
+	    		mActions[index].segment(4+6,3) *= 100.0;
+	    		mActions[index][13] = mActionGlobalBallPosition[index]*100.0;
 	    	}
 	    }
 	    else
 	    {
 	    	// mCurCriticalActionTimes[index] = (int) (mActions[index][4+8+6]+0.5);
-	    	mCurCriticalActionTimes[index] = 60;
+	    	mCurCriticalActionTimes[index] = 30;
     		if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
     		{
-    			mActionGlobalBallPosition[index] = rootT * ((Eigen::Vector3d)mActions[index].segment(4+6,3)/100.0);
-    			mActionGlobalBallVelocity[index] = rootT.linear() * (mActions[index].segment(4+6+3,3)/100.0);
+    			mActionGlobalBallPosition[index] =  mActions[index][13]/100.0;
+    			mActionGlobalBallVelocity[index] = rootT.linear() * (mActions[index].segment(4+6,3)/100.0);
     		}
 	    }
 	    if(!isCriticalAction(mCurActionTypes[index]))
 	    	mCurCriticalActionTimes[index] = 0;
-		mActions[index][4+6+6] = mCurCriticalActionTimes[index];
+		mActions[index][4+6+4] = mCurCriticalActionTimes[index];
 	}
 	// std::cout<<"mCurCriticalActionTimes[index] "<<mCurCriticalActionTimes[0]<<std::endl;
 
