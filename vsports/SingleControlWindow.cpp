@@ -506,7 +506,7 @@ step()
 	mEnv->setAction(0, mActions[0]);
 
 	std::cout<<mEnv->mActions[0].segment(0,10).transpose()<<std::endl;
-	std::cout<<mEnv->mActions[0].segment(10,8).transpose()<<std::endl;
+	std::cout<<mEnv->mActions[0].segment(10,7).transpose()<<std::endl;
 
 
 

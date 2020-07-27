@@ -29,7 +29,7 @@ Environment::
 Environment(int control_Hz, int simulation_Hz, int numChars, std::string bvh_path, std::string nn_path)
 :mControlHz(control_Hz), mSimulationHz(simulation_Hz), mNumChars(numChars), mWorld(std::make_shared<dart::simulation::World>()),
 mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0), endTime(15),
-criticalPointFrame(0), curFrame(0), mIsFoulState(false)
+criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false)
 {
 	std::cout<<"Envionment Generation --- ";
 	srand((unsigned int)time(0));
@@ -621,7 +621,7 @@ getState(int index)
 	// }
 	if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
 	{
-		if(mCurCriticalActionTimes[index] == 10.0)
+		if(mCurCriticalActionTimes[index] == 15.0)
 		{
 			mChangeContactIsActive[index] = true;
 		}
@@ -678,40 +678,32 @@ Environment::
 getReward(int index, bool verbose)
 {
 	double reward = 0;
-	// reward = exp(-(curBallPosition - mTargetBallPosition).norm());
-	// if((curBallPosition - mTargetBallPosition).norm() < 0.3)
-	// {
-	// reward = 100;
-	// std::cout<<"Successed"<<std::endl;
-	// mIsTerminalState = true;
-	// }
-	// reward = exp(-(mCharacters[0]->getSkeleton()->getCOM() - mTargetBallPosition).norm());
-	// if((mCharacters[0]->getSkeleton()->getCOM () - mTargetBallPosition).norm() < 1.0)
-	// {
-	// reward = 100;
-	// std::cout<<"Successed"<<std::endl;
-	// mIsTerminalState = true;
-	// }
 
-	// Eigen::Vector3d curCOM = mCharacters[0]->getSkeleton()->getCOM();
-
-	// Eigen::Vector3d targetBallDirection = mTargetBallPosition - curCOM;
-	// // targetBallDirection[1] = 0;
-	// if(targetBallDirection.norm() != 0)
-	// 	targetBallDirection.normalize();
-
-	// Eigen::Vector3d curDirection = 30.0 *(curCOM - mPrevCOMs[index]);
-	// // curDirection[1] = 0;
+	Eigen::Isometry3d rootT = getRootT(index);
+	Eigen::Vector3d targetPlaneNormal = mTargetBallPosition - rootT.translation();
+	targetPlaneNormal[1] = 0;
 
 
-	// double theta = acos(targetBallDirection.dot(curDirection.normalized()));
-	// reward = 0.5*exp(- theta) * curDirection.norm();
-	// if((curCOM - mTargetBallPosition).norm() < 1.0)
-	// {
-	// 	reward = 100;
-	// 	std::cout<<"Successed"<<std::endl;
-	// 	mIsTerminalState = true;
-	// }
+	Eigen::Vector3d relCurBallPosition = curBallPosition - rootT.translation();
+
+
+	Eigen::Vector3d projCurBallPosition = targetPlaneNormal.normalized() * (targetPlaneNormal.normalized().dot(relCurBallPosition));
+	double direction = targetPlaneNormal.normalized().dot(relCurBallPosition);
+	if(direction >= 0)
+	{
+		if(!gotReward)
+		{
+			if(projCurBallPosition.norm() > targetPlaneNormal.norm())
+			{
+				gotReward =true;
+				double distanceOnPlane = (mTargetBallPosition - curBallPosition).norm();
+				reward = exp(-pow(distanceOnPlane,2));
+				mIsTerminalState = true;
+				std::cout<<"END!"<<std::endl;
+			}
+		}
+		
+	}
 
 
 	Eigen::Vector3d targetBallDirection = mTargetBallPosition - curBallPosition;
@@ -726,20 +718,22 @@ getReward(int index, bool verbose)
 
 	// double theta = acos(targetBallDirection.dot(curDirection.normalized()));
 	
-	reward = 0.001*targetBallDirection.dot(curBallVelocity);
+	reward += 0.001*targetBallDirection.dot(curBallVelocity);
 	// reward = max(0.0, reward);
 
-	Eigen::Vector3d targetBallPosition = mTargetBallPosition - curBallPosition;
+	// Eigen::Vector3d targetBallPosition = mTargetBallPosition - curBallPosition;
 	// targetBallPosition[1] = 0.0;
-	if((targetBallPosition).norm() < 0.3)
-	{
-		// if(!mCurBallPossessions[index])
-		// {
-			reward = 1;
-			std::cout<<"Successed"<<std::endl;
-			mIsTerminalState = true;
-		// }
-	}
+
+	// if((targetBallPosition).norm() < 0.3)
+	// {
+	// 	// if(!mCurBallPossessions[index])
+	// 	// {
+	// 		reward = 1;
+	// 		std::cout<<"Successed"<<std::endl;
+			
+	// 		mIsTerminalState = true;
+	// 	// }
+	// }
 
 	return reward;
 }
@@ -898,14 +892,17 @@ applyAction(int index)
 
 
     //Update hand Contacts;
-    if(mChangeContactIsActive[index] && false)
+    if(mChangeContactIsActive[index])
     {
-    	updatePrevContacts(index, mActions[index].segment(14,2));
+    	// std::cout<<"mChangeContactIsActive"<<std::endl;
+    	updatePrevContacts(index, mActions[index].segment(15,2));
     	if(curContact[index] == -1)
     	{
     		mChangeContactIsActive[index] = false;
     		mCurBallPossessions[index] = false;
     	}
+    	// std::cout<<curContact[index]<<std::endl;
+    	// std::cout<<std::endl;
 
     }
     else
@@ -1413,7 +1410,7 @@ setAction(int index, const Eigen::VectorXd& a)
 
     if(mActions[index].segment(10,3).norm()>1300.0)
     {
-    	mActions[index].segment(10,3) *= 1300.0/mActions[index].segment(13,3).norm();
+    	mActions[index].segment(10,3) *= 1300.0/mActions[index].segment(10,3).norm();
     }
 
     if(mActions[index][13] > 250.0)
@@ -1458,7 +1455,7 @@ setAction(int index, const Eigen::VectorXd& a)
 
     //** contact
    	for(int i=0;i<2;i++)
-   		mActions[index][15+i] >= 0.0 ? 1.0 : 0.0;
+   		mActions[index][15+i] = mActions[index][15+i] >= 0.0 ? 1.0 : 0.0;
 
 
 }
@@ -1507,8 +1504,8 @@ reset()
 	mNumBallTouch = 0;
 
 	mMotionGenerator->clear();
-	resetTargetBallPosition();
 	resetCharacterPositions();
+	resetTargetBallPosition();
 	for(int i=0;i<mNumChars;i++)
 	{
 		mActions[i].setZero();
@@ -1532,6 +1529,7 @@ reset()
 		curContact[i] = -1;
 		prevFreeBallPositions.clear();
 	}
+	gotReward = false;
 }
 
 
@@ -1539,13 +1537,17 @@ void
 Environment::
 resetTargetBallPosition()
 {
-	double xRange = 28.0*0.5*0.8;
-	double zRange = 15.0*0.5*0.8;
-	double yRange = 3.0;
+	Eigen::Isometry3d rootT = getRootT(0);
 
-	mTargetBallPosition[0] = (double) rand()/RAND_MAX * xRange*1.0 ;
-	mTargetBallPosition[1] = (double) rand()/RAND_MAX * yRange*1.0 ;
-	mTargetBallPosition[2] = (double) rand()/RAND_MAX * zRange*2.0 - zRange;
+	double xRange = 5.0;
+	double yRange = 3.0;
+	double zRange = 4.0;
+
+	mTargetBallPosition[0] = (double) rand()/RAND_MAX * xRange*0.5 + xRange*0.5;
+	mTargetBallPosition[1] = (double) rand()/RAND_MAX * yRange*0.5 + yRange*0.5 ;
+	mTargetBallPosition[2] = (double) rand()/RAND_MAX * zRange*0.5 + zRange*0.5;
+
+	mTargetBallPosition = rootT * mTargetBallPosition;
 
 	// mTargetBallPosition = Eigen::Vector3d(14.0 -1.5 + 0.05, 3.1+0.2, 0.0);
 	// goalpostPositions.segment(3,3) = Eigen::Vector3d(-14.0*0.8 +1.0, 3.0*0.8, 0.0);
@@ -1720,6 +1722,8 @@ updatePrevContacts(int index, Eigen::Vector2d handContacts)
     
     if(handContacts[0]>0.5 && handContacts[1]>0.5)
         curContact[index] = 2;
+    // std::cout<<"updatePrevContacts "<<handContacts.transpose()<<std::endl;
+    // std::cout<<"updatePrevContacts "<<curContact[index]<<std::endl;
 
 }
 
@@ -1888,7 +1892,7 @@ computeCriticalActionTimes()
 	    // }
 	    // prevActionType = maxIndex-4;
 
-		double interp = 0.5;
+		double interp = 0.3;
     	Eigen::Isometry3d rootT = getRootT(index);
 	    if(mCurActionTypes[index] == mPrevActionTypes[index])
 	    {
@@ -1896,13 +1900,18 @@ computeCriticalActionTimes()
 	    	{
 	    		mCurCriticalActionTimes[index]--;
 	    		double curActionGlobalBallPosition = mActions[index][13]/100.0;
-	    		Eigen::Vector3d curActionGlobalBallVelocity = rootT.linear() * (mActions[index].segment(4+6,3)/100.0);
+	    		Eigen::Vector3d curActionGlobalBallVelocity = rootT.linear() * ( mActions[index].segment(4+6,3)/100.0);
 
 	    		mActionGlobalBallPosition[index] = (1.0-interp) * mActionGlobalBallPosition[index] + interp * curActionGlobalBallPosition;
 	    		mActionGlobalBallVelocity[index] = (1.0-interp) * mActionGlobalBallVelocity[index] + interp * curActionGlobalBallVelocity;
 	    		// mActions[index].segment(4+6,3) = rootT.inverse() *mActionGlobalBallPosition[index];
 	    		mActions[index].segment(4+6,3) = rootT.linear().inverse() * mActionGlobalBallVelocity[index];
 	    		mActions[index].segment(4+6,3) *= 100.0;
+	    		// if(mActions[index].segment(4+6,3).norm()>2000)
+	    		// {
+	    		// 	std::cout<<mActions[index].segment(4+6,3).transpose()<<std::endl;
+	    		// 	exit(0);
+	    		// }
 	    		mActions[index][13] = mActionGlobalBallPosition[index]*100.0;
 	    	}
 	    }
