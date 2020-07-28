@@ -509,10 +509,14 @@ getState(int index)
 	else
 	{	
 		curBallVelocity = 30.0 * (curBallPosition - prevBallPositions[1]);
-		if(curBallVelocity.norm() > 8.5)
+		if(curBallVelocity.norm() > 20.0)
 			curBallVelocity.setZero();
 		ballVelocity = rootT.linear().inverse()* curBallVelocity;
+		// std::cout<<"A : "<<curBallPosition.transpose()<<std::endl;
+		// std::cout<<"B : "<<prevBallPositions[1].transpose()<<std::endl;
 	}
+
+	// std::cout<<"Cur ball velocity : "<<curBallVelocity.transpose()<<std::endl;
 
 
 
