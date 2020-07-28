@@ -621,7 +621,7 @@ getState(int index)
 	// }
 	if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
 	{
-		if(mCurCriticalActionTimes[index] == 15.0)
+		if(mCurCriticalActionTimes[index] == 10.0)
 		{
 			mChangeContactIsActive[index] = true;
 		}
@@ -699,7 +699,8 @@ getReward(int index, bool verbose)
 				double distanceOnPlane = (mTargetBallPosition - curBallPosition).norm();
 				reward = exp(-pow(distanceOnPlane,2));
 				mIsTerminalState = true;
-				std::cout<<"END!"<<std::endl;
+				if(distanceOnPlane < 0.3)
+					std::cout<<"SUCCESSED!"<<std::endl;
 			}
 		}
 		
@@ -900,6 +901,7 @@ applyAction(int index)
     	{
     		mChangeContactIsActive[index] = false;
     		mCurBallPossessions[index] = false;
+    		// std::cout<<"here"<<std::endl;
     	}
     	// std::cout<<curContact[index]<<std::endl;
     	// std::cout<<std::endl;
@@ -912,6 +914,7 @@ applyAction(int index)
     		&& !mChangeContactIsActive[index])
     	{
     		updatePrevContacts(index, Eigen::Vector2d::Zero());
+    		mCurBallPossessions[index] = false;
     	}
     	else
    			updatePrevContacts(index, std::get<1>(nextPositionAndContacts).segment(2,2));
