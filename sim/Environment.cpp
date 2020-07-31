@@ -629,7 +629,7 @@ getState(int index)
 		{
 			mChangeContactIsActive[index] = true;
 		}
-		else if(mCurActionTypes[index] < -10.0)
+		else if(mCurCriticalActionTimes[index] < -10.0)
 		{
 			mChangeContactIsActive[index] = false;
 		}
@@ -682,6 +682,7 @@ Environment::
 getReward(int index, bool verbose)
 {
 	double reward = 0;
+	double g= -9.81;
 
 	Eigen::Isometry3d rootT = getRootT(index);
 	Eigen::Vector3d targetPlaneNormal = mTargetBallPosition - rootT.translation();
@@ -693,6 +694,71 @@ getReward(int index, bool verbose)
 
 	Eigen::Vector3d projCurBallPosition = targetPlaneNormal.normalized() * (targetPlaneNormal.normalized().dot(relCurBallPosition));
 	double direction = targetPlaneNormal.normalized().dot(relCurBallPosition);
+
+	bool fastTermination = true;
+	bool fastViewTermination = false;
+
+	Eigen::Vector3d targetBallDirection = mTargetBallPosition - curBallPosition;
+	// targetBallDirection[1] = 0;
+	if(targetBallDirection.norm() != 0)
+		targetBallDirection.normalize();
+
+	// Eigen::Vector3d curDirection = 30.0 *(curBallPosition - mPrevBallPosition);
+
+	// curDirection[1] = 0;
+
+
+	// double theta = acos(targetBallDirection.dot(curDirection.normalized()));
+	
+	reward += 0.001*targetBallDirection.dot(curBallVelocity);
+	if(fastTermination)
+	{
+		if(!mCurBallPossessions[index])
+		{
+			// criticalPoint_targetBallPosition;
+			// criticalPoint_targetBallVelocity;
+			Eigen::Vector3d relTargetPosition = mTargetBallPosition - criticalPoint_targetBallPosition;
+			Eigen::Vector3d projRelTargetPosition = relTargetPosition;
+			projRelTargetPosition[1] = 0.0;
+			Eigen::Vector3d projCriticalVelocity = criticalPoint_targetBallVelocity;
+			projCriticalVelocity[1] = 0.0;
+			if(projRelTargetPosition.dot(projCriticalVelocity) > 0)
+			{
+				double normalDirVelocity = projRelTargetPosition.normalized().dot(projCriticalVelocity);
+				double time = projRelTargetPosition.norm()/normalDirVelocity;
+				// std::cout<<"Time : "<<time<<std::endl;
+
+				Eigen::Vector3d projectedBallPosition = criticalPoint_targetBallPosition + time *criticalPoint_targetBallVelocity;
+				projectedBallPosition[1] += 0.5*g*time*time;
+
+				// std::cout<<criticalPointFrame<<" #### "<<curFrame<<std::endl;
+				if(criticalPointFrame == curFrame -2)
+				{
+					// std::cout<<"SHOOT!"<<std::endl;
+					reward = exp(-pow((mTargetBallPosition - projectedBallPosition).norm(),2));
+					if((mTargetBallPosition - projectedBallPosition).norm() < 0.3)
+						std::cout<<"SUCCESSED!"<<std::endl;
+				}
+				if(fastViewTermination)
+					mIsTerminalState = true;
+				return reward;
+
+			}
+			else
+			{
+				if(fastViewTermination)
+					mIsTerminalState = true;
+				return 0;
+			}
+		}
+		else
+		{
+			return reward;
+		}
+	}
+
+
+
 	if(direction >= 0)
 	{
 		if(!gotReward)
@@ -711,19 +777,6 @@ getReward(int index, bool verbose)
 	}
 
 
-	Eigen::Vector3d targetBallDirection = mTargetBallPosition - curBallPosition;
-	// targetBallDirection[1] = 0;
-	if(targetBallDirection.norm() != 0)
-		targetBallDirection.normalize();
-
-	// Eigen::Vector3d curDirection = 30.0 *(curBallPosition - mPrevBallPosition);
-
-	// curDirection[1] = 0;
-
-
-	// double theta = acos(targetBallDirection.dot(curDirection.normalized()));
-	
-	reward += 0.001*targetBallDirection.dot(curBallVelocity);
 	// reward = max(0.0, reward);
 
 	// Eigen::Vector3d targetBallPosition = mTargetBallPosition - curBallPosition;
@@ -906,6 +959,10 @@ applyAction(int index)
     		mChangeContactIsActive[index] = false;
     		mCurBallPossessions[index] = false;
     		// std::cout<<"here"<<std::endl;
+    	}
+    	else
+    	{
+    		mCurBallPossessions[index] = true;
     	}
     	// std::cout<<curContact[index]<<std::endl;
     	// std::cout<<std::endl;
@@ -1137,9 +1194,12 @@ applyAction(int index)
 	if(mLFootContacting[index])
 	{
 		Eigen::Vector3d curLFootPosition = skel->getBodyNode("LeftToe")->getWorldTransform().translation();
+		Eigen::Vector3d footDiff = curLFootPosition - mLLastFootPosition[index];
+		footDiff[1] = 0.0;
 		// std::cout<<(curLFootPosition - mLLastFootPosition[index]).norm()<<std::endl;
-		if((curLFootPosition - mLLastFootPosition[index]).norm()>0.35)
+		if(footDiff.norm()>0.35)
 		{
+			// std::cout<<"Left Foot Sliding"<<std::endl;
 			mIsTerminalState = true;
 		}
 	}
@@ -1147,8 +1207,11 @@ applyAction(int index)
 	if(mRFootContacting[index])
 	{
 		Eigen::Vector3d curRFootPosition = skel->getBodyNode("RightToe")->getWorldTransform().translation();
-		if((curRFootPosition - mRLastFootPosition[index]).norm()>0.35)
+		Eigen::Vector3d footDiff = curRFootPosition - mRLastFootPosition[index];
+		footDiff[1] = 0.0;
+		if(footDiff.norm()>0.35)
 		{
+			// std::cout<<"Right Foot Sliding"<<std::endl;
 			mIsTerminalState = true;
 		}
 	}
@@ -1210,7 +1273,7 @@ applyAction(int index)
         {
         	this->criticalPoint_targetBallVelocity = 8.0 * this->criticalPoint_targetBallVelocity.normalized();
         }
-        this->criticalPointFrame = curFrame-1;
+        this->criticalPointFrame = curFrame;
     }
 
 // 	if(prevContact[index] != -1 && curContact[index] == -1)
@@ -1551,12 +1614,13 @@ resetTargetBallPosition()
 	double zRange = 4.0;
 
 	mTargetBallPosition[0] = (double) rand()/RAND_MAX * xRange*0.5 + xRange*0.5;
-	mTargetBallPosition[1] = (double) rand()/RAND_MAX * yRange*0.5 + yRange*0.5 ;
+	// mTargetBallPosition[1] = (double) rand()/RAND_MAX * yRange*0.5 + yRange*0.5 ;
+	mTargetBallPosition[1] = 2.4 ;
 	mTargetBallPosition[2] = (double) rand()/RAND_MAX * zRange*0.5 + zRange*0.5;
 
 	mTargetBallPosition = rootT * mTargetBallPosition;
 
-	// mTargetBallPosition = Eigen::Vector3d(14.0 -1.5 + 0.05, 3.1+0.2, 0.0);
+	mTargetBallPosition = Eigen::Vector3d(14.0 -1.5 + 0.05, 3.1+0.2, 0.0);
 	// goalpostPositions.segment(3,3) = Eigen::Vector3d(-14.0*0.8 +1.0, 3.0*0.8, 0.0);
 
 }
@@ -1578,14 +1642,41 @@ resetCharacterPositions()
 
 	if(useHalfCourt)
 	{
-		standPosition[3] = (double) rand()/RAND_MAX * xRange*1.0;
-		standPosition[5] = (double) rand()/RAND_MAX * zRange*1.0;
+		double r = (double) rand()/RAND_MAX * zRange * 0.8 + zRange*0.2;
+		double theta = (double) rand()/RAND_MAX * M_PI;
+		// standPosition[3] = (double) rand()/RAND_MAX * xRange*1.0;
+		// standPosition[5] = (double) rand()/RAND_MAX * zRange*1.0;
+
+		standPosition[3] = xRange - r * sin(theta);
+		standPosition[5] = 0 + r * cos(theta);
 	}
 	else
 	{
 		standPosition[3] = (double) rand()/RAND_MAX * xRange*2.0 - xRange;
 		standPosition[5] = (double) rand()/RAND_MAX * zRange*2.0 - zRange;
 	}
+
+	Eigen::Vector3d curRootOrientation = standPosition.segment(0,3);
+
+	double angle = curRootOrientation.norm();
+	Eigen::Vector3d axis = curRootOrientation.normalized();
+
+	Eigen::Vector3d curDirection = Eigen::AngleAxisd(angle, axis) * Eigen::Vector3d::UnitY();
+	curDirection[1] = 0.0;
+	curDirection.normalize();
+	// std::cout<<curDirection.transpose()<<std::endl;
+
+	Eigen::AngleAxisd aa(angle, axis);
+	Eigen::Vector3d goalDirection = Eigen::Vector3d(14.0 -1.5 + 0.05, 3.1+0.2, 0.0)- standPosition.segment(3,3);
+	if(curDirection.dot(goalDirection) <0.0)
+	{
+		aa = Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitY())*aa;
+	}
+	Eigen::Vector3d newRootOrientation = aa.angle() * aa.axis();
+
+	standPosition.segment(0,3) = newRootOrientation;
+
+
 
 
 
@@ -1611,6 +1702,9 @@ resetCharacterPositions()
 
 	criticalPoint_targetBallPosition = curBallPosition;
 	criticalPoint_targetBallVelocity.setZero();
+
+	if((double) rand()/RAND_MAX > 0.5)
+		dribbleDefaultVec[3] *= -1;
 
 	for(int i=0;i<RESET_ADAPTING_FRAME;i++)
 		mMotionGenerator->setCurrentPose(standPosition, Utils::toStdVec(dribbleDefaultVec));
@@ -1820,7 +1914,7 @@ computeHandBallPosition(int index)
 	{
 		Eigen::Isometry3d leftHandTransform = skel->getBodyNode("LeftHand")->getWorldTransform();
 		Eigen::Isometry3d rightHandTransform = skel->getBodyNode("RightHand")->getWorldTransform();
-		ballPosition = Eigen::Vector3d(0.1, 0.0, 0.0);
+		ballPosition = Eigen::Vector3d(0.1, 0.18, 0.0);
 
 		ballPosition = (leftHandTransform*ballPosition + rightHandTransform*ballPosition)/2.0;
 	}
@@ -2411,6 +2505,8 @@ getRootT(int index)
 	Eigen::Isometry3d rootT = skel->getRootBodyNode()->getWorldTransform();
 
 	Eigen::Vector3d front = rootT.linear()*Eigen::Vector3d::UnitY();
+
+	// front = Eigen::AngleAxisd(skel->getPositions().segment(0,3).norm(), skel->getPositions().segment(0,3).normalized())*Eigen::Vector3d::UnitY();
 	front[1] = 0.0;
 	front.normalize();
 

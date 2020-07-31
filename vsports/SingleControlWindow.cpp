@@ -716,11 +716,74 @@ display()
 
 	if(mEnv->curContact[0]==0 || mEnv->curContact[0]==2)
 	{
-		GUI::drawSphere(0.1, mEnv->mCharacters[0]->getSkeleton()->getBodyNode("LeftHand")->getWorldTransform().translation(), Eigen::Vector3d::Zero());
+		Eigen::Isometry3d handIsometry = mEnv->mCharacters[0]->getSkeleton()->getBodyNode("LeftHand")->getWorldTransform();
+
+		glPushMatrix();
+		Eigen::Vector3d handPosition = handIsometry.translation();
+		glTranslated(handPosition[0], handPosition[1], handPosition[2]);
+		Eigen::AngleAxisd handAA(handIsometry.linear());
+		glRotated(180/M_PI*handAA.angle(), handAA.axis()[0], handAA.axis()[1], handAA.axis()[2]);
+		glTranslated(0.1, 0.0, 0.0);
+
+		// GUI::drawSphere(0.1, mEnv->mCharacters[0]->getSkeleton()->getBodyNode("LeftHand")->getWorldTransform().translation(), Eigen::Vector3d::Zero());
+		glColor3f(0.0, 0.0, 0.0);
+		GUI::drawCube(Eigen::Vector3d(0.1, 0.1, 0.1));
+
+		glPopMatrix();
 	}
 	if(mEnv->curContact[0]==1 || mEnv->curContact[0]==2)
 	{
-		GUI::drawSphere(0.1, mEnv->mCharacters[0]->getSkeleton()->getBodyNode("RightHand")->getWorldTransform().translation(), Eigen::Vector3d::Zero());
+		Eigen::Isometry3d handIsometry = mEnv->mCharacters[0]->getSkeleton()->getBodyNode("RightHand")->getWorldTransform();
+
+		glPushMatrix();
+		Eigen::Vector3d handPosition = handIsometry.translation();
+		glTranslated(handPosition[0], handPosition[1], handPosition[2]);
+		Eigen::AngleAxisd handAA(handIsometry.linear());
+		glRotated(180/M_PI*handAA.angle(), handAA.axis()[0], handAA.axis()[1], handAA.axis()[2]);
+		glTranslated(0.1, 0.0, 0.0);
+
+		// GUI::drawSphere(0.1, mEnv->mCharacters[0]->getSkeleton()->getBodyNode("LeftHand")->getWorldTransform().translation(), Eigen::Vector3d::Zero());
+		glColor3f(0.0, 0.0, 0.0);
+		GUI::drawCube(Eigen::Vector3d(0.1, 0.1, 0.1));
+
+		glPopMatrix();	
+	}
+
+
+	if(mEnv->mLFootContacting[0])
+	{
+		Eigen::Isometry3d handIsometry = mEnv->mCharacters[0]->getSkeleton()->getBodyNode("LeftToe")->getWorldTransform();
+
+		glPushMatrix();
+		Eigen::Vector3d handPosition = handIsometry.translation();
+		glTranslated(handPosition[0], handPosition[1], handPosition[2]);
+		Eigen::AngleAxisd handAA(handIsometry.linear());
+		glRotated(180/M_PI*handAA.angle(), handAA.axis()[0], handAA.axis()[1], handAA.axis()[2]);
+		glTranslated(0.1, 0.0, 0.0);
+
+		// GUI::drawSphere(0.1, mEnv->mCharacters[0]->getSkeleton()->getBodyNode("LeftHand")->getWorldTransform().translation(), Eigen::Vector3d::Zero());
+		glColor3f(0.3, 0.3, 0.3);
+		GUI::drawCube(Eigen::Vector3d(0.1, 0.1, 0.1));
+
+		glPopMatrix();	
+	}
+
+	if(mEnv->mRFootContacting[0])
+	{
+		Eigen::Isometry3d handIsometry = mEnv->mCharacters[0]->getSkeleton()->getBodyNode("RightToe")->getWorldTransform();
+
+		glPushMatrix();
+		Eigen::Vector3d handPosition = handIsometry.translation();
+		glTranslated(handPosition[0], handPosition[1], handPosition[2]);
+		Eigen::AngleAxisd handAA(handIsometry.linear());
+		glRotated(180/M_PI*handAA.angle(), handAA.axis()[0], handAA.axis()[1], handAA.axis()[2]);
+		glTranslated(0.1, 0.0, 0.0);
+
+		// GUI::drawSphere(0.1, mEnv->mCharacters[0]->getSkeleton()->getBodyNode("LeftHand")->getWorldTransform().translation(), Eigen::Vector3d::Zero());
+		glColor3f(0.3, 0.3, 0.3);
+		GUI::drawCube(Eigen::Vector3d(0.1, 0.1, 0.1));
+
+		glPopMatrix();	
 	}
 
 
