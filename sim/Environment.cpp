@@ -696,7 +696,7 @@ getReward(int index, bool verbose)
 	double direction = targetPlaneNormal.normalized().dot(relCurBallPosition);
 
 	bool fastTermination = true;
-	bool fastViewTermination = false;
+	bool fastViewTermination = true;
 
 	Eigen::Vector3d targetBallDirection = mTargetBallPosition - curBallPosition;
 	// targetBallDirection[1] = 0;
@@ -1620,7 +1620,8 @@ resetTargetBallPosition()
 
 	mTargetBallPosition = rootT * mTargetBallPosition;
 
-	mTargetBallPosition = Eigen::Vector3d(14.0 -1.5 + 0.05, 3.1+0.2, 0.0);
+	// mTargetBallPosition = Eigen::Vector3d(14.0 -1.5 + 0.05, 3.1+0.2, 0.0);
+	mTargetBallPosition = Eigen::Vector3d(14.0 -1.5 + 0.05, 2.0, 0.0);
 	// goalpostPositions.segment(3,3) = Eigen::Vector3d(-14.0*0.8 +1.0, 3.0*0.8, 0.0);
 
 }
