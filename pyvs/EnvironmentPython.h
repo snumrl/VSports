@@ -5,6 +5,7 @@
 #include <string>
 #include <boost/python.hpp>
 #include <boost/python/numpy.hpp>
+#include "../extern/ICA/plugin/MotionGenerator.h"
 #include "WrapperFunctions.h"
 #include "Normalizer.h"
 
@@ -44,6 +45,10 @@ public:
 
 	// For all slaves
 	void stepsAtOnce();
+	void initMotionGenerator(std::string dataPath);
+
+    ICA::dart::MotionGenerator* mMotionGenerator;
+	std::map<std::string, int> dartNameIdMap;
 
 	// Normalizer* mNormalizer;
 private:

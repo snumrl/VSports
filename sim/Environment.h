@@ -155,7 +155,7 @@ public:
 
 
 	Eigen::VectorXd getNormalizedState(int index);
-
+	Eigen::VectorXd getMGAction(int index);
 	double getReward(int index, bool verbose = true);
 	std::vector<double> getRewards();
 
@@ -279,7 +279,9 @@ public:
 	Eigen::Vector3d criticalPoint_targetBallPosition;
 	Eigen::Vector3d criticalPoint_targetBallVelocity;
 	Eigen::Vector3d computeBallPosition();
-	void initDartNameIdMapping();
+	std::map<std::string, int> initDartNameIdMapping();
+
+	void setPositionFromBVH(int index, int bvhFrame);
 
 	void initMotionGenerator(std::string dataPath);
 
@@ -383,6 +385,8 @@ public:
 
 	bool gotReward;
 	// AgentEnvWindow* mWindow;
+
+	int resetCount;
 };
 double getFacingAngleFromLocalState(Eigen::VectorXd curState);
 Eigen::VectorXd localStateToOriginState(Eigen::VectorXd localState, int mNumChars=6);

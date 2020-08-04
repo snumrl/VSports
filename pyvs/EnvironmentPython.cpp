@@ -17,11 +17,29 @@ EnvironmentPython(int numAgent, std::string motion_nn_path)
 	}
 	mNumState = mSlaves[0]->getNumState();
 	mNumAction = mSlaves[0]->getNumAction();
+	initMotionGenerator(motion_nn_path);
+	resets();
 
 	// std::cout<<mNumState<<std::endl;
 	// exit()
 }
 // For general properties
+
+
+void
+EnvironmentPython::
+initMotionGenerator(std::string dataPath)
+{
+	mMotionGenerator = new ICA::dart::MotionGenerator(dataPath, mSlaves[0]->initDartNameIdMapping());
+}
+void
+EnvironmentPython::
+reset(int id)
+{
+	mSlaves[id]->reset();
+}
+
+
 int
 EnvironmentPython::
 getNumState()
@@ -52,12 +70,6 @@ stepAtOnce(int id)
 	mSlaves[id]->stepAtOnce();
 }
 
-void
-EnvironmentPython::
-reset(int id)
-{
-	mSlaves[id]->reset();
-}
 
 void
 EnvironmentPython::
@@ -234,6 +246,15 @@ stepsAtOnce()
 {
 	int num = getSimulationHz()/getControlHz();
 // #pragma omp parallel for
+
+	std::vector<Eigen::VectorXd> concatControlVector;
+	for(int id=0;id<mNumSlaves;++id)
+	{
+		concatControlVector.push_back(mSlaves[id]->getMGAction(0));
+	}
+
+
+
 	for(int id=0;id<mNumSlaves;++id)
 	{
 		// for(int j=0;j<num;j++)

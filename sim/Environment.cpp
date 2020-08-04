@@ -90,6 +90,13 @@ criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false)
 
 void
 Environment::
+setPositionFromBVH(int index, int bvhFrame)
+{
+	BVHmanager::setPositionFromBVH(mCharacters[index]->getSkeleton(), mBvhParser, bvhFrame);
+}
+
+void
+Environment::
 initMotionGenerator(std::string dataPath)
 {
 	initDartNameIdMapping();
@@ -128,6 +135,7 @@ initDartNameIdMapping()
 		this->dartNameIdMap[bvhSkel->getBodyNode(i)->getName()] = curIndex;
 		curIndex += bvhSkel->getBodyNode(i)->getParentJoint()->getNumDofs();
 	}
+	return this->dartNameIdMap;
 }
 
 
@@ -260,6 +268,13 @@ void setSkelCollidable(SkeletonPtr skel, bool collidable = true)
 	{ 
 		skel->getBodyNode(i)->setCollidable(collidable);
 	}
+}
+
+Eigen::VectorXd
+Environment::
+getMGAction(int index)
+{
+	return mActions[index].segment(0,15);
 }
 
 
@@ -857,6 +872,13 @@ applyAction(int index)
 	// std::cout<<mActions[index].segment(10,6).transpose()<<std::endl;
 	// std::cout<<mActions[index].segment(16,2).transpose()<<std::endl;
 	// std::cout<<endl;
+
+
+
+	// Eigen::VectorXd mgAction = mActions[index].segment(0,15);
+
+	auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(getMGAction(index)));
+
 	mPrevBallPosition = ballSkel->getCOM();
 	for(int i=0;i<mNumChars;i++)
 	{
@@ -868,9 +890,6 @@ applyAction(int index)
 	}
 
 
-	Eigen::VectorXd mgAction = mActions[index].segment(0,15);
-
-	auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(mgAction));
     Eigen::VectorXd nextPosition = std::get<0>(nextPositionAndContacts);
 
     mCharacters[index]->mSkeleton->setPositions(nextPosition);
@@ -1600,6 +1619,7 @@ reset()
 		prevFreeBallPositions.clear();
 	}
 	gotReward = false;
+	resetCount = 30;
 }
 
 
