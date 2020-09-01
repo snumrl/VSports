@@ -15,6 +15,8 @@
 // Include GLM
 #include <glm/glm.hpp>
 #include "../extern/ICA/plugin/MotionGenerator.h"
+#include "../extern/ICA/plugin/MotionGeneratorBatch.h"
+#include "../extern/ICA/plugin/utils.h"
 #include "../extern/ICA/Utils/PathManager.h"
 #include "../extern/ICA/CharacterControl/MotionRepresentation.h"
 #include "../utils/Utils.h"
@@ -121,6 +123,11 @@ SingleControlWindow(const char* nn_path,
 
 	mEnv = new Environment(30, 180, 1, "../data/motions/basketData/motion/s_004_1_1.bvh", nn_path);
 	reducedDim = false;
+	mMotionGeneratorBatch = new ICA::dart::MotionGeneratorBatch(nn_path, mEnv->initDartNameIdMapping(), 1);
+
+	mEnv->initialize(mMotionGeneratorBatch, 0);
+	// mEnv->slaveReset();
+	// mMotionGeneratorBatch->setCurrentDartPosition(mEnv->mCharacters[0]->getSkeleton()->getPositions(), 0);
 
 	p::str str = ("num_state = "+std::to_string(mEnv->getNumState())).c_str();
 	p::exec(str,mns);
@@ -302,7 +309,7 @@ keyboard(unsigned char key, int x, int y)
         }
 		case 'r':
         {
-            mEnv->reset();
+            mEnv->slaveReset();
             break;
         }
 		case 'h':
@@ -461,7 +468,7 @@ step()
 	if(mEnv->isTerminalState())// || mEnv->isFoulState())
 	{
 		sleep(1);
-		mEnv->reset();
+		mEnv->slaveReset();
 	}
 	// std::cout<<"mFrame : "<<mFrame<<std::endl;
     // std::cout<<"RNN Time : "<<std::endl;
@@ -503,6 +510,8 @@ step()
 	// mEnv->mActions[0] = Utils::toEigenVec(this->xData[0][mFrame]);
 	// std::cout<<Utils::toEigenVec(this->xData[0][mFrame]).transpose()<<std::endl;
 	getActionFromNN(0);
+	mActions[0].segment(0,2) = Eigen::Vector2d(200.0, 0.0);
+	mActions[0].segment(2,2) = Eigen::Vector2d(50.0, -50.0);
 	mEnv->setAction(0, mActions[0]);
 
 	std::cout<<mEnv->mActions[0].segment(0,10).transpose()<<std::endl;
@@ -519,7 +528,66 @@ step()
 
     // std::cout<<"Simulator Time : "<<std::endl;
     // time_check_start();
-	mEnv->stepAtOnce();
+
+
+
+
+
+
+
+
+	std::vector<std::vector<double>> concatControlVector;
+	// for(int i=0;i<mEnv->slaveResetStateVector.size();i++)
+	// {
+	// 	std::cout<<mEnv->slaveResetStateVector[i]<<" ";
+	// }
+	// std::cout<<endl;
+	// std::cout<<mEnv->slaveResetStateVector.transpose()<<std::endl;
+
+	for(int id=0;id<1;++id)
+	{
+		if(mEnv->resetCount>15)
+		{
+			mMotionGeneratorBatch->setBatchState(id, mEnv->slaveResetStateVector);
+		}
+	}
+	// std::cout<<"1111"<<std::endl;
+
+
+	for(int id=0;id<1;++id)
+	{
+		if(mEnv->resetCount<0)
+			concatControlVector.push_back(eigenToStdVec(mEnv->getMGAction(0)));
+		else
+			concatControlVector.push_back(eigenToStdVec(mEnv->slaveResetTargetVector));
+	}
+	// std::cout<<"2222"<<std::endl;
+
+	std::vector<std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool>>
+	nextPoseAndContactsWithBatch = mMotionGeneratorBatch->generateNextPoseAndContactsWithBatch(concatControlVector);
+
+	// std::cout<<"3333"<<std::endl;
+
+
+	// time_check_start();
+
+
+	for(int id=0;id<1;++id)
+	{
+		mEnv->stepAtOnce(nextPoseAndContactsWithBatch[id]);
+		// for(int j=0;j<num;j++)
+		// 	this->step(id);
+		// this->step
+		// this->stepAtOnce(id);
+	}
+
+
+
+
+
+
+
+	// mEnv->stepAtOnce();
     // time_check_end();
     // std::cout<<std::endl;
 	mEnv->getRewards();

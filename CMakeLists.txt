@@ -57,7 +57,7 @@ file(GLOB srcs
 		"./*.cpp"
 		"render/*.h" "render/*.cpp"
 		"vsports/common.h"
-		"vsports/SingleBasketballWindow.h" "vsports/SingleBasketballWindow.cpp"
+		#"vsports/SingleBasketballWindow.h" "vsports/SingleBasketballWindow.cpp"
 		"vsports/SingleControlWindow.h" "vsports/SingleControlWindow.cpp"
 		"utils/*.h" "utils/*.cpp"
 		"motion/*.h" "motion/*.cpp")

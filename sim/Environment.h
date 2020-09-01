@@ -4,6 +4,7 @@
 #include "Character3D.h"
 #include "BehaviorTree.h"
 #include "../extern/ICA/plugin/MotionGenerator.h"
+#include "../extern/ICA/plugin/MotionGeneratorBatch.h"
 #include "../motion/BVHparser.h"
 #include "../pyvs/Normalizer.h"
 
@@ -54,7 +55,7 @@
 // #define _ID_SLOWED 22
 
 enum BasketballState{
-	POSITIONING, BALL_CATCH_1, DRIBBLE, BALL_CATCH_2
+	POSITIONING, BALL_CATCH_1, DRIBBLING, BALL_CATCH_2
 };
 
 std::vector<int> getAvailableAction(BasketballState bs);
@@ -141,9 +142,11 @@ public:
 	void initFloor();
 	void initBall();
 
+	void initialize(ICA::dart::MotionGeneratorBatch* mgb, int batchIndex = 0);
 	void step();
 
 	void stepAtOnce();
+	void stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContacts);
 
 	void reset();
 	bool isTerminalState();
@@ -208,6 +211,18 @@ public:
 	bool isCriticalPoint();
 
 	bool isCriticalAction(int actionType);
+
+	void slaveReset();
+	void slaveResetCharacterPositions();
+	void slaveResetTargetBallPosition();
+
+	Eigen::VectorXd slaveResetTargetVector;
+	std::vector<double> slaveResetStateVector;
+	int resetCount;
+
+	ICA::dart::MotionGeneratorBatch* mMgb;
+	int mBatchIndex;
+
 
 public:
 	dart::simulation::WorldPtr mWorld;
@@ -386,7 +401,6 @@ public:
 	bool gotReward;
 	// AgentEnvWindow* mWindow;
 
-	int resetCount;
 };
 double getFacingAngleFromLocalState(Eigen::VectorXd curState);
 Eigen::VectorXd localStateToOriginState(Eigen::VectorXd localState, int mNumChars=6);

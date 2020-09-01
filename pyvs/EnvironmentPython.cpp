@@ -1,12 +1,14 @@
 #include "EnvironmentPython.h"
+#include "../extern/ICA/plugin/utils.h"
 #include <omp.h>
 #include "dart/math/math.hpp"
+#include "../vsports/common.h"
 #include <iostream>
 #include <GL/glut.h>
 
 EnvironmentPython::
-EnvironmentPython(int numAgent, std::string motion_nn_path)
-	:mNumSlaves(1)
+EnvironmentPython(int numAgent, std::string motion_nn_path, int numSlaves)
+	:mNumSlaves(numSlaves)
 {
 	dart::math::seedRand();
 	omp_set_num_threads(mNumSlaves);
@@ -14,11 +16,18 @@ EnvironmentPython(int numAgent, std::string motion_nn_path)
 	for(int i=0;i<mNumSlaves;i++)
 	{
 		mSlaves.push_back(new Environment(30, 180, numAgent, "../data/motions/basketData/motion/s_004_1_1.bvh", motion_nn_path));
+		// exit(0);
+	}
+	// exit(0);
+	initMotionGenerator(motion_nn_path);
+
+	for(int i=0;i<mNumSlaves;i++)
+	{
+		mSlaves[i]->initialize(mMotionGeneratorBatch, i);
 	}
 	mNumState = mSlaves[0]->getNumState();
 	mNumAction = mSlaves[0]->getNumAction();
-	initMotionGenerator(motion_nn_path);
-	resets();
+	slaveResets();
 
 	// std::cout<<mNumState<<std::endl;
 	// exit()
@@ -30,15 +39,41 @@ void
 EnvironmentPython::
 initMotionGenerator(std::string dataPath)
 {
-	mMotionGenerator = new ICA::dart::MotionGenerator(dataPath, mSlaves[0]->initDartNameIdMapping());
+	mMotionGeneratorBatch = new ICA::dart::MotionGeneratorBatch(dataPath, mSlaves[0]->initDartNameIdMapping(), mNumSlaves);
 }
+
+
+void
+EnvironmentPython::
+resets()
+{
+	for(int id=0;id<mNumSlaves;++id)
+		reset(id);
+}
+
+
 void
 EnvironmentPython::
 reset(int id)
 {
 	mSlaves[id]->reset();
 }
+void
+EnvironmentPython::
+slaveResets()
+{
+	for(int id=0;id<mNumSlaves;++id)
+		slaveReset(id);
+}
 
+
+void
+EnvironmentPython::
+slaveReset(int id)
+{
+	mSlaves[id]->slaveReset();
+	mMotionGeneratorBatch->setCurrentDartPosition(mSlaves[id]->mCharacters[0]->getSkeleton()->getPositions(), id);
+}
 
 int
 EnvironmentPython::
@@ -70,14 +105,6 @@ stepAtOnce(int id)
 	mSlaves[id]->stepAtOnce();
 }
 
-
-void
-EnvironmentPython::
-resets()
-{
-	for(int id=0;id<mNumSlaves;++id)
-		mSlaves[id]->reset();
-}
 
 bool
 EnvironmentPython::
@@ -162,6 +189,7 @@ setAction(np::ndarray np_array, int id, int index)
 	bool reducedDim = false;
 
 	Eigen::VectorXd action = Wrapper::toEigenVector(np_array);
+	// std::cout<<"Env python : "<<action.transpose()<<std::endl;
 	Eigen::VectorXd denormalizedAction;
 	Eigen::VectorXd ex_action(action.rows());
 	// if(reducedDim)
@@ -247,21 +275,46 @@ stepsAtOnce()
 	int num = getSimulationHz()/getControlHz();
 // #pragma omp parallel for
 
-	std::vector<Eigen::VectorXd> concatControlVector;
+	// std::cout<<"0000"<<std::endl;
+	std::vector<std::vector<double>> concatControlVector;
+
 	for(int id=0;id<mNumSlaves;++id)
 	{
-		concatControlVector.push_back(mSlaves[id]->getMGAction(0));
+		if(mSlaves[id]->resetCount>15)
+		{
+			mMotionGeneratorBatch->setBatchState(id, mSlaves[id]->slaveResetStateVector);
+		}
 	}
-
+	// std::cout<<"1111"<<std::endl;
 
 
 	for(int id=0;id<mNumSlaves;++id)
 	{
+		if(mSlaves[id]->resetCount<0)
+			concatControlVector.push_back(eigenToStdVec(mSlaves[id]->getMGAction(0)));
+		else
+			concatControlVector.push_back(eigenToStdVec(mSlaves[id]->slaveResetTargetVector));
+	}
+	// std::cout<<"2222"<<std::endl;
+
+	std::vector<std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool>>
+	nextPoseAndContactsWithBatch = mMotionGeneratorBatch->generateNextPoseAndContactsWithBatch(concatControlVector);
+
+	// std::cout<<"3333"<<std::endl;
+
+
+	// time_check_start();
+
+
+	for(int id=0;id<mNumSlaves;++id)
+	{
+		mSlaves[id]->stepAtOnce(nextPoseAndContactsWithBatch[id]);
 		// for(int j=0;j<num;j++)
 		// 	this->step(id);
 		// this->step
-		this->stepAtOnce(id);
+		// this->stepAtOnce(id);
 	}
+	// time_check_end();
 }
 
 // void
@@ -337,6 +390,12 @@ getNumIterations()
 // 		glutInit(&argc, argv);
 // 	}
 // };
+bool 
+EnvironmentPython::
+isOnResetProcess(int id)
+{
+	return mSlaves[id]->resetCount>=0;
+}
 
 
 
@@ -347,12 +406,15 @@ BOOST_PYTHON_MODULE(pyvs)
 	Py_Initialize();
 	np::initialize();
 
-	class_<EnvironmentPython>("Env", init<int, std::string>())
+	class_<EnvironmentPython>("Env", init<int, std::string, int>())
 		.def("getNumState",&EnvironmentPython::getNumState)
 		.def("getNumAction",&EnvironmentPython::getNumAction)
 		.def("getSimulationHz",&EnvironmentPython::getSimulationHz)
 		.def("getControlHz",&EnvironmentPython::getControlHz)
 		.def("reset",&EnvironmentPython::reset)
+		.def("resets",&EnvironmentPython::resets)
+		.def("slaveReset",&EnvironmentPython::slaveReset)
+		// .def("slaveResets",&EnvironmentPython::slaveResets)
 		.def("isTerminalState",&EnvironmentPython::isTerminalState)
 		.def("isFoulState",&EnvironmentPython::isFoulState)
 		.def("getState",&EnvironmentPython::getState)
@@ -364,9 +426,10 @@ BOOST_PYTHON_MODULE(pyvs)
 		// .def("getSchedulerReward",&EnvironmentPython::getSchedulerReward)
 		// .def("getLinearActorReward",&EnvironmentPython::getLinearActorReward)
 		.def("stepsAtOnce",&EnvironmentPython::stepsAtOnce)
-		.def("stepAtOnce",&EnvironmentPython::stepAtOnce)
-		.def("step",&EnvironmentPython::step)
-		.def("resets",&EnvironmentPython::resets)
+		.def("isOnResetProcess",&EnvironmentPython::isOnResetProcess)
+		// .def("stepAtOnce",&EnvironmentPython::stepAtOnce)
+		// .def("step",&EnvironmentPython::step)
+		.def("slaveResets",&EnvironmentPython::slaveResets)
 		.def("getNumIterations",&EnvironmentPython::getNumIterations)
 		// .def("getHardcodedAction",&EnvironmentPython::getHardcodedAction)
 		// .def("reconEnvFromState",&EnvironmentPython::reconEnvFromState)

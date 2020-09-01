@@ -127,8 +127,8 @@ public:
 	int actionDelay;
 
     Eigen::VectorXd goal;
-    ICA::dart::MotionGenerator* mMotionGenerator;
-
+    // ICA::dart::MotionGenerator* mMotionGenerator;
+	ICA::dart::MotionGeneratorBatch* mMotionGeneratorBatch;
 	Eigen::VectorXd targetLocal;
 
     std::vector<std::vector<Eigen::Isometry3d>> prevHandTransforms;

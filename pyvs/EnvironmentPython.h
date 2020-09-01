@@ -6,13 +6,14 @@
 #include <boost/python.hpp>
 #include <boost/python/numpy.hpp>
 #include "../extern/ICA/plugin/MotionGenerator.h"
+#include "../extern/ICA/plugin/MotionGeneratorBatch.h"
 #include "WrapperFunctions.h"
 #include "Normalizer.h"
 
 class EnvironmentPython
 {
 public:
-	EnvironmentPython(int numAgent, std::string motion_nn_path);
+	EnvironmentPython(int numAgent, std::string motion_nn_path, int numSlaves);
 	// For general properties
 	int getNumState();
 	int getNumAction();
@@ -26,6 +27,8 @@ public:
 	// void steps(int id);
 	void reset(int id);
 	void resets();
+	void slaveReset(int id);
+	void slaveResets();
 	bool isTerminalState(int id);
 	bool isFoulState(int id);
 	np::ndarray getState(int id, int index);
@@ -47,7 +50,9 @@ public:
 	void stepsAtOnce();
 	void initMotionGenerator(std::string dataPath);
 
-    ICA::dart::MotionGenerator* mMotionGenerator;
+	bool isOnResetProcess(int id);
+
+    ICA::dart::MotionGeneratorBatch* mMotionGeneratorBatch;
 	std::map<std::string, int> dartNameIdMap;
 
 	// Normalizer* mNormalizer;
