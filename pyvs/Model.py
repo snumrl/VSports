@@ -81,7 +81,6 @@ class SimulationNN(nn.Module):
 
 
 
-# Current state, goal state -> (subgoal state - current state)* weight of state
 class ActorCriticNN(nn.Module):
 	def __init__(self, num_states, num_actions, log_std = 0.0):
 		super(ActorCriticNN, self).__init__()

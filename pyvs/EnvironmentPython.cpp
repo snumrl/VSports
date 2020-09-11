@@ -280,9 +280,9 @@ stepsAtOnce()
 
 	for(int id=0;id<mNumSlaves;++id)
 	{
-		if(mSlaves[id]->resetCount>15)
+		if(mSlaves[id]->resetCount>30)
 		{
-			mMotionGeneratorBatch->setBatchState(id, mSlaves[id]->slaveResetStateVector);
+			mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, mSlaves[id]->slaveResetPositionVector);
 		}
 	}
 	// std::cout<<"1111"<<std::endl;

@@ -7,6 +7,10 @@ void BVHmanager::setPositionFromBVH(dart::dynamics::SkeletonPtr skel, BVHparser 
 	MotionNode* rootNode = bvhParser->getRootNode();
 	MotionNode* curNode  = rootNode->getNextNode();
 
+	Eigen::VectorXd zeroPosition(skel->getNumDofs());
+	zeroPosition.setZero();
+	skel->setPositions(zeroPosition);
+
 	skel->setPosition(skel->getDof("j_"+rootNode->getName()+"_pos_x")->getIndexInSkeleton(), rootNode->data[bvh_frame][0]/100.0);
 	skel->setPosition(skel->getDof("j_"+rootNode->getName()+"_pos_y")->getIndexInSkeleton(), rootNode->data[bvh_frame][1]/100.0);
 	skel->setPosition(skel->getDof("j_"+rootNode->getName()+"_pos_z")->getIndexInSkeleton(), rootNode->data[bvh_frame][2]/100.0);
@@ -19,6 +23,11 @@ void BVHmanager::setPositionFromBVH(dart::dynamics::SkeletonPtr skel, BVHparser 
 	
 	while(curNode != nullptr)
 	{
+		// if(curNode->getName().find("Finger") != std::string::npos) 
+		// {
+		// 	curNode = curNode->getNextNode();
+		// 	continue;
+		// }
 		skel->setPosition(skel->getDof("j_"+curNode->getName()+"_x")->getIndexInSkeleton(), curNode->data[bvh_frame][0]);
 		skel->setPosition(skel->getDof("j_"+curNode->getName()+"_y")->getIndexInSkeleton(), curNode->data[bvh_frame][1]);
 		skel->setPosition(skel->getDof("j_"+curNode->getName()+"_z")->getIndexInSkeleton(), curNode->data[bvh_frame][2]);

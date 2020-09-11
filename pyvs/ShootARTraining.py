@@ -19,6 +19,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import torchvision.transforms as T
+from Utils import RunningMeanStd
 
 import numpy as np
 
@@ -38,7 +39,7 @@ Tensor = FloatTensor
 LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 
-nnCount = 21
+nnCount = 1
 baseDir = "../nn_ar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -120,6 +121,10 @@ class RL(object):
 			for i in range(self.num_policy):
 				self.buffer[h][i] = Buffer(100000)
 
+		self.RMSs = [RunningMeanStd() for _ in range(self.num_h)]
+
+
+
 		# self.buffer_0 = [ [None] for i in range(self.num_policy)]
 		# for i in range(self.num_policy):
 		# 	self.buffer_0[i] = Buffer(100000)
@@ -140,7 +145,8 @@ class RL(object):
 		# self.num_action_1 = 4
 		# self.num_action_2 = 8;
 
-		self.num_action = [6, 4, 6]
+		# action type / root velocity, ball direction / (shooting) ball height, ball velocity, hand contact, fingerAngle
+		self.num_action = [5, 4, 6]
 
 
 		# self.target_model_0 = [None]*self.num_policy
@@ -1109,7 +1115,7 @@ if __name__=="__main__":
 		rl.saveModels()
 
 
-	print('num states: {}, num actions: {}'.format(rl.env.getNumState(),rl.env.getNumAction()-2))
+	print('num states: {}, num actions: {}'.format(rl.env.getNumState(),rl.env.getNumAction()-1))
 	# for i in range(ppo.max_iteration-5):
 
 	result_figure = nndir+"/"+"result.png"

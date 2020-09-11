@@ -7,7 +7,7 @@
 Normalizer::Normalizer(std::string xNormalPath, std::string yNormalPath)
 {
 	std::ifstream in;
-	dimX = 15;
+	dimX = 14;
 	dimY = 147;
 
 	in.open(xNormalPath);
@@ -111,19 +111,20 @@ denormalizeAction(Eigen::VectorXd action)
 	int offset = 1;
 	// std::cout<<action.rows()<<std::endl;
 
+	// -2 is for the hand contact which are not contained in xMean
 	assert(action.rows()+offset-2 == dimX);
 
 	// std::cout<<"------------------"<<std::endl;
 	// std::cout<<action.transpose()<<std::endl;
 
-	Eigen::VectorXd allignedAction(14);
-	allignedAction.segment(4,6) = action.segment(0,6);
-	allignedAction.segment(0,4) = action.segment(6,4);
-	allignedAction.segment(10,4) = action.segment(10,4);
+	Eigen::VectorXd allignedAction(action.rows()-2);
+	allignedAction.segment(4,5) = action.segment(0,5);
+	allignedAction.segment(0,4) = action.segment(5,4);
+	allignedAction.segment(9,4) = action.segment(9,4);
 
 
 
-	Eigen::VectorXd denormalizedAction(14);
+	Eigen::VectorXd denormalizedAction(action.rows()-2);
 
 	// std::cout<<allignedAction.transpose()<<std::endl;
 	// std::cout<<std::endl;
@@ -131,16 +132,16 @@ denormalizeAction(Eigen::VectorXd action)
 	// std::cout<<xMean.transpose()<<std::endl;
 	// std::cout<<xStd.transpose()<<std::endl;
 	// exit(0);
-	denormalizedAction = allignedAction.cwiseProduct(xStd.segment(0,14));
-	denormalizedAction = denormalizedAction + xMean.segment(0,14);
+	denormalizedAction = allignedAction.cwiseProduct(xStd.segment(0,action.rows()-2));
+	denormalizedAction = denormalizedAction + xMean.segment(0,action.rows()-2);
 
-	denormalizedAction.segment(4,6) = allignedAction.segment(4,6);
+	denormalizedAction.segment(4,5) = allignedAction.segment(4,5);
 	
 
-	Eigen::VectorXd extendedAction(17);
+	Eigen::VectorXd extendedAction(action.rows()+1);
 	extendedAction.setZero();
-	extendedAction.segment(0,14) = denormalizedAction;
-	extendedAction.segment(14+offset,2) = action.segment(14,2);
+	extendedAction.segment(0,action.rows()-2) = denormalizedAction;
+	extendedAction.segment(action.rows()-2+offset,2) = action.segment(action.rows()-2,2);
 	// exit(0);
 	return extendedAction;
 }

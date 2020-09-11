@@ -218,6 +218,7 @@ public:
 
 	Eigen::VectorXd slaveResetTargetVector;
 	std::vector<double> slaveResetStateVector;
+	Eigen::VectorXd slaveResetPositionVector;
 	int resetCount;
 
 	ICA::dart::MotionGeneratorBatch* mMgb;
@@ -340,13 +341,14 @@ public:
 
 	void goToPrevSituation();
 
+	void addFingerSegmentToSkel(dart::dynamics::SkeletonPtr skel);
+
 	// std::vector<bool> mLFootDetached;
 	// std::vector<bool> mRFootDetached;
 
 	std::vector<BStateMachine*> bsm;
 
-	void genObstacleNearCharacter();
-	void removeOldestObstacle();
+	void genObstacleNearCharacter(); 
 
 	void genObstaclesToTargetDir(int numObstacles);
 
@@ -399,6 +401,8 @@ public:
 	Eigen::Isometry3d getRootT(int index);
 
 	bool gotReward;
+
+	int violatedFrames;
 	// AgentEnvWindow* mWindow;
 
 };

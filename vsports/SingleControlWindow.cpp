@@ -38,7 +38,7 @@ initWindow(int _w, int _h, char* _name)
 {
 	mWindows.push_back(this);
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA | GLUT_MULTISAMPLE | GLUT_ACCUM);
-	glutInitWindowPosition(500, 100);
+	glutInitWindowPosition(100, 100);
 	glutInitWindowSize(_w, _h);
 	mWinIDs.push_back(glutCreateWindow(_name));
 	// glutHideWindow();
@@ -149,17 +149,17 @@ SingleControlWindow(const char* nn_path,
 
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module_0[i] = p::eval("ActorCriticNN(num_state, 6).cuda()", mns);
+		nn_module_0[i] = p::eval("ActorCriticNN(num_state, 5).cuda()", mns);
 		load_0[i] = nn_module_0[i].attr("load");
 	}
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module_1[i] = p::eval("ActorCriticNN(num_state+6, 4).cuda()", mns);
+		nn_module_1[i] = p::eval("ActorCriticNN(num_state+5, 4).cuda()", mns);
 		load_1[i] = nn_module_1[i].attr("load");
 	}
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module_2[i] = p::eval("ActorCriticNN(num_state+6+4, num_action-6-4).cuda()", mns);
+		nn_module_2[i] = p::eval("ActorCriticNN(num_state+5+4, num_action-5-4).cuda()", mns);
 		load_2[i] = nn_module_2[i].attr("load");
 	}
 
@@ -510,12 +510,13 @@ step()
 	// mEnv->mActions[0] = Utils::toEigenVec(this->xData[0][mFrame]);
 	// std::cout<<Utils::toEigenVec(this->xData[0][mFrame]).transpose()<<std::endl;
 	getActionFromNN(0);
-	mActions[0].segment(0,2) = Eigen::Vector2d(200.0, 0.0);
-	mActions[0].segment(2,2) = Eigen::Vector2d(50.0, -50.0);
+	// mActions[0].segment(0,2) = Eigen::Vector2d(200.0, 0.0);
+	// mActions[0].segment(2,2) = Eigen::Vector2d(50.0, -50.0);
 	mEnv->setAction(0, mActions[0]);
 
-	std::cout<<mEnv->mActions[0].segment(0,10).transpose()<<std::endl;
-	std::cout<<mEnv->mActions[0].segment(10,7).transpose()<<std::endl;
+	std::cout<<mEnv->mActions[0].segment(0,9).transpose()<<std::endl;
+	std::cout<<mEnv->mActions[0].segment(9,7).transpose()<<std::endl;
+	std::cout<<std::endl;
 
 
 
@@ -537,6 +538,7 @@ step()
 
 
 	std::vector<std::vector<double>> concatControlVector;
+	// std::cout<<"In SingleControlWindow :"<<std::endl;
 	// for(int i=0;i<mEnv->slaveResetStateVector.size();i++)
 	// {
 	// 	std::cout<<mEnv->slaveResetStateVector[i]<<" ";
@@ -546,9 +548,10 @@ step()
 
 	for(int id=0;id<1;++id)
 	{
-		if(mEnv->resetCount>15)
+		if(mEnv->resetCount>30)
 		{
-			mMotionGeneratorBatch->setBatchState(id, mEnv->slaveResetStateVector);
+			// std::cout<<"slave reset state vector"<<std::endl;
+			mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, mEnv->slaveResetPositionVector);
 		}
 	}
 	// std::cout<<"1111"<<std::endl;
@@ -857,7 +860,7 @@ display()
 
 	// GUI::drawVerticalLine(this->goal.segment(0,2), Eigen::Vector3d(1.0, 1.0, 1.0));
 
-	int numActions = 6;
+	int numActions = 5;
 
     std::string curAction;
 
@@ -912,7 +915,8 @@ display()
 
 	showAvailableActions();
 
-	GUI::drawBoxOnScreen(0.2+0.6*((double)mEnv->mCurActionTypes[0] / 8), 0.2, Eigen::Vector2d(6.0, 4.0),Eigen::Vector3d(1.0, 1.0, 1.0));
+	// std::cout<<mEnv->mCurActionTypes[0]<<std::endl;
+	GUI::drawBoxOnScreen(0.2+0.6*((double)mEnv->mCurActionTypes[0] / (numActions)), 0.2, Eigen::Vector2d(6.0, 4.0),Eigen::Vector3d(1.0, 1.0, 1.0));
 
 
 	glutSwapBuffers();
@@ -1045,11 +1049,11 @@ getActionFromNN(int index)
 
 	Eigen::VectorXd state = mEnv->getState(index);
 
-	int numActions = 6;
+	int numActions = 5;
 	// std::cout<<state.segment(155,6).transpose()<<std::endl;
 	// std::cout<<state.segment(mEnv->mCharacters[0]->getSkeleton()->getNumDofs(),12).transpose()<<std::endl;
 
-	Eigen::VectorXd mAction(16);
+	Eigen::VectorXd mAction(mEnv->getNumAction()-1);
 	mAction.setZero();
 
 	get_action_0 = nn_module_0[index].attr("get_action");
@@ -1148,7 +1152,7 @@ SingleControlWindow::
 showAvailableActions()
 {
 	std::vector<int> aa = mEnv->bsm[0]->getAvailableActions();
-	int numActionTypes = 8;
+	int numActionTypes = 5;
 	for(int i=0;i<numActionTypes;i++)
 	{
 		// if( i == mEnv->mCurActionTypes[0])

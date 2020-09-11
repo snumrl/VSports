@@ -10,20 +10,22 @@ class RunningMeanStd(object):
         self.epsilon = 1e-8
         self.clip = 10
 
+    # update mean and var with current input
     def update(self, x):
         batch_mean = np.mean(x, axis=0)
         batch_var = np.var(x, axis=0)
         batch_count = x.shape[0]
         self.update_from_moments(batch_mean, batch_var, batch_count)
 
-    def update_from_moments(self, batch_mean, batch_var, batch_count):
-        self.mean, self.var, self.count = update_mean_var_count_from_moments(
-            self.mean, self.var, self.count, batch_mean, batch_var, batch_count)
-
+    # get value from normalized output
     def apply(self, x):
         self.update(x)
         x = np.clip((x - self.mean) / np.sqrt(self.var + self.epsilon), -self.clip, self.clip)
         return x
+
+    def update_from_moments(self, batch_mean, batch_var, batch_count):
+        self.mean, self.var, self.count = update_mean_var_count_from_moments(
+            self.mean, self.var, self.count, batch_mean, batch_var, batch_count)
 
     def save(self, path):
         data = {'mean':self.mean, 'var':self.var, 'count':self.count}
