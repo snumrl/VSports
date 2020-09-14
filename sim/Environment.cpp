@@ -630,7 +630,7 @@ stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContact
 			// std::cout<<(curLFootPosition - mLLastFootPosition[index]).norm()<<std::endl;
 			if(footDiff.norm()>0.50)
 			{
-				std::cout<<"Left Foot Sliding"<<std::endl;
+				// std::cout<<"Left Foot Sliding"<<std::endl;
 				mIsTerminalState = true;
 			}
 		}
@@ -642,7 +642,7 @@ stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContact
 			footDiff[1] = 0.0;
 			if(footDiff.norm()>0.50)
 			{
-				std::cout<<"Right Foot Sliding"<<std::endl;
+				// std::cout<<"Right Foot Sliding"<<std::endl;
 				mIsTerminalState = true;
 			}
 		}
@@ -1375,6 +1375,9 @@ setAction(int index, const Eigen::VectorXd& a)
 
 
 	computeCriticalActionTimes();
+
+
+
     // if(isCriticalAction(curActionType))
     // {
     // 	if(mActions[index][16]== 0)

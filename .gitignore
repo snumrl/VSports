@@ -41,6 +41,7 @@ log/*
 nn/*
 nn_ar/*
 nn_ar_h/*
+nn_lar_h/*
 nn_obstacle/*
 pyvs/*.so
 model/*.so

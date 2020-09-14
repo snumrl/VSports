@@ -85,6 +85,7 @@ SingleControlWindow()
 	p::exec("import torchvision.transforms as T",mns);
 	p::exec("import numpy as np",mns);
 	p::exec("from Model import *",mns);
+	p::exec("from VAE import VAE",mns);
 	// cout<<"444444"<<endl;
 	controlOn = false;
 
@@ -146,7 +147,7 @@ SingleControlWindow(const char* nn_path,
 	p::object *load_1 = new p::object[mEnv->mNumChars];
 	p::object *load_2 = new p::object[mEnv->mNumChars];
 	// reset_hidden = new boost::python::object[mEnv->mNumChars];
-
+/*
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
 		nn_module_0[i] = p::eval("ActorCriticNN(num_state, 5).cuda()", mns);
@@ -162,12 +163,33 @@ SingleControlWindow(const char* nn_path,
 		nn_module_2[i] = p::eval("ActorCriticNN(num_state+5+4, num_action-5-4).cuda()", mns);
 		load_2[i] = nn_module_2[i].attr("load");
 	}
+*/
+
+
+	for(int i=0;i<mEnv->mNumChars;i++)
+	{
+		nn_module_0[i] = p::eval("ActorCriticNN(num_state, 4).cuda()", mns);
+		load_0[i] = nn_module_0[i].attr("load");
+	}
+	for(int i=0;i<mEnv->mNumChars;i++)
+	{
+		nn_module_1[i] = p::eval("ActorCriticNN(num_state+4, 2).cuda()", mns);
+		load_1[i] = nn_module_1[i].attr("load");
+	}
 
 
 	load_0[0](string(control_nn_path) + "_0.pt");
 	load_1[0](string(control_nn_path) + "_1.pt");
-	load_2[0](string(control_nn_path) + "_2.pt");
+	// load_2[0](string(control_nn_path) + "_2.pt");
 	std::cout<<"Loaded control nn : "<<control_nn_path<<std::endl;
+
+
+	// nn_module_decoder = new boost::python::object;
+	p::object load_decoder;
+
+	nn_module_decoder = p::eval("VAE().cuda()", mns);
+	load_decoder = nn_module_decoder.attr("load");
+
 
 
 
@@ -213,22 +235,9 @@ SingleControlWindow(const char* nn_path,
     // if(! boost::filesystem::is_regular_file (xDataPath)) break;
     this->xData.push_back(MotionRepresentation::readXData(xNormalPath, xDataPath, sub_dir));
 
-    // getControlMeanStdByActionType(0);
-    // getControlMeanStdByActionType(1);
-    // getControlMeanStdByActionType(3);
-    // exit(0);
-
-	// for(int i=0;i<10;i++)
-	// {
-	// 	BVHmanager::setPositionFromBVH(mEnv->mCharacters[0]->getSkeleton(), mEnv->mBvhParser, 50+i);
-	// 	Eigen::VectorXd bvhPosition = mEnv->mCharacters[0]->getSkeleton()->getPositions();
-	// 	mEnv->mMotionGenerator->setCurrentPose(bvhPosition, this->xData[0][mFrame]);
-	// 	mEnv->mCharacters[0]->getSkeleton()->setPositions(bvhPosition);
-	// 	mFrame++;
-	// }
-
-
 }
+
+
 
 // void
 // SingleControlWindow::
@@ -892,8 +901,8 @@ display()
     }
 	if(mEnv->mCurActionTypes[0] == 1 || mEnv->mCurActionTypes[0] == 3 )
 	{
-		Eigen::Vector3d ballTargetPosition = Eigen::Vector3d(0.0, mEnv->mActions[0][13]/100.0, 0.0);
-		Eigen::Vector3d ballTargetVelocity = mEnv->mActions[0].segment(10,3)/100.0;
+		Eigen::Vector3d ballTargetPosition = Eigen::Vector3d(0.0, mEnv->mActions[0][4+numActions+3]/100.0, 0.0);
+		Eigen::Vector3d ballTargetVelocity = mEnv->mActions[0].segment(4+numActions,3)/100.0;
 		ballTargetPosition = rootIsometry * ballTargetPosition;
 		ballTargetVelocity = rootIsometry.linear() * ballTargetVelocity;
 
@@ -1040,7 +1049,7 @@ toOneHotVector(Eigen::VectorXd action)
     result[maxIndex] = 1.0;
     return result;
 }
-
+/*
 void
 SingleControlWindow::
 getActionFromNN(int index)
@@ -1145,6 +1154,118 @@ getActionFromNN(int index)
 	// std::cout<<"-------------"<<std::endl;	
 	mActions[index] = mEnv->mNormalizer->denormalizeAction(mAction);
 }
+
+*/
+void
+SingleControlWindow::
+getActionFromNN(int index)
+{
+	p::object get_action_0;
+
+	Eigen::VectorXd state = mEnv->getState(index);
+
+	int numActions = 4;
+	// std::cout<<state.segment(155,6).transpose()<<std::endl;
+	// std::cout<<state.segment(mEnv->mCharacters[0]->getSkeleton()->getNumDofs(),12).transpose()<<std::endl;
+
+	Eigen::VectorXd mAction(mEnv->getNumAction());
+	mAction.setZero();
+
+	get_action_0 = nn_module_0[index].attr("get_action");
+
+	p::tuple shape = p::make_tuple(state.size());
+	np::dtype dtype = np::dtype::get_builtin<float>();
+	np::ndarray state_np = np::empty(shape, dtype);
+
+	float* dest = reinterpret_cast<float*>(state_np.get_data());
+	for(int j=0;j<state.size();j++)
+	{
+		dest[j] = state[j];
+	}
+
+	p::object temp = get_action_0(state_np);
+	np::ndarray action_np = np::from_object(temp);
+	float* srcs = reinterpret_cast<float*>(action_np.get_data());
+
+	for(int j=0;j<numActions;j++)
+	{
+		mAction[j] = srcs[j];
+	}
+
+
+
+	// mAction.segment(0,numActions) = toOneHotVector(mAction.segment(0,numActions));
+
+	///////////////
+
+	Eigen::VectorXd state_1(state.size()+numActions);
+	state_1.segment(0,state.size()) = state;
+	state_1.segment(state.size(),numActions) = mAction.segment(0,numActions);
+
+	p::object get_action_1;
+
+	get_action_1 = nn_module_1[index].attr("get_action");
+
+	p::tuple shape_1 = p::make_tuple(state_1.size());
+	np::ndarray state_np_1 = np::empty(shape_1, dtype);
+
+	float* dest_1 = reinterpret_cast<float*>(state_np_1.get_data());
+	for(int j=0;j<state_1.size();j++)
+	{
+		dest_1[j] = state_1[j];
+	}
+
+	temp = get_action_1(state_np_1);
+	np::ndarray action_np_1 = np::from_object(temp);
+	float* srcs_1 = reinterpret_cast<float*>(action_np_1.get_data());
+
+	for(int j=numActions;j<numActions+4;j++)
+	{
+		mAction[j] = srcs_1[j-numActions];
+	}
+
+	///////////////
+	// exit(0);
+	mAction.segment(14,2) = mAction.segment(4,2);
+
+
+	Eigen::VectorXd encodedAction(4);
+	encodedAction = mAction.segment(0,encodedAction.size());
+
+	p::object decode;
+
+	decode = nn_module_decoder.attr("decodeAction");
+
+	p::tuple shape_d = p::make_tuple(encodedAction.size());
+	np::ndarray state_np_d = np::empty(shape_d, dtype);
+
+	float* dest_d = reinterpret_cast<float*>(state_np_d.get_data());
+	for(int j=0;j<encodedAction.size();j++)
+	{
+		dest_d[j] = encodedAction[j];
+	}
+
+	temp = decode(state_np_d);
+	np::ndarray action_np_d = np::from_object(temp);
+	float* src_d = reinterpret_cast<float*>(action_np_d.get_data());
+
+	for(int j=0;j<14;j++)
+	{
+		mAction[j] = src_d[j];
+	}
+	// std::cout<<"Decoded Action :"<<std::endl;
+	// std::cout<<mAction.transpose()<<std::endl;
+
+
+	// mAction = mEnv->mNormalizer->denormalizeAction(mAction);
+	// std::cout<<mAction.segment(0,4).transpose()<<std::endl;
+	// std::cout<<mAction.segment(4,8).transpose()<<std::endl;
+	// std::cout<<mAction.segment(12,7).transpose()<<std::endl;
+	// std::cout<<std::endl;
+	// std::cout<<"-------------"<<std::endl;	
+	mActions[index] = mEnv->mNormalizer->denormalizeAction(mAction);
+}
+
 
 
 void

@@ -93,6 +93,8 @@ public:
 	boost::python::object *nn_module_1;
 	boost::python::object *nn_module_2;
 
+	boost::python::object nn_module_decoder;
+
 	// boost::python::object mm,mns,sys_module;
 	boost::python::object target_rnd_nn_module;
 	boost::python::object predictor_rnd_nn_module;

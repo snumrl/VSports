@@ -103,6 +103,50 @@ normalizeState(Eigen::VectorXd state)
 
 
 // ad-hoc setting. the action type part is different from other part.
+// Eigen::VectorXd
+// Normalizer::
+// denormalizeAction(Eigen::VectorXd action)
+// {
+// 	//critical action time dimension
+// 	int offset = 1;
+// 	// std::cout<<action.rows()<<std::endl;
+
+// 	// -2 is for the hand contact which are not contained in xMean
+// 	assert(action.rows()+offset-2 == dimX);
+
+// 	// std::cout<<"------------------"<<std::endl;
+// 	// std::cout<<action.transpose()<<std::endl;
+
+// 	Eigen::VectorXd allignedAction(action.rows()-2);
+// 	allignedAction.segment(4,5) = action.segment(0,5);
+// 	allignedAction.segment(0,4) = action.segment(5,4);
+// 	allignedAction.segment(9,4) = action.segment(9,4);
+
+
+
+// 	Eigen::VectorXd denormalizedAction(action.rows()-2);
+
+// 	// std::cout<<allignedAction.transpose()<<std::endl;
+// 	// std::cout<<std::endl;
+
+// 	// std::cout<<xMean.transpose()<<std::endl;
+// 	// std::cout<<xStd.transpose()<<std::endl;
+// 	// exit(0);
+// 	denormalizedAction = allignedAction.cwiseProduct(xStd.segment(0,action.rows()-2));
+// 	denormalizedAction = denormalizedAction + xMean.segment(0,action.rows()-2);
+
+// 	denormalizedAction.segment(4,5) = allignedAction.segment(4,5);
+	
+
+// 	Eigen::VectorXd extendedAction(action.rows()+1);
+// 	extendedAction.setZero();
+// 	extendedAction.segment(0,action.rows()-2) = denormalizedAction;
+// 	extendedAction.segment(action.rows()-2+offset,2) = action.segment(action.rows()-2,2);
+// 	// exit(0);
+// 	return extendedAction;
+// }
+
+
 Eigen::VectorXd
 Normalizer::
 denormalizeAction(Eigen::VectorXd action)
@@ -112,19 +156,17 @@ denormalizeAction(Eigen::VectorXd action)
 	// std::cout<<action.rows()<<std::endl;
 
 	// -2 is for the hand contact which are not contained in xMean
-	assert(action.rows()+offset-2 == dimX);
+	assert(action.rows()-2 == dimX);
 
 	// std::cout<<"------------------"<<std::endl;
 	// std::cout<<action.transpose()<<std::endl;
 
-	Eigen::VectorXd allignedAction(action.rows()-2);
-	allignedAction.segment(4,5) = action.segment(0,5);
-	allignedAction.segment(0,4) = action.segment(5,4);
-	allignedAction.segment(9,4) = action.segment(9,4);
+	// Eigen::VectorXd allignedAction(action.rows()-2);
+	// allignedAction.segment(0,action.rows()-2) = action.segment(0,action.rows()-2);
 
 
-
-	Eigen::VectorXd denormalizedAction(action.rows()-2);
+	Eigen::VectorXd denormalizedAction(action.rows());
+	denormalizedAction = action; 
 
 	// std::cout<<allignedAction.transpose()<<std::endl;
 	// std::cout<<std::endl;
@@ -132,20 +174,19 @@ denormalizeAction(Eigen::VectorXd action)
 	// std::cout<<xMean.transpose()<<std::endl;
 	// std::cout<<xStd.transpose()<<std::endl;
 	// exit(0);
-	denormalizedAction = allignedAction.cwiseProduct(xStd.segment(0,action.rows()-2));
-	denormalizedAction = denormalizedAction + xMean.segment(0,action.rows()-2);
+	denormalizedAction.segment(0,action.rows()-2) = action.segment(0,action.rows()-2).cwiseProduct(xStd.segment(0,action.rows()-2));
+	denormalizedAction.segment(0,action.rows()-2) = denormalizedAction.segment(0,action.rows()-2) + xMean.segment(0,action.rows()-2);
 
-	denormalizedAction.segment(4,5) = allignedAction.segment(4,5);
+	// denormalizedAction.segment(4,5) = allignedAction.segment(4,5);
 	
 
-	Eigen::VectorXd extendedAction(action.rows()+1);
-	extendedAction.setZero();
-	extendedAction.segment(0,action.rows()-2) = denormalizedAction;
-	extendedAction.segment(action.rows()-2+offset,2) = action.segment(action.rows()-2,2);
+	// Eigen::VectorXd extendedAction(action.rows()+1);
+	// extendedAction.setZero();
+	// extendedAction.segment(0,action.rows()-2) = denormalizedAction;
+	// extendedAction.segment(action.rows()-2+offset,2) = action.segment(action.rows()-2,2);
 	// exit(0);
-	return extendedAction;
+	return denormalizedAction;
 }
-
 
 // Eigen::VectorXd
 // Normalizer::
