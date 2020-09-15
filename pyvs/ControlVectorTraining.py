@@ -10,8 +10,9 @@ from IPython import embed
 import os
 import sys
 import random
+import numpy as np
 
-from VAE import VAE, loss_function
+from VAE import VAE, VAEEncoder, VAEDecoder, loss_function
 
 use_cuda = torch.cuda.is_available()
 FloatTensor = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
@@ -23,6 +24,137 @@ device = torch.device("cuda" if use_cuda else "cpu")
 model = VAE().to(device)
 optimizer = optim.Adam(model.parameters(), lr=1e-3)
 # print("asdf")
+
+
+
+def getActionTypeFromVector(actionTypeVector):
+	maxValue = -100
+	maxValueIndex = 0
+	# print(actionTypeVector)
+
+	for i in range(len(actionTypeVector)):
+
+		if actionTypeVector[i] > maxValue:
+			maxValue = actionTypeVector[i]
+			maxValueIndex = i
+	return maxValueIndex
+
+# def splitControlVector(cv_list, numActionTypes):
+# 	# embed()
+# 	# exit(0)
+# 	actionTypeVector_list = cv_list[:,4:4+numActionTypes]
+# 	# controlVectorLists = [[] for _ in range(numActionTypes)]
+# 	controlVectorLists = np.empty((numActionTypes, 1, 14), dtype=np.float32) 
+# 	# concated = []
+# 	for i in range(int(len(cv_list))):
+# 		curActionTypeVector = actionTypeVector_list[i]
+# 		curActionType = getActionTypeFromVector(curActionTypeVector)
+# 		# print(curActionType)
+# 		# controlVectorLists[curActionType].append(cv_list[i])
+
+# 		# embed()
+# 		# exit(0)
+# 		if i == 0:
+# 			controlVectorLists[curActionType][0] = np.array([cv_list[i]])
+# 		else:
+# 			controlVectorLists[curActionType] = np.concatenate((controlVectorLists[curActionType], np.array([cv_list[i]])),axis = 0)
+
+# 	return controlVectorLists
+
+
+
+def splitControlVector(cv_list, numActionTypes):
+	# embed()
+	# exit(0)
+	actionTypeVector_list = cv_list[:,4:4+numActionTypes]
+	controlVectorLists = [[] for _ in range(numActionTypes)]
+	# controlVectorLists = np.empty((numActionTypes, 1, 14), dtype=np.float32) 
+	# concated = []
+	for i in range(int(len(cv_list))):
+		curActionTypeVector = actionTypeVector_list[i]
+		curActionType = getActionTypeFromVector(curActionTypeVector)
+		# print(curActionType)
+		controlVectorLists[curActionType].append(cv_list[i])
+
+		# embed()
+		# exit(0)
+		# if i == 0:
+		# 	controlVectorLists[curActionType][0] = np.array([cv_list[i]])
+		# else:
+		# 	controlVectorLists[curActionType] = np.concatenate((controlVectorLists[curActionType], np.array([cv_list[i]])),axis = 0)
+
+	for i in range(numActionTypes):
+		controlVectorLists[i] = np.array(controlVectorLists[i])
+	return np.array(controlVectorLists)
+
+
+def removeActionTypePart(splited_cv_list, numActionTypes):
+	removed_cv_list = []
+	for i in range(numActionTypes):
+		# embed()
+		# exit(0)
+		front_list = splited_cv_list[i][:,0:4]
+		end_list = splited_cv_list[i][:,4+numActionTypes:14]
+		# embed()
+		# exit(0)
+		removed_list = np.concatenate((front_list,end_list), axis= 1)
+		removed_cv_list.append(removed_list)
+	return np.array(removed_cv_list)
+
+
+class ComprehensiveControlVectorTraining():
+	def __init__(self, path, numActionTypes):
+		self.path = path
+		self.numActionTypes = numActionTypes
+
+		self.VAEEncoder = VAEEncoder().to(device)
+		self.VAEDecoders = [VAEDecoder().to(device) for _ in range(self.numActionTypes)]
+		self.optimizers = []
+		for i in range(self.numActionTypes):
+			self.optimizers.append(optim.Adam(list(self.VAEEncoder.parameters()) + list(self.VAEDecoders[i].parameters()), lr=1e-5))
+
+		self.controlVectorList = loadData(os.path.dirname(os.path.abspath(__file__)) + "/../extern/ICA/motions/%s/data/0_xData.dat"%(path))
+		self.controlVectorList = np.array(self.controlVectorList)
+		self.controlVectorListSplited = splitControlVector(self.controlVectorList , numActionTypes)
+		self.controlVectorListSplited = removeActionTypePart(self.controlVectorListSplited, numActionTypes)
+
+	def trainTargetCV(self,actionType):
+		print('Train control vector of actiontype {}, Size : {}'.format(actionType, len(self.controlVectorListSplited[actionType])))
+		for epoch in range(3):
+			self.VAEEncoder.train()
+			self.VAEDecoders[actionType].train()
+			train_loss = 0
+			action_controlVectorList = self.controlVectorListSplited[actionType]
+			random.shuffle(action_controlVectorList)
+
+			# for i in range(int(len(action_controlVectorList)/64)):
+			for i in range(200):
+				data = action_controlVectorList[i*64:(i+1)*64]
+				data = Tensor(data)
+				self.optimizers[actionType].zero_grad()
+				latent, mu, logvar = self.VAEEncoder(data)
+
+				recon_batch = self.VAEDecoders[actionType](latent)
+
+				loss = loss_function(recon_batch, data, mu, logvar)
+				loss.backward()
+				train_loss += loss.item()
+				self.optimizers[actionType].step()
+				if i % 40 == 0:
+					print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+		                epoch, i * len(data), 12800,
+		                100. * i / (200),
+		                loss.item() / len(data)))
+			print('===> Epoch: {} Arverage loss: {:.4f}'.format(1, train_loss / 12800))
+		self.VAEDecoders[actionType].save("vae_nn/vae_action_decoder_"+str(actionType)+".pt")	
+		self.VAEEncoder.save("vae_nn/vae_action_encoder.pt")	
+
+
+	# def trainComprehensiveLatentSpace(self, actionTypeSource, actionTypeTarget):
+
+
+
+
 def trainControlVector(path, actionType):
 	for epoch in range(30):
 		model.train()
@@ -72,5 +204,10 @@ def test(path):
 
 
 
-trainControlVector("basket_0")
+# trainControlVector("basket_0")
 # test("basket_0")
+
+ccvt = ComprehensiveControlVectorTraining("basket_0", 5)
+for i in range(50):
+	ccvt.trainTargetCV(0)
+	ccvt.trainTargetCV(3)

@@ -983,7 +983,7 @@ getReward(int index, bool verbose)
 	double g= -9.81;
 
 	bool fastTermination = true;
-	bool fastViewTermination = false;
+	bool fastViewTermination = true;
 
 	// Eigen::Vector3d targetBallDirection = mTargetBallPosition - curBallPosition;
 	// // targetBallDirection[1] = 0;

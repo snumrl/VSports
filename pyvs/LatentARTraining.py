@@ -115,8 +115,10 @@ class RL(object):
 		self.buffer_size = 16*1024
 		self.batch_size = 512
 		
+
+		self.num_action_types = 5
 		self.latent_size = 4
-		self.num_action = [self.latent_size, 2]
+		self.num_action = [self.num_action_types, self.latent_size, 2]
 
 
 		self.num_h = len(self.num_action);
@@ -394,10 +396,8 @@ class RL(object):
 			# embed()
 			# exit(0)
 			# generate transition of second hierachy
-			actions_0_oneHot = np.array(list(actions_h[0]))
-			# actions_0_oneHot = arrayToOneHotVector(actions_h[0])
-			# for i in range(len(actions_h[0])):
-				# actions_0_oneHot[i] = arrayToOneHotVector(actions_h[0][i])
+			# actions_0_oneHot = np.array(list(actions_h[0]))
+			actions_0_oneHot = arrayToOneHotVector(actions_h[0])
 
 
 
@@ -440,7 +440,6 @@ class RL(object):
 			# actions_h = np.array(list(actions_h))
 
 
-			# actions = np.concatenate((actions_0_oneHot, actions_1, actions_2), axis=1)
 			actions = actions_0_oneHot
 			# embed()
 			# exit(0)
