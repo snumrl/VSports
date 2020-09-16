@@ -201,7 +201,7 @@ setAction(np::ndarray np_array, int id, int index)
 	// else
 	// {
 	//** we change the dimension of action in denormalizeAction
-		denormalizedAction = mSlaves[id]->mNormalizer->denormalizeAction(action);
+	denormalizedAction = mSlaves[id]->mNormalizer->denormalizeAction(action);
 	// }
 
 
@@ -218,6 +218,17 @@ setAction(np::ndarray np_array, int id, int index)
 
 	mSlaves[id]->setAction(index, denormalizedAction);
 }
+
+int 
+EnvironmentPython::
+setActionType(int actionType, int id, int index)
+{
+	int constrainedActionType;
+	constrainedActionType = mSlaves[id]->setActionType(index, actionType);
+
+	return constrainedActionType;
+}
+
 
 
 // void
@@ -422,6 +433,7 @@ BOOST_PYTHON_MODULE(pyvs)
 		// .def("getSchedulerState",&EnvironmentPython::getSchedulerState)
 		// .def("getLinearActorState",&EnvironmentPython::getLinearActorState)
 		.def("setAction",&EnvironmentPython::setAction)
+		.def("setActionType",&EnvironmentPython::setActionType)
 		.def("getReward",&EnvironmentPython::getReward)
 		// .def("getSchedulerReward",&EnvironmentPython::getSchedulerReward)
 		// .def("getLinearActorReward",&EnvironmentPython::getLinearActorReward)

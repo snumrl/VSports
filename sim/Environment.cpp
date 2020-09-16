@@ -1222,37 +1222,156 @@ setAction(int index, const Eigen::VectorXd& a)
 
 	if(!isNanOccured)
 	{
-		mActions[index] = a;
+		mActions[index].setZero();
+		mActions[index].segment(0,4) = a.segment(0,4);
+		mActions[index].segment(4+NUM_ACTION_TYPE,7) = a.segment(4,7);
 	}
 	else
 	{
 		std::cout<<"Nan Action"<<std::endl;
 		mActions[index].setZero();
-		mActions[index][4+4] = 1.0;
+		// mActions[index][4+4] = 1.0;
 	}
 
-	int curActionType = 0;
-    int maxIndex = 0;
-    double maxValue = -100;
-    for(int i=4;i<4+NUM_ACTION_TYPE;i++)
-    {
-        if(mActions[index][i] > maxValue)
-        {
-            maxValue = mActions[index][i];
-            maxIndex = i;
-        }
-    }
-    // std::cout<<"Original action : "<< maxIndex-4<<std::endl;
+	// int curActionType = 0;
+ //    int maxIndex = 0;
+ //    double maxValue = -100;
+ //    for(int i=4;i<4+NUM_ACTION_TYPE;i++)
+ //    {
+ //        if(mActions[index][i] > maxValue)
+ //        {
+ //            maxValue = mActions[index][i];
+ //            maxIndex = i;
+ //        }
+ //    }
+ //    // std::cout<<"Original action : "<< maxIndex-4<<std::endl;
 
-    curActionType = maxIndex-4;
+ //    curActionType = maxIndex-4;
 
-    if(resetCount<0)
-    	curActionType = 3;
-    else
-    	curActionType = 0;
+ //    if(resetCount<0)
+ //    	curActionType = 3;
+ //    else
+ //    	curActionType = 0;
+
+
     // std::cout<<"resetCount "<<resetCount<<std::endl;
     // std::cout<<"before bsm ActionType " <<curActionType<<std::endl;
 
+    // if(isCriticalAction(mPrevActionTypes[index]))
+    // {
+    // 	if(mCurCriticalActionTimes[index] > -15)
+    // 		curActionType = mPrevActionTypes[index];
+    // 	else
+    // 	{
+    // 		bsm[index]->transition(mPrevActionTypes[index], true);
+	   //  	if(bsm[index]->isAvailable(curActionType))
+	   //  	{
+	   //  		if(isCriticalAction(curActionType))
+	   //  			curActionType = bsm[index]->transition(curActionType);
+	   //  		else
+	   //  			curActionType = bsm[index]->transition(curActionType, true);
+	   //  	}
+	   //  	else
+	   //  		curActionType = bsm[index]->transition(curActionType);    	
+	   //  }
+    // }
+    // else
+    // {
+    // 	if(bsm[index]->isAvailable(curActionType))
+    // 	{
+    // 		if(isCriticalAction(curActionType))
+    // 			curActionType = bsm[index]->transition(curActionType);
+    // 		else
+    // 			curActionType = bsm[index]->transition(curActionType, true);
+    // 	}
+    // 	else
+    // 		curActionType = bsm[index]->transition(curActionType);
+    // }
+
+    // std::cout<<"Set Action actiontype : "<<curActionType<<std::endl;
+    // mCurActionTypes[index] = curActionType;
+	// mActions[index].segment(4,NUM_ACTION_TYPE).setZero();
+
+    mActions[index][4+mCurActionTypes[index]] = 1.0;
+
+
+    if(mCurActionTypes[index] == 4 || mCurActionTypes[index] == 5)
+    {
+    	mActions[index].segment(2,2).setZero();
+    }
+    else
+    {
+
+    }
+
+    if(mActions[index].segment(0,2).norm() > 120.0)
+    {
+    	mActions[index].segment(0,2) *= 120.0/mActions[index].segment(0,2).norm();
+    }
+
+    if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
+    {
+    	if(mActions[index].segment(0,2).norm() > 38.0)
+	    {
+	    	mActions[index].segment(0,2) *= 38.0/mActions[index].segment(0,2).norm();
+	    }
+    }
+
+
+    if(mActions[index].segment(2,2).norm() > 100.0)
+    {
+    	mActions[index].segment(2,2) *= 100.0/mActions[index].segment(2,2).norm();
+    }
+
+    if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
+    {
+    	if(mActions[index].segment(2,2).norm() > 85.0)
+	    {
+	    	mActions[index].segment(2,2) *= 85.0/mActions[index].segment(2,2).norm();
+	    }
+    }
+
+
+
+    if(mActions[index].segment(4+NUM_ACTION_TYPE,3).norm()>1300.0)
+    {
+    	mActions[index].segment(4+NUM_ACTION_TYPE,3) *= 1300.0/mActions[index].segment(4+NUM_ACTION_TYPE,3).norm();
+    }
+
+    if(mActions[index][4+NUM_ACTION_TYPE+3] > 250.0)
+    {
+    	mActions[index][4+NUM_ACTION_TYPE+3]  = 250.0;
+    }
+    else if(mActions[index][4+NUM_ACTION_TYPE+3] < 50.0)
+    {
+    	mActions[index][4+NUM_ACTION_TYPE+3] = 50.0;
+    }
+
+    if(!isCriticalAction(mCurActionTypes[index]))
+    {
+    	mActions[index].segment(4+NUM_ACTION_TYPE, mActions[index].rows()-(4+NUM_ACTION_TYPE)).setZero();
+    }
+
+	computeCriticalActionTimes();
+
+    //** contact
+    if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
+    {
+	   	for(int i=0;i<2;i++)
+	   		mActions[index][ACTION_SIZE-2+i] = mActions[index][ACTION_SIZE-2+i] >= 0.0 ? 1.0 : 0.0;
+    }
+
+
+
+}
+
+
+int
+Environment::
+setActionType(int index, int actionType)
+{
+
+	int curActionType = actionType;
     if(isCriticalAction(mPrevActionTypes[index]))
     {
     	if(mCurCriticalActionTimes[index] > -15)
@@ -1287,118 +1406,8 @@ setAction(int index, const Eigen::VectorXd& a)
     // bsm[index]->transition(curActionType);
     mCurActionTypes[index] = curActionType;
 
-    if(mCurActionTypes[index] == 4 || mCurActionTypes[index] == 5)
-    {
-    	mActions[index].segment(2,2).setZero();
-    }
-    else
-    {
-    	// if(mActions[index].segment(2,2).norm() != 0)
-    	// mActions[index].segment(2,2).normalize();
-    }
-
-    if(mActions[index].segment(0,2).norm() > 120.0)
-    {
-    	mActions[index].segment(0,2) *= 120.0/mActions[index].segment(0,2).norm();
-    }
-
-    if(curActionType == 1 || curActionType == 3)
-    {
-    	if(mActions[index].segment(0,2).norm() > 38.0)
-	    {
-	    	mActions[index].segment(0,2) *= 38.0/mActions[index].segment(0,2).norm();
-	    }
-    }
-
-    // mActionGlobalBallPositions[index].segment(2,2) = Eigen::Vector2d(50.0, -50.0);
-
-    if(mActions[index].segment(2,2).norm() > 100.0)
-    {
-    	mActions[index].segment(2,2) *= 100.0/mActions[index].segment(2,2).norm();
-    }
-
-    if(curActionType == 1 || curActionType == 3)
-    {
-    	if(mActions[index].segment(2,2).norm() > 85.0)
-	    {
-	    	mActions[index].segment(2,2) *= 85.0/mActions[index].segment(2,2).norm();
-	    }
-    	// Eigen::Vector2d shootBallPosition(mActions[index][10], mActions[index][12]);
-    	// shootBallPosition.normalize();
-    	// mActions[index].segment(2,2) = mActions[index].segment(2,2).norm() * shootBallPosition;
-    }
-
-	mActions[index].segment(4,NUM_ACTION_TYPE).setZero();
-
-    mActions[index][4+curActionType] = 1.0;
-
-
-    // mActions[index][11] = max(50.0,  mActions[index][11]);
-    // mActions[index][10] = max(50.0,  mActions[index][10]);
-    // if(mActions[index].segment(10,3).norm()>200.0)
-    // {
-    // 	mActions[index].segment(10,3) *= 200.0/mActions[index].segment(10,3).norm();
-    // }
-
-    if(mActions[index].segment(4+NUM_ACTION_TYPE,3).norm()>1300.0)
-    {
-    	mActions[index].segment(4+NUM_ACTION_TYPE,3) *= 1300.0/mActions[index].segment(4+NUM_ACTION_TYPE,3).norm();
-    }
-
-    if(mActions[index][4+NUM_ACTION_TYPE+3] > 250.0)
-    {
-    	mActions[index][4+NUM_ACTION_TYPE+3]  = 250.0;
-    }
-    else if(mActions[index][4+NUM_ACTION_TYPE+3] < 50.0)
-    {
-    	mActions[index][4+NUM_ACTION_TYPE+3] = 50.0;
-    }
-
-
-
-
-
-
-    // if(curActionType != 1 && curActionType != 3)
-
-    // if(mActions[index].segment(2,2).norm() != 0)
-    // {
-    // 	mActions[index].segment(2,2).normalize();
-    // }
-
-    // mActions[index].segment(2,2) = Eigen::Vector2d(1.0, 0.0);
-
-    if(!isCriticalAction(curActionType))
-    {
-    	mActions[index].segment(4+NUM_ACTION_TYPE, mActions[index].rows()-(4+NUM_ACTION_TYPE)).setZero();
-    }
-
-
-	computeCriticalActionTimes();
-
-
-
-    // if(isCriticalAction(curActionType))
-    // {
-    // 	if(mActions[index][16]== 0)
-    // 		mActions[index][16+1] = 1;
-    // 	else
-    // 		mActions[index][16+1] = 0;
-    // }
-    // else
-    // 	mActions[index][16+1] = 0;
-
-    //** contact
-    if(curActionType == 1 || curActionType == 3)
-    {
-	   	for(int i=0;i<2;i++)
-	   		mActions[index][ACTION_SIZE-2+i] = mActions[index][ACTION_SIZE-2+i] >= 0.0 ? 1.0 : 0.0;
-    }
-
-
-
+    return curActionType;
 }
-
 
 bool
 Environment::

@@ -37,6 +37,7 @@ public:
 	void setActions(np::ndarray np_array);
 	double getReward(int id, int index, int verbose);
 	double getNumIterations();
+	int setActionType(int actionType, int id, int index);
 
 	// int getNumBallTouch(int id);
 
