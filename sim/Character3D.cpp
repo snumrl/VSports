@@ -7,6 +7,10 @@ Character3D::
 Character3D(const std::string& name)
 :mName(name)
 {
+	curLeftFingerPosition = 0.0;
+	curRightFingerPosition = 0.0;
+	curLeftFingerBallPosition = 0.0;
+	curRightFingerBallPosition = 0.0;
 }
 
 const dart::dynamics::SkeletonPtr&

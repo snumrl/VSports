@@ -408,6 +408,8 @@ public:
 	int setActionType(int index, int actionType);
 
 
+
+
 };
 double getFacingAngleFromLocalState(Eigen::VectorXd curState);
 Eigen::VectorXd localStateToOriginState(Eigen::VectorXd localState, int mNumChars=6);

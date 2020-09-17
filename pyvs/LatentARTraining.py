@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 1
+nnCount = 3
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -91,7 +91,7 @@ class Buffer(object):
 class RL(object):
 	def __init__(self, motion_nn):
 		np.random.seed(seed = int(time.time()))
-		self.num_slaves = 16
+		self.num_slaves = 8
 		self.num_agents = 1
 		self.env = Env(self.num_agents, motion_nn, self.num_slaves)
 		self.num_state = self.env.getNumState()
@@ -112,13 +112,15 @@ class RL(object):
 		self.gamma = 0.997
 		self.lb = 0.95
 
-		self.buffer_size = 16*1024
-		self.batch_size = 512
+		self.buffer_size = 8*1024
+		self.batch_size = 256
 		
 
 		self.num_action_types = 5
-		self.latent_size = 4
-		self.num_action = [self.num_action_types, self.latent_size, 2]
+		self.latent_size = 5
+
+		#contact, finger, finger-ball
+		self.num_action = [self.num_action_types, self.latent_size, 6]
 
 
 		self.num_h = len(self.num_action);
@@ -134,8 +136,8 @@ class RL(object):
 		self.actionDecoders = [ VAEDecoder().to(device) for _ in range(self.num_action_types)]
 		# for i in range(self.num_action_types):
 
-		self.actionDecoders[0].load("vae_nn/vae_action_decoder_"+str(0)+".pt")
-		self.actionDecoders[3].load("vae_nn/vae_action_decoder_"+str(3)+".pt")
+		self.actionDecoders[0].load("vae_nn2/vae_action_decoder_"+str(0)+".pt")
+		self.actionDecoders[3].load("vae_nn2/vae_action_decoder_"+str(3)+".pt")
 
 
 
@@ -346,8 +348,32 @@ class RL(object):
 		local_step = 0
 		counter = 0
 
+		def arrayToOneHotVectorWithConstraint(nparr):
+			result = np.array(list(np.copy(nparr)))
+			# resultVector = 
+
+			# embed()
+			# exit(0)
+
+			for agent in range(len(nparr)):
+				for slaves in range(len(nparr[agent])):
+					maxIndex = 0
+					maxValue = -100
+					for i in range(len(nparr[agent][slaves])):
+						result[agent][slaves][i] = 0.0
+						if nparr[agent][slaves][i] > maxValue:
+							maxValue = nparr[agent][slaves][i]
+							maxIndex = i
+					maxIndex = self.env.setActionType(maxIndex, slaves, agent)
+					# print(maxIndex)
+					result[agent][slaves][maxIndex] = 1.0
+			return result
+
+
 		def arrayToOneHotVector(nparr):
 			result = np.array(list(np.copy(nparr)))
+			# resultVector = 
+
 			# embed()
 			# exit(0)
 
@@ -362,6 +388,18 @@ class RL(object):
 							maxIndex = i
 					result[agent][slaves][maxIndex] = 1.0
 			return result
+
+
+
+		def getActionTypeFromVector(vec):
+			maxIndex = 0
+			maxValue = -100
+			for i in range(len(vec)):
+				if vec[i] == 1:
+					return i
+			print("Something wrong in vec")
+			print(vec)
+			return 0
 
 
 		while True:
@@ -400,7 +438,7 @@ class RL(object):
 			# exit(0)
 			# generate transition of second hierachy
 			# actions_0_oneHot = np.array(list(actions_h[0]))
-			actions_0_oneHot = arrayToOneHotVector(actions_h[0])
+			actions_0_oneHot = arrayToOneHotVectorWithConstraint(actions_h[0])
 
 
 
@@ -437,17 +475,6 @@ class RL(object):
 						# exit(0)
 
 
-			def getActionFromVector(vec):
-				maxIndex = 0
-				maxValue = -100
-				for i in range(len(vec)):
-					if vec[i] == 1:
-						return i
-				print("Something wrong in vec")
-				print(vec)
-				return 0
-
-
 
 
 			# actions_h = np.array(list(actions_h))
@@ -468,8 +495,8 @@ class RL(object):
 			# action : torch.Size([1, 16, 6])
 
 			actionTypePart = actions[:,:,0:self.num_action_types]
-			actionsDecodePart = actions[:,:,self.num_action_types:self.num_action_types+4]
-			actionsRemainPart = actions[:,:,self.num_action_types+4:]
+			actionsDecodePart = actions[:,:,self.num_action_types:self.num_action_types+self.latent_size]
+			actionsRemainPart = actions[:,:,self.num_action_types+self.latent_size:]
 
 
 			decodeShape = list(np.shape(actionsDecodePart))
@@ -482,13 +509,13 @@ class RL(object):
 			# actionsDecoded =np.empty(( ),dtype=np.float32)
 			for i in range(len(actionsDecodePart)):
 				for j in range(len(actionsDecodePart[i])):
-					embed()
-					exit(0)
-					curActionType = getActionFromVector(actionTypePart[i][j])
-					actionsDecoded = self.actionDecoders[curActionType].decode(Tensor(actionsDecodePart)).cpu().detach().numpy()
+					# embed()
+					# exit(0)
+					curActionType = getActionTypeFromVector(actionTypePart[i][j])
+					actionsDecoded[i][j] = self.actionDecoders[curActionType].decode(Tensor(actionsDecodePart[i][j])).cpu().detach().numpy()
 
 
-			envActions = np.concatenate((actionTypePart, actionsDecoded, actionsRemainPart), axis=2)
+			envActions = np.concatenate((actionsDecoded, actionsRemainPart), axis=2)
 
 			for i in range(self.num_agents):
 				for j in range(self.num_slaves):

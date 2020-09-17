@@ -93,7 +93,7 @@ public:
 	boost::python::object *nn_module_1;
 	boost::python::object *nn_module_2;
 
-	boost::python::object nn_module_decoder;
+	boost::python::object *nn_module_decoders;
 
 	// boost::python::object mm,mns,sys_module;
 	boost::python::object target_rnd_nn_module;
@@ -148,11 +148,17 @@ public:
 	bool reducedDim;
 
 	Eigen::VectorXd toOneHotVector(Eigen::VectorXd action);
+	Eigen::VectorXd toOneHotVectorWithConstraint(int index, Eigen::VectorXd action);
 
 	void showAvailableActions();
 
 
 	void getControlMeanStdByActionType(int actionType);
+
+	int getActionTypeFromVec(Eigen::VectorXd action);
+
+	double fingerAngle;
+	double fingerBallAngle;
 
     // Eigen::Vector3d curBallPosition;
     // Eigen::Vector3d prevBallPosition;

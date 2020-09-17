@@ -15,6 +15,11 @@ public:
 	dart::dynamics::SkeletonPtr mSkeleton;
 	// dart::dynamics::SkeletonPtr mArrow;
 	std::string mName;
+
+	double curLeftFingerPosition;
+	double curRightFingerPosition;
+	double curLeftFingerBallPosition;
+	double curRightFingerBallPosition;
 	// double mDirection;
 };
 

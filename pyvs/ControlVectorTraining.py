@@ -122,6 +122,7 @@ class ComprehensiveControlVectorTraining():
 		print('Train control vector of actiontype {}, Size : {}'.format(actionType, len(self.controlVectorListSplited[actionType])))
 		for epoch in range(3):
 			self.VAEEncoder.train()
+			# self.VAEDecoders[0].train()
 			self.VAEDecoders[actionType].train()
 			train_loss = 0
 			action_controlVectorList = self.controlVectorListSplited[actionType]
@@ -131,14 +132,17 @@ class ComprehensiveControlVectorTraining():
 			for i in range(200):
 				data = action_controlVectorList[i*64:(i+1)*64]
 				data = Tensor(data)
+				# self.optimizers[0].zero_grad()
 				self.optimizers[actionType].zero_grad()
 				latent, mu, logvar = self.VAEEncoder(data)
 
+				# recon_batch = self.VAEDecoders[0](latent)
 				recon_batch = self.VAEDecoders[actionType](latent)
 
 				loss = loss_function(recon_batch, data, mu, logvar)
 				loss.backward()
 				train_loss += loss.item()
+				# self.optimizers[0].step()
 				self.optimizers[actionType].step()
 				if i % 40 == 0:
 					print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
@@ -146,8 +150,9 @@ class ComprehensiveControlVectorTraining():
 		                100. * i / (200),
 		                loss.item() / len(data)))
 			print('===> Epoch: {} Arverage loss: {:.4f}'.format(1, train_loss / 12800))
-		self.VAEDecoders[actionType].save("vae_nn/vae_action_decoder_"+str(actionType)+".pt")	
-		self.VAEEncoder.save("vae_nn/vae_action_encoder.pt")	
+		# self.VAEDecoders[0].save("vae_nn/vae_action_decoder_"+str(actionType)+".pt")	
+		self.VAEDecoders[actionType].save("vae_nn2/vae_action_decoder_"+str(actionType)+".pt")	
+		self.VAEEncoder.save("vae_nn2/vae_action_encoder.pt")	
 
 
 	# def trainComprehensiveLatentSpace(self, actionTypeSource, actionTypeTarget):

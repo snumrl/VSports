@@ -158,7 +158,7 @@ denormalizeAction(Eigen::VectorXd action)
 	// std::cout<<action.rows()<<std::endl;
 
 	// -2 is for the hand contact which are not contained in xMean
-	assert(action.rows()-2 == dimX - numActionTypes);
+	assert(action.rows()-6 == dimX - numActionTypes);
 
 	// std::cout<<"------------------"<<std::endl;
 	// std::cout<<action.transpose()<<std::endl;
@@ -167,13 +167,13 @@ denormalizeAction(Eigen::VectorXd action)
 	// allignedAction.segment(0,action.rows()-2) = action.segment(0,action.rows()-2);
 	int actionLength = action.rows();
 
-	Eigen::VectorXd allignedAction(actionLength-2);
+	Eigen::VectorXd allignedAction(actionLength-6);
 	// allignedAction.segment(4,numActionTypes) = action.segment(0,numActionTypes);
 	allignedAction.segment(0,4) = action.segment(0,4);
 	allignedAction.segment(4,5) = action.segment(4,5);
 
 
-	Eigen::VectorXd denormalizedAction(actionLength-2);
+	Eigen::VectorXd denormalizedAction(actionLength-6);
 	denormalizedAction = allignedAction; 
 
 	// std::cout<<allignedAction.transpose()<<std::endl;
@@ -194,10 +194,11 @@ denormalizeAction(Eigen::VectorXd action)
 
 	Eigen::VectorXd extendedAction(actionLength);
 	extendedAction.setZero();
-	extendedAction.segment(0,actionLength-2) = denormalizedAction;
-	extendedAction.segment(actionLength-2,2) = action.segment(actionLength-2,2);
+	extendedAction.segment(0,actionLength-6) = denormalizedAction;
+	extendedAction.segment(actionLength-6,6) = action.segment(actionLength-6,6);
+	// std::cout<<"denormalizedAction : "<<action.segment(actionLength-6,6).transpose()<<std::endl;
 	// exit(0);
-	return denormalizedAction;
+	return extendedAction;
 }
 
 // Eigen::VectorXd

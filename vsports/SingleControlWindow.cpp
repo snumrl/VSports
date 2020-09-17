@@ -85,7 +85,7 @@ SingleControlWindow()
 	p::exec("import torchvision.transforms as T",mns);
 	p::exec("import numpy as np",mns);
 	p::exec("from Model import *",mns);
-	p::exec("from VAE import VAE",mns);
+	p::exec("from VAE import VAEDecoder",mns);
 	// cout<<"444444"<<endl;
 	controlOn = false;
 
@@ -112,6 +112,8 @@ SingleControlWindow()
         this->prevHandTransforms.push_back(prevHandTransform);
     }
 
+    fingerAngle = 0;
+    fingerBallAngle =0;
 
 
 }
@@ -121,6 +123,7 @@ SingleControlWindow(const char* nn_path,
 					const char* control_nn_path)
 :SingleControlWindow()
 {
+	int numActionTypes = 5;
 
 	mEnv = new Environment(30, 180, 1, "../data/motions/basketData/motion/s_004_1_1.bvh", nn_path);
 	reducedDim = false;
@@ -147,7 +150,7 @@ SingleControlWindow(const char* nn_path,
 	p::object *load_1 = new p::object[mEnv->mNumChars];
 	p::object *load_2 = new p::object[mEnv->mNumChars];
 	// reset_hidden = new boost::python::object[mEnv->mNumChars];
-/*
+
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
 		nn_module_0[i] = p::eval("ActorCriticNN(num_state, 5).cuda()", mns);
@@ -155,41 +158,47 @@ SingleControlWindow(const char* nn_path,
 	}
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module_1[i] = p::eval("ActorCriticNN(num_state+5, 4).cuda()", mns);
+		nn_module_1[i] = p::eval("ActorCriticNN(num_state+5, 5).cuda()", mns);
 		load_1[i] = nn_module_1[i].attr("load");
 	}
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module_2[i] = p::eval("ActorCriticNN(num_state+5+4, num_action-5-4).cuda()", mns);
+		nn_module_2[i] = p::eval("ActorCriticNN(num_state+5+5, 6 ).cuda()", mns);
 		load_2[i] = nn_module_2[i].attr("load");
 	}
-*/
 
 
-	for(int i=0;i<mEnv->mNumChars;i++)
-	{
-		nn_module_0[i] = p::eval("ActorCriticNN(num_state, 4).cuda()", mns);
-		load_0[i] = nn_module_0[i].attr("load");
-	}
-	for(int i=0;i<mEnv->mNumChars;i++)
-	{
-		nn_module_1[i] = p::eval("ActorCriticNN(num_state+4, 2).cuda()", mns);
-		load_1[i] = nn_module_1[i].attr("load");
-	}
+
+	// for(int i=0;i<mEnv->mNumChars;i++)
+	// {
+	// 	nn_module_0[i] = p::eval("ActorCriticNN(num_state, 4).cuda()", mns);
+	// 	load_0[i] = nn_module_0[i].attr("load");
+	// }
+	// for(int i=0;i<mEnv->mNumChars;i++)
+	// {
+	// 	nn_module_1[i] = p::eval("ActorCriticNN(num_state+4, 2).cuda()", mns);
+	// 	load_1[i] = nn_module_1[i].attr("load");
+	// }
 
 
 	load_0[0](string(control_nn_path) + "_0.pt");
 	load_1[0](string(control_nn_path) + "_1.pt");
-	// load_2[0](string(control_nn_path) + "_2.pt");
+	load_2[0](string(control_nn_path) + "_2.pt");
 	std::cout<<"Loaded control nn : "<<control_nn_path<<std::endl;
 
 
-	// nn_module_decoder = new boost::python::object;
-	p::object load_decoder;
+	nn_module_decoders = new boost::python::object[numActionTypes];
+	p::object* load_decoders = new p::object[numActionTypes];
 
-	nn_module_decoder = p::eval("VAE().cuda()", mns);
-	load_decoder = nn_module_decoder.attr("load");
+	for(int i=0;i<numActionTypes;i++)
+	{
+		nn_module_decoders[i] = p::eval("VAEDecoder().cuda()", mns);
+		load_decoders[i] = nn_module_decoders[i].attr("load");
+	}
 
+	load_decoders[0]("../pyvs/vae_nn2/vae_action_decoder_"+to_string(0)+".pt");
+	load_decoders[3]("../pyvs/vae_nn2/vae_action_decoder_"+to_string(3)+".pt");
+	std::cout<<"Loaded VAE decoder"<<std::endl;
 
 
 
@@ -311,6 +320,23 @@ keyboard(unsigned char key, int x, int y)
         case 'd':
             keyarr[int('d')] = PUSHED;
             break;
+        case 'j':
+        	fingerAngle += 0.1;
+        	std::cout<<"fingerAngle : "<<fingerAngle<<std::endl;
+        	break;
+        case 'k':
+        	fingerAngle -= 0.1;
+        	std::cout<<"fingerAngle : "<<fingerAngle<<std::endl;
+        	break;
+        case 'n':
+        	fingerBallAngle += 0.1;
+        	std::cout<<"fingerBallAngle : "<<fingerBallAngle<<std::endl;
+        	break;
+        case 'm':
+        	fingerBallAngle -= 0.1;
+        	std::cout<<"fingerBallAngle : "<<fingerBallAngle<<std::endl;
+        	break;
+
 		case 't':
         {
             mTrackCharacter = !mTrackCharacter;
@@ -525,8 +551,8 @@ step()
 
 	std::cout<<mEnv->mActions[0].segment(0,9).transpose()<<std::endl;
 	std::cout<<mEnv->mActions[0].segment(9,7).transpose()<<std::endl;
+	std::cout<<mEnv->mActions[0].segment(16,4).transpose()<<std::endl;
 	std::cout<<std::endl;
-
 
 
 	
@@ -739,6 +765,9 @@ display()
 	// cout<<mEnv->getLocalState(0).segment(_ID_GOALPOST_P+6, 2).transpose()<<endl;
 	// cout<<endl;
 
+	// mEnv->getCharacter(0)->getSkeleton()->getBodyNode("LeftFinger")->getParentJoint()->setPosition(0, fingerAngle);
+	// mEnv->getCharacter(0)->getSkeleton()->getBodyNode("LeftFingerBall")->getParentJoint()->setPosition(0, fingerBallAngle);
+
 
 	GUI::drawSkeleton(mEnv->floorSkel, Eigen::Vector3d(0.5, 1.0, 0.5), showCourtMesh, false);
 
@@ -796,35 +825,35 @@ display()
 
 	if(mEnv->curContact[0]==0 || mEnv->curContact[0]==2)
 	{
-		Eigen::Isometry3d handIsometry = mEnv->mCharacters[0]->getSkeleton()->getBodyNode("LeftHand")->getWorldTransform();
+		Eigen::Isometry3d handIsometry = mEnv->mCharacters[0]->getSkeleton()->getBodyNode("LeftFinger")->getWorldTransform();
 
 		glPushMatrix();
 		Eigen::Vector3d handPosition = handIsometry.translation();
 		glTranslated(handPosition[0], handPosition[1], handPosition[2]);
 		Eigen::AngleAxisd handAA(handIsometry.linear());
 		glRotated(180/M_PI*handAA.angle(), handAA.axis()[0], handAA.axis()[1], handAA.axis()[2]);
-		glTranslated(0.1, 0.0, 0.0);
+		// glTranslated(0.035, 0.0, 0.0);
 
 		// GUI::drawSphere(0.1, mEnv->mCharacters[0]->getSkeleton()->getBodyNode("LeftHand")->getWorldTransform().translation(), Eigen::Vector3d::Zero());
 		glColor3f(0.0, 0.0, 0.0);
-		GUI::drawCube(Eigen::Vector3d(0.1, 0.1, 0.1));
+		GUI::drawCube(Eigen::Vector3d(0.072, 0.035, 0.055));
 
 		glPopMatrix();
 	}
 	if(mEnv->curContact[0]==1 || mEnv->curContact[0]==2)
 	{
-		Eigen::Isometry3d handIsometry = mEnv->mCharacters[0]->getSkeleton()->getBodyNode("RightHand")->getWorldTransform();
+		Eigen::Isometry3d handIsometry = mEnv->mCharacters[0]->getSkeleton()->getBodyNode("RightFinger")->getWorldTransform();
 
 		glPushMatrix();
 		Eigen::Vector3d handPosition = handIsometry.translation();
 		glTranslated(handPosition[0], handPosition[1], handPosition[2]);
 		Eigen::AngleAxisd handAA(handIsometry.linear());
 		glRotated(180/M_PI*handAA.angle(), handAA.axis()[0], handAA.axis()[1], handAA.axis()[2]);
-		glTranslated(0.1, 0.0, 0.0);
+		// glTranslated(0.035, 0.0, 0.0);
 
 		// GUI::drawSphere(0.1, mEnv->mCharacters[0]->getSkeleton()->getBodyNode("LeftHand")->getWorldTransform().translation(), Eigen::Vector3d::Zero());
 		glColor3f(0.0, 0.0, 0.0);
-		GUI::drawCube(Eigen::Vector3d(0.1, 0.1, 0.1));
+		GUI::drawCube(Eigen::Vector3d(0.072, 0.035, 0.055));
 
 		glPopMatrix();	
 	}
@@ -839,11 +868,11 @@ display()
 		glTranslated(handPosition[0], handPosition[1], handPosition[2]);
 		Eigen::AngleAxisd handAA(handIsometry.linear());
 		glRotated(180/M_PI*handAA.angle(), handAA.axis()[0], handAA.axis()[1], handAA.axis()[2]);
-		glTranslated(0.1, 0.0, 0.0);
+		glTranslated(0.0, 0.0, 0.0);
 
 		// GUI::drawSphere(0.1, mEnv->mCharacters[0]->getSkeleton()->getBodyNode("LeftHand")->getWorldTransform().translation(), Eigen::Vector3d::Zero());
 		glColor3f(0.3, 0.3, 0.3);
-		GUI::drawCube(Eigen::Vector3d(0.1, 0.1, 0.1));
+		GUI::drawCube(Eigen::Vector3d(0.05, 0.05, 0.06));
 
 		glPopMatrix();	
 	}
@@ -857,11 +886,11 @@ display()
 		glTranslated(handPosition[0], handPosition[1], handPosition[2]);
 		Eigen::AngleAxisd handAA(handIsometry.linear());
 		glRotated(180/M_PI*handAA.angle(), handAA.axis()[0], handAA.axis()[1], handAA.axis()[2]);
-		glTranslated(0.1, 0.0, 0.0);
+		glTranslated(0.0, 0.0, 0.0);
 
 		// GUI::drawSphere(0.1, mEnv->mCharacters[0]->getSkeleton()->getBodyNode("LeftHand")->getWorldTransform().translation(), Eigen::Vector3d::Zero());
 		glColor3f(0.3, 0.3, 0.3);
-		GUI::drawCube(Eigen::Vector3d(0.1, 0.1, 0.1));
+		GUI::drawCube(Eigen::Vector3d(0.05, 0.05, 0.06));
 
 		glPopMatrix();	
 	}
@@ -1049,6 +1078,208 @@ toOneHotVector(Eigen::VectorXd action)
     result[maxIndex] = 1.0;
     return result;
 }
+
+
+Eigen::VectorXd
+SingleControlWindow::
+toOneHotVectorWithConstraint(int index, Eigen::VectorXd action)
+{
+    int maxIndex = 0;
+    double maxValue = -100;
+    for(int i=0;i<action.size();i++)
+    {
+        if(action[i]> maxValue)
+        {
+        	maxValue= action[i];
+        	maxIndex = i;
+        }
+    }
+    maxIndex = mEnv->setActionType(index, maxIndex);
+    Eigen::VectorXd result(action.size());
+    result.setZero();
+    result[maxIndex] = 1.0;
+    return result;
+}
+
+
+int
+SingleControlWindow::
+getActionTypeFromVec(Eigen::VectorXd action)
+{
+    int maxIndex = 0;
+    double maxValue = -100;
+    for(int i=0;i<action.size();i++)
+    {
+        if(action[i]> maxValue)
+        {
+        	maxValue= action[i];
+        	maxIndex = i;
+        }
+    }
+
+    return maxIndex;
+}
+
+
+
+void
+SingleControlWindow::
+getActionFromNN(int index)
+{
+	p::object get_action_0;
+
+	Eigen::VectorXd state = mEnv->getState(index);
+
+	int numActions = 5;
+	// std::cout<<state.segment(155,6).transpose()<<std::endl;
+	// std::cout<<state.segment(mEnv->mCharacters[0]->getSkeleton()->getNumDofs(),12).transpose()<<std::endl;
+
+	Eigen::VectorXd mActionType(numActions);
+	mActionType.setZero();
+
+	get_action_0 = nn_module_0[index].attr("get_action");
+
+	p::tuple shape = p::make_tuple(state.size());
+	np::dtype dtype = np::dtype::get_builtin<float>();
+	np::ndarray state_np = np::empty(shape, dtype);
+
+	float* dest = reinterpret_cast<float*>(state_np.get_data());
+	for(int j=0;j<state.size();j++)
+	{
+		dest[j] = state[j];
+	}
+
+	p::object temp = get_action_0(state_np);
+	np::ndarray action_np = np::from_object(temp);
+	float* srcs = reinterpret_cast<float*>(action_np.get_data());
+
+	for(int j=0;j<numActions;j++)
+	{
+		mActionType[j] = srcs[j];
+	}
+
+	mActionType = toOneHotVectorWithConstraint(index, mActionType);
+
+	int actionType = getActionTypeFromVec(mActionType);
+
+	mEnv->setActionType(index, actionType);
+
+
+	///////////////
+	Eigen::VectorXd mAction(mEnv->getNumAction() - numActions);
+	Eigen::VectorXd state_1(state.size()+numActions);
+	state_1.segment(0,state.size()) = state;
+	state_1.segment(state.size(),numActions) = mActionType;
+
+	p::object get_action_1;
+
+	get_action_1 = nn_module_1[index].attr("get_action");
+
+	p::tuple shape_1 = p::make_tuple(state_1.size());
+	np::ndarray state_np_1 = np::empty(shape_1, dtype);
+
+	float* dest_1 = reinterpret_cast<float*>(state_np_1.get_data());
+	for(int j=0;j<state_1.size();j++)
+	{
+		dest_1[j] = state_1[j];
+	}
+
+	temp = get_action_1(state_np_1);
+	np::ndarray action_np_1 = np::from_object(temp);
+	float* srcs_1 = reinterpret_cast<float*>(action_np_1.get_data());
+
+	for(int j=0;j<4;j++)
+	{
+		mAction[j] = srcs_1[j];
+	}
+
+	///////////////
+	// exit(0);
+	// mAction.segment(9,2) = mAction.segment(4,2);
+
+	int latentSize = 5;
+
+	Eigen::VectorXd encodedAction(latentSize);
+	encodedAction = mAction.segment(0,encodedAction.size());
+	Eigen::VectorXd decodedAction(9);
+
+	p::object decode;
+
+	decode = nn_module_decoders[actionType].attr("decodeAction");
+
+	p::tuple shape_d = p::make_tuple(encodedAction.size());
+	np::ndarray state_np_d = np::empty(shape_d, dtype);
+
+	float* dest_d = reinterpret_cast<float*>(state_np_d.get_data());
+	for(int j=0;j<encodedAction.size();j++)
+	{
+		dest_d[j] = encodedAction[j];
+	}
+
+	temp = decode(state_np_d);
+	np::ndarray action_np_d = np::from_object(temp);
+	float* src_d = reinterpret_cast<float*>(action_np_d.get_data());
+
+	for(int j=0;j<9;j++)
+	{
+		decodedAction[j] = src_d[j];
+	}
+
+
+
+	Eigen::VectorXd mActionHandContact(6);
+	Eigen::VectorXd state_2(state_1.size()+encodedAction.rows());
+	state_2.segment(0,state_1.size()) = state_1;
+	state_2.segment(state_1.size(),encodedAction.rows()) = encodedAction;
+
+	p::object get_action_2;
+
+	get_action_2 = nn_module_2[index].attr("get_action");
+
+	p::tuple shape_2 = p::make_tuple(state_2.size());
+	np::ndarray state_np_2 = np::empty(shape_2, dtype);
+
+	float* dest_2 = reinterpret_cast<float*>(state_np_2.get_data());
+	for(int j=0;j<state_2.size();j++)
+	{
+		dest_2[j] = state_2[j];
+	}
+
+	temp = get_action_2(state_np_2);
+	np::ndarray action_np_2 = np::from_object(temp);
+	float* srcs_2 = reinterpret_cast<float*>(action_np_2.get_data());
+
+	for(int j=0;j<mActionHandContact.size();j++)
+	{
+		mActionHandContact[j] = srcs_2[j];
+	}
+
+	mAction.segment(0, decodedAction.size()) = decodedAction;
+	mAction.segment(decodedAction.size(),mActionHandContact.size()) = mActionHandContact;
+
+
+
+
+
+
+
+	// std::cout<<"Decoded Action :"<<std::endl;
+	// std::cout<<mAction.transpose()<<std::endl;
+
+
+	// mAction = mEnv->mNormalizer->denormalizeAction(mAction);
+	// std::cout<<mAction.segment(0,4).transpose()<<std::endl;
+	// std::cout<<mAction.segment(4,8).transpose()<<std::endl;
+	// std::cout<<mAction.segment(12,7).transpose()<<std::endl;
+	// std::cout<<std::endl;
+	// std::cout<<"-------------"<<std::endl;	
+	mActions[index] = mEnv->mNormalizer->denormalizeAction(mAction);
+
+	// return mActions[index];
+}
+
+
+
 /*
 void
 SingleControlWindow::
@@ -1156,7 +1387,7 @@ getActionFromNN(int index)
 }
 
 */
-void
+/*void
 SingleControlWindow::
 getActionFromNN(int index)
 {
@@ -1266,7 +1497,7 @@ getActionFromNN(int index)
 	mActions[index] = mEnv->mNormalizer->denormalizeAction(mAction);
 }
 
-
+*/
 
 void
 SingleControlWindow::
@@ -1363,53 +1594,53 @@ int getActionTypeFromVec(std::vector<double> vec)
 	return maxIndex-4;
 }
 
-void
-SingleControlWindow::
-getControlMeanStdByActionType(int actionType)
-{
-	// std::cout<<this->xData[0].size()<<std::endl;
-	std::vector<std::vector<double>> total;
-	for(int i=0;i<this->xData[0].size();i++)
-	{
-		int curActionType = getActionTypeFromVec(this->xData[0][i]);
+// void
+// SingleControlWindow::
+// getControlMeanStdByActionType(int actionType)
+// {
+// 	// std::cout<<this->xData[0].size()<<std::endl;
+// 	std::vector<std::vector<double>> total;
+// 	for(int i=0;i<this->xData[0].size();i++)
+// 	{
+// 		int curActionType = getActionTypeFromVec(this->xData[0][i]);
 
-		if(curActionType == actionType)
-		{
-			total.push_back(this->xData[0][i]);
-		}
-	}
+// 		if(curActionType == actionType)
+// 		{
+// 			total.push_back(this->xData[0][i]);
+// 		}
+// 	}
 
-	std::vector<std::vector<double>> totalTranspose;
+// 	std::vector<std::vector<double>> totalTranspose;
 
-	// std::cout<<total[0].size()<<std::endl;
-	for(int j=0;j<total[0].size();j++)
-	{
-		std::vector<double> row;
-		for(int i=0;i<total.size();i++)
-		{
-			// std::cout<<i<<" "<<j<<std::endl;
-			row.push_back(total[i][j]);
-		}
-		totalTranspose.push_back(row);
-	}
+// 	// std::cout<<total[0].size()<<std::endl;
+// 	for(int j=0;j<total[0].size();j++)
+// 	{
+// 		std::vector<double> row;
+// 		for(int i=0;i<total.size();i++)
+// 		{
+// 			// std::cout<<i<<" "<<j<<std::endl;
+// 			row.push_back(total[i][j]);
+// 		}
+// 		totalTranspose.push_back(row);
+// 	}
 
-	for(int i=0;i<totalTranspose.size();i++)
-	{
-		std::cout<<i<<" th :";
-		double sum = std::accumulate(totalTranspose[i].begin(), totalTranspose[i].end(), 0.0);
-		double mean = sum/totalTranspose[i].size();
+// 	for(int i=0;i<totalTranspose.size();i++)
+// 	{
+// 		std::cout<<i<<" th :";
+// 		double sum = std::accumulate(totalTranspose[i].begin(), totalTranspose[i].end(), 0.0);
+// 		double mean = sum/totalTranspose[i].size();
 
-		std::vector<double> diff(totalTranspose[i].size());
-		std::transform(totalTranspose[i].begin(), totalTranspose[i].end(), diff.begin(),
-		               std::bind2nd(std::minus<double>(), mean));
+// 		std::vector<double> diff(totalTranspose[i].size());
+// 		std::transform(totalTranspose[i].begin(), totalTranspose[i].end(), diff.begin(),
+// 		               std::bind2nd(std::minus<double>(), mean));
 
-		double sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
-		double stdev = std::sqrt(sq_sum/(diff.size()-1));
-		std::cout<<mean<<", "<<stdev<<" / "<<mean+2*stdev<<", "<<mean-2*stdev<<std::endl;
-	}
-	// exit(0);
+// 		double sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
+// 		double stdev = std::sqrt(sq_sum/(diff.size()-1));
+// 		std::cout<<mean<<", "<<stdev<<" / "<<mean+2*stdev<<", "<<mean-2*stdev<<std::endl;
+// 	}
+// 	// exit(0);
 
 
-	// double sum = std::accumulate(total.begin(), _InputIterator __last, _Tp __init)
+// 	// double sum = std::accumulate(total.begin(), _InputIterator __last, _Tp __init)
 
-}
+// }
