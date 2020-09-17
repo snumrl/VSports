@@ -13,6 +13,7 @@
 #include <ctime>
 #include <signal.h>
 #include <dart/utils/utils.hpp>
+#include "../vsports/common.h"
 
 using namespace std;
 using namespace dart;
@@ -505,6 +506,8 @@ stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContact
 {
 	for(int index=0;index<mCharacters.size();index++)
 	{
+		// time_check_start();
+
 		mPrevBallPosition = ballSkel->getCOM();
 		for(int i=0;i<mNumChars;i++)
 		{
@@ -722,6 +725,7 @@ stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContact
 	        }
 	        this->criticalPointFrame = curFrame;
 	    }
+		// time_check_end();
 	}
 
 
@@ -1051,7 +1055,8 @@ getReward(int index, bool verbose)
 	double g= -9.81;
 
 	bool fastTermination = true;
-	bool fastViewTermination = true;
+	// activates when fastTermination is on
+	bool fastViewTermination = false;
 
 	// Eigen::Vector3d targetBallDirection = mTargetBallPosition - curBallPosition;
 	// // targetBallDirection[1] = 0;

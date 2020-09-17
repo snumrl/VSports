@@ -195,7 +195,8 @@ denormalizeAction(Eigen::VectorXd action)
 	Eigen::VectorXd extendedAction(actionLength);
 	extendedAction.setZero();
 	extendedAction.segment(0,actionLength-6) = denormalizedAction;
-	extendedAction.segment(actionLength-6,6) = action.segment(actionLength-6,6);
+	extendedAction.segment(actionLength-6,2) = action.segment(actionLength-6,2);
+	extendedAction.segment(actionLength-4,4) = action.segment(actionLength-4,4);
 	// std::cout<<"denormalizedAction : "<<action.segment(actionLength-6,6).transpose()<<std::endl;
 	// exit(0);
 	return extendedAction;

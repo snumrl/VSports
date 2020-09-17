@@ -289,6 +289,9 @@ stepsAtOnce()
 	// std::cout<<"0000"<<std::endl;
 	std::vector<std::vector<double>> concatControlVector;
 
+
+	// std::cout<<"steps at once"<<std::endl;
+	// time_check_start();
 	for(int id=0;id<mNumSlaves;++id)
 	{
 		if(mSlaves[id]->resetCount>30)
@@ -310,6 +313,7 @@ stepsAtOnce()
 
 	std::vector<std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool>>
 	nextPoseAndContactsWithBatch = mMotionGeneratorBatch->generateNextPoseAndContactsWithBatch(concatControlVector);
+	// time_check_end();
 
 	// std::cout<<"3333"<<std::endl;
 

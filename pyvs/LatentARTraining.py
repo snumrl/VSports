@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 3
+nnCount = 4
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -91,7 +91,7 @@ class Buffer(object):
 class RL(object):
 	def __init__(self, motion_nn):
 		np.random.seed(seed = int(time.time()))
-		self.num_slaves = 8
+		self.num_slaves = 16
 		self.num_agents = 1
 		self.env = Env(self.num_agents, motion_nn, self.num_slaves)
 		self.num_state = self.env.getNumState()
@@ -407,7 +407,6 @@ class RL(object):
 			if counter%10 == 0:
 				print('SIM : {}'.format(local_step),end='\r')
 
-			# start = time.time()
 
 			# generate transition of first hierachy
 			states_h[0] = states
@@ -438,9 +437,11 @@ class RL(object):
 			# exit(0)
 			# generate transition of second hierachy
 			# actions_0_oneHot = np.array(list(actions_h[0]))
+			# start = time.time()
 			actions_0_oneHot = arrayToOneHotVectorWithConstraint(actions_h[0])
 
 
+			# print("time :", time.time() - start)
 
 			# embed()
 			# exit(0)
@@ -507,6 +508,9 @@ class RL(object):
 			# embed()
 			# exit(0)
 			# actionsDecoded =np.empty(( ),dtype=np.float32)
+
+			# start = time.time()
+
 			for i in range(len(actionsDecodePart)):
 				for j in range(len(actionsDecodePart[i])):
 					# embed()
@@ -514,6 +518,7 @@ class RL(object):
 					curActionType = getActionTypeFromVector(actionTypePart[i][j])
 					actionsDecoded[i][j] = self.actionDecoders[curActionType].decode(Tensor(actionsDecodePart[i][j])).cpu().detach().numpy()
 
+			# print("time :", time.time() - start)
 
 			envActions = np.concatenate((actionsDecoded, actionsRemainPart), axis=2)
 
@@ -534,7 +539,11 @@ class RL(object):
 			# actions = np.concatenate((actions_0, actions_1, actions_2), axis=1)
 
 			# print("time :", time.time() - start)
+
+			# start = time.time()
 			self.env.stepsAtOnce()
+
+			# print("time :", time.time() - start)
 
 			nan_occur = [False]*self.num_slaves
 			# for i in range(self.num_agents):
