@@ -717,8 +717,8 @@ stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContact
 
 	    if(mCurBallPossessions[index])
 	    {
-	        this-> criticalPoint_targetBallPosition = this->prevBallPositions[0];
-	        this-> criticalPoint_targetBallVelocity = (this->prevBallPositions[0] - this->prevBallPositions[2])*15;
+	        this-> criticalPoint_targetBallPosition = this->curBallPosition;
+	        this-> criticalPoint_targetBallVelocity = (this->curBallPosition - this->prevBallPositions[1])*15;
 	        if(this-> criticalPoint_targetBallVelocity.norm() >8)
 	        {
 	        	this->criticalPoint_targetBallVelocity = 8.0 * this->criticalPoint_targetBallVelocity.normalized();
@@ -1056,7 +1056,7 @@ getReward(int index, bool verbose)
 
 	bool fastTermination = true;
 	// activates when fastTermination is on
-	bool fastViewTermination = false;
+	bool fastViewTermination = true;
 
 	// Eigen::Vector3d targetBallDirection = mTargetBallPosition - curBallPosition;
 	// // targetBallDirection[1] = 0;
@@ -1092,7 +1092,7 @@ getReward(int index, bool verbose)
 			projRelTargetPosition[1] = 0.0;
 			Eigen::Vector3d projCriticalVelocity = criticalPoint_targetBallVelocity;
 			projCriticalVelocity[1] = 0.0;
-			reward = 0.1*projRelTargetPosition.normalized().dot(projCriticalVelocity.normalized());
+			reward = 0.01*projRelTargetPosition.normalized().dot(projCriticalVelocity.normalized());
 			if(projRelTargetPosition.dot(projCriticalVelocity) > 0)
 			{
 				// std::cout<<reward<<std::endl;
@@ -1107,7 +1107,7 @@ getReward(int index, bool verbose)
 				if(criticalPointFrame == curFrame -2)
 				{
 					// std::cout<<"SHOOT!"<<std::endl;
-					reward += exp(0.5*-pow((mTargetBallPosition - projectedBallPosition).norm(),2));
+					reward += exp(0.4*-pow((mTargetBallPosition - projectedBallPosition).norm(),2));
 					if((mTargetBallPosition - projectedBallPosition).norm() < 0.3)
 						std::cout<<"SUCCESSED!"<<std::endl;
 				}
@@ -1689,9 +1689,19 @@ slaveResetCharacterPositions()
 		// std::cout<<"Reverse"<<std::endl;
 		aa = Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitY())*aa;
 	}
+
+	bool directionToGoal = true;
+	if(directionToGoal)
+	{
+		aa = Eigen::AngleAxisd(atan2(goalDirection[0], goalDirection[2])+M_PI/2.0, Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(M_PI/2.0, Eigen::Vector3d::UnitZ());
+	}
+
 	Eigen::Vector3d newRootOrientation = aa.angle() * aa.axis();
+	// newRootOrientation.setZero();
 
 	standPosition.segment(0,3) = newRootOrientation;
+
+
 
 
 	criticalPoint_targetBallPosition = curBallPosition;
@@ -2062,31 +2072,85 @@ computeHandBallPosition(int index)
 {
 	assert(curContact[index] != -1);
 	SkeletonPtr skel = mCharacters[index]->getSkeleton();
-	Eigen::Vector3d ballPosition = Eigen::Vector3d(0.14, 0.16, 0.0);
+	// Eigen::Vector3d prevBallPositions[0]
+	// Eigen::Vector3d relballPosition = Eigen::Vector3d(0.14, 0.16, 0.0);
 	if(curContact[index] == 0)
 	{
-		Eigen::Isometry3d handTransform = skel->getBodyNode("LeftHand")->getWorldTransform();
-		ballPosition = handTransform * ballPosition;
+		// Eigen::Isometry3d handTransform = skel->getBodyNode("LeftHand")->getWorldTransform();
+		// Eigen::Vector3d ballPosition = handTransform * ballPosition;
 
-		ballPosition = skel->getBodyNode("LeftFingerBall")->getWorldTransform().translation();
+		Eigen::Vector3d ballPosition = skel->getBodyNode("LeftFingerBall")->getWorldTransform().translation();
+
+		if((ballPosition - curBallPosition).norm() >0.15)
+		{
+			Eigen::Vector3d ballPositionR = skel->getBodyNode("RightFingerBall")->getWorldTransform().translation();
+			if((ballPosition-curBallPosition).norm() > (ballPositionR -curBallPosition).norm())
+			{
+				curContact[index] = 1;
+				return ballPositionR;
+			}
+			else
+			{
+				// std::cout<<"Too far ball to left hand"<<std::endl;
+				return ballPosition;
+			}
+		}
+		else
+			return ballPosition;
 	}
 	else if(curContact[index] == 1)
 	{
-		Eigen::Isometry3d handTransform = skel->getBodyNode("RightHand")->getWorldTransform();
-		ballPosition = handTransform * ballPosition;
-		ballPosition = skel->getBodyNode("RightFingerBall")->getWorldTransform().translation();
+		// Eigen::Isometry3d handTransform = skel->getBodyNode("RightHand")->getWorldTransform();
+		// ballPosition = handTransform * ballPosition;
+		Eigen::Vector3d ballPosition = skel->getBodyNode("RightFingerBall")->getWorldTransform().translation();
+		if((ballPosition - curBallPosition).norm() >0.15)
+		{
+			Eigen::Vector3d ballPositionL = skel->getBodyNode("LeftFingerBall")->getWorldTransform().translation();
+			if((ballPosition-curBallPosition).norm() > (ballPositionL -curBallPosition).norm())
+			{
+				curContact[index] = 0;
+				return ballPositionL;
+			}
+			else
+			{
+				// std::cout<<"Too far ball to right hand"<<std::endl;
+				return ballPosition;
+			}
+		}
+		else
+			return ballPosition;
 	}
 	if(curContact[index] == 2)
 	{
-		Eigen::Isometry3d leftHandTransform = skel->getBodyNode("LeftHand")->getWorldTransform();
-		Eigen::Isometry3d rightHandTransform = skel->getBodyNode("RightFingerBall")->getWorldTransform();
-		ballPosition = Eigen::Vector3d(0.14, 0.16, 0.0);
+		// Eigen::Isometry3d leftHandTransform = skel->getBodyNode("LeftHand")->getWorldTransform();
+		// Eigen::Isometry3d rightHandTransform = skel->getBodyNode("RightFingerBall")->getWorldTransform();
+		// ballPosition = Eigen::Vector3d(0.14, 0.16, 0.0);
 
-		ballPosition = (leftHandTransform*ballPosition + rightHandTransform*ballPosition)/2.0;
-		ballPosition = (skel->getBodyNode("LeftFingerBall")->getWorldTransform().translation() + 
+		// ballPosition = (leftHandTransform*ballPosition + rightHandTransform*ballPosition)/2.0;
+		Eigen::Vector3d ballPosition = (skel->getBodyNode("LeftFingerBall")->getWorldTransform().translation() + 
 						skel->getBodyNode("RightFingerBall")->getWorldTransform().translation())/2.0;
+		if((ballPosition - curBallPosition).norm() >0.15)
+		{
+			Eigen::Vector3d ballPositionL = skel->getBodyNode("LeftFingerBall")->getWorldTransform().translation();
+			Eigen::Vector3d ballPositionR = skel->getBodyNode("RightFingerBall")->getWorldTransform().translation();
+			if((ballPositionL-curBallPosition).norm() > (ballPositionR -curBallPosition).norm())
+			{
+				curContact[index] = 1;
+				// std::cout<<"Too far ball to two hand"<<std::endl;
+				return ballPositionR;
+			}
+			else
+			{
+				curContact[index] = 0;
+				// std::cout<<"Too far ball to two hand"<<std::endl;
+				return ballPositionL;
+			}
+		}
+		else
+			return ballPosition;
+
 	}
-	return ballPosition;
+	// return ballPosition;
 }
 //upper bound for fast binary search
 double getBounceTime(double startPosition, double startVelocity, double upperbound)
@@ -2161,7 +2225,7 @@ computeCriticalActionTimes()
 	    // }
 	    // prevActionType = maxIndex-4;
 
-		double interp = 0.3;
+		double interp = 0.0;
     	Eigen::Isometry3d rootT = getRootT(index);
 	    if(mCurActionTypes[index] == mPrevActionTypes[index])
 	    {
