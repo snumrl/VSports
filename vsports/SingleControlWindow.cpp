@@ -446,11 +446,13 @@ void
 SingleControlWindow::
 timer(int value)
 {
+	// time_check_start();
 	if(mPlay)
 		value = step();
 	// display();
 	// glutSwapBuffers();
 	glutPostRedisplay();
+	// time_check_end();
 	SimWindow::timer(value);
 }
 
@@ -500,6 +502,7 @@ int
 SingleControlWindow::
 step()
 {
+	std::chrono::time_point<std::chrono::system_clock> m_time_check_s = std::chrono::system_clock::now();
 	if(mEnv->isTerminalState())// || mEnv->isFoulState())
 	{
 		sleep(1);
@@ -508,7 +511,6 @@ step()
 	// std::cout<<"mFrame : "<<mFrame<<std::endl;
     // std::cout<<"RNN Time : "<<std::endl;
     // time_check_start();
-	std::chrono::time_point<std::chrono::system_clock> m_time_check_s = std::chrono::system_clock::now();
 	this->targetLocal.setZero();
 
 	// applyKeyBoardEvent();
@@ -544,10 +546,16 @@ step()
 	// mActions[0] = Utils::toEigenVec(this->xData[0][mFrame]);
 	// mEnv->mActions[0] = Utils::toEigenVec(this->xData[0][mFrame]);
 	// std::cout<<Utils::toEigenVec(this->xData[0][mFrame]).transpose()<<std::endl;
+
+	// time_check_start();
 	getActionFromNN(0);
+	// time_check_end();
+
 	// mActions[0].segment(0,2) = Eigen::Vector2d(200.0, 0.0);
 	// mActions[0].segment(2,2) = Eigen::Vector2d(50.0, -50.0);
+	// time_check_start();
 	mEnv->setAction(0, mActions[0]);
+	// time_check_end();
 
 	std::cout<<mEnv->mActions[0].segment(0,9).transpose()<<std::endl;
 	std::cout<<mEnv->mActions[0].segment(9,7).transpose()<<std::endl;
@@ -601,8 +609,10 @@ step()
 	}
 	// std::cout<<"2222"<<std::endl;
 
+	// time_check_start();
 	std::vector<std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool>>
 	nextPoseAndContactsWithBatch = mMotionGeneratorBatch->generateNextPoseAndContactsWithBatch(concatControlVector);
+	// time_check_end();
 
 	// std::cout<<"3333"<<std::endl;
 
@@ -624,7 +634,6 @@ step()
 
 
 
-
 	// mEnv->stepAtOnce();
     // time_check_end();
     // std::cout<<std::endl;
@@ -633,6 +642,7 @@ step()
 
 
 
+	// glutPostRedisplay();
     std::chrono::duration<double> elapsed_seconds;
 	elapsed_seconds = std::chrono::system_clock::now()-m_time_check_s;
     int calTime = std::min((int)(1000*elapsed_seconds.count()), 33);
