@@ -56,7 +56,7 @@ criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), viola
 		prevBallPositions[i].setZero();
 	}
 	mTargetBallPosition.setZero();
-	this->endTime = 20;
+	this->endTime = 5;
 	this->initCharacters(bvh_path);
 	// this->initMotionGenerator(nn_path);
 
@@ -1056,7 +1056,7 @@ getReward(int index, bool verbose)
 
 	bool fastTermination = true;
 	// activates when fastTermination is on
-	bool fastViewTermination = false;
+	bool fastViewTermination = true;
 
 	// Eigen::Vector3d targetBallDirection = mTargetBallPosition - curBallPosition;
 	// // targetBallDirection[1] = 0;
@@ -1385,9 +1385,9 @@ setAction(int index, const Eigen::VectorXd& a)
 
     }
 
-    if(mActions[index].segment(0,2).norm() > 120.0)
+    if(mActions[index].segment(0,2).norm() > 150.0)
     {
-    	mActions[index].segment(0,2) *= 120.0/mActions[index].segment(0,2).norm();
+    	mActions[index].segment(0,2) *= 150.0/mActions[index].segment(0,2).norm();
     }
 
     if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
@@ -1460,12 +1460,14 @@ int
 Environment::
 setActionType(int index, int actionType)
 {
+	// std::cout<<"Action Type : "<<actionType<<std::endl;
 
 	int curActionType = actionType;
 	if(resetCount>=0)
 		curActionType = 0;
-	else
-		curActionType = 3;
+	else if(actionType != 3)
+		curActionType = 0;
+
     if(isCriticalAction(mPrevActionTypes[index]))
     {
     	if(mCurCriticalActionTimes[index] > -15)

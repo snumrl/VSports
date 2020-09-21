@@ -1168,11 +1168,12 @@ getActionFromNN(int index)
 		mActionType[j] = srcs[j];
 	}
 
+	// std::cout<<"mActionType : "<<mActionType.transpose()<<std::endl;
 	mActionType = toOneHotVectorWithConstraint(index, mActionType);
 
 	int actionType = getActionTypeFromVec(mActionType);
 
-	mEnv->setActionType(index, actionType);
+	// mEnv->setActionType(index, actionType);
 
 
 	///////////////
