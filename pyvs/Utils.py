@@ -1,11 +1,12 @@
 import numpy as np
 import pickle
+from IPython import embed
 
 class RunningMeanStd(object):
     # https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Parallel_algorithm
     def __init__(self, shape=()):
-        self.mean = np.zeros(shape, 'float64')
-        self.var = np.ones(shape, 'float64')
+        self.mean = np.zeros(shape, np.float32)
+        self.var = np.ones(shape, np.float32)
         self.count = 1e-4
         self.epsilon = 1e-8
         self.clip = 10
@@ -19,9 +20,21 @@ class RunningMeanStd(object):
 
     # get value from normalized output
     def apply(self, x):
+        embed()
+        exit(0)
         self.update(x)
         x = np.clip((x - self.mean) / np.sqrt(self.var + self.epsilon), -self.clip, self.clip)
         return x
+
+    def applyOnly(self, x):
+
+        x = np.clip((x - self.mean) / np.sqrt(self.var + self.epsilon), -self.clip, self.clip)
+        return x
+
+        # rms_x = np.zeros(shape=x.shape(), np.float32)
+        # for i in range(len(rms_x)):
+        #     rms_x[i] = np.clip((x[i] - self.mean) / np.sqrt(self.var + self.epsilon), -self.clip, self.clip)
+
 
     def update_from_moments(self, batch_mean, batch_var, batch_count):
         self.mean, self.var, self.count = update_mean_var_count_from_moments(

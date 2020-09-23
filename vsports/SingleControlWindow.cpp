@@ -831,7 +831,7 @@ display()
 
 	// GUI::drawStringOnScreen(0.2, 0.8, scoreString, true, Eigen::Vector3d::Zero());
 
-	GUI::drawStringOnScreen(0.8, 0.8, to_string(mEnv->getElapsedTime()), true, Eigen::Vector3d::Zero());
+	GUI::drawStringOnScreen(0.8, 0.8, to_string(mEnv->getElapsedTime()), true, Eigen::Vector3d(0.5, 0.5, 0.5));
 
 	if(mEnv->curContact[0]==0 || mEnv->curContact[0]==2)
 	{
@@ -958,7 +958,10 @@ display()
 
     std::string score = "Score : "+to_string(mEnv->mAccScore[0]);
    
-    GUI::drawStringOnScreen(0.2, 0.75, score, true, Eigen::Vector3d(1,1,1));
+	GUI::drawBoxOnScreen(0.25, 0.75, Eigen::Vector2d(15.0, 4.0),Eigen::Vector3d(1.0, 1.0, 1.0), true);
+    GUI::drawStringOnScreen(0.2, 0.75, score, true, Eigen::Vector3d(0.0,0.0,0.0));
+
+
     GUI::drawStringOnScreen(0.2, 0.55, std::to_string(mEnv->mCurBallPossessions[0]), true, Eigen::Vector3d(1,1,1));
 
 	showAvailableActions();

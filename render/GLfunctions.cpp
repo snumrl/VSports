@@ -300,9 +300,8 @@ GUI::drawStringOnScreen_Big(float _x, float _y, const std::string &_s, const Eig
 	glMatrixMode(oldMode);
 }
 
-
 void
-GUI::drawBoxOnScreen(float _x, float _y, Eigen::Vector2d size, const Eigen::Vector3d& color)
+GUI::drawBoxOnScreen(float _x, float _y, Eigen::Vector2d size, const Eigen::Vector3d& color, bool filled)
 {
 	glColor3f(color[0], color[1], color[2]);
 
@@ -321,7 +320,11 @@ GUI::drawBoxOnScreen(float _x, float _y, Eigen::Vector2d size, const Eigen::Vect
 
 	double x = 2.0*_x - 1.0;
 	double y = 2.0*_y - 1.0;
-	glBegin(GL_LINE_STRIP);
+	if(!filled)
+		glBegin(GL_LINE_STRIP);
+	else
+		glBegin(GL_QUADS);
+
 	    glVertex3f(x * 100.0 + size[0], y * 100.0 + size[1], 0.0f); 
 	    glVertex3f(x * 100.0 + size[0], y * 100.0 + -size[1], 0.0f); 
 	    glVertex3f(x * 100.0 + -size[0], y * 100.0 + -size[1], 0.0f); 
@@ -334,6 +337,8 @@ GUI::drawBoxOnScreen(float _x, float _y, Eigen::Vector2d size, const Eigen::Vect
 	glPopMatrix();
 	glMatrixMode(oldMode);
 }
+
+
 
 void
 GUI::drawMapOnScreen(Eigen::VectorXd minimap, int numRows, int numCols)

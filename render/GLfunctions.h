@@ -27,7 +27,7 @@ namespace GUI
 	void drawStringOnScreen_small(float _x, float _y, const std::string& _s,const Eigen::Vector3d& color=Eigen::Vector3d(0.8,0.8,0.8));
 	void drawStringOnScreen_Big(float _x, float _y, const std::string &_s, const Eigen::Vector3d& color);
 
-	void drawBoxOnScreen(float _x, float _y, Eigen::Vector2d size, const Eigen::Vector3d& color);
+	void drawBoxOnScreen(float _x, float _y, Eigen::Vector2d size, const Eigen::Vector3d& color, bool filled = false);
 
 	void drawMapOnScreen(Eigen::VectorXd minimap, int numRows, int numCols);
 

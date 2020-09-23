@@ -9,6 +9,7 @@ from collections import OrderedDict
 import numpy as np
 from IPython import embed
 import copy
+from Utils import RunningMeanStd
 
 MultiVariateNormal = torch.distributions.Normal
 temp = MultiVariateNormal.log_prob
@@ -125,7 +126,10 @@ class ActorCriticNN(nn.Module):
 		self.policy.apply(weights_init)
 		self.value.apply(weights_init)
 
+		self.rms = RunningMeanStd(shape=(num_states))
+
 	def forward(self,x):
+		# self.rms.apply(x)
 		x = x.cuda()
 
 		batch_size = x.size()[0];
@@ -135,6 +139,22 @@ class ActorCriticNN(nn.Module):
 		# rnnOutput, out_hidden = self.rnn(x.view(1, batch_size,-1), in_hidden)
 		return MultiVariateNormal(self.policy(x).unsqueeze(0),self.log_std.exp()), self.value(x)
 		# return MultiVariateNormal(self.policy(rnnOutput).unsqueeze(0),self.log_std.exp()), self.value(rnnOutput), out_hidden
+
+	def forwardAndUpdate(self,x):
+
+
+
+		x = x.cuda()
+
+		batch_size = x.size()[0];
+
+		# self.log_std = nn.Parameter(Tensor([0, 0, -2]))
+		# k = np.exp(-0.01*num_eval)
+		# rnnOutput, out_hidden = self.rnn(x.view(1, batch_size,-1), in_hidden)
+		return MultiVariateNormal(self.policy(x).unsqueeze(0),self.log_std.exp()), self.value(x)
+		# return MultiVariateNormal(self.policy(rnnOutput).unsqueeze(0),self.log_std.exp()), self.value(rnnOutput), out_hidden
+
+
 	def load(self,path):
 		print('load nn {}'.format(path))
 		self.load_state_dict(torch.load(path))
