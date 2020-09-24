@@ -165,14 +165,13 @@ denormalizeAction(Eigen::VectorXd action)
 	// allignedAction.segment(0,action.rows()-2) = action.segment(0,action.rows()-2);
 	int actionLength = action.rows();
 
-	Eigen::VectorXd allignedAction(actionLength);
-	// allignedAction.segment(4,numActionTypes) = action.segment(0,numActionTypes);
-	allignedAction.segment(0,4) = action.segment(0,4);
-	allignedAction.segment(4,5) = action.segment(4,5);
+	// Eigen::VectorXd allignedAction(actionLength);
+	// // allignedAction.segment(4,numActionTypes) = action.segment(0,numActionTypes);
+	// allignedAction.segment(0,4) = action.segment(0,4);
+	// allignedAction.segment(4,5) = action.segment(4,5);
 
 
-	Eigen::VectorXd denormalizedAction(actionLength-6);
-	denormalizedAction = allignedAction; 
+	Eigen::VectorXd denormalizedAction = action; 
 
 	// std::cout<<allignedAction.transpose()<<std::endl;
 	// std::cout<<std::endl;

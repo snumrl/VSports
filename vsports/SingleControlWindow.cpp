@@ -558,8 +558,8 @@ step()
 	// time_check_end();
 
 	std::cout<<mEnv->mActions[0].segment(0,9).transpose()<<std::endl;
-	std::cout<<mEnv->mActions[0].segment(9,7).transpose()<<std::endl;
-	std::cout<<mEnv->mActions[0].segment(16,4).transpose()<<std::endl;
+	std::cout<<mEnv->mActions[0].segment(9,5).transpose()<<std::endl;
+	// std::cout<<mEnv->mActions[0].segment(16,4).transpose()<<std::endl;
 	std::cout<<std::endl;
 
 
