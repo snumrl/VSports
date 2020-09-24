@@ -161,11 +161,11 @@ SingleControlWindow(const char* nn_path,
 		nn_module_1[i] = p::eval("ActorCriticNN(num_state+5, 5).cuda()", mns);
 		load_1[i] = nn_module_1[i].attr("load");
 	}
-	for(int i=0;i<mEnv->mNumChars;i++)
-	{
-		nn_module_2[i] = p::eval("ActorCriticNN(num_state+5+5, 6 ).cuda()", mns);
-		load_2[i] = nn_module_2[i].attr("load");
-	}
+	// for(int i=0;i<mEnv->mNumChars;i++)
+	// {
+	// 	nn_module_2[i] = p::eval("ActorCriticNN(num_state+5+5, 6 ).cuda()", mns);
+	// 	load_2[i] = nn_module_2[i].attr("load");
+	// }
 
 
 
@@ -183,7 +183,7 @@ SingleControlWindow(const char* nn_path,
 
 	load_0[0](string(control_nn_path) + "_0.pt");
 	load_1[0](string(control_nn_path) + "_1.pt");
-	load_2[0](string(control_nn_path) + "_2.pt");
+	// load_2[0](string(control_nn_path) + "_2.pt");
 	std::cout<<"Loaded control nn : "<<control_nn_path<<std::endl;
 
 
@@ -1241,7 +1241,7 @@ getActionFromNN(int index)
 
 
 
-	Eigen::VectorXd mActionHandContact(6);
+/*	Eigen::VectorXd mActionHandContact(6);
 	Eigen::VectorXd state_2(state_1.size()+encodedAction.rows());
 	state_2.segment(0,state_1.size()) = state_1;
 	state_2.segment(state_1.size(),encodedAction.rows()) = encodedAction;
@@ -1267,9 +1267,9 @@ getActionFromNN(int index)
 	{
 		mActionHandContact[j] = srcs_2[j];
 	}
-
+*/
 	mAction.segment(0, decodedAction.size()) = decodedAction;
-	mAction.segment(decodedAction.size(),mActionHandContact.size()) = mActionHandContact;
+	// mAction.segment(decodedAction.size(),mActionHandContact.size()) = mActionHandContact;
 
 
 

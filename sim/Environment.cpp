@@ -22,7 +22,7 @@ using namespace dart::collision;
 using namespace dart::constraint;
 
 #define RESET_ADAPTING_FRAME 15
-#define ACTION_SIZE 20
+#define ACTION_SIZE 14
 #define CONTROL_VECTOR_SIZE 14
 #define NUM_ACTION_TYPE 5
 
@@ -170,30 +170,30 @@ void Environment::addFingerSegmentToSkel(SkeletonPtr skel)
 	pb2j.translation() = Eigen::Vector3d(0.095, 0.0, 0.0);
 	cb2j.setIdentity();
 	cb2j.translation() = Eigen::Vector3d(-fingerLength/2.0, 0.0, 0.0);
-	SkelMaker::makeRevoluteJointBody("RightFinger", skel, skel->getBodyNode("RightHand"), SHAPE_TYPE::BOX, Eigen::Vector3d(fingerLength, 0.03, 0.05),
+	SkelMaker::makeWeldJointBody("RightFinger", skel, skel->getBodyNode("RightHand"), SHAPE_TYPE::BOX, Eigen::Vector3d(fingerLength, 0.03, 0.05),
 	 pb2j, cb2j);
 
-	pb2j.setIdentity();
-	pb2j.translation() = Eigen::Vector3d(fingerLength/2.0, 0.0, 0.0);
-	cb2j.setIdentity();
-	cb2j.translation() = Eigen::Vector3d(0.0, -0.125, 0.0);
-	SkelMaker::makeRevoluteJointBody("RightFingerBall", skel, skel->getBodyNode("RightFinger"), SHAPE_TYPE::BALL, Eigen::Vector3d(0.02, 0.02, 0.02),
-	 pb2j, cb2j);
+	// pb2j.setIdentity();
+	// pb2j.translation() = Eigen::Vector3d(fingerLength/2.0, 0.0, 0.0);
+	// cb2j.setIdentity();
+	// cb2j.translation() = Eigen::Vector3d(0.0, -0.125, 0.0);
+	// SkelMaker::makeRevoluteJointBody("RightFingerBall", skel, skel->getBodyNode("RightFinger"), SHAPE_TYPE::BALL, Eigen::Vector3d(0.02, 0.02, 0.02),
+	//  pb2j, cb2j);
 
 
 	pb2j.setIdentity();
 	pb2j.translation() = Eigen::Vector3d(0.095, 0.0, 0.0);
 	cb2j.setIdentity();
 	cb2j.translation() = Eigen::Vector3d(-fingerLength/2.0, 0.0, 0.0);
-	SkelMaker::makeRevoluteJointBody("LeftFinger", skel, skel->getBodyNode("LeftHand"), SHAPE_TYPE::BOX, Eigen::Vector3d(fingerLength, 0.03, 0.05),
+	SkelMaker::makeWeldJointBody("LeftFinger", skel, skel->getBodyNode("LeftHand"), SHAPE_TYPE::BOX, Eigen::Vector3d(fingerLength, 0.03, 0.05),
 	 pb2j, cb2j);
 
-	pb2j.setIdentity();
-	pb2j.translation() = Eigen::Vector3d(fingerLength/2.0, 0.0, 0.0);
-	cb2j.setIdentity();
-	cb2j.translation() = Eigen::Vector3d(0.0, -0.125, 0.0);
-	SkelMaker::makeRevoluteJointBody("LeftFingerBall", skel, skel->getBodyNode("LeftFinger"), SHAPE_TYPE::BALL, Eigen::Vector3d(0.02, 0.02, 0.02),
-	 pb2j, cb2j);
+	// pb2j.setIdentity();
+	// pb2j.translation() = Eigen::Vector3d(fingerLength/2.0, 0.0, 0.0);
+	// cb2j.setIdentity();
+	// cb2j.translation() = Eigen::Vector3d(0.0, -0.125, 0.0);
+	// SkelMaker::makeRevoluteJointBody("LeftFingerBall", skel, skel->getBodyNode("LeftFinger"), SHAPE_TYPE::BALL, Eigen::Vector3d(0.02, 0.02, 0.02),
+	//  pb2j, cb2j);
 
 
 }
@@ -545,80 +545,87 @@ stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContact
 		{
 			mCurBallPossessions[index] = true;
 		}
+	   	updatePrevContacts(index, nextContacts.segment(2,2));
+
+
+	   	if(!mCurBallPossessions[index])
+	   	{
+	   		curContact[index] = -1;
+	   	}
+	   	else
+	   	{
+	   		if(mCurActionTypes[index] ==1 || mCurActionTypes[index] ==3 )
+	   		{
+	   			if(curContact[index] == -1)
+		   		{
+		   			curContact[index] = prevContact[index];
+		   		}
+	   		}
+	   		
+	   	}
+
+		SkeletonPtr skel = mCharacters[index]->getSkeleton();
+
+
+	    if(mPrevBallPossessions[index] && !mCurBallPossessions[index])
+	    {
+	        this->criticalPointFrame = curFrame-1;
+	        this->criticalPoint_targetBallPosition = this->curBallPosition;
+
+	        Eigen::Vector3d predictedBallPosition;
+
+	        if(prevContact[index] == 0)
+	        {
+	        	predictedBallPosition = skel->getBodyNode("LeftHand")->getWorldTransform()*Eigen::Vector3d(0.14, 0.16, 0.0);
+	        }
+	        if(prevContact[index] == 1)
+	        {
+	        	predictedBallPosition = skel->getBodyNode("RightHand")->getWorldTransform()*Eigen::Vector3d(0.14, 0.16, 0.0);
+	        }
+	        if(prevContact[index] == 2)
+	        {
+	        	predictedBallPosition = skel->getBodyNode("LeftHand")->getWorldTransform()*Eigen::Vector3d(0.14, 0.16, 0.0)
+				+skel->getBodyNode("RightHand")->getWorldTransform()*Eigen::Vector3d(0.14, 0.16, 0.0);
+				predictedBallPosition /= 2.0;
+	        }
+
+			double speed= (predictedBallPosition - this->prevBallPositions[0]).norm()*15;
+
+			speed /= 5.0;
+            // std::cout<<"SPEED : "<<speed<<std::endl;
+            // speed= sqrt(speed);
+            if(speed > 1.5)
+                speed = 1.5;
+            if(speed < 1.0)
+                speed = 1.0;
+
+	        Eigen::Isometry3d headT = skel->getBodyNode("Head")->getWorldTransform();
+	        
+            Eigen::Vector3d ballDirection;
+
+            if(mCurActionTypes[index] == 3)
+                ballDirection = Eigen::Vector3d(0.7, 1.1, 0.0);
+            else
+                ballDirection = Eigen::Vector3d(0.0, 1.35, 0.0);
+
+	        this->criticalPoint_targetBallVelocity = headT.linear()*ballDirection*4*speed;
+
+	    }
 
 
 	    //Update hand Contacts;
-	    if(mChangeContactIsActive[index])
-	    {
-	    	// std::cout<<"mChangeContactIsActive"<<std::endl;
-	    	// std::cout<<mActions[index].segment(ACTION_SIZE-2,2)<<std::endl;
-	    	updatePrevContacts(index, mActions[index].segment(4+NUM_ACTION_TYPE+5,2));
 
-	    	// finger : -0.4 ~ M_PI/2.0
-	    	// fingerBall : -1.3 ~ 0.2
+	    // {
+	    	// if((mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3) 
+	    	// 	&& mCurCriticalActionTimes[index]<10
+	    	// 	&& !mChangeContactIsActive[index])
+	    	// {
+	    	// 	updatePrevContacts(index, Eigen::Vector2d::Zero());
+	    	// 	mCurBallPossessions[index] = false;
+	    	// }
+	    	// else
 
-	    	double curLeftFingerPosition = mCharacters[index]->curLeftFingerPosition;
-	    	double newLeftFingerPosition = constrainedFingerAngle(curLeftFingerPosition + mActions[index][4+NUM_ACTION_TYPE+5+2]);
-
-	    	double curRightFingerPosition = mCharacters[index]->curRightFingerPosition;
-	    	double newRightFingerPosition = constrainedFingerBallAngle(curRightFingerPosition + mActions[index][4+NUM_ACTION_TYPE+5+3]);
-
-	    	double curLeftFingerBallPosition = mCharacters[index]->curLeftFingerBallPosition;
-	    	double newLeftFingerBallPosition = constrainedFingerAngle(curLeftFingerBallPosition + mActions[index][4+NUM_ACTION_TYPE+5+4]);
-
-	    	double curRightFingerBallPosition = mCharacters[index]->curRightFingerBallPosition;
-	    	double newRightFingerBallPosition = constrainedFingerBallAngle(curRightFingerBallPosition + mActions[index][4+NUM_ACTION_TYPE+5+5]);
-
-
-	    	// std::cout<<mActions[index].segment(ACTION_SIZE-4,4)<<std::endl;
-	    	// std::cout<<newLeftFingerPosition<<std::endl;
-	    	// std::cout<<curLeftFingerPosition + mActions[index][4+NUM_ACTION_TYPE+5+2]<<std::endl;
-	    	// std::cout<<curLeftFingerPosition<<std::endl;
-
-
-
-			mCharacters[index]->mSkeleton->getBodyNode("LeftFinger")->getParentJoint()
-				->setPosition(0, newLeftFingerPosition);
-			mCharacters[index]->curLeftFingerPosition = newLeftFingerPosition;
-
-			mCharacters[index]->mSkeleton->getBodyNode("RightFinger")->getParentJoint()
-				->setPosition(0, newRightFingerPosition);
-			mCharacters[index]->curRightFingerPosition = newRightFingerPosition;
-
-
-			mCharacters[index]->mSkeleton->getBodyNode("LeftFingerBall")->getParentJoint()
-				->setPosition(0, newLeftFingerBallPosition);
-			mCharacters[index]->curLeftFingerBallPosition = newLeftFingerBallPosition;
-
-			mCharacters[index]->mSkeleton->getBodyNode("RightFingerBall")->getParentJoint()
-				->setPosition(0, newRightFingerBallPosition);
-			mCharacters[index]->curRightFingerBallPosition = newRightFingerBallPosition;
-
-	    	if(curContact[index] == -1)
-	    	{
-	    		mChangeContactIsActive[index] = false;
-	    		mCurBallPossessions[index] = false;
-	    	}
-	    	else
-	    	{
-	    		mCurBallPossessions[index] = true;
-	    	}
-
-
-	    }
-	    else
-	    {
-	    	if((mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3) 
-	    		&& mCurCriticalActionTimes[index]<10
-	    		&& !mChangeContactIsActive[index])
-	    	{
-	    		updatePrevContacts(index, Eigen::Vector2d::Zero());
-	    		mCurBallPossessions[index] = false;
-	    	}
-	    	else
-	   			updatePrevContacts(index, std::get<1>(nextPoseAndContacts).segment(2,2));
-
-	    }
+	    // }
 
 	    if((mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3) 
 	    		&& mCurCriticalActionTimes[index]<-10)
@@ -665,7 +672,6 @@ stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContact
 
 
 	    //** get foot contacting
-		SkeletonPtr skel = mCharacters[index]->getSkeleton();
 		if(std::get<1>(nextPoseAndContacts)[0] > 0.5)
 		{
 			if(!mLFootContacting[index])
@@ -715,16 +721,6 @@ stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContact
 		}
 
 
-	    if(mCurBallPossessions[index])
-	    {
-	        this-> criticalPoint_targetBallPosition = this->curBallPosition;
-	        this-> criticalPoint_targetBallVelocity = (this->curBallPosition - this->prevBallPositions[1])*15;
-	        if(this-> criticalPoint_targetBallVelocity.norm() >8)
-	        {
-	        	this->criticalPoint_targetBallVelocity = 8.0 * this->criticalPoint_targetBallVelocity.normalized();
-	        }
-	        this->criticalPointFrame = curFrame;
-	    }
 		// time_check_end();
 	}
 
@@ -794,11 +790,11 @@ getState(int index)
 	EEJoints.push_back("LeftHand");
 	EEJoints.push_back("RightHand");
 
-	EEJoints.push_back("LeftFinger");
-	EEJoints.push_back("RightFinger");
+	// EEJoints.push_back("LeftFinger");
+	// EEJoints.push_back("RightFinger");
 
-	EEJoints.push_back("LeftFingerBall");
-	EEJoints.push_back("RightFingerBall");
+	// EEJoints.push_back("LeftFingerBall");
+	// EEJoints.push_back("RightFingerBall");
 
 
 	EEJoints.push_back("LeftToe");
@@ -1056,7 +1052,7 @@ getReward(int index, bool verbose)
 
 	bool fastTermination = true;
 	// activates when fastTermination is on
-	bool fastViewTermination = false;
+	bool fastViewTermination = true;
 
 	// Eigen::Vector3d targetBallDirection = mTargetBallPosition - curBallPosition;
 	// // targetBallDirection[1] = 0;
@@ -1434,8 +1430,7 @@ setAction(int index, const Eigen::VectorXd& a)
     }
 
 	computeCriticalActionTimes();
-
-    //** contact
+/*
     if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
     {
 	   	for(int i=0;i<2;i++)
@@ -1450,7 +1445,7 @@ setAction(int index, const Eigen::VectorXd& a)
 	   		}
 	   	}
 
-	}
+	}*/
 
 
 }
@@ -2075,12 +2070,12 @@ computeHandBallPosition(int index)
 	assert(curContact[index] != -1);
 	SkeletonPtr skel = mCharacters[index]->getSkeleton();
 	// Eigen::Vector3d prevBallPositions[0]
-	// Eigen::Vector3d relballPosition = Eigen::Vector3d(0.14, 0.16, 0.0);
+	Eigen::Vector3d relBallPosition = Eigen::Vector3d(0.14, 0.16, 0.0);
 	if(curContact[index] == 0)
 	{
-		// Eigen::Isometry3d handTransform = skel->getBodyNode("LeftHand")->getWorldTransform();
-		// Eigen::Vector3d ballPosition = handTransform * ballPosition;
-
+		Eigen::Isometry3d handTransform = skel->getBodyNode("LeftHand")->getWorldTransform();
+		Eigen::Vector3d ballPosition = handTransform * relBallPosition;
+/*
 		Eigen::Vector3d ballPosition = skel->getBodyNode("LeftFingerBall")->getWorldTransform().translation();
 
 		if((ballPosition - curBallPosition).norm() >0.15)
@@ -2097,14 +2092,14 @@ computeHandBallPosition(int index)
 				return ballPosition;
 			}
 		}
-		else
+		else*/
 			return ballPosition;
 	}
 	else if(curContact[index] == 1)
 	{
-		// Eigen::Isometry3d handTransform = skel->getBodyNode("RightHand")->getWorldTransform();
-		// ballPosition = handTransform * ballPosition;
-		Eigen::Vector3d ballPosition = skel->getBodyNode("RightFingerBall")->getWorldTransform().translation();
+		Eigen::Isometry3d handTransform = skel->getBodyNode("RightHand")->getWorldTransform();
+		Eigen::Vector3d ballPosition = handTransform * relBallPosition;
+		/*Eigen::Vector3d ballPosition = skel->getBodyNode("RightFingerBall")->getWorldTransform().translation();
 		if((ballPosition - curBallPosition).norm() >0.15)
 		{
 			Eigen::Vector3d ballPositionL = skel->getBodyNode("LeftFingerBall")->getWorldTransform().translation();
@@ -2119,17 +2114,17 @@ computeHandBallPosition(int index)
 				return ballPosition;
 			}
 		}
-		else
+		else*/
 			return ballPosition;
 	}
 	if(curContact[index] == 2)
 	{
-		// Eigen::Isometry3d leftHandTransform = skel->getBodyNode("LeftHand")->getWorldTransform();
-		// Eigen::Isometry3d rightHandTransform = skel->getBodyNode("RightFingerBall")->getWorldTransform();
-		// ballPosition = Eigen::Vector3d(0.14, 0.16, 0.0);
+		Eigen::Isometry3d leftHandTransform = skel->getBodyNode("LeftHand")->getWorldTransform();
+		Eigen::Isometry3d rightHandTransform = skel->getBodyNode("RightHand")->getWorldTransform();
+		Eigen::Vector3d ballPosition = Eigen::Vector3d(0.14, 0.16, 0.0);
 
-		// ballPosition = (leftHandTransform*ballPosition + rightHandTransform*ballPosition)/2.0;
-		Eigen::Vector3d ballPosition = (skel->getBodyNode("LeftFingerBall")->getWorldTransform().translation() + 
+		ballPosition = (leftHandTransform*relBallPosition + rightHandTransform*relBallPosition)/2.0;
+		/*Eigen::Vector3d ballPosition = (skel->getBodyNode("LeftFingerBall")->getWorldTransform().translation() + 
 						skel->getBodyNode("RightFingerBall")->getWorldTransform().translation())/2.0;
 		if((ballPosition - curBallPosition).norm() >0.15)
 		{
@@ -2148,7 +2143,7 @@ computeHandBallPosition(int index)
 				return ballPositionL;
 			}
 		}
-		else
+		else*/
 			return ballPosition;
 
 	}

@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 8
+nnCount = 9
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -120,7 +120,7 @@ class RL(object):
 		self.latent_size = 5
 
 		#contact, finger, finger-ball
-		self.num_action = [self.num_action_types, self.latent_size, 6]
+		self.num_action = [self.num_action_types, self.latent_size]
 
 
 		self.num_h = len(self.num_action);
@@ -136,8 +136,8 @@ class RL(object):
 		self.actionDecoders = [ VAEDecoder().to(device) for _ in range(self.num_action_types)]
 		# for i in range(self.num_action_types):
 
-		self.actionDecoders[0].load("vae_nn2/vae_action_decoder_"+str(0)+".pt")
-		self.actionDecoders[3].load("vae_nn2/vae_action_decoder_"+str(3)+".pt")
+		self.actionDecoders[0].load("vae_nn3/vae_action_decoder_"+str(0)+".pt")
+		self.actionDecoders[3].load("vae_nn3/vae_action_decoder_"+str(3)+".pt")
 
 
 
@@ -497,19 +497,12 @@ class RL(object):
 
 			actionTypePart = actions[:,:,0:self.num_action_types]
 			actionsDecodePart = actions[:,:,self.num_action_types:self.num_action_types+self.latent_size]
-			actionsRemainPart = actions[:,:,self.num_action_types+self.latent_size:]
+			# actionsRemainPart = actions[:,:,self.num_action_types+self.latent_size:]
 
 
 			decodeShape = list(np.shape(actionsDecodePart))
 			decodeShape[2] = 9
 			actionsDecoded =np.empty(decodeShape,dtype=np.float32)
-			# actionsDecoded = self.actionDecoder.decode(Tensor(actionsDecodePart)).cpu().detach().numpy()
-
-			# embed()
-			# exit(0)
-			# actionsDecoded =np.empty(( ),dtype=np.float32)
-
-			# start = time.time()
 
 			for i in range(len(actionsDecodePart)):
 				for j in range(len(actionsDecodePart[i])):
@@ -520,7 +513,8 @@ class RL(object):
 
 			# print("time :", time.time() - start)
 
-			envActions = np.concatenate((actionsDecoded, actionsRemainPart), axis=2)
+			envActions = actionsDecoded
+			# envActions = np.concatenate((actionsDecoded, actionsRemainPart), axis=2)
 
 			for i in range(self.num_agents):
 				for j in range(self.num_slaves):

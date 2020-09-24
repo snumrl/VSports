@@ -151,8 +151,8 @@ class ComprehensiveControlVectorTraining():
 		                loss.item() / len(data)))
 			print('===> Epoch: {} Arverage loss: {:.4f}'.format(1, train_loss / 12800))
 		# self.VAEDecoders[0].save("vae_nn/vae_action_decoder_"+str(actionType)+".pt")	
-		self.VAEDecoders[actionType].save("vae_nn2/vae_action_decoder_"+str(actionType)+".pt")	
-		self.VAEEncoder.save("vae_nn2/vae_action_encoder.pt")	
+		self.VAEDecoders[actionType].save("vae_nn3/vae_action_decoder_"+str(actionType)+".pt")	
+		self.VAEEncoder.save("vae_nn3/vae_action_encoder.pt")	
 
 
 	# def trainComprehensiveLatentSpace(self, actionTypeSource, actionTypeTarget):
@@ -191,28 +191,28 @@ def trainControlVector(path, actionType):
 		print('===> Epoch: {} Arverage loss: {:.4f}'.format(1, train_loss / len(control_vector_list)))
 	model.save("vae_nn/vae_0.pt")	
 
-def test(path):
-	model.eval()
-	with torch.no_grad():
-		control_vector_list = loadData(os.path.dirname(os.path.abspath(__file__)) + "/../extern/ICA/motions/%s/data/0_xData.dat"%(path))
-		random.shuffle(control_vector_list)
-		model.load("vae_nn/vae_0.pt")
-		for i in range(10):
-			data = control_vector_list[i]
-			data = Tensor(data)
-			recon_batch , mu, logvar = model(data)
-			print(data)
-			print(recon_batch)
-			print(mu)
-			print(logvar)
-			print("")
+# def test(path):
+# 	model.eval()
+# 	with torch.no_grad():
+# 		control_vector_list = loadData(os.path.dirname(os.path.abspath(__file__)) + "/../extern/ICA/motions/%s/data/0_xData.dat"%(path))
+# 		random.shuffle(control_vector_list)
+# 		model.load("vae_nn/vae_0.pt")
+# 		for i in range(10):
+# 			data = control_vector_list[i]
+# 			data = Tensor(data)
+# 			recon_batch , mu, logvar = model(data)
+# 			print(data)
+# 			print(recon_batch)
+# 			print(mu)
+# 			print(logvar)
+# 			print("")
 
 
 
 # trainControlVector("basket_0")
 # test("basket_0")
 
-ccvt = ComprehensiveControlVectorTraining("basket_0", 5)
+ccvt = ComprehensiveControlVectorTraining("basket_2", 5)
 for i in range(50):
 	ccvt.trainTargetCV(0)
 	ccvt.trainTargetCV(3)
