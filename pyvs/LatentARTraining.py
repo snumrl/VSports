@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 9
+nnCount = 10
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -131,7 +131,7 @@ class RL(object):
 			for i in range(self.num_policy):
 				self.buffer[h][i] = Buffer(100000)
 
-		self.RMSs = [RunningMeanStd() for _ in range(self.num_h)]
+		# self.RMSs = [RunningMeanStd() for _ in range(self.num_h)]
 
 		self.actionDecoders = [ VAEDecoder().to(device) for _ in range(self.num_action_types)]
 		# for i in range(self.num_action_types):

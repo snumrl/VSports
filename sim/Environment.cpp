@@ -56,7 +56,7 @@ criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), viola
 		prevBallPositions[i].setZero();
 	}
 	mTargetBallPosition.setZero();
-	this->endTime = 15;
+	this->endTime = 5;
 	this->initCharacters(bvh_path);
 	// this->initMotionGenerator(nn_path);
 
@@ -1052,7 +1052,7 @@ getReward(int index, bool verbose)
 
 	bool fastTermination = true;
 	// activates when fastTermination is on
-	bool fastViewTermination = false;
+	bool fastViewTermination = true;
 
 	// Eigen::Vector3d targetBallDirection = mTargetBallPosition - curBallPosition;
 	// // targetBallDirection[1] = 0;

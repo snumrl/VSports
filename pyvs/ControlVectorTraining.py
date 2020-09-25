@@ -212,7 +212,7 @@ def trainControlVector(path, actionType):
 # trainControlVector("basket_0")
 # test("basket_0")
 
-ccvt = ComprehensiveControlVectorTraining("basket_2", 5)
+ccvt = ComprehensiveControlVectorTraining("basket_7", 5)
 for i in range(50):
 	ccvt.trainTargetCV(0)
 	ccvt.trainTargetCV(3)
