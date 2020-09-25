@@ -1461,8 +1461,10 @@ setActionType(int index, int actionType)
 	if(resetCount>=0)
 		curActionType = 0;
 	else if(actionType != 3)
-		curActionType = 0;
+		curActionType = 3;
 
+
+	// curActionType = 3;
     if(isCriticalAction(mPrevActionTypes[index]))
     {
     	if(mCurCriticalActionTimes[index] > -15)

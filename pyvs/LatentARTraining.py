@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 10
+nnCount = 11
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
