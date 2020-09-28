@@ -151,8 +151,8 @@ class ComprehensiveControlVectorTraining():
 		                loss.item() / len(data)))
 			print('===> Epoch: {} Arverage loss: {:.4f}'.format(1, train_loss / 12800))
 		# self.VAEDecoders[0].save("vae_nn/vae_action_decoder_"+str(actionType)+".pt")	
-		self.VAEDecoders[actionType].save("vae_nn3/vae_action_decoder_"+str(actionType)+".pt")	
-		self.VAEEncoder.save("vae_nn3/vae_action_encoder.pt")	
+		self.VAEDecoders[actionType].save("vae_nn/vae_action_decoder_"+str(actionType)+".pt")	
+		self.VAEEncoder.save("vae_nn/vae_action_encoder.pt")	
 
 
 	# def trainComprehensiveLatentSpace(self, actionTypeSource, actionTypeTarget):
@@ -212,7 +212,7 @@ def trainControlVector(path, actionType):
 # trainControlVector("basket_0")
 # test("basket_0")
 
-ccvt = ComprehensiveControlVectorTraining("basket_7", 5)
+ccvt = ComprehensiveControlVectorTraining("basket_8", 5)
 for i in range(50):
 	ccvt.trainTargetCV(0)
 	ccvt.trainTargetCV(3)

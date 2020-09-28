@@ -126,13 +126,19 @@ class ActorCriticNN(nn.Module):
 		self.policy.apply(weights_init)
 		self.value.apply(weights_init)
 
-		self.rms = RunningMeanStd(shape=(num_states))
+		# print(num_states)
+		# self.rms = RunningMeanStd(shape=(num_states))
 
 	def forward(self,x):
-		# self.rms.apply(x)
-		x = x.cuda()
 
+		# x_np = x.detach().cpu().numpy()
+		# x_np = self.rms.applyOnly(x_np)
+		# x = Tensor(x_np).cuda()
+
+		x= x.cuda()
 		batch_size = x.size()[0];
+		# embed()
+		# exit(0)
 
 		# self.log_std = nn.Parameter(Tensor([0, 0, -2]))
 		# k = np.exp(-0.01*num_eval)
@@ -142,8 +148,11 @@ class ActorCriticNN(nn.Module):
 
 	def forwardAndUpdate(self,x):
 
+		# x_np = x.detach().cpu().numpy()
+		# x_np = self.rms.apply(x_np)
+		# x = Tensor(x_np).cuda()
 
-
+		# rms.apply(x)
 		x = x.cuda()
 
 		batch_size = x.size()[0];

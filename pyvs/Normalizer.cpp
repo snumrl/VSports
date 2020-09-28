@@ -7,7 +7,7 @@
 Normalizer::Normalizer(std::string xNormalPath, std::string yNormalPath)
 {
 	std::ifstream in;
-	dimX = 14;
+	dimX = 13;
 	dimY = 147;
 
 	in.open(xNormalPath);
@@ -182,8 +182,8 @@ denormalizeAction(Eigen::VectorXd action)
 	denormalizedAction.segment(0,4) = action.segment(0,4).cwiseProduct(xStd.segment(0,4));
 	denormalizedAction.segment(0,4) = denormalizedAction.segment(0,4)+ xMean.segment(0,4);
 
-	denormalizedAction.segment(4,5) = action.segment(4,5).cwiseProduct(xStd.segment(4+numActionTypes,5));
-	denormalizedAction.segment(4,5) = denormalizedAction.segment(4,5)+ xMean.segment(4+numActionTypes,5);
+	denormalizedAction.segment(4,4) = action.segment(4,4).cwiseProduct(xStd.segment(4+numActionTypes,4));
+	denormalizedAction.segment(4,4) = denormalizedAction.segment(4,4)+ xMean.segment(4+numActionTypes,4);
 
 	return denormalizedAction;
 }

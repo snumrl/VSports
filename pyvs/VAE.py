@@ -140,9 +140,9 @@ class VAEEncoder(nn.Module):
     def __init__(self):
         super(VAEEncoder, self).__init__()
 
-        self.cvSize = 9
+        self.cvSize = 8
         scale = 64
-        latentSize = 5
+        latentSize = 4
         self.fc1 = nn.Linear(self.cvSize, scale*2)
         self.fc1b = nn.Linear(scale*2, scale)
         self.fc21 = nn.Linear(scale, latentSize)
@@ -179,9 +179,9 @@ class VAEDecoder(nn.Module):
     def __init__(self):
         super(VAEDecoder, self).__init__()
 
-        self.cvSize = 9
+        self.cvSize = 8
         scale = 64
-        latentSize = 5
+        latentSize = 4
         self.fc3 = nn.Linear(latentSize, scale)
         self.fc3b = nn.Linear(scale, scale*2)
         self.fc4 = nn.Linear(scale*2, self.cvSize)
@@ -224,7 +224,7 @@ class VAEDecoder(nn.Module):
 
 # Reconstruction + KL divergence losses summed over all elements and batch
 def loss_function(recon_x, x, mu, logvar):
-    BCE = F.mse_loss(recon_x, x.view(-1, 9), reduction='sum')
+    BCE = F.mse_loss(recon_x, x.view(-1, 8), reduction='sum')
     # BCE = F.binary_cross_entropy(recon_x, x.view(-1, 784), reduction='sum')
 
     # see Appendix B from VAE paper:

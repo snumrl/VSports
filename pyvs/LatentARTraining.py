@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 11
+nnCount = 12
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -117,7 +117,7 @@ class RL(object):
 		
 
 		self.num_action_types = 5
-		self.latent_size = 5
+		self.latent_size = 4
 
 		#contact, finger, finger-ball
 		self.num_action = [self.num_action_types, self.latent_size]
@@ -136,8 +136,10 @@ class RL(object):
 		self.actionDecoders = [ VAEDecoder().to(device) for _ in range(self.num_action_types)]
 		# for i in range(self.num_action_types):
 
-		self.actionDecoders[0].load("vae_nn3/vae_action_decoder_"+str(0)+".pt")
-		self.actionDecoders[3].load("vae_nn3/vae_action_decoder_"+str(3)+".pt")
+		self.actionDecoders[0].load("vae_nn/vae_action_decoder_"+str(0)+".pt")
+		self.actionDecoders[3].load("vae_nn/vae_action_decoder_"+str(3)+".pt")
+
+		self.rms = RunningMeanStd(self.num_state)
 
 
 
@@ -331,6 +333,8 @@ class RL(object):
 			for j in range(self.num_slaves):
 				states[i][j] = self.env.getState(j,i).astype(np.float32)
 		states = np.array(states)
+		states = self.rms.apply(states)
+		# print(states)
 		# embed()
 		# exit(0)
 		# states.transpose()
@@ -501,7 +505,7 @@ class RL(object):
 
 
 			decodeShape = list(np.shape(actionsDecodePart))
-			decodeShape[2] = 9
+			decodeShape[2] = 8
 			actionsDecoded =np.empty(decodeShape,dtype=np.float32)
 
 			for i in range(len(actionsDecodePart)):
@@ -610,6 +614,7 @@ class RL(object):
 				for j in range(self.num_slaves):
 					states[i][j] = self.env.getState(j,i).astype(np.float32)
 			states = np.array(states)
+			states = self.rms.apply(states)
 
 		print('SIM : {}'.format(local_step))
 
@@ -753,8 +758,10 @@ class RL(object):
 					stack_td = np.vstack(batch.TD).astype(np.float32)
 					stack_gae = np.vstack(batch.GAE).astype(np.float32)
 
-					# num_layers = self.target_model[buff_index].num_layers
 
+					# if(h==1):
+					# 	embed()
+					# 	exit(0)
 					a_dist,v = self.target_model[h][buff_index].forward(Tensor(stack_s))	
 					
 					# hidden_list[timeStep] = list(cur_stack_hidden)

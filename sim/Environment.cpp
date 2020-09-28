@@ -22,8 +22,8 @@ using namespace dart::collision;
 using namespace dart::constraint;
 
 #define RESET_ADAPTING_FRAME 15
-#define ACTION_SIZE 14
-#define CONTROL_VECTOR_SIZE 14
+#define ACTION_SIZE 13
+#define CONTROL_VECTOR_SIZE 13
 #define NUM_ACTION_TYPE 5
 
 // p.rows() + v.rows() + ballP.rows() + ballV.rows() +
@@ -1429,7 +1429,7 @@ setAction(int index, const Eigen::VectorXd& a)
     	mActions[index].segment(4+NUM_ACTION_TYPE, mActions[index].rows()-(4+NUM_ACTION_TYPE)).setZero();
     }
 
-	computeCriticalActionTimes();
+	// computeCriticalActionTimes();
 /*
     if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
     {
@@ -1467,21 +1467,43 @@ setActionType(int index, int actionType)
 	// curActionType = 3;
     if(isCriticalAction(mPrevActionTypes[index]))
     {
-    	if(mCurCriticalActionTimes[index] > -15)
-    		curActionType = mPrevActionTypes[index];
+    	if(mPrevActionTypes[index] == 1 || mPrevActionTypes[index] == 3)
+    	{
+	    	if(mCurBallPossessions[index])
+	    		curActionType = mPrevActionTypes[index];
+	    	else
+	    	{
+	    		bsm[index]->transition(mPrevActionTypes[index], true);
+		    	if(bsm[index]->isAvailable(curActionType))
+		    	{
+		    		if(isCriticalAction(curActionType))
+		    			curActionType = bsm[index]->transition(curActionType);
+		    		else
+		    			curActionType = bsm[index]->transition(curActionType, true);
+		    	}
+		    	else
+		    		curActionType = bsm[index]->transition(curActionType);    	
+		    }
+    	}
     	else
     	{
-    		bsm[index]->transition(mPrevActionTypes[index], true);
-	    	if(bsm[index]->isAvailable(curActionType))
-	    	{
-	    		if(isCriticalAction(curActionType))
-	    			curActionType = bsm[index]->transition(curActionType);
-	    		else
-	    			curActionType = bsm[index]->transition(curActionType, true);
-	    	}
+	    	if(!mCurBallPossessions[index])
+	    		curActionType = mPrevActionTypes[index];
 	    	else
-	    		curActionType = bsm[index]->transition(curActionType);    	
-	    }
+	    	{
+	    		bsm[index]->transition(mPrevActionTypes[index], true);
+		    	if(bsm[index]->isAvailable(curActionType))
+		    	{
+		    		if(isCriticalAction(curActionType))
+		    			curActionType = bsm[index]->transition(curActionType);
+		    		else
+		    			curActionType = bsm[index]->transition(curActionType, true);
+		    	}
+		    	else
+		    		curActionType = bsm[index]->transition(curActionType);    	
+		    }
+    	}
+
     }
     else
     {
@@ -1515,8 +1537,9 @@ isTerminalState()
 	{
 		mIsTerminalState = true;
 	}
-	if(mCurCriticalActionTimes[0] < -60)
-		mIsTerminalState= true;
+
+	// if(mCurCriticalActionTimes[0] < -60)
+	// 	mIsTerminalState= true;
 
 	// if((mCharacters[0]->getSkeleton()->getCOM()-mTargetBallPosition).norm() > 20.0)
 	// 	mIsTerminalState = true;
@@ -2798,21 +2821,44 @@ applyAction(int index)
 
 
     Eigen::Vector4d nextContacts = std::get<1>(nextPoseAndContacts).segment(0,4);
+
+   	updatePrevContacts(index, std::get<1>(nextPoseAndContacts).segment(2,2));
+
     // mCurActionTypes[index] = std::get<2>(nextPoseAndContacts);
 	mCurBallPossessions[index] = std::get<2>(nextPoseAndContacts);
 	if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
 	{
+		// if(curContact == -1)
+		// {}
+		if(!mCurBallPossessions[index])
+		{
+			curContact[index] = -1;
+		}
+		if(mCurBallPossessions[index] && curContact[index] == -1)
+		{
+			curContact[index] = prevContact[index];
+		}
+
 		// if(mCurCriticalActionTimes[index] > 0)
 		// 	mCurBallPossessions[index] = true;
 		// else
 		// 	mCurBallPossessions[index] = false;
-		if(mCurCriticalActionTimes[index] < -10)
-		{
-			mCurBallPossessions[index] = false;
-		}
+		// if(mCurCriticalActionTimes[index] < -10)
+		// {
+		// 	mCurBallPossessions[index] = false;
+		// }
 	}
 	if(mCurActionTypes[index] == 2)
 	{
+		if(curContact[index] != -1)
+		{
+			mCurBallPossessions[index] = true;
+		}
+
+		if(mCurBallPossessions[index] && curContact[index] == -1)
+		{
+			mCurBallPossessions[index] = false;
+		}
 		// if(mCurCriticalActionTimes[index] > 0)
 		// {
 		// 	mCurBallPossessions[index] = false;
@@ -2870,43 +2916,43 @@ applyAction(int index)
 
 
     //Update hand Contacts;
-    if(mChangeContactIsActive[index])
-    {
-    	std::cout<<"mChangeContactIsActive"<<std::endl;
-    	updatePrevContacts(index, mActions[index].segment(4+NUM_ACTION_TYPE+5,2));
-    	if(curContact[index] == -1)
-    	{
-    		mChangeContactIsActive[index] = false;
-    		mCurBallPossessions[index] = false;
-    		// std::cout<<"here"<<std::endl;
-    	}
-    	else
-    	{
-    		mCurBallPossessions[index] = true;
-    	}
-    	// std::cout<<curContact[index]<<std::endl;
-    	// std::cout<<std::endl;
+    // if(mChangeContactIsActive[index])
+    // {
+    // 	std::cout<<"mChangeContactIsActive"<<std::endl;
+    // 	updatePrevContacts(index, mActions[index].segment(4+NUM_ACTION_TYPE+5,2));
+    // 	if(curContact[index] == -1)
+    // 	{
+    // 		mChangeContactIsActive[index] = false;
+    // 		mCurBallPossessions[index] = false;
+    // 		// std::cout<<"here"<<std::endl;
+    // 	}
+    // 	else
+    // 	{
+    // 		mCurBallPossessions[index] = true;
+    // 	}
+    // 	// std::cout<<curContact[index]<<std::endl;
+    // 	// std::cout<<std::endl;
 
-    }
-    else
-    {
-    	if((mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3) 
-    		&& mCurCriticalActionTimes[index]<10
-    		&& !mChangeContactIsActive[index])
-    	{
-    		updatePrevContacts(index, Eigen::Vector2d::Zero());
-    		mCurBallPossessions[index] = false;
-    	}
-    	else
-   			updatePrevContacts(index, std::get<1>(nextPoseAndContacts).segment(2,2));
+    // }
+    // else
+    // {
+    // 	if((mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3) 
+    // 		&& mCurCriticalActionTimes[index]<10
+    // 		&& !mChangeContactIsActive[index])
+    // 	{
+    // 		updatePrevContacts(index, Eigen::Vector2d::Zero());
+    // 		mCurBallPossessions[index] = false;
+    // 	}
+    // 	else
+   	// 		updatePrevContacts(index, std::get<1>(nextPoseAndContacts).segment(2,2));
 
-    }
+    // }
 
-    if((mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3) 
-    		&& mCurCriticalActionTimes[index]<-10)
-    {
-    	curContact[index] = -1;
-    }
+    // if((mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3) 
+    // 		&& mCurCriticalActionTimes[index]<-10)
+    // {
+    // 	curContact[index] = -1;
+    // }
 
     // std::cout<<curContact[index]<<std::endl;
     // std::cout<<mCurBallPossessions[index]<<std::endl;

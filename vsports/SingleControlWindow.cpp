@@ -158,7 +158,7 @@ SingleControlWindow(const char* nn_path,
 	}
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module_1[i] = p::eval("ActorCriticNN(num_state+5, 5).cuda()", mns);
+		nn_module_1[i] = p::eval("ActorCriticNN(num_state+5, 4).cuda()", mns);
 		load_1[i] = nn_module_1[i].attr("load");
 	}
 	// for(int i=0;i<mEnv->mNumChars;i++)
@@ -196,8 +196,8 @@ SingleControlWindow(const char* nn_path,
 		load_decoders[i] = nn_module_decoders[i].attr("load");
 	}
 
-	load_decoders[0]("../pyvs/vae_nn3/vae_action_decoder_"+to_string(0)+".pt");
-	load_decoders[3]("../pyvs/vae_nn3/vae_action_decoder_"+to_string(3)+".pt");
+	load_decoders[0]("../pyvs/vae_nn/vae_action_decoder_"+to_string(0)+".pt");
+	load_decoders[3]("../pyvs/vae_nn/vae_action_decoder_"+to_string(3)+".pt");
 	std::cout<<"Loaded VAE decoder"<<std::endl;
 
 
@@ -1211,11 +1211,11 @@ getActionFromNN(int index)
 	// exit(0);
 	// mAction.segment(9,2) = mAction.segment(4,2);
 
-	int latentSize = 5;
+	int latentSize = 4;
 
 	Eigen::VectorXd encodedAction(latentSize);
 	encodedAction = mAction.segment(0,encodedAction.size());
-	Eigen::VectorXd decodedAction(9);
+	Eigen::VectorXd decodedAction(8);
 
 	p::object decode;
 
@@ -1234,7 +1234,7 @@ getActionFromNN(int index)
 	np::ndarray action_np_d = np::from_object(temp);
 	float* src_d = reinterpret_cast<float*>(action_np_d.get_data());
 
-	for(int j=0;j<9;j++)
+	for(int j=0;j<decodedAction.size();j++)
 	{
 		decodedAction[j] = src_d[j];
 	}

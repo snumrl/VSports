@@ -20,14 +20,15 @@ class RunningMeanStd(object):
 
     # get value from normalized output
     def apply(self, x):
-        embed()
-        exit(0)
+        # embed()
+        # exit(0)
         self.update(x)
         x = np.clip((x - self.mean) / np.sqrt(self.var + self.epsilon), -self.clip, self.clip)
         return x
 
     def applyOnly(self, x):
-
+        # embed()
+        # exit(0)
         x = np.clip((x - self.mean) / np.sqrt(self.var + self.epsilon), -self.clip, self.clip)
         return x
 
