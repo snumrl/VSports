@@ -131,7 +131,6 @@ class RL(object):
 			for i in range(self.num_policy):
 				self.buffer[h][i] = Buffer(100000)
 
-		# self.RMSs = [RunningMeanStd() for _ in range(self.num_h)]
 
 		self.actionDecoders = [ VAEDecoder().to(device) for _ in range(self.num_action_types)]
 		# for i in range(self.num_action_types):
@@ -139,6 +138,7 @@ class RL(object):
 		self.actionDecoders[0].load("vae_nn3/vae_action_decoder_"+str(0)+".pt")
 		self.actionDecoders[3].load("vae_nn3/vae_action_decoder_"+str(3)+".pt")
 
+		self.rms = RunningMeanStd(self.num_state)
 
 
 		# self.buffer_0 = [ [None] for i in range(self.num_policy)]
@@ -331,6 +331,8 @@ class RL(object):
 			for j in range(self.num_slaves):
 				states[i][j] = self.env.getState(j,i).astype(np.float32)
 		states = np.array(states)
+		states = self.rms.apply(states)
+
 		# embed()
 		# exit(0)
 		# states.transpose()
@@ -610,6 +612,7 @@ class RL(object):
 				for j in range(self.num_slaves):
 					states[i][j] = self.env.getState(j,i).astype(np.float32)
 			states = np.array(states)
+			states = self.rms.apply(states)
 
 		print('SIM : {}'.format(local_step))
 
