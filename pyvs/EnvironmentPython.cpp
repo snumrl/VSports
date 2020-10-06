@@ -201,10 +201,15 @@ setAction(np::ndarray np_array, int id, int index)
 	// else
 	// {
 	//** we change the dimension of action in denormalizeAction
+
+
+	// ===Now we don't need to normalize action
 	denormalizedAction = mSlaves[id]->mNormalizer->denormalizeAction(action);
+
+
 	// }
 
-
+// 
 	// Eigen::VectorXd denormalizedAction = mSlaves[id]->mNormalizer->denormalizeAction(ex_action);
 
 	// std::cout<<"Output Action :"<<std::endl;

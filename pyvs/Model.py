@@ -83,9 +83,9 @@ class SimulationNN(nn.Module):
 
 
 class ActorCriticNN(nn.Module):
-	def __init__(self, num_states, num_actions, log_std = 0.0):
+	def __init__(self, num_states, num_actions, log_std = 0.0, softmax = False):
 		super(ActorCriticNN, self).__init__()
-
+		self.softmax = softmax
 		self.num_policyInput = num_states
 
 		self.hidden_size = 128
@@ -97,17 +97,31 @@ class ActorCriticNN(nn.Module):
 		num_h1 = 256
 		num_h2 = 256
 		# num_h3 = 256
+		# self.policy = None
 
-		self.policy = nn.Sequential(
-			nn.Linear(self.num_policyInput, num_h1),
-			nn.LeakyReLU(0.2, inplace=True),
-			nn.Linear(num_h1, num_h2),
-			nn.LeakyReLU(0.2, inplace=True),
-			nn.Linear(num_h2, num_actions),
-			# nn.Tanh()
-			# nn.LeakyReLU(0.2, inplace=True),
-			# nn.Linear(num_h3, num_actions)
-		)
+		if self.softmax :
+			self.policy = nn.Sequential(
+				nn.Linear(self.num_policyInput, num_h1),
+				nn.LeakyReLU(0.2, inplace=True),
+				nn.Linear(num_h1, num_h2),
+				nn.LeakyReLU(0.2, inplace=True),
+				nn.Linear(num_h2, num_actions),
+				nn.Softmax(dim = 1)
+				# nn.Tanh()
+				# nn.LeakyReLU(0.2, inplace=True),
+				# nn.Linear(num_h3, num_actions)
+			)
+		else:
+			self.policy = nn.Sequential(
+				nn.Linear(self.num_policyInput, num_h1),
+				nn.LeakyReLU(0.2, inplace=True),
+				nn.Linear(num_h1, num_h2),
+				nn.LeakyReLU(0.2, inplace=True),
+				nn.Linear(num_h2, num_actions),
+				# nn.Tanh()
+				# nn.LeakyReLU(0.2, inplace=True),
+				# nn.Linear(num_h3, num_actions)
+			)
 		self.value = nn.Sequential(
 			nn.Linear(self.num_policyInput, num_h1),
 			nn.LeakyReLU(0.2, inplace=True),
@@ -127,6 +141,11 @@ class ActorCriticNN(nn.Module):
 		self.value.apply(weights_init)
 
 		self.rms = RunningMeanStd(shape=(num_states))
+
+	def loadRMS(self, path):
+		print('load RMS : {}'.format(path))
+		self.rms.load(path)
+
 
 	def forward(self,x):
 		# self.rms.apply(x)
@@ -157,6 +176,8 @@ class ActorCriticNN(nn.Module):
 
 	def load(self,path):
 		print('load nn {}'.format(path))
+		# embed()
+		# exit(0)	
 		self.load_state_dict(torch.load(path))
 
 	def save(self,path):
@@ -164,6 +185,9 @@ class ActorCriticNN(nn.Module):
 		torch.save(self.state_dict(),path)
 
 	def get_action(self,s):
+		# embed()
+		# exit(0)
+		s[0:len(self.rms.mean)] = self.rms.applyOnly(s[0:len(self.rms.mean)])
 		ts = torch.tensor(s)
 
 		# embed()

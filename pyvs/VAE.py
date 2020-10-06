@@ -42,7 +42,7 @@ class VAE(nn.Module):
 
         self.cvSize = 14
         scale = 256
-        latentSize = 4
+        latentSize = 5
         self.fc1 = nn.Linear( self.cvSize , scale*2)
         self.fc1b = nn.Linear(scale*2, scale)
         self.fc21 = nn.Linear(scale, latentSize)
@@ -142,7 +142,7 @@ class VAEEncoder(nn.Module):
 
         self.cvSize = 9
         scale = 64
-        latentSize = 5
+        latentSize = 4
         self.fc1 = nn.Linear(self.cvSize, scale*2)
         self.fc1b = nn.Linear(scale*2, scale)
         self.fc21 = nn.Linear(scale, latentSize)
@@ -181,7 +181,7 @@ class VAEDecoder(nn.Module):
 
         self.cvSize = 9
         scale = 64
-        latentSize = 5
+        latentSize = 4
         self.fc3 = nn.Linear(latentSize, scale)
         self.fc3b = nn.Linear(scale, scale*2)
         self.fc4 = nn.Linear(scale*2, self.cvSize)

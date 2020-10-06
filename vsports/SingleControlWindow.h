@@ -160,6 +160,8 @@ public:
 	double fingerAngle;
 	double fingerBallAngle;
 
+	int latentSize;
+
     // Eigen::Vector3d curBallPosition;
     // Eigen::Vector3d prevBallPosition;
     // Eigen::Vector3d pprevBallPosition;

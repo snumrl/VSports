@@ -56,7 +56,7 @@ criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), viola
 		prevBallPositions[i].setZero();
 	}
 	mTargetBallPosition.setZero();
-	this->endTime = 5;
+	this->endTime = 10;
 	this->initCharacters(bvh_path);
 	// this->initMotionGenerator(nn_path);
 
@@ -527,8 +527,12 @@ stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContact
 		mCurBallPossessions[index] = std::get<2>(nextPoseAndContacts);
 		if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
 		{
+			if(mCurCriticalActionTimes[index] >=0)
+			{
+				mCurBallPossessions[index] = true;
+			}
 
-			if(mCurCriticalActionTimes[index] < -10)
+			if(mCurCriticalActionTimes[index] < 0)
 			{
 				mCurBallPossessions[index] = false;
 			}
@@ -594,10 +598,10 @@ stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContact
 			speed /= 5.0;
             // std::cout<<"SPEED : "<<speed<<std::endl;
             // speed= sqrt(speed);
-            if(speed > 1.5)
-                speed = 1.5;
-            if(speed < 1.0)
-                speed = 1.0;
+            if(speed > 1.3)
+                speed = 1.3;
+            if(speed < 0.5)
+                speed = 0.5;
 
 	        Eigen::Isometry3d headT = skel->getBodyNode("Head")->getWorldTransform();
 	        
@@ -608,8 +612,9 @@ stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContact
             else
                 ballDirection = Eigen::Vector3d(0.0, 1.35, 0.0);
 
-	        this->criticalPoint_targetBallVelocity = headT.linear()*ballDirection*4*speed;
+	        // this->criticalPoint_targetBallVelocity = headT.linear()*ballDirection*5*speed;
 
+	        this->criticalPoint_targetBallVelocity = getRootT(index).linear()* (mActions[index].segment(4+NUM_ACTION_TYPE,3)/100.0);
 	    }
 
 
@@ -1052,26 +1057,32 @@ getReward(int index, bool verbose)
 
 	bool fastTermination = true;
 	// activates when fastTermination is on
-	bool fastViewTermination = true;
-
-	// Eigen::Vector3d targetBallDirection = mTargetBallPosition - curBallPosition;
-	// // targetBallDirection[1] = 0;
-	// if(targetBallDirection.norm() != 0)
-	// 	targetBallDirection.normalize();
-
-	// // Eigen::Vector3d curDirection = 30.0 *(curBallPosition - mPrevBallPosition);
-
-	// // curDirection[1] = 0;
+	bool fastViewTermination = false;
 
 
-	// // double theta = acos(targetBallDirection.dot(curDirection.normalized()));
+	// Dribble Direction Reward
+/*	Eigen::Vector3d targetPlaneNormal = mTargetBallPosition - mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM();
+	targetPlaneNormal[1] = 0.0;
+
+	Eigen::Vector3d comTargetDirection = targetPlaneNormal.normalized();
+
+	Eigen::Vector3d curRootVelocity = mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM() - mPrevCOMs[index];
+
+	reward += 0.1*comTargetDirection.dot(curRootVelocity);
+
+	if(targetPlaneNormal.norm() < 0.5)
+	{
+		reward = 1.0;
+		mIsTerminalState = true;
+	}
+
+	return reward;
+	*/
 
 
-	// Eigen::Vector3d comTargetDirection = targetPlaneNormal.normalized();
 
-	// Eigen::Vector3d curRootVelocity = mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM() - mPrevCOMs[index];
 
-	// reward += 0.01*comTargetDirection.dot(curRootVelocity);
+	// Shoot Reward
 	if(gotReward)
 		return 0;
 
@@ -1080,10 +1091,12 @@ getReward(int index, bool verbose)
 	{
 		if(!mCurBallPossessions[index])
 		{
+			if(fastViewTermination)
+				mIsTerminalState = true;
 			gotReward = true;
 			// criticalPoint_targetBallPosition;
 			// criticalPoint_targetBallVelocity;
-			Eigen::Vector3d relTargetPosition = mTargetBallPosition - criticalPoint_targetBallPosition;
+			/*Eigen::Vector3d relTargetPosition = mTargetBallPosition - criticalPoint_targetBallPosition;
 			Eigen::Vector3d projRelTargetPosition = relTargetPosition;
 			projRelTargetPosition[1] = 0.0;
 			Eigen::Vector3d projCriticalVelocity = criticalPoint_targetBallVelocity;
@@ -1117,15 +1130,39 @@ getReward(int index, bool verbose)
 				if(fastViewTermination)
 					mIsTerminalState = true;
 				return reward;
+			}*/
+			Eigen::Vector3d relTargetPosition = mTargetBallPosition - criticalPoint_targetBallPosition;
+
+			double h = relTargetPosition[1];
+
+			double v = criticalPoint_targetBallVelocity[1];
+			reward = 0.02*v;
+			reward *= relTargetPosition.normalized().dot(criticalPoint_targetBallVelocity.normalized());
+
+			//vt + 1/2 gt^2 = h
+			// std::cout<<"v*v+2*g*h "<<v*v+2*g*h<<std::endl;
+			if(v*v+2*g*h<0)
+			{
+				return reward;
 			}
+			double t = (-v -sqrt(v*v+2*g*h))/g;
+
+			Eigen::Vector3d ballPositionOnThePlane = criticalPoint_targetBallPosition + criticalPoint_targetBallVelocity*t;
+			ballPositionOnThePlane[1] = 0.0;
+
+			Eigen::Vector3d targetPositionOnThePlane = mTargetBallPosition;
+			targetPositionOnThePlane[1] = 0.0;
+
+			reward += exp(0.3 * -pow((targetPositionOnThePlane - ballPositionOnThePlane).norm(),2));
+			// std::cout<<"############"<<reward<<std::endl;
+
+			return reward;
 		}
 		else
 		{
 			return reward;
 		}
 	}
-
-
 	else
 	{
 
@@ -1301,7 +1338,7 @@ setAction(int index, const Eigen::VectorXd& a)
 	{
 		mActions[index].setZero();
 		mActions[index].segment(0,4) = a.segment(0,4);
-		mActions[index].segment(4+NUM_ACTION_TYPE,11) = a.segment(4,11);
+		mActions[index].segment(4+NUM_ACTION_TYPE,5) = a.segment(4,5);
 	}
 	else
 	{
@@ -1386,13 +1423,13 @@ setAction(int index, const Eigen::VectorXd& a)
     	mActions[index].segment(0,2) *= 150.0/mActions[index].segment(0,2).norm();
     }
 
-    if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
-    {
-    	if(mActions[index].segment(0,2).norm() > 38.0)
-	    {
-	    	mActions[index].segment(0,2) *= 38.0/mActions[index].segment(0,2).norm();
-	    }
-    }
+    // if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
+    // {
+    // 	if(mActions[index].segment(0,2).norm() > 150.0)
+	   //  {
+	   //  	mActions[index].segment(0,2) *= 150.0/mActions[index].segment(0,2).norm();
+	   //  }
+    // }
 
 
     if(mActions[index].segment(2,2).norm() > 100.0)
@@ -1400,13 +1437,13 @@ setAction(int index, const Eigen::VectorXd& a)
     	mActions[index].segment(2,2) *= 100.0/mActions[index].segment(2,2).norm();
     }
 
-    if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
-    {
-    	if(mActions[index].segment(2,2).norm() > 85.0)
-	    {
-	    	mActions[index].segment(2,2) *= 85.0/mActions[index].segment(2,2).norm();
-	    }
-    }
+    // if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
+    // {
+    // 	if(mActions[index].segment(2,2).norm() > 100.0)
+	   //  {
+	   //  	mActions[index].segment(2,2) *= 100.0/mActions[index].segment(2,2).norm();
+	   //  }
+    // }
 
 
 
@@ -1461,11 +1498,12 @@ setActionType(int index, int actionType)
 	if(resetCount>=0)
 		curActionType = 0;
 	else if(actionType != 3)
-		curActionType = 0;
+		curActionType = 3;
+	// curActionType = 0;
 
     if(isCriticalAction(mPrevActionTypes[index]))
     {
-    	if(mCurCriticalActionTimes[index] > -15)
+    	if(mCurCriticalActionTimes[index] > -10)
     		curActionType = mPrevActionTypes[index];
     	else
     	{
@@ -1822,30 +1860,6 @@ resetCharacterPositions()
 	Eigen::Vector3d newRootOrientation = aa.angle() * aa.axis();
 
 	standPosition.segment(0,3) = newRootOrientation;
-
-
-
-
-
-	Eigen::VectorXd targetZeroVec(14);
-	targetZeroVec.setZero();
-	targetZeroVec[4+4] = 1;
-
-
-	// if(useHalfCourt)
-	// {
-	// 	curBallPosition[0] = (double) rand()/RAND_MAX * xRange*1.0;
-	// 	curBallPosition[2] = (double) rand()/RAND_MAX * zRange*1.0;
-	// }
-	// else
-	// {
-	// 	curBallPosition[0] = (double) rand()/RAND_MAX * xRange*2.0 - xRange;
-	// 	curBallPosition[2] = (double) rand()/RAND_MAX * zRange*2.0 - zRange;
-	// }
-
-	// curBallPosition[1] = 0.895;
-
-
 
 	criticalPoint_targetBallPosition = curBallPosition;
 	criticalPoint_targetBallVelocity.setZero();
@@ -2237,6 +2251,8 @@ computeCriticalActionTimes()
 	    		// mActions[index].segment(4+6,3) = rootT.inverse() *mActionGlobalBallPosition[index];
 	    		mActions[index].segment(4+NUM_ACTION_TYPE,3) = rootT.linear().inverse() * mActionGlobalBallVelocity[index];
 	    		mActions[index].segment(4+NUM_ACTION_TYPE,3) *= 100.0;
+	    		// mActions[index][4+NUM_ACTION_TYPE+,3] *= mActionGlobalBallPosition[index];
+
 	    		// if(mActions[index].segment(4+6,3).norm()>2000)
 	    		// {
 	    		// 	std::cout<<mActions[index].segment(4+6,3).transpose()<<std::endl;
@@ -2247,11 +2263,15 @@ computeCriticalActionTimes()
 	    }
 	    else
 	    {
-	    	// mCurCriticalActionTimes[index] = (int) (mActions[index][4+8+6]+0.5);
-	    	mCurCriticalActionTimes[index] = 30;
+	    	mCurCriticalActionTimes[index] = (int) (mActions[index][4+NUM_ACTION_TYPE+4]+0.5);
+	    	if(mCurCriticalActionTimes[index] > 30)
+	    		mCurCriticalActionTimes[index] = 30;
+	    	if(mCurCriticalActionTimes[index] < 20)
+	    		mCurCriticalActionTimes[index] = 20;
+	    	// mCurCriticalActionTimes[index] = 30;
     		if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
     		{
-    			mActionGlobalBallPosition[index] =  mActions[index][4+NUM_ACTION_TYPE+3]/100.0;
+    			mActionGlobalBallPosition[index] = mActions[index][4+NUM_ACTION_TYPE+3]/100.0;
     			mActionGlobalBallVelocity[index] = rootT.linear() * (mActions[index].segment(4+NUM_ACTION_TYPE,3)/100.0);
     		}
 	    }
@@ -2800,14 +2820,11 @@ applyAction(int index)
 	mCurBallPossessions[index] = std::get<2>(nextPoseAndContacts);
 	if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
 	{
-		// if(mCurCriticalActionTimes[index] > 0)
-		// 	mCurBallPossessions[index] = true;
-		// else
+
+		// if(mCurCriticalActionTimes[index] < -10)
+		// {
 		// 	mCurBallPossessions[index] = false;
-		if(mCurCriticalActionTimes[index] < -10)
-		{
-			mCurBallPossessions[index] = false;
-		}
+		// }
 	}
 	if(mCurActionTypes[index] == 2)
 	{

@@ -86,6 +86,7 @@ SingleControlWindow()
 	p::exec("import numpy as np",mns);
 	p::exec("from Model import *",mns);
 	p::exec("from VAE import VAEDecoder",mns);
+	// p::exec("from Utils import RunningMeanStd",mns);
 	// cout<<"444444"<<endl;
 	controlOn = false;
 
@@ -124,6 +125,7 @@ SingleControlWindow(const char* nn_path,
 :SingleControlWindow()
 {
 	int numActionTypes = 5;
+	latentSize = 4;
 
 	mEnv = new Environment(30, 180, 1, "../data/motions/basketData/motion/s_004_1_1.bvh", nn_path);
 	reducedDim = false;
@@ -149,17 +151,23 @@ SingleControlWindow(const char* nn_path,
 	p::object *load_0 = new p::object[mEnv->mNumChars];
 	p::object *load_1 = new p::object[mEnv->mNumChars];
 	p::object *load_2 = new p::object[mEnv->mNumChars];
+
+	p::object *load_rms_0 = new p::object[mEnv->mNumChars];
+	p::object *load_rms_1 = new p::object[mEnv->mNumChars];
+
 	// reset_hidden = new boost::python::object[mEnv->mNumChars];
 
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
 		nn_module_0[i] = p::eval("ActorCriticNN(num_state, 5).cuda()", mns);
 		load_0[i] = nn_module_0[i].attr("load");
+		load_rms_0[i] = nn_module_0[i].attr("loadRMS");
 	}
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module_1[i] = p::eval("ActorCriticNN(num_state+5, 5).cuda()", mns);
+		nn_module_1[i] = p::eval(("ActorCriticNN(num_state+5, "+to_string(latentSize)+").cuda()").data(), mns);
 		load_1[i] = nn_module_1[i].attr("load");
+		load_rms_1[i] = nn_module_1[i].attr("loadRMS");
 	}
 	// for(int i=0;i<mEnv->mNumChars;i++)
 	// {
@@ -183,6 +191,20 @@ SingleControlWindow(const char* nn_path,
 
 	load_0[0](string(control_nn_path) + "_0.pt");
 	load_1[0](string(control_nn_path) + "_1.pt");
+
+	std::string dir = control_nn_path;
+	std::string subdir = "";
+	while(dir.find("/")!=std::string::npos)
+	{
+		subdir += dir.substr(0,dir.find("/")+1);
+		dir = dir.substr(dir.find("/")+1);
+	}
+
+
+	load_rms_0[0]((subdir + "rms.ms").data());
+	load_rms_1[0]((subdir + "rms.ms").data());
+
+
 	// load_2[0](string(control_nn_path) + "_2.pt");
 	std::cout<<"Loaded control nn : "<<control_nn_path<<std::endl;
 
@@ -196,8 +218,8 @@ SingleControlWindow(const char* nn_path,
 		load_decoders[i] = nn_module_decoders[i].attr("load");
 	}
 
-	load_decoders[0]("../pyvs/vae_nn3/vae_action_decoder_"+to_string(0)+".pt");
-	load_decoders[3]("../pyvs/vae_nn3/vae_action_decoder_"+to_string(3)+".pt");
+	load_decoders[0]("../pyvs/vae_nn4/vae_action_decoder_"+to_string(0)+".pt");
+	load_decoders[3]("../pyvs/vae_nn4/vae_action_decoder_"+to_string(3)+".pt");
 	std::cout<<"Loaded VAE decoder"<<std::endl;
 
 
@@ -1144,6 +1166,7 @@ getActionFromNN(int index)
 	Eigen::VectorXd state = mEnv->getState(index);
 
 	int numActions = 5;
+	// int latentSize = 4;
 	// std::cout<<state.segment(155,6).transpose()<<std::endl;
 	// std::cout<<state.segment(mEnv->mCharacters[0]->getSkeleton()->getNumDofs(),12).transpose()<<std::endl;
 
@@ -1202,7 +1225,7 @@ getActionFromNN(int index)
 	np::ndarray action_np_1 = np::from_object(temp);
 	float* srcs_1 = reinterpret_cast<float*>(action_np_1.get_data());
 
-	for(int j=0;j<4;j++)
+	for(int j=0;j<latentSize;j++)
 	{
 		mAction[j] = srcs_1[j];
 	}
@@ -1211,11 +1234,15 @@ getActionFromNN(int index)
 	// exit(0);
 	// mAction.segment(9,2) = mAction.segment(4,2);
 
-	int latentSize = 5;
 
 	Eigen::VectorXd encodedAction(latentSize);
 	encodedAction = mAction.segment(0,encodedAction.size());
 	Eigen::VectorXd decodedAction(9);
+
+	// encodedAction.setOnes();
+	// encodedAction *= -5.0;
+
+	// encodedAction << 0.3710, -0.2950,  0.3723, -0.0413, -1.4446, -0.7784;
 
 	p::object decode;
 
@@ -1238,6 +1265,10 @@ getActionFromNN(int index)
 	{
 		decodedAction[j] = src_d[j];
 	}
+
+	std::cout<<"Cur Action Type : "<<actionType<<std::endl;
+	std::cout<<"Encoded Action : "<<encodedAction.transpose()<<std::endl;
+	std::cout<<"Decoded Action : "<<decodedAction.transpose()<<std::endl;
 
 
 
@@ -1268,7 +1299,7 @@ getActionFromNN(int index)
 		mActionHandContact[j] = srcs_2[j];
 	}
 */
-	mAction.segment(0, decodedAction.size()) = decodedAction;
+	// mAction.segment(0, decodedAction.size()) = decodedAction;
 	// mAction.segment(decodedAction.size(),mActionHandContact.size()) = mActionHandContact;
 
 
@@ -1287,7 +1318,8 @@ getActionFromNN(int index)
 	// std::cout<<mAction.segment(12,7).transpose()<<std::endl;
 	// std::cout<<std::endl;
 	// std::cout<<"-------------"<<std::endl;	
-	mActions[index] = mEnv->mNormalizer->denormalizeAction(mAction);
+	mActions[index] = mEnv->mNormalizer->denormalizeAction(decodedAction);
+	// mActions[index] = mAction;
 
 	// return mActions[index];
 }

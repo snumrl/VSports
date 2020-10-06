@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 10
+nnCount = 20
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -117,7 +117,7 @@ class RL(object):
 		
 
 		self.num_action_types = 5
-		self.latent_size = 5
+		self.latent_size = 4
 
 		#contact, finger, finger-ball
 		self.num_action = [self.num_action_types, self.latent_size]
@@ -135,8 +135,8 @@ class RL(object):
 		self.actionDecoders = [ VAEDecoder().to(device) for _ in range(self.num_action_types)]
 		# for i in range(self.num_action_types):
 
-		self.actionDecoders[0].load("vae_nn3/vae_action_decoder_"+str(0)+".pt")
-		self.actionDecoders[3].load("vae_nn3/vae_action_decoder_"+str(3)+".pt")
+		self.actionDecoders[0].load("vae_nn4/vae_action_decoder_"+str(0)+".pt")
+		self.actionDecoders[3].load("vae_nn4/vae_action_decoder_"+str(3)+".pt")
 
 		self.rms = RunningMeanStd(self.num_state)
 
@@ -175,8 +175,11 @@ class RL(object):
 			for j in range(self.num_policy):
 				if h == 2 :
 					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], -1.0)
+				if h== 0:
+					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], 0.0, True)
 				else:
-					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h])
+					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], 0.0)
+
 				acc_num_action += self.num_action[h]
 				if use_cuda:
 					self.target_model[h][j].cuda()
@@ -272,7 +275,6 @@ class RL(object):
 		# self.target_model_1[self.indexToNetDic[index]].load(nndir+'/'+path+'_'+str(self.indexToNetDic[index%self.num_agents])+'_1.pt')
 		# self.target_model_2[self.indexToNetDic[index]].load(nndir+'/'+path+'_'+str(self.indexToNetDic[index%self.num_agents])+'_2.pt')
 
-
 	def saveModels(self):
 		for i in range(self.num_policy):
 			for h in range(self.num_h):
@@ -292,6 +294,33 @@ class RL(object):
 				# self.target_model_0[i].save(nndir+'/'+str(self.num_evaluation)+'_'+str(i)+'_0.pt')
 				# self.target_model_1[i].save(nndir+'/'+str(self.num_evaluation)+'_'+str(i)+'_1.pt')
 				# self.target_model_2[i].save(nndir+'/'+str(self.num_evaluation)+'_'+str(i)+'_2.pt')
+		self.rms.save(nndir+'/rms.ms')
+		# f = open(nndir+'/rms.ms', 'w')
+		# for i in range(len(self.rms.mean)):
+		# 	f.write(str(self.rms.mean[i]))
+		# 	f.write(" ")
+		# 	f.write(str(self.rms.var[i]))
+		# 	f.write("\n")
+		# f.close()
+
+	def arrayToOneHotVector(nparr):
+		result = np.array(list(np.copy(nparr)))
+		# resultVector = 
+
+		# embed()
+		# exit(0)
+
+		for agent in range(len(nparr)):
+			for slaves in range(len(nparr[agent])):
+				maxIndex = 0
+				maxValue = -100
+				for i in range(len(nparr[agent][slaves])):
+					result[agent][slaves][i] = 0.0
+					if nparr[agent][slaves][i] > maxValue:
+						maxValue = nparr[agent][slaves][i]
+						maxIndex = i
+				result[agent][slaves][maxIndex] = 1.0
+		return result
 
 
 	def generateTransitions(self):
@@ -361,6 +390,8 @@ class RL(object):
 				for slaves in range(len(nparr[agent])):
 					maxIndex = 0
 					maxValue = -100
+					# embed()
+					# exit()
 					for i in range(len(nparr[agent][slaves])):
 						result[agent][slaves][i] = 0.0
 						if nparr[agent][slaves][i] > maxValue:
@@ -372,24 +403,24 @@ class RL(object):
 			return result
 
 
-		def arrayToOneHotVector(nparr):
-			result = np.array(list(np.copy(nparr)))
-			# resultVector = 
+		# def arrayToOneHotVector(nparr):
+		# 	result = np.array(list(np.copy(nparr)))
+		# 	# resultVector = 
 
-			# embed()
-			# exit(0)
+		# 	# embed()
+		# 	# exit(0)
 
-			for agent in range(len(nparr)):
-				for slaves in range(len(nparr[agent])):
-					maxIndex = 0
-					maxValue = -100
-					for i in range(len(nparr[agent][slaves])):
-						result[agent][slaves][i] = 0.0
-						if nparr[agent][slaves][i] > maxValue:
-							maxValue = nparr[agent][slaves][i]
-							maxIndex = i
-					result[agent][slaves][maxIndex] = 1.0
-			return result
+		# 	for agent in range(len(nparr)):
+		# 		for slaves in range(len(nparr[agent])):
+		# 			maxIndex = 0
+		# 			maxValue = -100
+		# 			for i in range(len(nparr[agent][slaves])):
+		# 				result[agent][slaves][i] = 0.0
+		# 				if nparr[agent][slaves][i] > maxValue:
+		# 					maxValue = nparr[agent][slaves][i]
+		# 					maxIndex = i
+		# 			result[agent][slaves][maxIndex] = 1.0
+		# 	return result
 
 
 
@@ -498,7 +529,7 @@ class RL(object):
 			# action : torch.Size([1, 16, 6])
 
 			actionTypePart = actions[:,:,0:self.num_action_types]
-			actionsDecodePart = actions[:,:,self.num_action_types:self.num_action_types+self.latent_size]
+			actionsDecodePart =actions[:,:,self.num_action_types:self.num_action_types+self.latent_size]
 			# actionsRemainPart = actions[:,:,self.num_action_types+self.latent_size:]
 
 
@@ -511,6 +542,8 @@ class RL(object):
 					# embed()
 					# exit(0)
 					curActionType = getActionTypeFromVector(actionTypePart[i][j])
+					# embed()
+					# exit(0)
 					actionsDecoded[i][j] = self.actionDecoders[curActionType].decode(Tensor(actionsDecodePart[i][j])).cpu().detach().numpy()
 
 			# print("time :", time.time() - start)
@@ -755,6 +788,7 @@ class RL(object):
 					stack_lp = np.vstack(batch.logprob).astype(np.float32)
 					stack_td = np.vstack(batch.TD).astype(np.float32)
 					stack_gae = np.vstack(batch.GAE).astype(np.float32)
+
 
 					# num_layers = self.target_model[buff_index].num_layers
 

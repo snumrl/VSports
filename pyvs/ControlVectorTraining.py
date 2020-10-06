@@ -22,7 +22,7 @@ Tensor = FloatTensor
 device = torch.device("cuda" if use_cuda else "cpu")
 
 model = VAE().to(device)
-optimizer = optim.Adam(model.parameters(), lr=1e-3)
+optimizer = optim.Adam(model.parameters(), lr=5e-3)
 # print("asdf")
 
 
@@ -126,7 +126,7 @@ class ComprehensiveControlVectorTraining():
 			self.VAEDecoders[actionType].train()
 			train_loss = 0
 			action_controlVectorList = self.controlVectorListSplited[actionType]
-			random.shuffle(action_controlVectorList)
+			np.random.shuffle(action_controlVectorList)
 
 			# for i in range(int(len(action_controlVectorList)/64)):
 			for i in range(200):
@@ -138,6 +138,12 @@ class ComprehensiveControlVectorTraining():
 
 				# recon_batch = self.VAEDecoders[0](latent)
 				recon_batch = self.VAEDecoders[actionType](latent)
+
+				if i == 0:
+					print(data.view(-1,9)[0])
+					print(recon_batch[0])
+					print(latent[0])
+					print("")
 
 				loss = loss_function(recon_batch, data, mu, logvar)
 				loss.backward()
@@ -151,8 +157,8 @@ class ComprehensiveControlVectorTraining():
 		                loss.item() / len(data)))
 			print('===> Epoch: {} Arverage loss: {:.4f}'.format(1, train_loss / 12800))
 		# self.VAEDecoders[0].save("vae_nn/vae_action_decoder_"+str(actionType)+".pt")	
-		self.VAEDecoders[actionType].save("vae_nn3/vae_action_decoder_"+str(actionType)+".pt")	
-		self.VAEEncoder.save("vae_nn3/vae_action_encoder.pt")	
+		self.VAEDecoders[actionType].save("vae_nn4/vae_action_decoder_"+str(actionType)+".pt")	
+		self.VAEEncoder.save("vae_nn4/vae_action_encoder.pt")	
 
 
 	# def trainComprehensiveLatentSpace(self, actionTypeSource, actionTypeTarget):
@@ -212,7 +218,7 @@ def trainControlVector(path, actionType):
 # trainControlVector("basket_0")
 # test("basket_0")
 
-ccvt = ComprehensiveControlVectorTraining("basket_7", 5)
-for i in range(50):
+ccvt = ComprehensiveControlVectorTraining("basket_12", 5)
+for i in range(100):
 	ccvt.trainTargetCV(0)
 	ccvt.trainTargetCV(3)

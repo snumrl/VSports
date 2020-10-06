@@ -13,9 +13,14 @@ class RunningMeanStd(object):
 
     # update mean and var with current input
     def update(self, x):
-        batch_mean = np.mean(x, axis=0)
-        batch_var = np.var(x, axis=0)
-        batch_count = x.shape[0]
+        # embed()
+        # exit(0)
+        x_ = x.reshape(-1, len(self.mean))
+        batch_mean = np.mean(x_, axis=0)
+        batch_var = np.var(x_, axis=0)
+        batch_count = x_.shape[0]
+        # embed()
+        # exit(0)
         self.update_from_moments(batch_mean, batch_var, batch_count)
 
     # get value from normalized output
