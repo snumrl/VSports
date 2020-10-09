@@ -56,7 +56,7 @@ criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), viola
 		prevBallPositions[i].setZero();
 	}
 	mTargetBallPosition.setZero();
-	this->endTime = 10;
+	this->endTime = 5;
 	this->initCharacters(bvh_path);
 	// this->initMotionGenerator(nn_path);
 
@@ -840,8 +840,8 @@ getState(int index)
 	// std::cout<<"relTargetPosition : "<<relTargetPosition.transpose()<<std::endl;
 
 	Eigen::Vector6d goalpostPositions;
-	goalpostPositions.segment(0,3) = Eigen::Vector3d(14.0 -1.0, 3.0, 0.0);
-	goalpostPositions.segment(3,3) = Eigen::Vector3d(-14.0 +1.0, 3.0, 0.0);
+	goalpostPositions.segment(0,3) = Eigen::Vector3d(14.0 -1.5 + 0.05, 3.1+0.2, 0.0);
+	goalpostPositions.segment(3,3) = Eigen::Vector3d(-(14.0 -1.5 + 0.05), 3.1+0.2, 0.0);
 
 
 	goalpostPositions.segment(0,3) = rootT.inverse() * ((Eigen::Vector3d) goalpostPositions.segment(0,3));
@@ -900,6 +900,40 @@ getState(int index)
 		if(availableActionList[i] < 5)
 			availableActions[availableActionList[i]] = 1;
 	}
+
+	std::vector<Eigen::Vector3d> relObstacles(mObstacles.size());
+	for(int i=0;i<mObstacles.size();i++)
+	{
+		relObstacles[i] = rootT.inverse()*mObstacles[i];
+		// relObstacles[i][1] = 0;
+	}
+
+
+	mCharacters[index]->blocked = false;
+	for(int i=0;i<relObstacles.size();i++)
+	{
+		Eigen::Vector3d projectedGoalpostPositions = goalpostPositions.segment(0,3);
+		projectedGoalpostPositions[1] = 0.0;
+		Eigen::Vector3d temp = projectedGoalpostPositions.normalized() * relObstacles[i].dot(projectedGoalpostPositions.normalized());
+		// std::cout<<"temp.norm() : "<<temp.norm()<<std::endl;
+		// std::cout<<"projectedGoalpostPositions.norm() : "<<projectedGoalpostPositions.norm()<<std::endl;
+		if(temp.norm() > projectedGoalpostPositions.norm())
+			continue;
+		temp[1] = relObstacles[i][1];
+		// std::cout<<"Temp : "<<temp.transpose()<<std::endl;
+		// std::cout<<"relObstacles : "<<relObstacles[i].transpose()<<std::endl;
+		double distance = (relObstacles[i] - temp).norm();
+		// std::cout<<distance<<std::endl;
+		if(distance < 0.5)
+		{
+			mCharacters[index]->blocked = true;
+			break;
+		}
+	}
+
+
+
+
 	// std::cout<<" Cur state is "<<bsm[index]->curState<<std::endl;
 	// std::cout<<availableActions.transpose()<<std::endl;
 
@@ -912,7 +946,7 @@ getState(int index)
 	// std::cout<<"contacts.transpose(): "<<contacts.transpose()<<std::endl;
 
 	state.resize(skelPosition.rows() + relCurBallPosition.rows() + relTargetPosition.rows() + relBallToTargetPosition.rows() + goalpostPositions.rows() 
-		+ contacts.rows() + 1 + 1 + 3 +curActionType.rows()+curSMState.rows()+availableActions.rows() + 1);
+		+ contacts.rows() + 1 + 1 + 3 +curActionType.rows()+curSMState.rows()+availableActions.rows() + relObstacles.size()*3 + 1);
 	 //+ ballVelocity.rows()+2+curActionType.rows());
 	
 	int curIndex = 0;
@@ -982,36 +1016,19 @@ getState(int index)
 		curIndex++;
 	}
 
-	// state[curIndex] = mLFootDetached[index];
-	// curIndex++;
-	// state[curIndex] = mRFootDetached[index];
-	// curIndex++;
-
-	// for(int i=0;i<state.size();i++)
-	// {
-	// 	if(std::isnan(state[i]))
-	// 	{
-	// 		std::cout<<"Nan State"<<std::endl;
-	// 	}
-	// }
-	if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
+	for(int i=0;i<relObstacles.size();i++)
 	{
-		if(mCurCriticalActionTimes[index] == 10.0)
-		{
-			mChangeContactIsActive[index] = true;
-		}
-		else if(mCurCriticalActionTimes[index] < -10.0)
-		{
-			mChangeContactIsActive[index] = false;
-		}
+		state[curIndex] = relObstacles[i][0];
+		curIndex++;
+		state[curIndex] = relObstacles[i][1];
+		curIndex++;
+		state[curIndex] = relObstacles[i][2];
+		curIndex++;
 	}
-	else
-	{
-		mChangeContactIsActive[index] = false;
-	}
-
-	state[curIndex] = mChangeContactIsActive[index];
+	state[curIndex] = mCharacters[index]->blocked;
 	curIndex++;
+
+
 	// std::cout<<std::setprecision(3);
 	// std::cout<<state.segment(skelPosition.size(), 20).transpose()<<std::endl;
 	// std::cout<<state.segment(skelPosition.size() + 20, 4).transpose()<<std::endl;
@@ -1079,6 +1096,9 @@ getReward(int index, bool verbose)
 	return reward;
 	*/
 
+	// if(mCharacters[index]->blocked && mCurActionTypes[index] == 0)
+	// 	reward += 0.001;
+
 
 
 
@@ -1136,8 +1156,7 @@ getReward(int index, bool verbose)
 			double h = relTargetPosition[1];
 
 			double v = criticalPoint_targetBallVelocity[1];
-			reward = 0.02*v;
-			reward *= relTargetPosition.normalized().dot(criticalPoint_targetBallVelocity.normalized());
+			reward += 0.02*v*relTargetPosition.normalized().dot(criticalPoint_targetBallVelocity.normalized());
 
 			//vt + 1/2 gt^2 = h
 			// std::cout<<"v*v+2*g*h "<<v*v+2*g*h<<std::endl;
@@ -1153,8 +1172,10 @@ getReward(int index, bool verbose)
 			Eigen::Vector3d targetPositionOnThePlane = mTargetBallPosition;
 			targetPositionOnThePlane[1] = 0.0;
 
-			reward += exp(0.3 * -pow((targetPositionOnThePlane - ballPositionOnThePlane).norm(),2));
-			// std::cout<<"############"<<reward<<std::endl;
+			if(!mCharacters[index]->blocked)
+				reward += exp(0.3 * -pow((targetPositionOnThePlane - ballPositionOnThePlane).norm(),2));
+			else
+				reward += 0.2 * exp(0.3 * -pow((targetPositionOnThePlane - ballPositionOnThePlane).norm(),2));
 
 			return reward;
 		}
@@ -1498,7 +1519,7 @@ setActionType(int index, int actionType)
 	if(resetCount>=0)
 		curActionType = 0;
 	else if(actionType != 3)
-		curActionType = 3;
+		curActionType = 0;
 	// curActionType = 0;
 
     if(isCriticalAction(mPrevActionTypes[index]))
@@ -1632,6 +1653,11 @@ slaveReset()
 	// std::cout<<"1111111111"<<std::endl;
 	slaveResetTargetBallPosition();
 	// std::cout<<"2222222222"<<std::endl;
+
+	mObstacles.clear();
+	for(int i=0;i<3;i++)
+		genObstacleNearGoalpost();
+
 	for(int i=0;i<mNumChars;i++)
 	{
 		mActions[i].setZero();
@@ -1725,10 +1751,12 @@ slaveResetCharacterPositions()
 		aa = Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitY())*aa;
 	}
 
+	double randomDirection = rand()/(double)RAND_MAX * 2.0 * M_PI;
+
 	bool directionToGoal = true;
 	if(directionToGoal)
 	{
-		aa = Eigen::AngleAxisd(atan2(goalDirection[0], goalDirection[2])+M_PI/2.0, Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(M_PI/2.0, Eigen::Vector3d::UnitZ());
+		aa = Eigen::AngleAxisd(atan2(goalDirection[0], goalDirection[2])+M_PI/2.0 + randomDirection, Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(M_PI/2.0, Eigen::Vector3d::UnitZ());
 	}
 
 	Eigen::Vector3d newRootOrientation = aa.angle() * aa.axis();
@@ -2694,13 +2722,13 @@ Environment::genObstacleNearCharacter()
 	updateHeightMap(0);
 }
 
-// void
-// Environment::removeOldestObstacle()
-// {
-// 	if(mObstacles.size()>=1.0)
-// 		mObstacles.erase(mObstacles.begin());
-// 	updateHeightMap(0);
-// }
+void
+Environment::removeOldestObstacle()
+{
+	if(mObstacles.size()>=1.0)
+		mObstacles.erase(mObstacles.begin());
+	// updateHeightMap(0);
+}
 
 void
 Environment::genObstaclesToTargetDir(int numObstacles)
@@ -2743,6 +2771,26 @@ Environment::genObstaclesToTargetDir(int numObstacles)
 		obstaclePosition[1] = 0.0;
 		mObstacles.push_back(obstaclePosition);
 	}
+}
+
+
+void
+Environment::genObstacleNearGoalpost()
+{
+	double dRange = 1.0;
+
+	double distance = 2.0;
+	double angle = (double) rand()/RAND_MAX * M_PI/1.0;// - M_PI/4.0;
+
+
+
+	// std::cout<<angle<<std::endl;
+
+	Eigen::Vector3d obstaclePosition = mTargetBallPosition;
+	obstaclePosition += distance * Eigen::Vector3d(cos(M_PI/2.0 + angle), 0.0, sin(M_PI/2.0 + angle));
+	obstaclePosition[1] = 0.0;
+	mObstacles.push_back(obstaclePosition);
+	// updateHeightMap(0);
 }
 
 Eigen::Isometry3d

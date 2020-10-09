@@ -20,6 +20,8 @@ public:
 	double curRightFingerPosition;
 	double curLeftFingerBallPosition;
 	double curRightFingerBallPosition;
+
+	bool blocked;
 	// double mDirection;
 };
 

@@ -846,3 +846,13 @@ void GUI::drawDefaultArrow(Eigen::Vector3d start, Eigen::Vector3d end, double wi
 {
     GUI::drawArrow3D(start, end-start, (end-start).norm(), width, color, width*2.0);
 }
+
+void GUI::drawCylinder(double _radius, double _height,const Eigen::Vector3d& color, int slices, int stacks)
+{
+	QUAD_OBJ_INIT;
+	glPushMatrix();
+	glRotated(90.0, 1.0, 0.0, 0.0);
+	glColor3f(color[0],color[1],color[2]);
+	gluCylinder(quadObj, _radius, _radius, _height, slices, stacks);
+	glPopMatrix();
+}

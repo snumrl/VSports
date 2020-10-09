@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 20
+nnCount = 23
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -274,6 +274,7 @@ class RL(object):
 		# self.target_model_0[self.indexToNetDic[index]].load(nndir+'/'+path+'_'+str(self.indexToNetDic[index%self.num_agents])+'_0.pt')
 		# self.target_model_1[self.indexToNetDic[index]].load(nndir+'/'+path+'_'+str(self.indexToNetDic[index%self.num_agents])+'_1.pt')
 		# self.target_model_2[self.indexToNetDic[index]].load(nndir+'/'+path+'_'+str(self.indexToNetDic[index%self.num_agents])+'_2.pt')
+		self.rms.load(nndir+'/rms.ms')
 
 	def saveModels(self):
 		for i in range(self.num_policy):
@@ -669,6 +670,8 @@ class RL(object):
 					ad_t = 0
 
 					epi_return = 0.0
+					# embed()
+					# exit(0)
 					for i in reversed(range(len(data))):
 						epi_return += rewards[i]
 						delta = rewards[i] + values[i+1] * self.gamma - values[i]
@@ -797,7 +800,10 @@ class RL(object):
 					# hidden_list[timeStep] = list(cur_stack_hidden)
 
 
+					# embed()
+					# exit(0)
 					loss_critic = ((v-Tensor(stack_td)).pow(2)).mean()
+
 
 					'''Actor Loss'''
 					ratio = torch.exp(a_dist.log_prob(Tensor(stack_a))-Tensor(stack_lp))
@@ -847,6 +853,8 @@ class RL(object):
 			for h in range(self.num_h):
 				for param_group in self.optimizer[h][i].param_groups:
 					param_group['lr'] = self.learning_rate
+					# if h == 0:
+					# 	param_group['lr'] =  0.1*self.learning_rate
 
 			# for param_group in self.optimizer_1[i].param_groups:
 			# 	param_group['lr'] = self.learning_rate

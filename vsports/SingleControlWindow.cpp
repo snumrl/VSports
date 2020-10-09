@@ -159,7 +159,7 @@ SingleControlWindow(const char* nn_path,
 
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module_0[i] = p::eval("ActorCriticNN(num_state, 5).cuda()", mns);
+		nn_module_0[i] = p::eval("ActorCriticNN(num_state, 5, 0.0, True).cuda()", mns);
 		load_0[i] = nn_module_0[i].attr("load");
 		load_rms_0[i] = nn_module_0[i].attr("loadRMS");
 	}
@@ -343,22 +343,11 @@ keyboard(unsigned char key, int x, int y)
             keyarr[int('d')] = PUSHED;
             break;
         case 'j':
-        	fingerAngle += 0.1;
-        	std::cout<<"fingerAngle : "<<fingerAngle<<std::endl;
+        	mEnv->genObstacleNearGoalpost();
         	break;
         case 'k':
-        	fingerAngle -= 0.1;
-        	std::cout<<"fingerAngle : "<<fingerAngle<<std::endl;
+        	mEnv->removeOldestObstacle();
         	break;
-        case 'n':
-        	fingerBallAngle += 0.1;
-        	std::cout<<"fingerBallAngle : "<<fingerBallAngle<<std::endl;
-        	break;
-        case 'm':
-        	fingerBallAngle -= 0.1;
-        	std::cout<<"fingerBallAngle : "<<fingerBallAngle<<std::endl;
-        	break;
-
 		case 't':
         {
             mTrackCharacter = !mTrackCharacter;
@@ -836,6 +825,15 @@ display()
     targetBall2DPosition[1] = 0;
 	GUI::drawSphere(0.05, targetBall2DPosition, Eigen::Vector3d(0.0, 0.0, 0.0));
 
+
+	for(int i=0;i<mEnv->mObstacles.size();i++)
+	{
+		glPushMatrix();
+		glTranslated(mEnv->mObstacles[i][0], 2.0, mEnv->mObstacles[i][2]);
+		GUI::drawCylinder(0.5, 2.0, Eigen::Vector3d(0.3, 0.3, 0.3));
+		glPopMatrix();
+	}
+
 	// cout<<"3333"<<endl;
 
 	// std::string scoreString
@@ -851,7 +849,7 @@ display()
 	// cout<<mEnv->getCharacters()[0]->getSkeleton()->getVelocities().transpose()<<endl;
 	// cout<<mActions[1][3]<<endl;
 
-	// GUI::drawStringOnScreen(0.2, 0.8, scoreString, true, Eigen::Vector3d::Zero());
+	GUI::drawStringOnScreen(0.2, 0.6, to_string((int)mEnv->mCharacters[0]->blocked), true, Eigen::Vector3d::Zero());
 
 	GUI::drawStringOnScreen(0.8, 0.8, to_string(mEnv->getElapsedTime()), true, Eigen::Vector3d(0.5, 0.5, 0.5));
 
@@ -1119,6 +1117,7 @@ Eigen::VectorXd
 SingleControlWindow::
 toOneHotVectorWithConstraint(int index, Eigen::VectorXd action)
 {
+	// std::cout<<"acition type "<<action.transpose()<<std::endl;
     int maxIndex = 0;
     double maxValue = -100;
     for(int i=0;i<action.size();i++)

@@ -407,6 +407,8 @@ public:
 
 	int setActionType(int index, int actionType);
 
+	void genObstacleNearGoalpost();
+	void removeOldestObstacle();
 
 
 
