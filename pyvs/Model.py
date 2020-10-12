@@ -283,8 +283,8 @@ class ActorNN(nn.Module):
 		p = self.forward(ts.unsqueeze(0))
 
 
-		# return p.sample().cpu().detach().numpy().astype(np.float32)
-		return p.loc.cpu().detach().numpy().astype(np.float32)
+		return p.sample().cpu().detach().numpy().astype(np.float32)
+		# return p.loc.cpu().detach().numpy().astype(np.float32)
 
 
 

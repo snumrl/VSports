@@ -40,7 +40,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 1
+nnCount = 5
 baseDir = "../nn_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -540,6 +540,7 @@ class AutoRegressiveRL(object):
 					# soft maxing action type
 					a_t = a_t_dist.loc
 					sm = nn.Softmax(dim=2)
+					# a_t_sm = sm(Tensor([stack_a_t]))
 					a_t_sm = sm(a_t)
 					
 					stack_s_h = torch.cat([Tensor(stack_s), a_t_sm.squeeze()],dim=1)

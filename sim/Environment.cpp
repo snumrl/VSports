@@ -1657,7 +1657,7 @@ slaveReset()
 	// std::cout<<"2222222222"<<std::endl;
 
 	mObstacles.clear();
-	for(int i=0;i<3;i++)
+	for(int i=0;i<0;i++)
 		genObstacleNearGoalpost();
 
 	for(int i=0;i<mNumChars;i++)
