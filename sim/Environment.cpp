@@ -56,7 +56,7 @@ criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), viola
 		prevBallPositions[i].setZero();
 	}
 	mTargetBallPosition.setZero();
-	this->endTime = 5;
+	this->endTime = 6.5;
 	this->initCharacters(bvh_path);
 	// this->initMotionGenerator(nn_path);
 
@@ -1074,7 +1074,7 @@ getReward(int index, bool verbose)
 
 	bool fastTermination = true;
 	// activates when fastTermination is on
-	bool fastViewTermination = false;
+	bool fastViewTermination = true;
 
 
 	// Dribble Direction Reward
@@ -1096,8 +1096,8 @@ getReward(int index, bool verbose)
 	return reward;
 	*/
 
-	// if(mCharacters[index]->blocked && mCurActionTypes[index] == 0)
-	// 	reward += 0.001;
+	if(mCharacters[index]->blocked && mCurActionTypes[index] == 0)
+		reward += 0.001;
 
 
 
@@ -1513,7 +1513,9 @@ int
 Environment::
 setActionType(int index, int actionType)
 {
-	// std::cout<<"Action Type : "<<actionType<<std::endl;
+	// if(actionType == 1)
+	// 	std::cout<<"Action Type : "<<actionType<<std::endl;
+	actionType *= 3;
 
 	int curActionType = actionType;
 	if(resetCount>=0)
@@ -1556,7 +1558,7 @@ setActionType(int index, int actionType)
     // bsm[index]->transition(curActionType);
     mCurActionTypes[index] = curActionType;
 
-    return curActionType;
+    return curActionType/3;
 }
 
 bool

@@ -124,7 +124,7 @@ SingleControlWindow(const char* nn_path,
 					const char* control_nn_path)
 :SingleControlWindow()
 {
-	int numActionTypes = 5;
+	int numActionTypes = 2;
 	latentSize = 4;
 
 	mEnv = new Environment(30, 180, 1, "../data/motions/basketData/motion/s_004_1_1.bvh", nn_path);
@@ -148,49 +148,43 @@ SingleControlWindow(const char* nn_path,
 	nn_module_0 = new boost::python::object[mEnv->mNumChars];
 	nn_module_1 = new boost::python::object[mEnv->mNumChars];
 	nn_module_2 = new boost::python::object[mEnv->mNumChars];
+	// nn_module_critic = new boost::python::object[mEnv->mNumChars];
+
 	p::object *load_0 = new p::object[mEnv->mNumChars];
 	p::object *load_1 = new p::object[mEnv->mNumChars];
 	p::object *load_2 = new p::object[mEnv->mNumChars];
+	// p::object *load_critic = new p::object[mEnv->mNumChars];
 
 	p::object *load_rms_0 = new p::object[mEnv->mNumChars];
 	p::object *load_rms_1 = new p::object[mEnv->mNumChars];
+	// p::object *load_rms_critic = new p::object[mEnv->mNumChars];
 
 	// reset_hidden = new boost::python::object[mEnv->mNumChars];
 
+	// for(int i=0;i<mEnv->mNumChars;i++)
+	// {
+	// 	nn_module_critic[i] = p::eval("CriticNN(num_state).cuda()", mns);
+	// 	load_0[i] = nn_module_0[i].attr("load");
+	// 	load_rms_0[i] = nn_module_0[i].attr("loadRMS");
+	// }
+
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module_0[i] = p::eval("ActorCriticNN(num_state, 5, 0.0, True).cuda()", mns);
+		nn_module_0[i] = p::eval(("ActorNN(num_state, "+to_string(numActionTypes)+", 0.0).cuda()").data(), mns);
 		load_0[i] = nn_module_0[i].attr("load");
 		load_rms_0[i] = nn_module_0[i].attr("loadRMS");
 	}
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module_1[i] = p::eval(("ActorCriticNN(num_state+5, "+to_string(latentSize)+").cuda()").data(), mns);
+		nn_module_1[i] = p::eval(("ActorNN(num_state+"+to_string(numActionTypes)+", "+to_string(latentSize)+", 0.0).cuda()").data(), mns);
 		load_1[i] = nn_module_1[i].attr("load");
 		load_rms_1[i] = nn_module_1[i].attr("loadRMS");
 	}
-	// for(int i=0;i<mEnv->mNumChars;i++)
-	// {
-	// 	nn_module_2[i] = p::eval("ActorCriticNN(num_state+5+5, 6 ).cuda()", mns);
-	// 	load_2[i] = nn_module_2[i].attr("load");
-	// }
 
 
-
-	// for(int i=0;i<mEnv->mNumChars;i++)
-	// {
-	// 	nn_module_0[i] = p::eval("ActorCriticNN(num_state, 4).cuda()", mns);
-	// 	load_0[i] = nn_module_0[i].attr("load");
-	// }
-	// for(int i=0;i<mEnv->mNumChars;i++)
-	// {
-	// 	nn_module_1[i] = p::eval("ActorCriticNN(num_state+4, 2).cuda()", mns);
-	// 	load_1[i] = nn_module_1[i].attr("load");
-	// }
-
-
-	load_0[0](string(control_nn_path) + "_0.pt");
-	load_1[0](string(control_nn_path) + "_1.pt");
+	load_0[0](string(control_nn_path) + "_actor_0_0.pt");
+	load_1[0](string(control_nn_path) + "_actor_0_1.pt");
+	// load_critic[0](string(control_nn_path) + "_critic_0.pt");
 
 	std::string dir = control_nn_path;
 	std::string subdir = "";
@@ -201,11 +195,11 @@ SingleControlWindow(const char* nn_path,
 	}
 
 
-	load_rms_0[0]((subdir + "rms.ms").data());
-	load_rms_1[0]((subdir + "rms.ms").data());
+	// rms
+	// load_rms_0[0]((subdir + "rms.ms").data());
+	// load_rms_1[0]((subdir + "rms.ms").data());
 
 
-	// load_2[0](string(control_nn_path) + "_2.pt");
 	std::cout<<"Loaded control nn : "<<control_nn_path<<std::endl;
 
 
@@ -219,7 +213,7 @@ SingleControlWindow(const char* nn_path,
 	}
 
 	load_decoders[0]("../pyvs/vae_nn4/vae_action_decoder_"+to_string(0)+".pt");
-	load_decoders[3]("../pyvs/vae_nn4/vae_action_decoder_"+to_string(3)+".pt");
+	load_decoders[1]("../pyvs/vae_nn4/vae_action_decoder_"+to_string(3)+".pt");
 	std::cout<<"Loaded VAE decoder"<<std::endl;
 
 
@@ -234,26 +228,6 @@ SingleControlWindow(const char* nn_path,
 
 	targetActionType = 0;
 	actionDelay = 0;
-	// bvhParser = new BVHparser(bvh_path, BVHType::BASKET);
-	// bvhParser->writeSkelFile();
-
-	// cout<<bvhParser->skelFilePath<<endl;
-
-	// SkeletonPtr bvhSkel = dart::utils::SkelParser::readSkeleton(bvhParser->skelFilePath);
-	// charNames.push_back(getFileName_(bvh_path));
-	// cout<<charNames[0]<<endl;	
-	// BVHmanager::setPositionFromBVH(bvhSkel, bvhParser, 0);
-	// mEnv->mWorld->addSkeleton(bvhSkel);
-
-
-	// cout<<"Before MotionGenerator"<<endl;
-	// exit(0);
-	// cout<<"BVH skeleton dofs : "<<bvhSkel->getNumDofs()<<endl;
-	// cout<<"BVH skeleton numBodies : "<<bvhSkel->getNumBodyNodes()<<endl;
-	// initDartNameIdMapping();
-	// mMotionGenerator = new ICA::dart::MotionGenerator(nn_path, this->dartNameIdMap);
-
-	// cout<<bvhSkel->getPositions().transpose()<<endl;
 
 
 	/// Read training X data
@@ -263,7 +237,6 @@ SingleControlWindow(const char* nn_path,
 
     std::cout<<"xDataPath:"<<xDataPath<<std::endl;
     
-    // if(! boost::filesystem::is_regular_file (xDataPath)) break;
     this->xData.push_back(MotionRepresentation::readXData(xNormalPath, xDataPath, sub_dir));
 
 }
@@ -1164,7 +1137,7 @@ getActionFromNN(int index)
 
 	Eigen::VectorXd state = mEnv->getState(index);
 
-	int numActions = 5;
+	int numActions = 2;
 	// int latentSize = 4;
 	// std::cout<<state.segment(155,6).transpose()<<std::endl;
 	// std::cout<<state.segment(mEnv->mCharacters[0]->getSkeleton()->getNumDofs(),12).transpose()<<std::endl;
@@ -1193,7 +1166,13 @@ getActionFromNN(int index)
 		mActionType[j] = srcs[j];
 	}
 
-	// std::cout<<"mActionType : "<<mActionType.transpose()<<std::endl;
+	std::cout<<"mActionType : "<<mActionType.transpose()<<std::endl;
+
+	double sum = 0;
+	sum += exp(mActionType[0]) + exp(mActionType[1]);
+	mActionType[0] = exp(mActionType[0])/sum;
+	mActionType[1] = exp(mActionType[1])/sum;
+
 	mActionType = toOneHotVectorWithConstraint(index, mActionType);
 
 	int actionType = getActionTypeFromVec(mActionType);

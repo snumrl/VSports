@@ -93,6 +93,8 @@ public:
 	boost::python::object *nn_module_1;
 	boost::python::object *nn_module_2;
 
+	boost::python::object *nn_module_critic;
+
 	boost::python::object *nn_module_decoders;
 
 	// boost::python::object mm,mns,sys_module;

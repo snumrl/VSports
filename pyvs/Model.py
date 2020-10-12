@@ -138,7 +138,6 @@ class ActorCriticNN(nn.Module):
 
 		# self.rnn.apply(weights_init)
 		self.policy.apply(weights_init)
-		self.value.apply(weights_init)
 
 		self.rms = RunningMeanStd(shape=(num_states))
 
@@ -221,6 +220,132 @@ class ActorCriticNN(nn.Module):
 		# return p.sample().cpu().detach().numpy()
 		return p.sample.cpu().detach().numpy() - p.loc.cpu().detach().numpy()
 
+
+
+
+class ActorNN(nn.Module):
+	def __init__(self, num_states, num_actions, log_std = 0.0):
+		super(ActorNN, self).__init__()
+		self.num_policyInput = num_states
+
+		self.hidden_size = 128
+		self.num_layers = 1
+
+
+		num_h1 = 256
+		num_h2 = 256
+
+		self.policy = nn.Sequential(
+			nn.Linear(self.num_policyInput, num_h1),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h1, num_h2),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h2, num_actions),
+		)
+
+		self.log_std = nn.Parameter(log_std * torch.ones(num_actions))
+
+
+		self.policy.apply(weights_init)
+
+		self.rms = RunningMeanStd(shape=(num_states))
+
+	def loadRMS(self, path):
+		print('load RMS : {}'.format(path))
+		self.rms.load(path)
+
+
+	def forward(self,x):
+		x = x.cuda()
+
+		batch_size = x.size()[0];
+
+		return MultiVariateNormal(self.policy(x).unsqueeze(0),self.log_std.exp())
+
+
+
+	def load(self,path):
+		print('load nn {}'.format(path))
+		self.load_state_dict(torch.load(path))
+
+	def save(self,path):
+		print('save nn {}'.format(path))
+		torch.save(self.state_dict(),path)
+
+	def get_action(self,s):
+		# embed()
+		# exit(0)
+		# s[0:len(self.rms.mean)] = self.rms.applyOnly(s[0:len(self.rms.mean)])
+		ts = torch.tensor(s)
+
+		# embed()
+		# exit(0)
+		p = self.forward(ts.unsqueeze(0))
+
+
+		# return p.sample().cpu().detach().numpy().astype(np.float32)
+		return p.loc.cpu().detach().numpy().astype(np.float32)
+
+
+
+
+class CriticNN(nn.Module):
+	def __init__(self, num_states):
+		super(CriticNN, self).__init__()
+		self.num_policyInput = num_states
+
+		self.hidden_size = 128
+		self.num_layers = 1
+
+		# self.rnn = nn.LSTM(self.num_policyInput, self.hidden_size, num_layers=self.num_layers)
+		# self.cur_hidden = self.init_hidden(1)
+
+		num_h1 = 256
+		num_h2 = 256
+		# num_h3 = 256
+		# self.policy = None
+
+		self.value = nn.Sequential(
+			nn.Linear(self.num_policyInput, num_h1),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h1, num_h2),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h2, 1),
+			# nn.LeakyReLU(0.2, inplace=True),
+			# nn.Linear(num_h3, 1)
+		)
+
+		self.value.apply(weights_init)
+
+		self.rms = RunningMeanStd(shape=(num_states))
+
+	def loadRMS(self, path):
+		print('load RMS : {}'.format(path))
+		self.rms.load(path)
+
+
+	def forward(self,x):
+		x = x.cuda()
+
+		return self.value(x)
+
+
+
+	def load(self,path):
+		print('load nn {}'.format(path))
+		self.load_state_dict(torch.load(path))
+
+	def save(self,path):
+		print('save nn {}'.format(path))
+		torch.save(self.state_dict(),path)
+
+
+	def get_value(self, s):
+		ts = torch.tensor(s)
+
+		v= self.forward(ts.unsqueeze(0))
+
+		return v.cpu().detach().numpy()[0]
 
 	# def get_value_gradient(self,s):
 	# 	delta = 0.01
