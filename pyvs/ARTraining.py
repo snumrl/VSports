@@ -40,7 +40,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 5
+nnCount = 10
 baseDir = "../nn_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -50,7 +50,7 @@ if not exists(baseDir):
 if not exists(nndir):
 	mkdir(nndir)
 
-RNNEpisode = namedtuple('RNNEpisode', ('s','a_t','a','r','value','a_t_logprob','a_logprob'))
+RNNEpisode = namedtuple('RNNEpisode', ('s','a_t','a_t_onehot','a','r','value','a_t_logprob','a_logprob'))
 
 class RNNEpisodeBuffer(object):
 	def __init__(self):
@@ -62,7 +62,7 @@ class RNNEpisodeBuffer(object):
 	def getData(self):
 		return self.data
 
-RNNTransition = namedtuple('RNNTransition',('s','a_t','a','a_t_logprob','a_logprob','TD','GAE'))
+RNNTransition = namedtuple('RNNTransition',('s','a_t','a_t_onehot','a','a_t_logprob','a_logprob','TD','GAE'))
 
 class RNNReplayBuffer(object):
 	def __init__(self, buff_size = 10000):
@@ -134,7 +134,7 @@ class AutoRegressiveRL(object):
 		## To test, we set the total number of action to 2
 		self.actionDecoders[1].load("vae_nn4/vae_action_decoder_"+str(3)+".pt")
 
-		# self.rms = RunningMeanStd(self.num_state)
+		self.rms = RunningMeanStd(self.num_state)
 		self.actor = [[[None] for _ in range(self.num_policy)] for _ in range(self.num_h)]
 		self.critic = [[None] for _ in range(self.num_policy)]
 
@@ -202,7 +202,7 @@ class AutoRegressiveRL(object):
 		self.critic[self.indexToNetDic[index]].load(nndir+'/'+path+'_critic_'+str(self.indexToNetDic[index%self.num_agents])+'.pt')
 		for h in range(self.num_h):
 			self.actor[h][self.indexToNetDic[index]].load(nndir+'/'+path+'_actor_'+str(self.indexToNetDic[index%self.num_agents])+'_'+str(h)+'.pt')
-		# self.rms.load(nndir+'/rms.ms')
+		self.rms.load(nndir+'/rms.ms')
 
 	def saveModels(self):
 		for i in range(self.num_policy):
@@ -221,7 +221,7 @@ class AutoRegressiveRL(object):
 				for h in range(self.num_h):
 					self.actor[h][i].save(nndir+'/'+str(self.num_evaluation)+'_actor_'+str(i)+'_'+str(h)+'.pt')
 
-		# self.rms.save(nndir+'/rms.ms')
+		self.rms.save(nndir+'/rms.ms')
 
 	def arrayToOneHotVector(nparr):
 		result = np.array(list(np.copy(nparr)))
@@ -247,6 +247,8 @@ class AutoRegressiveRL(object):
 		actions = [[None for _ in range(self.num_slaves)] for _ in range(self.num_agents)]
 		rewards = [[None for _ in range(self.num_slaves)] for _ in range(self.num_agents)]
 
+		# actions_0_onehots = [None for _ in range(self.num_slaves)]
+
 		states_h = np.array([None for _ in range(self.num_h)])
 		actions_h = np.array([[None for _ in range(self.num_agents)] for _ in range(self.num_h)])
 		logprobs_h = np.array([[None for _ in range(self.num_agents)] for _ in range(self.num_h)])
@@ -261,7 +263,7 @@ class AutoRegressiveRL(object):
 			for j in range(self.num_slaves):
 				states[i][j] = self.env.getState(j,i).astype(np.float32)
 		states = np.array(states)
-		# states = self.rms.apply(states)
+		states = self.rms.apply(states)
 
 		learningTeam = 0
 		teamDic = {0: 0, 1: 0}
@@ -333,20 +335,20 @@ class AutoRegressiveRL(object):
 
 
 
-			arrayToOneHotVectorWithConstraint(actions_h[0])
+			actions_0_onehot = arrayToOneHotVectorWithConstraint(actions_h[0])
 
-			sm = nn.Softmax(dim=1)
-			# embed()
-			# exit(0)
-			actions_0_sm = [sm(Tensor(actions_h[0][0])).cpu().detach().numpy()]
+			# sm = nn.Softmax(dim=1)
+			# # embed()
+			# # exit(0)
+			# actions_0_sm = [sm(Tensor(actions_h[0][0])).cpu().detach().numpy()]
 
-			# actions_0_oneHot = 
 
 			# generate transition of second hierachy
 			for h in range(1,self.num_h):
 				if h == 1:
 
-					states_h[h] = np.concatenate((states_h[0], actions_0_sm), axis=2)
+					states_h[h] = np.concatenate((states_h[0], actions_0_onehot), axis=2)
+					# states_h[h] = np.concatenate((states_h[0], actions_0_sm), axis=2)
 
 					a_dist_slave = [None]*self.num_agents
 					v_slave = [None]*self.num_agents
@@ -363,14 +365,16 @@ class AutoRegressiveRL(object):
 								.cpu().detach().numpy().reshape(-1);
 
 
-			actionsDecodePart = np.array(list(actions_h[h]))
+			# embed()
+			# exit(0)
+			actionsDecodePart = np.array(list(actions_h[1]))
 			decodeShape = list(np.shape(actionsDecodePart))
 			decodeShape[2] = 9
 			actionsDecoded =np.empty(decodeShape,dtype=np.float32)
 
 			for i in range(len(actionsDecodePart)):
 				for j in range(len(actionsDecodePart[i])):
-					curActionType = getActionTypeFromVector(actions_0_sm[i][j])
+					curActionType = getActionTypeFromVector(actions_0_onehot[i][j])
 					actionsDecoded[i][j] = self.actionDecoders[curActionType].decode(Tensor(actionsDecodePart[i][j])).cpu().detach().numpy()
 
 
@@ -412,13 +416,13 @@ class AutoRegressiveRL(object):
 					if self.env.isTerminalState(j) is False:
 						for i in range(self.num_agents):
 							if teamDic[i] == learningTeam:
-								self.episodes[j][i].push(states_h[0][i][j], actions_h[0][i][j], actions_h[1][i][j],\
+								self.episodes[j][i].push(states_h[0][i][j], actions_h[0][i][j], actions_0_onehot[i][j], actions_h[1][i][j],\
 									rewards[i][j], values_h[0][i][j], logprobs_h[0][i][j], logprobs_h[1][i][j])
 								local_step += 1
 					else:
 						for i in range(self.num_agents):
 							if teamDic[i] == learningTeam:
-								self.episodes[j][i].push(states_h[0][i][j], actions_h[0][i][j], actions_h[1][i][j],\
+								self.episodes[j][i].push(states_h[0][i][j], actions_h[0][i][j], actions_0_onehot[i][j], actions_h[1][i][j],\
 									rewards[i][j], values_h[0][i][j], logprobs_h[0][i][j], logprobs_h[1][i][j])
 
 
@@ -440,7 +444,7 @@ class AutoRegressiveRL(object):
 				for j in range(self.num_slaves):
 					states[i][j] = self.env.getState(j,i).astype(np.float32)
 			states = np.array(states)
-			# states = self.rms.apply(states)
+			states = self.rms.apply(states)
 
 		print('SIM : {}'.format(local_step))
 
@@ -458,7 +462,7 @@ class AutoRegressiveRL(object):
 				# print(size)
 				if size == 0:
 					continue
-				states, action_types, actions, rewards, values, action_types_logprobs, action_logprobs = zip(*data)
+				states, action_types, action_types_onehot, actions, rewards, values, action_types_logprobs, action_logprobs = zip(*data)
 				values = np.concatenate((values, np.zeros(1)), axis=0)
 				advantages = np.zeros(size)
 				ad_t = 0
@@ -482,7 +486,7 @@ class AutoRegressiveRL(object):
 					rnn_replay_buffer = RNNReplayBuffer(10000)
 					for i in range(size):
 
-						rnn_replay_buffer.push(states[i], action_types[i], actions[i], 
+						rnn_replay_buffer.push(states[i], action_types[i], action_types_onehot[i], actions[i], 
 							action_types_logprobs[i], action_logprobs[i], TD[i], advantages[i])
 
 					self.buffer[index].push(rnn_replay_buffer)
@@ -524,6 +528,7 @@ class AutoRegressiveRL(object):
 
 					stack_s = np.vstack(batch.s).astype(np.float32)
 					stack_a_t = np.vstack(batch.a_t).astype(np.float32)
+					stack_a_t_onehot = np.vstack(batch.a_t_onehot).astype(np.float32)
 					stack_a = np.vstack(batch.a).astype(np.float32)
 					stack_a_t_lp = np.vstack(batch.a_t_logprob).astype(np.float32)
 					stack_a_lp = np.vstack(batch.a_logprob).astype(np.float32)
@@ -543,7 +548,8 @@ class AutoRegressiveRL(object):
 					# a_t_sm = sm(Tensor([stack_a_t]))
 					a_t_sm = sm(a_t)
 					
-					stack_s_h = torch.cat([Tensor(stack_s), a_t_sm.squeeze()],dim=1)
+					stack_s_h = torch.cat([Tensor(stack_s), Tensor(stack_a_t_onehot)],dim=1)
+					# stack_s_h = torch.cat([Tensor(stack_s), a_t_sm.squeeze()],dim=1)
 
 					a_dist = self.actor[1][buff_index].forward(Tensor(stack_s_h))	
 					
@@ -567,13 +573,14 @@ class AutoRegressiveRL(object):
 					# loss_actor = - surrogate2.mean()
 
 					'''Entropy Loss'''
-					loss_entropy = - self.w_entropy * a_dist.entropy().mean()
+					loss_entropy = - self.w_entropy * a_dist.entropy().mean()* a_t_dist.entropy().mean()
 
 					# self.loss_actor[buff_index] = loss_actor.cpu().detach().numpy().tolist()
 					# self.loss_critic[buff_index] = loss_critic.cpu().detach().numpy().tolist()
 
 					loss = loss_actor + loss_critic + loss_entropy
-					self.actor_optimizer[h][buff_index].zero_grad()
+					self.actor_optimizer[0][buff_index].zero_grad()
+					self.actor_optimizer[1][buff_index].zero_grad()
 					self.critic_optimizer[buff_index].zero_grad()
 
 
@@ -596,10 +603,10 @@ class AutoRegressiveRL(object):
 
 
 					self.critic_optimizer[buff_index].step()
+					self.sum_loss_critic[buff_index] += loss_critic*self.batch_size/self.num_epochs
+
 					for h in range(self.num_h):
 						self.actor_optimizer[h][buff_index].step()
-					self.sum_loss_critic[buff_index] += loss_critic*self.batch_size/self.num_epochs
-					for h in range(self.num_h):
 						self.sum_loss_actor[h][buff_index] += loss_actor*self.batch_size/self.num_epochs
 
 				print('Optimizing actor-critic nn_{} : {}/{}'.format(h, j+1,self.num_epochs),end='\r')

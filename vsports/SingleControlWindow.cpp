@@ -1168,10 +1168,10 @@ getActionFromNN(int index)
 
 	std::cout<<"mActionType : "<<mActionType.transpose()<<std::endl;
 
-	double sum = 0;
-	sum += exp(mActionType[0]) + exp(mActionType[1]);
-	mActionType[0] = exp(mActionType[0])/sum;
-	mActionType[1] = exp(mActionType[1])/sum;
+	// double sum = 0;
+	// sum += exp(mActionType[0]) + exp(mActionType[1]);
+	// mActionType[0] = exp(mActionType[0])/sum;
+	// mActionType[1] = exp(mActionType[1])/sum;
 
 	mActionType = toOneHotVectorWithConstraint(index, mActionType);
 

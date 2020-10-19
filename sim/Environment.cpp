@@ -56,7 +56,7 @@ criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), viola
 		prevBallPositions[i].setZero();
 	}
 	mTargetBallPosition.setZero();
-	this->endTime = 6.5;
+	this->endTime = 10;
 	this->initCharacters(bvh_path);
 	// this->initMotionGenerator(nn_path);
 
@@ -1076,81 +1076,51 @@ getReward(int index, bool verbose)
 	// activates when fastTermination is on
 	bool fastViewTermination = true;
 
+	bool isDribble = true;
 
-	// Dribble Direction Reward
-/*	Eigen::Vector3d targetPlaneNormal = mTargetBallPosition - mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM();
-	targetPlaneNormal[1] = 0.0;
-
-	Eigen::Vector3d comTargetDirection = targetPlaneNormal.normalized();
-
-	Eigen::Vector3d curRootVelocity = mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM() - mPrevCOMs[index];
-
-	reward += 0.1*comTargetDirection.dot(curRootVelocity);
-
-	if(targetPlaneNormal.norm() < 0.5)
+	if(isDribble)
 	{
-		reward = 1.0;
-		mIsTerminalState = true;
+		if(!mCurBallPossessions[index])
+		{
+			mIsTerminalState = true;
+			return 0;
+		}
+
+		// Dribble Direction Reward
+		Eigen::Vector3d targetPlaneNormal = mTargetBallPosition - mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM();
+		targetPlaneNormal[1] = 0.0;
+
+		Eigen::Vector3d comTargetDirection = targetPlaneNormal.normalized();
+
+		Eigen::Vector3d curRootVelocity = mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM() - mPrevCOMs[index];
+
+		reward += 0.1*comTargetDirection.dot(curRootVelocity);
+
+		if(targetPlaneNormal.norm() < 0.5)
+		{
+			reward = 1.0;
+			mIsTerminalState = true;
+		}
+
+		return reward;
+
 	}
 
-	return reward;
-	*/
-
-	if(mCharacters[index]->blocked && mCurActionTypes[index] == 0)
-		reward += 0.001;
-
-
-
-
-	// Shoot Reward
-	if(gotReward)
-		return 0;
-
-
-	if(fastTermination)
+	else
 	{
+		if(mCharacters[index]->blocked && mCurActionTypes[index] == 0)
+			reward += 0.001;
+		// Shoot Reward
+		if(gotReward)
+			return 0;
+
+
 		if(!mCurBallPossessions[index])
 		{
 			if(fastViewTermination)
 				mIsTerminalState = true;
 			gotReward = true;
-			// criticalPoint_targetBallPosition;
-			// criticalPoint_targetBallVelocity;
-			/*Eigen::Vector3d relTargetPosition = mTargetBallPosition - criticalPoint_targetBallPosition;
-			Eigen::Vector3d projRelTargetPosition = relTargetPosition;
-			projRelTargetPosition[1] = 0.0;
-			Eigen::Vector3d projCriticalVelocity = criticalPoint_targetBallVelocity;
-			projCriticalVelocity[1] = 0.0;
-			reward = 0.01*projRelTargetPosition.normalized().dot(projCriticalVelocity.normalized());
-			if(projRelTargetPosition.dot(projCriticalVelocity) > 0)
-			{
-				// std::cout<<reward<<std::endl;
-				double normalDirVelocity = projRelTargetPosition.normalized().dot(projCriticalVelocity);
-				double time = projRelTargetPosition.norm()/normalDirVelocity;
-				// std::cout<<"Time : "<<time<<std::endl;
 
-				Eigen::Vector3d projectedBallPosition = criticalPoint_targetBallPosition + time *criticalPoint_targetBallVelocity;
-				projectedBallPosition[1] += 0.5*g*time*time;
-
-				// std::cout<<criticalPointFrame<<" #### "<<curFrame<<std::endl;
-				if(criticalPointFrame == curFrame -2)
-				{
-					// std::cout<<"SHOOT!"<<std::endl;
-					reward += exp(0.4*-pow((mTargetBallPosition - projectedBallPosition).norm(),2));
-					if((mTargetBallPosition - projectedBallPosition).norm() < 0.3)
-						std::cout<<"SUCCESSED!"<<std::endl;
-				}
-				if(fastViewTermination)
-					mIsTerminalState = true;
-				return reward;
-
-			}
-			else
-			{
-				if(fastViewTermination)
-					mIsTerminalState = true;
-				return reward;
-			}*/
 			Eigen::Vector3d relTargetPosition = mTargetBallPosition - criticalPoint_targetBallPosition;
 
 			double h = relTargetPosition[1];
@@ -1184,61 +1154,7 @@ getReward(int index, bool verbose)
 			return reward;
 		}
 	}
-	else
-	{
 
-		Eigen::Isometry3d rootT = getRootT(index);
-		Eigen::Vector3d targetPlaneNormal = mTargetBallPosition - rootT.translation();
-		targetPlaneNormal[1] = 0;
-
-
-		Eigen::Vector3d relCurBallPosition = curBallPosition - rootT.translation();
-
-
-		Eigen::Vector3d projCurBallPosition = targetPlaneNormal.normalized() * (targetPlaneNormal.normalized().dot(relCurBallPosition));
-		double direction = targetPlaneNormal.normalized().dot(relCurBallPosition);
-
-
-		if(direction >= 0)
-		{
-			if(!gotReward)
-			{
-				if(projCurBallPosition.norm() > targetPlaneNormal.norm())
-				{
-					gotReward =true;
-					double distanceOnPlane = (mTargetBallPosition - curBallPosition).norm();
-					reward = exp(-pow(distanceOnPlane,2));
-					mIsTerminalState = true;
-					if(distanceOnPlane < 0.3)
-						std::cout<<"SUCCESSED!"<<std::endl;
-				}
-			}
-			
-		}
-
-		reward = max(0.0, reward);
-
-		return reward;
-	}
-
-
-
-	// for simple drible
-	// Eigen::Vector3d targetBallPosition = mTargetBallPosition - curBallPosition;
-	// targetBallPosition[1] = 0.0;
-
-	// if((targetBallPosition).norm() < 0.3)
-	// {
-	// 	// if(!mCurBallPossessions[index])
-	// 	// {
-	// 		reward = 1;
-	// 		std::cout<<"Successed"<<std::endl;
-			
-	// 		mIsTerminalState = true;
-	// 	// }
-	// }
-
-	// return reward;
 }
 
 
