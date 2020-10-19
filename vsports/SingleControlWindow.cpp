@@ -58,7 +58,7 @@ initWindow(int _w, int _h, char* _name)
 
 SingleControlWindow::
 SingleControlWindow()
-:SimWindow(), mIsNNLoaded(false), mFrame(680)
+:SimWindow(), mIsNNLoaded(false), mFrame(5273)
 {
 
  	// srand (time(NULL));	
@@ -148,43 +148,49 @@ SingleControlWindow(const char* nn_path,
 	nn_module_0 = new boost::python::object[mEnv->mNumChars];
 	nn_module_1 = new boost::python::object[mEnv->mNumChars];
 	nn_module_2 = new boost::python::object[mEnv->mNumChars];
-	// nn_module_critic = new boost::python::object[mEnv->mNumChars];
-
 	p::object *load_0 = new p::object[mEnv->mNumChars];
 	p::object *load_1 = new p::object[mEnv->mNumChars];
 	p::object *load_2 = new p::object[mEnv->mNumChars];
-	// p::object *load_critic = new p::object[mEnv->mNumChars];
 
 	p::object *load_rms_0 = new p::object[mEnv->mNumChars];
 	p::object *load_rms_1 = new p::object[mEnv->mNumChars];
-	// p::object *load_rms_critic = new p::object[mEnv->mNumChars];
 
 	// reset_hidden = new boost::python::object[mEnv->mNumChars];
 
-	// for(int i=0;i<mEnv->mNumChars;i++)
-	// {
-	// 	nn_module_critic[i] = p::eval("CriticNN(num_state).cuda()", mns);
-	// 	load_0[i] = nn_module_0[i].attr("load");
-	// 	load_rms_0[i] = nn_module_0[i].attr("loadRMS");
-	// }
-
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module_0[i] = p::eval(("ActorNN(num_state, "+to_string(numActionTypes)+", 0.0).cuda()").data(), mns);
+		nn_module_0[i] = p::eval(("ActorCriticNN(num_state, "+to_string(numActionTypes)+", 0.0, True).cuda()").data(), mns);
 		load_0[i] = nn_module_0[i].attr("load");
 		load_rms_0[i] = nn_module_0[i].attr("loadRMS");
 	}
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module_1[i] = p::eval(("ActorNN(num_state+"+to_string(numActionTypes)+", "+to_string(latentSize)+", 0.0).cuda()").data(), mns);
+		nn_module_1[i] = p::eval(("ActorCriticNN(num_state+"+to_string(numActionTypes)+", "+to_string(latentSize)+").cuda()").data(), mns);
 		load_1[i] = nn_module_1[i].attr("load");
 		load_rms_1[i] = nn_module_1[i].attr("loadRMS");
 	}
+	// for(int i=0;i<mEnv->mNumChars;i++)
+	// {
+	// 	nn_module_2[i] = p::eval("ActorCriticNN(num_state+5+5, 6 ).cuda()", mns);
+	// 	load_2[i] = nn_module_2[i].attr("load");
+	// }
 
 
-	load_0[0](string(control_nn_path) + "_actor_0_0.pt");
-	load_1[0](string(control_nn_path) + "_actor_0_1.pt");
-	// load_critic[0](string(control_nn_path) + "_critic_0.pt");
+
+	// for(int i=0;i<mEnv->mNumChars;i++)
+	// {
+	// 	nn_module_0[i] = p::eval("ActorCriticNN(num_state, 4).cuda()", mns);
+	// 	load_0[i] = nn_module_0[i].attr("load");
+	// }
+	// for(int i=0;i<mEnv->mNumChars;i++)
+	// {
+	// 	nn_module_1[i] = p::eval("ActorCriticNN(num_state+4, 2).cuda()", mns);
+	// 	load_1[i] = nn_module_1[i].attr("load");
+	// }
+
+
+	load_0[0](string(control_nn_path) + "_0.pt");
+	load_1[0](string(control_nn_path) + "_1.pt");
 
 	std::string dir = control_nn_path;
 	std::string subdir = "";
@@ -195,11 +201,11 @@ SingleControlWindow(const char* nn_path,
 	}
 
 
-	// rms
-	// load_rms_0[0]((subdir + "rms.ms").data());
-	// load_rms_1[0]((subdir + "rms.ms").data());
+	load_rms_0[0]((subdir + "rms.ms").data());
+	load_rms_1[0]((subdir + "rms.ms").data());
 
 
+	// load_2[0](string(control_nn_path) + "_2.pt");
 	std::cout<<"Loaded control nn : "<<control_nn_path<<std::endl;
 
 
@@ -228,6 +234,26 @@ SingleControlWindow(const char* nn_path,
 
 	targetActionType = 0;
 	actionDelay = 0;
+	// bvhParser = new BVHparser(bvh_path, BVHType::BASKET);
+	// bvhParser->writeSkelFile();
+
+	// cout<<bvhParser->skelFilePath<<endl;
+
+	// SkeletonPtr bvhSkel = dart::utils::SkelParser::readSkeleton(bvhParser->skelFilePath);
+	// charNames.push_back(getFileName_(bvh_path));
+	// cout<<charNames[0]<<endl;	
+	// BVHmanager::setPositionFromBVH(bvhSkel, bvhParser, 0);
+	// mEnv->mWorld->addSkeleton(bvhSkel);
+
+
+	// cout<<"Before MotionGenerator"<<endl;
+	// exit(0);
+	// cout<<"BVH skeleton dofs : "<<bvhSkel->getNumDofs()<<endl;
+	// cout<<"BVH skeleton numBodies : "<<bvhSkel->getNumBodyNodes()<<endl;
+	// initDartNameIdMapping();
+	// mMotionGenerator = new ICA::dart::MotionGenerator(nn_path, this->dartNameIdMap);
+
+	// cout<<bvhSkel->getPositions().transpose()<<endl;
 
 
 	/// Read training X data
@@ -237,6 +263,7 @@ SingleControlWindow(const char* nn_path,
 
     std::cout<<"xDataPath:"<<xDataPath<<std::endl;
     
+    // if(! boost::filesystem::is_regular_file (xDataPath)) break;
     this->xData.push_back(MotionRepresentation::readXData(xNormalPath, xDataPath, sub_dir));
 
 }
@@ -253,7 +280,7 @@ SingleControlWindow(const char* nn_path,
 // 	for(int i=0;i<bvhSkel->getNumBodyNodes();i++)
 // 	{
 // 		this->dartNameIdMap[bvhSkel->getBodyNode(i)->getName()] = curIndex;
-// 		curIndex += bvhSkel->getBodyNode(i)->getParentJoint()->getNumDofs();
+// 		curIndex += bvhSkel->getBodyNode(i)->getParentJoint()->getNumDofs(r);
 // 	}
 
 // 	// cout<<this->dartNameIdMap.size()<<endl;
@@ -490,6 +517,7 @@ step()
 	if(mEnv->isTerminalState())// || mEnv->isFoulState())
 	{
 		sleep(1);
+		mFrame = 5273;
 		mEnv->slaveReset();
 	}
 	// std::cout<<"mFrame : "<<mFrame<<std::endl;
@@ -497,47 +525,40 @@ step()
     // time_check_start();
 	this->targetLocal.setZero();
 
-	// applyKeyBoardEvent();
-	// applyMouseEvent();
- //    actionDelay--;
- //    if(actionDelay < -30)
-	// {
-	// 	targetActionType = 0;
- //        actionDelay = 0;
-	// }
-
- //    // If terminal action goes to end, reset to dribble.
- //    if(targetActionType == 0)
- //        actionDelay = 0;
-
-
-	// SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
-
-
-	// std::cout<<"BVH skel position : "<<vec3dTo2d(bvhSkel->getPositions().segment(3,3)).transpose()<<endl;
-	// std::cout<<"View direction  : "<<vec3dTo2d(mCamera->lookAt - mCamera->eye).transpose().normalized()<<endl;
-	
-	// std::cout<<"BVH skel position : "<<vec3dTo2d(bvhSkel->getPositions().segment(3,3)).transpose()<<endl;
-
-	// auto nextPositionAndContacts = mMotionGenerator->generateNextPoseAndContacts(this->targetLocal, targetActionType, actionDelay);
-
-	// mStates[0] = mEnv->getState(0);
 
 
 	// std::cout<<mStates[0].transpose()<<std::endl;
 
 	// mEnv->bsm[0]->curState = BasketballState::BALL_CATCH_1;
 	// mActions[0] = Utils::toEigenVec(this->xData[0][mFrame]);
-	// mEnv->mActions[0] = Utils::toEigenVec(this->xData[0][mFrame]);
+
+	
+	// Eigen::VectorXd fullAction = Utils::toEigenVec(this->xData[0][mFrame]);
+
+
+
+	// std::cout<<
+	// mEnv->setActionType(0, getActionTypeFromVec(fullAction.segment(4,5))/3);
+
+	// Eigen::VectorXd remainedAction(fullAction.rows()-5);
+	// remainedAction.segment(0,4) = fullAction.segment(0,4);
+	// remainedAction.segment(4,5) = fullAction.segment(4+5,5);
+
+	// std::cout<<mEnv->mActions[0]<<std::endl;
 	// std::cout<<Utils::toEigenVec(this->xData[0][mFrame]).transpose()<<std::endl;
 
 	// time_check_start();
+
+
 	getActionFromNN(0);
+
+
 	// time_check_end();
 
-	// mActions[0].segment(0,2) = Eigen::Vector2d(200.0, 0.0);
-	// mActions[0].segment(2,2) = Eigen::Vector2d(50.0, -50.0);
+
 	// time_check_start();
+
+	// mEnv->setAction(0, remainedAction);
 	mEnv->setAction(0, mActions[0]);
 	// time_check_end();
 
@@ -1166,13 +1187,7 @@ getActionFromNN(int index)
 		mActionType[j] = srcs[j];
 	}
 
-	std::cout<<"mActionType : "<<mActionType.transpose()<<std::endl;
-
-	double sum = 0;
-	sum += exp(mActionType[0]) + exp(mActionType[1]);
-	mActionType[0] = exp(mActionType[0])/sum;
-	mActionType[1] = exp(mActionType[1])/sum;
-
+	// std::cout<<"mActionType : "<<mActionType.transpose()<<std::endl;
 	mActionType = toOneHotVectorWithConstraint(index, mActionType);
 
 	int actionType = getActionTypeFromVec(mActionType);

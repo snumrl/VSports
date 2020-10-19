@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 23
+nnCount = 24
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -116,7 +116,7 @@ class RL(object):
 		self.batch_size = 256
 		
 
-		self.num_action_types = 5
+		self.num_action_types = 2
 		self.latent_size = 4
 
 		#contact, finger, finger-ball
@@ -136,7 +136,7 @@ class RL(object):
 		# for i in range(self.num_action_types):
 
 		self.actionDecoders[0].load("vae_nn4/vae_action_decoder_"+str(0)+".pt")
-		self.actionDecoders[3].load("vae_nn4/vae_action_decoder_"+str(3)+".pt")
+		self.actionDecoders[1].load("vae_nn4/vae_action_decoder_"+str(3)+".pt")
 
 		self.rms = RunningMeanStd(self.num_state)
 
@@ -176,7 +176,7 @@ class RL(object):
 				if h == 2 :
 					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], -1.0)
 				if h== 0:
-					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], 0.0, True)
+					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], 0.0)
 				else:
 					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], 0.0)
 
@@ -382,6 +382,7 @@ class RL(object):
 
 		def arrayToOneHotVectorWithConstraint(nparr):
 			result = np.array(list(np.copy(nparr)))
+
 			# resultVector = 
 
 			# embed()
