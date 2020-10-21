@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 24
+nnCount = 25
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -112,7 +112,7 @@ class RL(object):
 		self.gamma = 0.997
 		self.lb = 0.95
 
-		self.buffer_size = 8*1024
+		self.buffer_size = 4*1024
 		self.batch_size = 256
 		
 
@@ -176,7 +176,7 @@ class RL(object):
 				if h == 2 :
 					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], -1.0)
 				if h== 0:
-					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], 0.0)
+					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], 0.0, True)
 				else:
 					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], 0.0)
 
@@ -266,7 +266,6 @@ class RL(object):
 		self.filecount = 0
 
 		self.env.slaveResets()
-
 
 	def loadTargetModels(self,path,index):
 		for h in range(self.num_h):
@@ -425,7 +424,6 @@ class RL(object):
 		# 	return result
 
 
-
 		def getActionTypeFromVector(vec):
 			maxIndex = 0
 			maxValue = -100
@@ -441,6 +439,8 @@ class RL(object):
 			counter += 1
 			if counter%10 == 0:
 				print('SIM : {}'.format(local_step),end='\r')
+
+
 
 
 			# generate transition of first hierachy
@@ -848,6 +848,8 @@ class RL(object):
 
 	def train(self):
 		frac = 1.0
+
+
 		self.learning_rate = self.default_learning_rate*frac
 		self.clip_ratio = self.default_clip_ratio*frac
 		for i in range(self.num_policy):

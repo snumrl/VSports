@@ -42,6 +42,7 @@ nn/*
 nn_ar/*
 nn_ar_h/*
 nn_lar_h/*
+nn_dqn_lar_h/*
 nn_h/*
 nn_obstacle/*
 pyvs/*.so

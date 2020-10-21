@@ -3,13 +3,17 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import torchvision.transforms as T
-import math
+import math, random
 import time
 from collections import OrderedDict
 import numpy as np
 from IPython import embed
+
 import copy
 from Utils import RunningMeanStd
+
+import torch.optim as optim
+import torch.autograd as autograd 
 
 MultiVariateNormal = torch.distributions.Normal
 temp = MultiVariateNormal.log_prob
@@ -24,6 +28,7 @@ FloatTensor = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
 ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
 Tensor = FloatTensor
+Variable = lambda *args, **kwargs: autograd.Variable(*args, **kwargs).cuda() if use_cuda else autograd.Variable(*args, **kwargs)
 
 def weights_init(m):
 	classname =	m.__class__.__name__
@@ -134,6 +139,8 @@ class ActorCriticNN(nn.Module):
 
 
 		self.log_std = nn.Parameter(log_std * torch.ones(num_actions))
+		# print(self.log_std.exp())
+
 		# self.log_std = nn.Parameter(Tensor([0, 0, -2]))
 
 		# self.rnn.apply(weights_init)
@@ -155,6 +162,7 @@ class ActorCriticNN(nn.Module):
 		# self.log_std = nn.Parameter(Tensor([0, 0, -2]))
 		# k = np.exp(-0.01*num_eval)
 		# rnnOutput, out_hidden = self.rnn(x.view(1, batch_size,-1), in_hidden)
+		# print(self.log_std.exp())
 		return MultiVariateNormal(self.policy(x).unsqueeze(0),self.log_std.exp()), self.value(x)
 		# return MultiVariateNormal(self.policy(rnnOutput).unsqueeze(0),self.log_std.exp()), self.value(rnnOutput), out_hidden
 
@@ -196,8 +204,8 @@ class ActorCriticNN(nn.Module):
 		# self.cur_hidden = new_hidden
 		# print(p.loc.cpu().detach().numpy())
 		# return p.sample().cpu().detach().numpy()
-		return p.sample().cpu().detach().numpy().astype(np.float32)
-		# return p.loc.cpu().detach().numpy().astype(np.float32)
+		# return p.sample().cpu().detach().numpy().astype(np.float32)
+		return p.loc.cpu().detach().numpy().astype(np.float32)
 
 	def get_value(self, s):
 		ts = torch.tensor(s)
@@ -220,8 +228,59 @@ class ActorCriticNN(nn.Module):
 		# return p.sample().cpu().detach().numpy()
 		return p.sample.cpu().detach().numpy() - p.loc.cpu().detach().numpy()
 
+class DQN(nn.Module):
+	def __init__(self, num_states, num_actions):
+		super(DQN, self).__init__()
+
+		self.layers = nn.Sequential(
+			nn.Linear(num_states, 128),
+			nn.ReLU(),
+			nn.Linear(128, 128),
+			nn.ReLU(),
+			nn.Linear(128, num_actions)
+		)
+		self.rms = RunningMeanStd(shape=(num_states))
+
+	def forward(self, x):
+		return self.layers(x)
 
 
+	def act(self, state, epsilon):
+		if random.random() > epsilon:
+			state   = Tensor(state)
+			q_value = self.forward(state)
+			action  = q_value.max(2)[1].data
+			# embed()
+			# exit(0)
+		else:
+			# embed()
+			# exit(0)
+			action = LongTensor(np.random.randint(0,2,(len(state[0])),dtype=int)).unsqueeze(0)
+			# action = random.randrange(env.action_space.n)
+		return action
+
+	def getAction(self, s):
+		s = Tensor(s)
+		q_value = self.forward(s)
+		# embed()
+		# exit(0)
+		action = q_value.max(2)[1].data
+
+		return action
+
+	def load(self,path):
+		print('load nn {}'.format(path))
+		# embed()
+		# exit(0)	
+		self.load_state_dict(torch.load(path))
+
+	def save(self,path):
+		print('save nn {}'.format(path))
+		torch.save(self.state_dict(),path)
+
+	def loadRMS(self, path):
+		print('load RMS : {}'.format(path))
+		self.rms.load(path)
 
 class ActorNN(nn.Module):
 	def __init__(self, num_states, num_actions, log_std = 0.0):

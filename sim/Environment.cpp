@@ -1076,7 +1076,7 @@ getReward(int index, bool verbose)
 	// activates when fastTermination is on
 	bool fastViewTermination = false;
 
-	bool isDribble = false;
+	bool isDribble = true;
 
 	if(isDribble)
 	{
@@ -1085,6 +1085,14 @@ getReward(int index, bool verbose)
 			mIsTerminalState = true;
 			return 0;
 		}
+
+		// if(mCurActionTypes[index] == 0)
+		// 	return 0.01;
+		// else
+		// {
+		// 	mIsTerminalState = true;
+		// 	return 0;
+		// }
 
 		// Dribble Direction Reward
 		Eigen::Vector3d targetPlaneNormal = mTargetBallPosition - mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM();
@@ -1182,7 +1190,8 @@ getRewards()
 		// 	// rewards.push_back();
 		// 	mAccScore[i] += getReward(i);
 		// }
-		mAccScore[i] += getReward(i);
+		if(resetCount<0)
+			mAccScore[i] += getReward(i);
 		// std::cout<<"Reward : "<<mAccScore[i]<<std::endl;
 
 	}
@@ -1562,6 +1571,7 @@ void
 Environment::
 slaveReset()
 {
+	// Reduced reset count for simple dribble action
 	resetCount = 45;
 	mIsTerminalState = false;
 	mIsFoulState = false;
