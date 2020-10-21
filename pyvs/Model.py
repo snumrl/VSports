@@ -259,12 +259,13 @@ class DQN(nn.Module):
 			# action = random.randrange(env.action_space.n)
 		return action
 
-	def getAction(self, s):
-		s = Tensor(s)
-		q_value = self.forward(s)
+	def get_action(self, s):
 		# embed()
 		# exit(0)
-		action = q_value.max(2)[1].data
+		s = Tensor(s)
+		q_value = self.forward(s)
+
+		action = q_value.max(0)[1].item()
 
 		return action
 
@@ -272,7 +273,7 @@ class DQN(nn.Module):
 		print('load nn {}'.format(path))
 		# embed()
 		# exit(0)	
-		self.load_state_dict(torch.load(path))
+		# self.load_state_dict(torch.load(path))
 
 	def save(self,path):
 		print('save nn {}'.format(path))

@@ -238,15 +238,24 @@ class RL(object):
 
 	def saveModels(self):
 		for i in range(self.num_policy):
-			self.ppo_model[i].save(nndir+'/'+'current_'+str(i)+'.pt')
+			self.ppo_model[i].save(nndir+'/'+'current_'+str(i)+'_ppo.pt')
+			self.dqn_model[i].save(nndir+'/'+'current_'+str(i)+'_dqn.pt')
 
 
 			if self.max_return_epoch == self.num_evaluation:
-				self.ppo_model[i].save(nndir+'/'+'max_'+str(i)+'.pt')
+				self.ppo_model[i].save(nndir+'/'+'max_'+str(i)+'_ppo.pt')
+				self.dqn_model[i].save(nndir+'/'+'max_'+str(i)+'_dqn.pt')
 
 			if self.num_evaluation%100 == 0:
-				self.ppo_model[i].save(nndir+'/'+str(self.num_evaluation)+'_'+str(i)+'.pt')
+				self.ppo_model[i].save(nndir+'/'+str(self.num_evaluation)+'_'+str(i)+'_ppo.pt')
+				self.dqn_model[i].save(nndir+'/'+str(self.num_evaluation)+'_'+str(i)+'_dqn.pt')
 		self.rms.save(nndir+'/rms.ms')
+
+	def loadTargetModels(self,path,index):
+		self.ppo_model[self.indexToNetDic[index]].load(nndir+'/'+path+'_'+str(self.indexToNetDic[index%self.num_agents])+'_ppo.pt')
+		self.dqn_model[self.indexToNetDic[index]].load(nndir+'/'+path+'_'+str(self.indexToNetDic[index%self.num_agents])+'_dqn.pt')
+		self.rms.load(nndir+'/rms.ms')
+
 
 
 	def generateTransitions(self):

@@ -124,7 +124,7 @@ SingleControlWindow(const char* nn_path,
 					const char* control_nn_path)
 :SingleControlWindow()
 {
-	int numActionTypes = 2;
+	numActionTypes = 2;
 	latentSize = 4;
 
 	mEnv = new Environment(30, 180, 1, "../data/motions/basketData/motion/s_004_1_1.bvh", nn_path);
@@ -159,7 +159,7 @@ SingleControlWindow(const char* nn_path,
 
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module_0[i] = p::eval(("ActorCriticNN(num_state, "+to_string(numActionTypes)+", 0.0, True).cuda()").data(), mns);
+		nn_module_0[i] = p::eval(("DQN(num_state, "+to_string(numActionTypes)+").cuda()").data(), mns);
 		load_0[i] = nn_module_0[i].attr("load");
 		load_rms_0[i] = nn_module_0[i].attr("loadRMS");
 	}
@@ -189,8 +189,8 @@ SingleControlWindow(const char* nn_path,
 	// }
 
 
-	load_0[0](string(control_nn_path) + "_0.pt");
-	load_1[0](string(control_nn_path) + "_1.pt");
+	load_0[0](string(control_nn_path) + "_dqn.pt");
+	load_1[0](string(control_nn_path) + "_ppo.pt");
 
 	std::string dir = control_nn_path;
 	std::string subdir = "";
@@ -532,7 +532,7 @@ step()
 	// mEnv->bsm[0]->curState = BasketballState::BALL_CATCH_1;
 	// mActions[0] = Utils::toEigenVec(this->xData[0][mFrame]);
 
-	
+
 	// Eigen::VectorXd fullAction = Utils::toEigenVec(this->xData[0][mFrame]);
 
 
@@ -1086,48 +1086,50 @@ motion(int x, int y)
 	SimWindow::motion(x, y);
 }
 
-Eigen::VectorXd
-SingleControlWindow::
-toOneHotVector(Eigen::VectorXd action)
-{
-    int maxIndex = 0;
-    double maxValue = -100;
-    for(int i=0;i<action.size();i++)
-    {
-        if(action[i]> maxValue)
-        {
-        	maxValue= action[i];
-        	maxIndex = i;
-        }
-    }
-    Eigen::VectorXd result(action.size());
-    result.setZero();
-    result[maxIndex] = 1.0;
-    return result;
-}
+// Eigen::VectorXd
+// SingleControlWindow::
+// toOneHotVector(Eigen::VectorXd action)
+// {
+//     int maxIndex = 0;
+//     double maxValue = -100;
+//     for(int i=0;i<action.size();i++)
+//     {
+//         if(action[i]> maxValue)
+//         {
+//         	maxValue= action[i];
+//         	maxIndex = i;
+//         }
+//     }
+//     Eigen::VectorXd result(action.size());
+//     result.setZero();
+//     result[maxIndex] = 1.0;
+//     return result;
+// }
 
 
-Eigen::VectorXd
-SingleControlWindow::
-toOneHotVectorWithConstraint(int index, Eigen::VectorXd action)
-{
-	// std::cout<<"acition type "<<action.transpose()<<std::endl;
-    int maxIndex = 0;
-    double maxValue = -100;
-    for(int i=0;i<action.size();i++)
-    {
-        if(action[i]> maxValue)
-        {
-        	maxValue= action[i];
-        	maxIndex = i;
-        }
-    }
-    maxIndex = mEnv->setActionType(index, maxIndex);
-    Eigen::VectorXd result(action.size());
-    result.setZero();
-    result[maxIndex] = 1.0;
-    return result;
-}
+// Eigen::VectorXd
+// SingleControlWindow::
+// toOneHotVectorWithConstraint(int index, int actionType)
+// {
+// 	Eigen::VectorXd result(numActionTypes);
+// 	int constrainedActionType = mEnv->setActionType(index, maxIndex);
+// 	// std::cout<<"acition type "<<action.transpose()<<std::endl;
+//     int maxIndex = 0;
+//     double maxValue = -100;
+//     for(int i=0;i<action.size();i++)
+//     {
+//         if(action[i]> maxValue)
+//         {
+//         	maxValue= action[i];
+//         	maxIndex = i;
+//         }
+//     }
+//     maxIndex = mEnv->setActionType(index, maxIndex);
+//     Eigen::VectorXd result();
+//     result.setZero();
+//     result[maxIndex] = 1.0;
+//     return result;
+// }
 
 
 int
@@ -1158,12 +1160,12 @@ getActionFromNN(int index)
 
 	Eigen::VectorXd state = mEnv->getState(index);
 
-	int numActions = 2;
+	// int numActions = 2;
 	// int latentSize = 4;
 	// std::cout<<state.segment(155,6).transpose()<<std::endl;
 	// std::cout<<state.segment(mEnv->mCharacters[0]->getSkeleton()->getNumDofs(),12).transpose()<<std::endl;
 
-	Eigen::VectorXd mActionType(numActions);
+	Eigen::VectorXd mActionType(numActionTypes);
 	mActionType.setZero();
 
 	get_action_0 = nn_module_0[index].attr("get_action");
@@ -1179,27 +1181,38 @@ getActionFromNN(int index)
 	}
 
 	p::object temp = get_action_0(state_np);
-	np::ndarray action_np = np::from_object(temp);
-	float* srcs = reinterpret_cast<float*>(action_np.get_data());
+	// np::int action_np = np::from_object(temp);
 
-	for(int j=0;j<numActions;j++)
-	{
-		mActionType[j] = srcs[j];
-	}
+	// int actionType = reinterpret_cast<int>(temp.get_data())
+
+	int actionType = p::extract<int>(temp);
+	// std::cout<<actionType<<std::endl;
+	// exit(0);
+
+
+	// float* srcs = reinterpret_cast<float*>(action_np.get_data());
+
+	// for(int j=0;j<numActionTypes;j++)
+	// {
+	// 	mActionType[j] = srcs[j];
+	// }
 
 	// std::cout<<"mActionType : "<<mActionType.transpose()<<std::endl;
-	mActionType = toOneHotVectorWithConstraint(index, mActionType);
 
-	int actionType = getActionTypeFromVec(mActionType);
+	actionType = mEnv->setActionType(index, actionType);
+	mActionType[actionType] = 1;
+	// mActionType = toOneHotVectorWithConstraint(index, mActionType);
+
+	// int actionType = getActionTypeFromVec(mActionType);
 
 	// mEnv->setActionType(index, actionType);
 
 
 	///////////////
-	Eigen::VectorXd mAction(mEnv->getNumAction() - numActions);
-	Eigen::VectorXd state_1(state.size()+numActions);
+	Eigen::VectorXd mAction(mEnv->getNumAction() - numActionTypes);
+	Eigen::VectorXd state_1(state.size()+numActionTypes);
 	state_1.segment(0,state.size()) = state;
-	state_1.segment(state.size(),numActions) = mActionType;
+	state_1.segment(state.size(),numActionTypes) = mActionType;
 
 	p::object get_action_1;
 
@@ -1259,9 +1272,9 @@ getActionFromNN(int index)
 		decodedAction[j] = src_d[j];
 	}
 
-	std::cout<<"Cur Action Type : "<<actionType<<std::endl;
-	std::cout<<"Encoded Action : "<<encodedAction.transpose()<<std::endl;
-	std::cout<<"Decoded Action : "<<decodedAction.transpose()<<std::endl;
+	// std::cout<<"Cur Action Type : "<<actionType<<std::endl;
+	// std::cout<<"Encoded Action : "<<encodedAction.transpose()<<std::endl;
+	// std::cout<<"Decoded Action : "<<decodedAction.transpose()<<std::endl;
 
 
 
