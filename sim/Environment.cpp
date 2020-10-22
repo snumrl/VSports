@@ -1076,10 +1076,18 @@ getReward(int index, bool verbose)
 	// activates when fastTermination is on
 	bool fastViewTermination = false;
 
-	bool isDribble = false;
+	bool isDribble = true;
 
 	if(isDribble)
 	{
+		if(mCurActionTypes[index] == 0)
+			return 0.01;
+		else
+		{
+			mIsTerminalState = true;
+			return 0;
+		}
+
 		if(!mCurBallPossessions[index])
 		{
 			mIsTerminalState = true;
@@ -1182,7 +1190,8 @@ getRewards()
 		// 	// rewards.push_back();
 		// 	mAccScore[i] += getReward(i);
 		// }
-		mAccScore[i] += getReward(i);
+		if(resetCount<0)
+			mAccScore[i] += getReward(i);
 		// std::cout<<"Reward : "<<mAccScore[i]<<std::endl;
 
 	}
@@ -1343,7 +1352,10 @@ setAction(int index, const Eigen::VectorXd& a)
     // mCurActionTypes[index] = curActionType;
 	// mActions[index].segment(4,NUM_ACTION_TYPE).setZero();
 
+    mActions[index].setZero();
     mActions[index][4+mCurActionTypes[index]] = 1.0;
+    return;
+
 
 
     if(mCurActionTypes[index] == 4 || mCurActionTypes[index] == 5)
@@ -1562,7 +1574,7 @@ void
 Environment::
 slaveReset()
 {
-	resetCount = 45;
+	resetCount = 5;
 	mIsTerminalState = false;
 	mIsFoulState = false;
 	mTimeElapsed = 0;

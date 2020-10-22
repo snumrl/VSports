@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 24
+nnCount = 37
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -112,7 +112,7 @@ class RL(object):
 		self.gamma = 0.997
 		self.lb = 0.95
 
-		self.buffer_size = 8*1024
+		self.buffer_size = 4*1024
 		self.batch_size = 256
 		
 
@@ -176,7 +176,7 @@ class RL(object):
 				if h == 2 :
 					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], -1.0)
 				if h== 0:
-					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], 0.0)
+					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], 0.0, True)
 				else:
 					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], 0.0)
 
@@ -208,6 +208,11 @@ class RL(object):
 		for h in range(self.num_h):
 			for i in range(self.num_policy):
 				self.optimizer[h][i] = optim.Adam(self.target_model[h][i].parameters(), lr=self.learning_rate)
+
+		# embed()
+		# exit(0)
+
+
 
 		# self.optimizer_1 = [None]*self.num_policy
 		# for i in range(self.num_policy):
@@ -531,7 +536,7 @@ class RL(object):
 			# action : torch.Size([1, 16, 6])
 
 			actionTypePart = actions[:,:,0:self.num_action_types]
-			actionsDecodePart =actions[:,:,self.num_action_types:self.num_action_types+self.latent_size]
+			actionsDecodePart = actions[:,:,self.num_action_types:self.num_action_types+self.latent_size]
 			# actionsRemainPart = actions[:,:,self.num_action_types+self.latent_size:]
 
 
@@ -783,7 +788,7 @@ class RL(object):
 				for i in range(len(all_segmented_transitions)//self.batch_size):
 					batch_segmented_transitions = all_segmented_transitions[i*self.batch_size:(i+1)*self.batch_size]
 
-					loss = Tensor(torch.zeros(1).cuda())
+					# loss = Tensor(torch.zeros(1).cuda())
 
 					batch = RNNTransition(*zip(*batch_segmented_transitions))
 
@@ -838,8 +843,13 @@ class RL(object):
 							param.grad.data.clamp_(-0.5, 0.5)
 
 					self.optimizer[h][buff_index].step()
-					self.sum_loss_actor[h][buff_index] += loss_actor*self.batch_size/self.num_epochs
-					self.sum_loss_critic[h][buff_index] += loss_critic*self.batch_size/self.num_epochs
+					self.sum_loss_actor[h][buff_index] += loss_actor.detach()*self.batch_size/self.num_epochs
+					self.sum_loss_critic[h][buff_index] += loss_critic.detach()*self.batch_size/self.num_epochs
+					loss_entropy = loss_entropy.detach()
+					loss_actor = loss_actor.detach()
+					loss_critic = loss_critic.detach()
+					loss= loss.detach()
+
 
 				print('Optimizing actor-critic nn_{} : {}/{}'.format(h, j+1,self.num_epochs),end='\r')
 			print('')
@@ -865,6 +875,7 @@ class RL(object):
 
 		self.generateTransitions()
 		self.computeTDandGAE()
+		# self.optimizeNN_h(0)
 		self.optimizeModel()
 
 
