@@ -898,6 +898,12 @@ getState(int index)
 	}
 
 
+	for(int i=0;i<availableActions.size();i++)
+	{
+		mCharacters[index]->availableActionTypes[i] = availableActions[i];
+	}
+
+
 	std::vector<Eigen::Vector3d> relObstacles(mObstacles.size());
 	for(int i=0;i<mObstacles.size();i++)
 	{
@@ -1085,6 +1091,16 @@ getReward(int index, bool verbose)
 		// 	mIsTerminalState = true;
 		// 	return 0;
 		// }
+
+		// action type correction reward
+		// std::vector<int> availableActionTypes = mCharacters[index]->availableActionTypes;
+		// std::vector<int>::iterator iter;
+
+		// if(std::find(availableActionTypes.begin(), 
+		// 			availableActionTypes.end(), 
+		// 			mCharacters[index]->inputActionType) != availableActionTypes.end())
+		// 	reward += 0.001;
+
 
 		if(!mCurBallPossessions[index])
 		{
@@ -1444,6 +1460,8 @@ setActionType(int index, int actionType)
 	actionType *= 3;
 
 	int curActionType = actionType;
+
+	mCharacters[index]->inputActionType = actionType;
 	if(resetCount>=0)
 		curActionType = 0;
 	else if(actionType != 3)

@@ -21,6 +21,7 @@ import torch.nn.functional as F
 import torchvision.transforms as T
 from Utils import RunningMeanStd
 from VAE import VAEDecoder
+from random import random
 
 import numpy as np
 
@@ -41,7 +42,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 2
+nnCount = 4
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -101,9 +102,7 @@ class RL(object):
 
 		self.num_epochs = 4
 		self.num_evaluation = 0
-		self.num_tuple_so_far = [0, 0]
-		# self.num_episode = [0, 0]
-		self.num_tuple = [0, 0]
+
 
 		self.num_simulation_Hz = self.env.getSimulationHz()
 		self.num_control_Hz = self.env.getControlHz()
@@ -124,6 +123,10 @@ class RL(object):
 
 
 		self.num_h = len(self.num_action);
+
+		self.num_tuple_so_far = [[0, 0] for _ in range(self.num_h)]
+		# self.num_episode = [0, 0]
+		self.num_tuple = [[0, 0] for _ in range(self.num_h)]
 
 		self.buffer = [[ [None] for _ in range(self.num_policy)] for _ in range(self.num_h)];
 
@@ -209,8 +212,6 @@ class RL(object):
 			for i in range(self.num_policy):
 				self.optimizer[h][i] = optim.Adam(self.target_model[h][i].parameters(), lr=self.learning_rate)
 
-		# embed()
-		# exit(0)
 
 
 
@@ -313,8 +314,7 @@ class RL(object):
 		result = np.array(list(np.copy(nparr)))
 		# resultVector = 
 
-		# embed()
-		# exit(0)
+
 
 		for agent in range(len(nparr)):
 			for slaves in range(len(nparr[agent])):
@@ -344,6 +344,7 @@ class RL(object):
 		actions_h = np.array([[None for _ in range(self.num_agents)] for _ in range(self.num_h)])
 		logprobs_h = np.array([[None for _ in range(self.num_agents)] for _ in range(self.num_h)])
 		values_h = np.array([[None for _ in range(self.num_agents)] for _ in range(self.num_h)])
+		is_exploitation = np.array([None for _ in range(self.num_agents)])
 
 		# states_1 = [None]*self.num_slaves*self.num_agents
 		# actions_1 = [None]*self.num_slaves*self.num_agents
@@ -360,8 +361,6 @@ class RL(object):
 
 		terminated = [False]*self.num_slaves*self.num_agents
 
-		# embed()
-		# exit(0)
 		for i in range(self.num_agents):
 			for j in range(self.num_slaves):
 				states[i][j] = self.env.getState(j,i).astype(np.float32)
@@ -369,16 +368,11 @@ class RL(object):
 		states = np.array(states)
 		states[:,:,:-2] = self.rms.apply(states[:,:,:-2])
 		mask = states[:,:,-2:]
-		# embed()
-		# exit(0)
 		# states.transpose()
 		# states = states.reshape(self.num_slaves, self.num_agents, -1)
 		# states = np.transpose(states, (1,0,2))
 
 		# states= states.astype(np.float32)
-		# embed()
-		# exit(0)
-
 		learningTeam = 0
 		# teamDic = {0: 0, 1: 1}
 		teamDic = {0: 0, 1: 0}
@@ -389,17 +383,10 @@ class RL(object):
 		def arrayToOneHotVectorWithConstraint(nparr):
 			result = np.array(list(np.copy(nparr)))
 
-			# resultVector = 
-
-			# embed()
-			# exit(0)
-
 			for agent in range(len(nparr)):
 				for slaves in range(len(nparr[agent])):
 					maxIndex = 0
 					maxValue = -100
-					# embed()
-					# exit()
 					for i in range(len(nparr[agent][slaves])):
 						result[agent][slaves][i] = 0.0
 						if nparr[agent][slaves][i] > maxValue:
@@ -414,9 +401,6 @@ class RL(object):
 		# def arrayToOneHotVector(nparr):
 		# 	result = np.array(list(np.copy(nparr)))
 		# 	# resultVector = 
-
-		# 	# embed()
-		# 	# exit(0)
 
 		# 	for agent in range(len(nparr)):
 		# 		for slaves in range(len(nparr[agent])):
@@ -474,8 +458,6 @@ class RL(object):
 					values_h[0][i] = v_slave[i].cpu().detach().numpy().reshape(-1);
 
 
-			# embed()
-			# exit(0)
 			# generate transition of second hierachy
 			# actions_0_oneHot = np.array(list(actions_h[0]))
 			# start = time.time()
@@ -484,19 +466,11 @@ class RL(object):
 
 			# print("time :", time.time() - start)
 
-			# embed()
-			# exit(0)
 			for h in range(1,self.num_h):
 				if h == 1:
-					# embed()
-					# exit(0)
 					states_h[h] = np.concatenate((states_h[0], actions_0_oneHot), axis=2)
-					# embed()
-					# exit(0)
 				else:
 					# print("value h : {}".format(h))
-					# embed()
-					# exit(0)
 					states_h[h] = np.concatenate((states_h[h-1], np.array(list(actions_h[h-1]))), axis=2)
 				a_dist_slave = [None]*self.num_agents
 				v_slave = [None]*self.num_agents
@@ -506,7 +480,14 @@ class RL(object):
 							Tensor([states_h[h][i]]))
 						a_dist_slave[i] = a_dist_slave_agent
 						v_slave[i] = v_slave_agent
-						actions_h[h][i] = a_dist_slave[i].sample().cpu().detach().numpy().squeeze().squeeze();		
+
+						if random()>0.5:
+							actions_h[h][i] = a_dist_slave[i].sample().cpu().detach().numpy().squeeze().squeeze();
+							is_exploitation[i] = False
+						else:
+							actions_h[h][i] = a_dist_slave[i].loc.cpu().detach().numpy().squeeze().squeeze();
+							is_exploitation[i] = True
+
 
 				for i in range(self.num_agents):
 					if teamDic[i] == learningTeam:
@@ -547,11 +528,7 @@ class RL(object):
 
 			for i in range(len(actionsDecodePart)):
 				for j in range(len(actionsDecodePart[i])):
-					# embed()
-					# exit(0)
 					curActionType = getActionTypeFromVector(actionTypePart[i][j])
-					# embed()
-					# exit(0)
 					actionsDecoded[i][j] = self.actionDecoders[curActionType].decode(Tensor(actionsDecodePart[i][j])).cpu().detach().numpy()
 
 			# print("time :", time.time() - start)
@@ -617,8 +594,13 @@ class RL(object):
 						for i in range(self.num_agents):
 							if teamDic[i] == learningTeam:
 								for h in range(self.num_h):
-									self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-										rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+									if h == 0:
+										if is_exploitation[i]:
+											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+									else :
+										self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 								# self.episodes_1[i][k].push(states_1[i*self.num_agents+k], actions_1[i*self.num_agents+k],\
 								# 	rewards[i*self.num_agents+k], values_1[i*self.num_agents+k], logprobs_1[i*self.num_agents+k])
 								# self.episodes_2[i][k].push(states_2[i*self.num_agents+k], actions_2[i*self.num_agents+k],\
@@ -628,8 +610,13 @@ class RL(object):
 						for i in range(self.num_agents):
 							if teamDic[i] == learningTeam:
 								for h in range(self.num_h):
-									self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-										rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+									if h == 0:
+										if is_exploitation[i]:
+											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+									else :
+										self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 
 
 								for h in range(self.num_h):
@@ -677,8 +664,6 @@ class RL(object):
 					ad_t = 0
 
 					epi_return = 0.0
-					# embed()
-					# exit(0)
 					for i in reversed(range(len(data))):
 						epi_return += rewards[i]
 						delta = rewards[i] + values[i+1] * self.gamma - values[i]
@@ -766,10 +751,12 @@ class RL(object):
 			''' counting numbers '''
 		for index in range(self.num_policy):
 			self.num_episode = len(self.total_episodes[0][0])
-			self.num_tuple[index] = 0
-			for rnn_replay_buffer in self.buffer[0][index].buffer:
-				self.num_tuple[index] += len(rnn_replay_buffer.buffer)
-			self.num_tuple_so_far[index] += self.num_tuple[index]
+		for h in range(self.num_h):
+			for index in range(self.num_policy):
+					self.num_tuple[h][index] = 0
+					for rnn_replay_buffer in self.buffer[h][index].buffer:
+						self.num_tuple[h][index] += len(rnn_replay_buffer.buffer)
+					self.num_tuple_so_far[h][index] += self.num_tuple[h][index]
 
 	def optimizeNN_h(self, h = 0):
 		for i in range(self.num_policy):
@@ -807,8 +794,6 @@ class RL(object):
 					# hidden_list[timeStep] = list(cur_stack_hidden)
 
 
-					# embed()
-					# exit(0)
 					loss_critic = ((v-Tensor(stack_td)).pow(2)).mean()
 
 
@@ -898,18 +883,20 @@ class RL(object):
 		s = s - h*3600 - m*60
 		if self.num_episode is 0:
 			self.num_episode = 1
-		for i in range(self.num_policy):
-			if self.num_tuple[i]is 0:
-				self.num_tuple[i] = 1
+
+		for h in range(self.num_h):
+			for i in range(self.num_policy):
+				if self.num_tuple[h][i] is 0:
+					self.num_tuple[h][i] = 1
 
 		print('# {} === {}h:{}m:{}s ==='.format(self.num_evaluation,h,m,s))
 		print('||--------------ActorCriticNN------------------')
 
 		for i in range(self.num_policy):
 			for h in range(self.num_h):
-				print('||Avg Loss Actor {} {}         : {:.4f}'.format(h, i, self.sum_loss_actor[h][i]/self.num_tuple[i]))
-				print('||Avg Loss Critic {} {}        : {:.4f}'.format(h, i, self.sum_loss_critic[h][i]/self.num_tuple[i]))
-				print('||Noise {}                    : {:.3f}'.format(h, self.target_model[h][i].log_std.exp().mean()))		
+				print('||Avg Loss Actor {} {}         : {:.4f}'.format(h, i, self.sum_loss_actor[h][i]/self.num_tuple[h][i]))
+				print('||Avg Loss Critic {} {}        : {:.4f}'.format(h, i, self.sum_loss_critic[h][i]/self.num_tuple[h][i]))
+				print('||Noise {}                     : {:.3f}'.format(h, self.target_model[h][i].log_std.exp().mean()))		
 
 			# print('||Avg Loss Actor 1 {}         : {:.4f}'.format(i, self.sum_loss_actor_1[i]/self.num_tuple[i]))
 			# print('||Avg Loss Critic 1 {}        : {:.4f}'.format(i, self.sum_loss_critic_1[i]/self.num_tuple[i]))
@@ -919,15 +906,15 @@ class RL(object):
 			# print('||Avg Loss Critic 2 {}        : {:.4f}'.format(i, self.sum_loss_critic_2[i]/self.num_tuple[i]))
 			# print('||Noise 2                    : {:.3f}'.format(self.target_model[2][i].log_std.exp().mean()))		
 
-			print('||Num Transition So far {}  : {}'.format(i, self.num_tuple_so_far[i]))
-			print('||Num Transition {}         : {}'.format(i, self.num_tuple[i]))
+				print('||Num Transition So far {} {}  : {}'.format(h, i, self.num_tuple_so_far[h][i]))
+				print('||Num Transition {} {}         : {}'.format(h, i, self.num_tuple[h][i]))
 
 
 		print('||Num Episode              : {}'.format(self.num_episode))
 		print('||Avg Return per episode   : {:.3f}'.format(self.sum_return/self.num_episode))
 		# print('||Avg Reward per transition: {:.3f}'.format(self.sum_return/self.num_tuple))
 		for i in range(self.num_policy):
-			print('||Avg Step per episode {}   : {:.1f}'.format(i, self.num_tuple[i]/self.num_episode))
+			print('||Avg Step per episode {}   : {:.1f}'.format(i, self.num_tuple[1][i]/self.num_episode))
 		# print('||Max Win Rate So far      : {:.3f} at #{}'.format(self.max_winRate,self.max_winRate_epoch))
 		# print('||Current Win Rate         : {:.3f}'.format(self.winRate[-1]))
 

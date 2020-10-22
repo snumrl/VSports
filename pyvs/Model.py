@@ -159,6 +159,9 @@ class ActorCriticNN(nn.Module):
 		if self.actionType:
 			mask = x[:,-2:]
 			action = torch.mul(action, mask)
+
+
+			
 			# embed()
 			# exit(0)
 

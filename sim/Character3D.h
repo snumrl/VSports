@@ -24,6 +24,7 @@ public:
 	bool blocked;
 
 	int inputActionType;
+	std::vector<int> availableActionTypes;
 	// double mDirection;
 };
 
