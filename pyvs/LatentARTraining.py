@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 37
+nnCount = 2
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -99,7 +99,7 @@ class RL(object):
 		self.num_policy = 1
 
 
-		self.num_epochs = 8
+		self.num_epochs = 4
 		self.num_evaluation = 0
 		self.num_tuple_so_far = [0, 0]
 		# self.num_episode = [0, 0]
@@ -138,7 +138,7 @@ class RL(object):
 		self.actionDecoders[0].load("vae_nn4/vae_action_decoder_"+str(0)+".pt")
 		self.actionDecoders[1].load("vae_nn4/vae_action_decoder_"+str(3)+".pt")
 
-		self.rms = RunningMeanStd(self.num_state)
+		self.rms = RunningMeanStd(self.num_state-2)
 
 
 		# self.buffer_0 = [ [None] for i in range(self.num_policy)]
@@ -173,12 +173,12 @@ class RL(object):
 		acc_num_action = 0
 		for h in range(self.num_h):
 			for j in range(self.num_policy):
-				if h == 2 :
-					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], -1.0)
 				if h== 0:
-					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], 0.0, True)
+					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], 
+						log_std = 0.0, softmax = True, actionType = True)
 				else:
-					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], 0.0)
+					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], 
+						log_std = 0.0)
 
 				acc_num_action += self.num_action[h]
 				if use_cuda:
@@ -365,9 +365,10 @@ class RL(object):
 		for i in range(self.num_agents):
 			for j in range(self.num_slaves):
 				states[i][j] = self.env.getState(j,i).astype(np.float32)
-		states = np.array(states)
-		states = self.rms.apply(states)
 
+		states = np.array(states)
+		states[:,:,:-2] = self.rms.apply(states[:,:,:-2])
+		mask = states[:,:,-2:]
 		# embed()
 		# exit(0)
 		# states.transpose()
@@ -460,7 +461,7 @@ class RL(object):
 					a_dist_slave[i] = a_dist_slave_agent
 					v_slave[i] = v_slave_agent
 					# print(actions_h)
-					actions_h[0][i] = a_dist_slave[i].sample().cpu().detach().numpy().squeeze().squeeze();		
+					actions_h[0][i] = a_dist_slave[i].sample().cpu().detach().numpy().squeeze().squeeze();	
 					# print(actions_h)
 
 			# 	print(actions_h)
@@ -652,7 +653,7 @@ class RL(object):
 				for j in range(self.num_slaves):
 					states[i][j] = self.env.getState(j,i).astype(np.float32)
 			states = np.array(states)
-			states = self.rms.apply(states)
+			states[:,:,:-2] = self.rms.apply(states[:,:,:-2])
 
 		print('SIM : {}'.format(local_step))
 

@@ -12,6 +12,7 @@ Character3D(const std::string& name)
 	curLeftFingerBallPosition = 0.0;
 	curRightFingerBallPosition = 0.0;
 	blocked = false;
+	inputActionType = 0;
 }
 
 const dart::dynamics::SkeletonPtr&

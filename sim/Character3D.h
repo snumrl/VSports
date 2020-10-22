@@ -22,6 +22,8 @@ public:
 	double curRightFingerBallPosition;
 
 	bool blocked;
+
+	int inputActionType;
 	// double mDirection;
 };
 

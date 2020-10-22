@@ -1157,6 +1157,7 @@ getActionFromNN(int index)
 	p::object get_action_0;
 
 	Eigen::VectorXd state = mEnv->getState(index);
+	std::cout<<"action mask : "<<state.segment(state.size()-2, 2).transpose()<<std::endl;
 
 	int numActions = 2;
 	// int latentSize = 4;

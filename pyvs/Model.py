@@ -83,13 +83,15 @@ class SimulationNN(nn.Module):
 
 
 class ActorCriticNN(nn.Module):
-	def __init__(self, num_states, num_actions, log_std = 0.0, softmax = False):
+	def __init__(self, num_states, num_actions, log_std = 0.0, softmax = False, actionType = False):
 		super(ActorCriticNN, self).__init__()
 		self.softmax = softmax
 		self.num_policyInput = num_states
 
 		self.hidden_size = 128
 		self.num_layers = 1
+		self.actionType = actionType
+		self.softmax = softmax
 
 		# self.rnn = nn.LSTM(self.num_policyInput, self.hidden_size, num_layers=self.num_layers)
 		# self.cur_hidden = self.init_hidden(1)
@@ -106,7 +108,7 @@ class ActorCriticNN(nn.Module):
 				nn.Linear(num_h1, num_h2),
 				nn.LeakyReLU(0.2, inplace=True),
 				nn.Linear(num_h2, num_actions),
-				nn.Softmax(dim = 1)
+				# nn.Softmax(dim = 1)
 				# nn.Tanh()
 				# nn.LeakyReLU(0.2, inplace=True),
 				# nn.Linear(num_h3, num_actions)
@@ -139,7 +141,7 @@ class ActorCriticNN(nn.Module):
 		# self.rnn.apply(weights_init)
 		self.policy.apply(weights_init)
 
-		self.rms = RunningMeanStd(shape=(num_states))
+		self.rms = RunningMeanStd(shape=(num_states-2))
 
 	def loadRMS(self, path):
 		print('load RMS : {}'.format(path))
@@ -150,27 +152,42 @@ class ActorCriticNN(nn.Module):
 		# self.rms.apply(x)
 		x = x.cuda()
 
-		batch_size = x.size()[0];
+		# batch_size = x.size()[0];
+
+		action = self.policy(x)
+	
+		if self.actionType:
+			mask = x[:,-2:]
+			action = torch.mul(action, mask)
+			# embed()
+			# exit(0)
+
+
+		# embed()
+		# exit(0)
+		if self.softmax:
+			sm =  nn.Softmax(dim = 1)
+			action = sm(action)
 
 		# self.log_std = nn.Parameter(Tensor([0, 0, -2]))
 		# k = np.exp(-0.01*num_eval)
 		# rnnOutput, out_hidden = self.rnn(x.view(1, batch_size,-1), in_hidden)
-		return MultiVariateNormal(self.policy(x).unsqueeze(0),self.log_std.exp()), self.value(x)
+		return MultiVariateNormal(action.unsqueeze(0),self.log_std.exp()), self.value(x)
 		# return MultiVariateNormal(self.policy(rnnOutput).unsqueeze(0),self.log_std.exp()), self.value(rnnOutput), out_hidden
 
-	def forwardAndUpdate(self,x):
+	# def forwardAndUpdate(self,x):
 
 
 
-		x = x.cuda()
+	# 	x = x.cuda()
 
-		batch_size = x.size()[0];
+	# 	batch_size = x.size()[0];
 
-		# self.log_std = nn.Parameter(Tensor([0, 0, -2]))
-		# k = np.exp(-0.01*num_eval)
-		# rnnOutput, out_hidden = self.rnn(x.view(1, batch_size,-1), in_hidden)
-		return MultiVariateNormal(self.policy(x).unsqueeze(0),self.log_std.exp()), self.value(x)
-		# return MultiVariateNormal(self.policy(rnnOutput).unsqueeze(0),self.log_std.exp()), self.value(rnnOutput), out_hidden
+	# 	# self.log_std = nn.Parameter(Tensor([0, 0, -2]))
+	# 	# k = np.exp(-0.01*num_eval)
+	# 	# rnnOutput, out_hidden = self.rnn(x.view(1, batch_size,-1), in_hidden)
+	# 	return MultiVariateNormal(self.policy(x).unsqueeze(0),self.log_std.exp()), self.value(x)
+	# 	# return MultiVariateNormal(self.policy(rnnOutput).unsqueeze(0),self.log_std.exp()), self.value(rnnOutput), out_hidden
 
 
 	def load(self,path):

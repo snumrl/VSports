@@ -620,18 +620,6 @@ stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContact
 
 	    //Update hand Contacts;
 
-	    // {
-	    	// if((mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3) 
-	    	// 	&& mCurCriticalActionTimes[index]<10
-	    	// 	&& !mChangeContactIsActive[index])
-	    	// {
-	    	// 	updatePrevContacts(index, Eigen::Vector2d::Zero());
-	    	// 	mCurBallPossessions[index] = false;
-	    	// }
-	    	// else
-
-	    // }
-
 	    if((mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3) 
 	    		&& mCurCriticalActionTimes[index]<-10)
 	    {
@@ -888,18 +876,27 @@ getState(int index)
 	// ballVelocity/=100.0;
 
 	// ballVelocity/=4.0;
-	Eigen::Vector4d curSMState;
+	Eigen::Vector2d curSMState;
 	curSMState.setZero();
 	curSMState[bsm[index]->getStateWithInt()] = 1.0;
 
-	Eigen::VectorXd availableActions(5);
+	Eigen::VectorXd availableActions(2);
 	availableActions.setZero();
 	std::vector<int> availableActionList = bsm[index]->getAvailableActions();
-	for(int i=0;i<availableActionList.size();i++)
+
+	if((mCurActionTypes[index] == 3)
+		&&mCurCriticalActionTimes[index] >-10)
 	{
-		if(availableActionList[i] < 5)
-			availableActions[availableActionList[i]] = 1;
+		availableActions[mCurActionTypes[index]/3] = 1;
 	}
+	else
+	{
+		for(int i=0;i<availableActionList.size();i++)
+		{
+			availableActions[availableActionList[i]] = 1;
+		}
+	}
+
 
 	std::vector<Eigen::Vector3d> relObstacles(mObstacles.size());
 	for(int i=0;i<mObstacles.size();i++)
@@ -946,7 +943,7 @@ getState(int index)
 	// std::cout<<"contacts.transpose(): "<<contacts.transpose()<<std::endl;
 
 	state.resize(skelPosition.rows() + relCurBallPosition.rows() + relTargetPosition.rows() + relBallToTargetPosition.rows() + goalpostPositions.rows() 
-		+ contacts.rows() + 1 + 1 + 3 +curActionType.rows()+curSMState.rows()+availableActions.rows() + relObstacles.size()*3 + 1);
+		+ contacts.rows() + 1 + 1 + 3 +curActionType.rows()+curSMState.rows() + relObstacles.size()*3 + 1 +availableActions.rows());
 	 //+ ballVelocity.rows()+2+curActionType.rows());
 	
 	int curIndex = 0;
@@ -1010,11 +1007,7 @@ getState(int index)
 		state[curIndex] = curSMState[i];
 		curIndex++;
 	}
-	for(int i=0;i<availableActions.rows();i++)
-	{
-		state[curIndex] = availableActions[i];
-		curIndex++;
-	}
+
 
 	for(int i=0;i<relObstacles.size();i++)
 	{
@@ -1028,6 +1021,11 @@ getState(int index)
 	state[curIndex] = mCharacters[index]->blocked;
 	curIndex++;
 
+	for(int i=0;i<availableActions.rows();i++)
+	{
+		state[curIndex] = availableActions[i];
+		curIndex++;
+	}
 
 	// std::cout<<std::setprecision(3);
 	// std::cout<<state.segment(skelPosition.size(), 20).transpose()<<std::endl;
@@ -1080,13 +1078,13 @@ getReward(int index, bool verbose)
 
 	if(isDribble)
 	{
-		if(mCurActionTypes[index] == 0)
-			return 0.01;
-		else
-		{
-			mIsTerminalState = true;
-			return 0;
-		}
+		// if(mCurActionTypes[index] == 0)
+		// 	return 0.01;
+		// else
+		// {
+		// 	mIsTerminalState = true;
+		// 	return 0;
+		// }
 
 		if(!mCurBallPossessions[index])
 		{
@@ -1352,9 +1350,9 @@ setAction(int index, const Eigen::VectorXd& a)
     // mCurActionTypes[index] = curActionType;
 	// mActions[index].segment(4,NUM_ACTION_TYPE).setZero();
 
-    mActions[index].setZero();
-    mActions[index][4+mCurActionTypes[index]] = 1.0;
-    return;
+    // mActions[index].setZero();
+    // mActions[index][4+mCurActionTypes[index]] = 1.0;
+    // return;
 
 
 
@@ -1574,7 +1572,7 @@ void
 Environment::
 slaveReset()
 {
-	resetCount = 5;
+	resetCount = 45;
 	mIsTerminalState = false;
 	mIsFoulState = false;
 	mTimeElapsed = 0;
@@ -1640,6 +1638,7 @@ slaveResetCharacterPositions()
 		mCharacters[i]->curRightFingerPosition = 0.0;
 		mCharacters[i]->curLeftFingerBallPosition = 0.0;
 		mCharacters[i]->curRightFingerBallPosition = 0.0;
+		mCharacters[i]->inputActionType = 0;
 	}
 
 	setPositionFromBVH(0, rand()%60+100);
@@ -2473,7 +2472,7 @@ transition(int action, bool transitState)
 {
 	if(curState == BasketballState::POSITIONING)
 	{
-		if(action == 4 || action == 5)
+		if(action == 4)
 		{
 			prevAction = action;
 			return action;
@@ -2481,35 +2480,9 @@ transition(int action, bool transitState)
 		else if(action == 2)
 		{
 			if(transitState)
-				curState = BasketballState::BALL_CATCH_1;
-			prevAction = action;
-			return 2;
-		}
-		else
-		{
-			return prevAction;
-		}
-	}
-	else if(curState == BasketballState::BALL_CATCH_1)
-	{
-		if(action == 6 || action == 7)
-		{
-			prevAction = action;
-			return action;
-		}
-		else if(action == 0)
-		{
-			if(transitState)
 				curState = BasketballState::DRIBBLING;
 			prevAction = action;
-			return action;
-		}
-		else if(action == 1 || action == 3)
-		{
-			if(transitState)
-				curState = BasketballState::POSITIONING;
-			prevAction = action;
-			return action;
+			return 2;
 		}
 		else
 		{
@@ -2530,65 +2503,60 @@ transition(int action, bool transitState)
 			prevAction = action;
 			return action;
 		}
-		else if(action == 6 || action == 7)
-		{
-			if(transitState)
-				curState = BasketballState::BALL_CATCH_2;
-			prevAction = action;
-			return action;
-		}
 		else
 		{
 			return prevAction;
 		}
 	}
-	else if(curState == BasketballState::BALL_CATCH_2)
-	{
-		if(action == 6 || action == 7)
-		{
-			if(transitState)
-				curState = BasketballState::BALL_CATCH_2;
-			prevAction = action;
-			return action;
-		}
-		else if(action == 1 || action == 3)
-		{
-			if(transitState)
-				curState = BasketballState::POSITIONING;
-			prevAction = action;
-			return action;
-		}
-		else
-		{
-			return prevAction;
-		}
-	}
+
 	else
 	{
 		std::cout<<"Wrong state in basket ball state!"<<std::endl;
 		exit(0);
 	}
 }
+
+// std::vector<int>
+// BStateMachine::
+// getAvailableActions()
+// {
+// 	if(curState == BasketballState::POSITIONING)
+// 	{
+// 		return std::vector<int>{2, 4, 5};
+// 	}
+// 	else if(curState == BasketballState::BALL_CATCH_1)
+// 	{
+// 		return std::vector<int>{0, 1, 3};//, 6, 7};
+// 	}
+// 	else if(curState == BasketballState::DRIBBLING)
+// 	{
+// 		return std::vector<int>{0, 1, 3};//, 6, 7};
+// 	}
+// 	else if(curState == BasketballState::BALL_CATCH_2)
+// 	{
+// 		return std::vector<int>{1, 3};//, 6, 7};
+
+// 	}
+// 	else
+// 	{
+// 		std::cout<<"Wrong state in basket ball state!"<<std::endl;
+// 		exit(0);
+// 	}
+// }
+
 
 std::vector<int>
 BStateMachine::
 getAvailableActions()
 {
-	if(curState == BasketballState::POSITIONING)
+	if(curState == BasketballState::DRIBBLING)
 	{
-		return std::vector<int>{2, 4, 5};
+		return std::vector<int>{0, 1};//, 6, 7};
 	}
-	else if(curState == BasketballState::BALL_CATCH_1)
+	else if(curState == BasketballState::POSITIONING)
 	{
-		return std::vector<int>{0, 1, 3};//, 6, 7};
-	}
-	else if(curState == BasketballState::DRIBBLING)
-	{
-		return std::vector<int>{0, 1, 3};//, 6, 7};
-	}
-	else if(curState == BasketballState::BALL_CATCH_2)
-	{
-		return std::vector<int>{1, 3};//, 6, 7};
+		//Do not use now
+		return std::vector<int>{2, 4};//, 6, 7};
 
 	}
 	else
@@ -2597,6 +2565,7 @@ getAvailableActions()
 		exit(0);
 	}
 }
+
 
 
 bool
@@ -2618,17 +2587,9 @@ getStateWithInt()
 	{
 		return 0;
 	}
-	else if(curState == BasketballState::BALL_CATCH_1)
-	{
-		return 1;
-	}
 	else if(curState == BasketballState::DRIBBLING)
 	{
-		return 2;
-	}
-	else if(curState == BasketballState::BALL_CATCH_2)
-	{
-		return 3;
+		return 1;
 	}
 	else
 	{

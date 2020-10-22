@@ -55,7 +55,7 @@
 // #define _ID_SLOWED 22
 
 enum BasketballState{
-	POSITIONING, BALL_CATCH_1, DRIBBLING, BALL_CATCH_2
+	POSITIONING, DRIBBLING
 };
 
 std::vector<int> getAvailableAction(BasketballState bs);
