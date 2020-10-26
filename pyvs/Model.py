@@ -216,8 +216,8 @@ class ActorCriticNN(nn.Module):
 		# self.cur_hidden = new_hidden
 		# print(p.loc.cpu().detach().numpy())
 		# return p.sample().cpu().detach().numpy()
-		return p.sample().cpu().detach().numpy().astype(np.float32)
-		# return p.loc.cpu().detach().numpy().astype(np.float32)
+		# return p.sample().cpu().detach().numpy().astype(np.float32)
+		return p.loc.cpu().detach().numpy().astype(np.float32)
 
 	def get_value(self, s):
 		ts = torch.tensor(s)

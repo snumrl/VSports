@@ -1189,7 +1189,16 @@ getActionFromNN(int index)
 	}
 
 	// std::cout<<"mActionType : "<<mActionType.transpose()<<std::endl;
-	mActionType = toOneHotVectorWithConstraint(index, mActionType);
+	std::cout<<"mEnv->curFrame : "<<mEnv->curFrame<<std::endl;
+	if(mEnv->curFrame%10 == 1)
+		mActionType = toOneHotVectorWithConstraint(index, mActionType);
+	else
+	{
+		mActionType.setZero();
+		int prevActionType = mEnv->mCurActionTypes[index]/3;
+		mActionType[prevActionType] = 1.0;
+
+	}
 
 	int actionType = getActionTypeFromVec(mActionType);
 

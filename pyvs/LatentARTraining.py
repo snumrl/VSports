@@ -42,7 +42,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 4
+nnCount = 8
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -111,8 +111,8 @@ class RL(object):
 		self.gamma = 0.997
 		self.lb = 0.95
 
-		self.buffer_size = 4*1024
-		self.batch_size = 256
+		self.buffer_size = 8*1024
+		self.batch_size = 512
 		
 
 		self.num_action_types = 2
@@ -339,6 +339,7 @@ class RL(object):
 		states = [[None for _ in range(self.num_slaves)] for _ in range(self.num_agents)]
 		actions = [[None for _ in range(self.num_slaves)] for _ in range(self.num_agents)]
 		rewards = [[None for _ in range(self.num_slaves)] for _ in range(self.num_agents)]
+		accRewards = [[0 for _ in range(self.num_slaves)] for _ in range(self.num_agents)]
 
 		states_h = np.array([None for _ in range(self.num_h)])
 		actions_h = np.array([[None for _ in range(self.num_agents)] for _ in range(self.num_h)])
@@ -438,34 +439,28 @@ class RL(object):
 
 			a_dist_slave = [None]*self.num_agents
 			v_slave = [None]*self.num_agents
-			for i in range(self.num_agents):
-				if teamDic[i] == learningTeam:
-					a_dist_slave_agent,v_slave_agent = self.target_model[0][self.indexToNetDic[i]].forward(\
-						Tensor(states_h[0][i]))
-					a_dist_slave[i] = a_dist_slave_agent
-					v_slave[i] = v_slave_agent
-					# print(actions_h)
-					actions_h[0][i] = a_dist_slave[i].sample().cpu().detach().numpy().squeeze().squeeze();	
-					# print(actions_h)
 
-			# 	print(actions_h)
-			# print(actions_h)
+			if counter%10 == 1:
+				for i in range(self.num_agents):
+					if teamDic[i] == learningTeam:
+						a_dist_slave_agent,v_slave_agent = self.target_model[0][self.indexToNetDic[i]].forward(\
+							Tensor(states_h[0][i]))
+						a_dist_slave[i] = a_dist_slave_agent
+						v_slave[i] = v_slave_agent
+						actions_h[0][i] = a_dist_slave[i].sample().cpu().detach().numpy().squeeze().squeeze();	
 
-			for i in range(self.num_agents):
-				if teamDic[i] == learningTeam:
-					logprobs_h[0][i] = a_dist_slave[i].log_prob(Tensor(actions_h[0][i]))\
-						.cpu().detach().numpy().reshape(-1);
-					values_h[0][i] = v_slave[i].cpu().detach().numpy().reshape(-1);
+				for i in range(self.num_agents):
+					if teamDic[i] == learningTeam:
+						logprobs_h[0][i] = a_dist_slave[i].log_prob(Tensor(actions_h[0][i]))\
+							.cpu().detach().numpy().reshape(-1);
+						values_h[0][i] = v_slave[i].cpu().detach().numpy().reshape(-1);
 
 
-			# generate transition of second hierachy
-			# actions_0_oneHot = np.array(list(actions_h[0]))
-			# start = time.time()
+
+
 			actions_0_oneHot = arrayToOneHotVectorWithConstraint(actions_h[0])
 
-
-			# print("time :", time.time() - start)
-
+			# generate transition of second hierachy
 			for h in range(1,self.num_h):
 				if h == 1:
 					states_h[h] = np.concatenate((states_h[0], actions_0_oneHot), axis=2)
@@ -481,12 +476,7 @@ class RL(object):
 						a_dist_slave[i] = a_dist_slave_agent
 						v_slave[i] = v_slave_agent
 
-						if random()>0.5:
-							actions_h[h][i] = a_dist_slave[i].sample().cpu().detach().numpy().squeeze().squeeze();
-							is_exploitation[i] = False
-						else:
-							actions_h[h][i] = a_dist_slave[i].loc.cpu().detach().numpy().squeeze().squeeze();
-							is_exploitation[i] = True
+						actions_h[h][i] = a_dist_slave[i].sample().cpu().detach().numpy().squeeze().squeeze();
 
 
 				for i in range(self.num_agents):
@@ -567,6 +557,11 @@ class RL(object):
 					for i in range(self.num_agents):
 						if teamDic[i] == learningTeam:
 							rewards[i][j] = self.env.getReward(j, i, True)
+							if counter%10 == 1:
+								accRewards[i][j] = rewards[i][j]
+							else:
+								accRewards[i][j] += rewards[i][j]
+
 							if np.any(np.isnan(rewards[i][j])):
 								nan_occur[j] = True
 							if np.any(np.isnan(states[i][j])) or np.any(np.isnan(actions[i][j])):
@@ -588,6 +583,7 @@ class RL(object):
 								# self.episodes_2[i][k] = RNNEpisodeBuffer()
 						print("nan", file=sys.stderr)
 						self.env.slaveReset(j)
+						self.env.setResetCount(50-counter%10, j);
 
 
 					if self.env.isTerminalState(j) is False:
@@ -595,12 +591,16 @@ class RL(object):
 							if teamDic[i] == learningTeam:
 								for h in range(self.num_h):
 									if h == 0:
-										if is_exploitation[i]:
+										if counter%10 == 0:
 											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 									else :
 										self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
 											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+
+								# print(len(self.episodes[0][j][i].data))
+								# print(len(self.episodes[1][j][i].data))
+								# print("")
 								# self.episodes_1[i][k].push(states_1[i*self.num_agents+k], actions_1[i*self.num_agents+k],\
 								# 	rewards[i*self.num_agents+k], values_1[i*self.num_agents+k], logprobs_1[i*self.num_agents+k])
 								# self.episodes_2[i][k].push(states_2[i*self.num_agents+k], actions_2[i*self.num_agents+k],\
@@ -611,9 +611,8 @@ class RL(object):
 							if teamDic[i] == learningTeam:
 								for h in range(self.num_h):
 									if h == 0:
-										if is_exploitation[i]:
-											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+										self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+										accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 									else :
 										self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
 											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
@@ -623,6 +622,7 @@ class RL(object):
 									self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
 									self.episodes[h][j][i] = RNNEpisodeBuffer()
 						self.env.slaveReset(j)
+						self.env.setResetCount(50-counter%10, j);
 
 
 			if local_step >= self.buffer_size:
@@ -875,12 +875,12 @@ class RL(object):
 
 	def evaluate(self):
 		self.num_evaluation = self.num_evaluation + 1
-		h = int((time.time() - self.tic)//3600.0)
+		hour = int((time.time() - self.tic)//3600.0)
 		m = int((time.time() - self.tic)//60.0)
 		s = int((time.time() - self.tic))
-		m = m - h*60
+		m = m - hour*60
 		s = int((time.time() - self.tic))
-		s = s - h*3600 - m*60
+		s = s - hour*3600 - m*60
 		if self.num_episode is 0:
 			self.num_episode = 1
 
@@ -889,7 +889,7 @@ class RL(object):
 				if self.num_tuple[h][i] is 0:
 					self.num_tuple[h][i] = 1
 
-		print('# {} === {}h:{}m:{}s ==='.format(self.num_evaluation,h,m,s))
+		print('# {} === {}h:{}m:{}s ==='.format(self.num_evaluation,hour,m,s))
 		print('||--------------ActorCriticNN------------------')
 
 		for i in range(self.num_policy):

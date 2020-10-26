@@ -39,6 +39,7 @@ public:
 	double getNumIterations();
 	int setActionType(int actionType, int id, int index);
 
+	int isActionTypeChangingFrame(int id);
 	// int getNumBallTouch(int id);
 
 	void endOfIteration();
@@ -52,6 +53,8 @@ public:
 	void initMotionGenerator(std::string dataPath);
 
 	bool isOnResetProcess(int id);
+
+	void setResetCount(int resetCount, int id);
 
     ICA::dart::MotionGeneratorBatch* mMotionGeneratorBatch;
 	std::map<std::string, int> dartNameIdMap;

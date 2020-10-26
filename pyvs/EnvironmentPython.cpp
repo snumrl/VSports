@@ -367,6 +367,21 @@ getNumIterations()
 	return mSlaves[0]->mNumIterations;
 }
 
+void
+EnvironmentPython::
+setResetCount(int resetCount, int id)
+{
+	mSlaves[id]->resetCount = resetCount;
+}
+
+
+// bool
+// EnvironmentPython::
+// isActionTypeChangingFrame(int id)
+// {
+// 	return mSlaves[id]->curFrame%10 == 0;
+// }
+
 // void 
 // EnvironmentPython::
 // reconEnvFromState(int id, int index, np::ndarray curLocalState)
@@ -456,6 +471,8 @@ BOOST_PYTHON_MODULE(pyvs)
 		// .def("reconEnvFromState",&EnvironmentPython::reconEnvFromState)
 		// .def("setLinearActorState",&EnvironmentPython::setLinearActorState)
 		.def("endOfIteration",&EnvironmentPython::endOfIteration)
+		.def("setResetCount",&EnvironmentPython::setResetCount)
+		// .def("isActionTypeChangingFrame",&EnvironmentPython::isActionTypeChangingFrame)
 		// .def("getNumBallTouch",&EnvironmentPython::getNumBallTouch);
 		// .def("setHindsightGoal",&EnvironmentPython::setHindsightGoal)
 		// .def("getHindsightState",&EnvironmentPython::getHindsightState)

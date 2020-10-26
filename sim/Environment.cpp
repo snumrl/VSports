@@ -341,6 +341,7 @@ Environment::
 getMGAction(int index)
 {
 	// std::cout<<"GET MG ACTION : "<<std::endl;
+	// std::cout<<mActions[index].segment(4,NUM_ACTION_TYPE).transpose()<<std::endl;
 	return mActions[index].segment(0,CONTROL_VECTOR_SIZE);
 }
 
@@ -859,7 +860,7 @@ getState(int index)
 	}
 	else
 	{	
-		curBallVelocity = 30.0 * (curBallPosition - prevBallPositions[1]);
+		curBallVelocity = 60.0 * (curBallPosition - prevBallPositions[1]);
 		if(curBallVelocity.norm() > 20.0)
 			curBallVelocity.setZero();
 		ballVelocity = rootT.linear().inverse()* curBallVelocity;
@@ -1101,8 +1102,21 @@ getReward(int index, bool verbose)
 		// 			mCharacters[index]->inputActionType) != availableActionTypes.end())
 		// 	reward += 0.001;
 
+		Eigen::Vector3d ballDisplacement = curBallPosition - prevBallPositions[0];
+
+		// std::cout<<"ballDisplacement norm : "<<ballDisplacement.norm()<<std::endl;
+
+		if(ballDisplacement.norm() > 0.25)
+			reward -= pow((ballDisplacement.norm()-0.1),2);
+
 
 		if(!mCurBallPossessions[index])
+		{
+			mIsTerminalState = true;
+			return 0;
+		}
+
+		if(mCurActionTypes[index] != 0)
 		{
 			mIsTerminalState = true;
 			return 0;
@@ -1364,10 +1378,9 @@ setAction(int index, const Eigen::VectorXd& a)
 
     // std::cout<<"Set Action actiontype : "<<curActionType<<std::endl;
     // mCurActionTypes[index] = curActionType;
-	// mActions[index].segment(4,NUM_ACTION_TYPE).setZero();
 
-    // mActions[index].setZero();
-    // mActions[index][4+mCurActionTypes[index]] = 1.0;
+    mActions[index][4+mCurActionTypes[index]] = 1.0;
+
     // return;
 
 
@@ -1590,7 +1603,7 @@ void
 Environment::
 slaveReset()
 {
-	resetCount = 45;
+	resetCount = 40;
 	mIsTerminalState = false;
 	mIsFoulState = false;
 	mTimeElapsed = 0;
