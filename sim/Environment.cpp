@@ -886,7 +886,7 @@ getState(int index)
 	std::vector<int> availableActionList = bsm[index]->getAvailableActions();
 
 	if((mCurActionTypes[index] == 3)
-		&&mCurCriticalActionTimes[index] >-10)
+		&&mCurCriticalActionTimes[index] >-40)
 	{
 		availableActions[mCurActionTypes[index]/3] = 1;
 	}
@@ -1079,9 +1079,9 @@ getReward(int index, bool verbose)
 
 	bool fastTermination = true;
 	// activates when fastTermination is on
-	bool fastViewTermination = false;
+	bool fastViewTermination = true;
 
-	bool isDribble = true;
+	bool isDribble = false;
 
 	if(isDribble)
 	{
@@ -1106,8 +1106,8 @@ getReward(int index, bool verbose)
 
 		// std::cout<<"ballDisplacement norm : "<<ballDisplacement.norm()<<std::endl;
 
-		if(ballDisplacement.norm() > 0.25)
-			reward -= pow((ballDisplacement.norm()-0.1),2);
+		// if(ballDisplacement.norm() > 0.25)
+		// 	reward -= pow((ballDisplacement.norm()-0.1),2);
 
 
 		if(!mCurBallPossessions[index])
@@ -1144,8 +1144,8 @@ getReward(int index, bool verbose)
 
 	else
 	{
-		if(mCharacters[index]->blocked && mCurActionTypes[index] == 0)
-			reward += 0.001;
+		// if(mCharacters[index]->blocked && mCurActionTypes[index] == 0)
+		// 	reward += 0.001;
 		// Shoot Reward
 		if(gotReward)
 			return 0;
@@ -1536,7 +1536,7 @@ isTerminalState()
 	{
 		mIsTerminalState = true;
 	}
-	if(mCurCriticalActionTimes[0] < -60)
+	if(mCurCriticalActionTimes[0] < -40)
 		mIsTerminalState= true;
 
 	// if((mCharacters[0]->getSkeleton()->getCOM()-mTargetBallPosition).norm() > 20.0)
@@ -1603,7 +1603,7 @@ void
 Environment::
 slaveReset()
 {
-	resetCount = 40;
+	resetCount = 50;
 	mIsTerminalState = false;
 	mIsFoulState = false;
 	mTimeElapsed = 0;

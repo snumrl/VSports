@@ -788,7 +788,10 @@ display()
 
 	GUI::drawSkeleton(mEnv->ballSkel, Eigen::Vector3d(0.9, 0.6, 0.0));
 
-	GUI::drawSkeleton(chars[0]->getSkeleton());
+	Eigen::Vector3d skelColor(1.0, 1.0, 1.0);
+	if(mEnv->resetCount >= 0)
+		skelColor = Eigen::Vector3d(0.5, 0.5, 0.5);
+	GUI::drawSkeleton(chars[0]->getSkeleton(), skelColor);
 
 	// Eigen::Isometry3d rootIsometry = ICA::dart::getBaseToRootMatrix(mEnv->mMotionGenerator->motionGenerators[0]->mMotionSegment->getLastPose()->getRoot());
 	// Eigen::Isometry3d rootIsometry = mEnv->mCharacters[0]->getSkeleton()->getRootBodyNode()->getWorldTransform();
