@@ -159,9 +159,6 @@ class ActorCriticNN(nn.Module):
 		if self.actionType:
 			mask = x[:,-2:]
 			action = torch.mul(action, mask)
-
-
-			
 			# embed()
 			# exit(0)
 
@@ -171,10 +168,6 @@ class ActorCriticNN(nn.Module):
 		if self.softmax:
 			sm =  nn.Softmax(dim = 1)
 			action = sm(action)
-
-		# self.log_std = nn.Parameter(Tensor([0, 0, -2]))
-		# k = np.exp(-0.01*num_eval)
-		# rnnOutput, out_hidden = self.rnn(x.view(1, batch_size,-1), in_hidden)
 		return MultiVariateNormal(action.unsqueeze(0),self.log_std.exp()), self.value(x)
 		# return MultiVariateNormal(self.policy(rnnOutput).unsqueeze(0),self.log_std.exp()), self.value(rnnOutput), out_hidden
 
