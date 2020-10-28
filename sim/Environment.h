@@ -7,6 +7,8 @@
 #include "../extern/ICA/plugin/MotionGeneratorBatch.h"
 #include "../motion/BVHparser.h"
 #include "../pyvs/Normalizer.h"
+#include "../extern/ICA/Motion/MotionSegment.h"
+#include "../extern/ICA/Motion/Pose.h"
 
 // #define _ID_P 0
 // #define _ID_V 2
@@ -407,10 +409,18 @@ public:
 
 	int setActionType(int index, int actionType);
 
-	void genObstacleNearGoalpost();
+	void genObstacleNearGoalpost(double angle = -1);
 	void removeOldestObstacle();
 
+	std::string nnPath;
 
+	void genRewardTutorialTrajectory();
+
+	std::vector<std::vector<std::vector<double>>> xData;
+	std::vector<std::vector<std::vector<double>>> yData;
+
+	Eigen::Isometry2d getLocationDisplacement(Motion::MotionSegment* ms, int start, int end);
+	Eigen::Isometry2d getCorrectShootingLocationFromControl(Motion::Pose* criticalPose, std::vector<double> control, double random);
 
 };
 double getFacingAngleFromLocalState(Eigen::VectorXd curState);

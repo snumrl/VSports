@@ -13,7 +13,13 @@
 #include <ctime>
 #include <signal.h>
 #include <dart/utils/utils.hpp>
+#include <Eigen/Geometry>
 #include "../vsports/common.h"
+#include "../extern/ICA/Utils/PathManager.h"
+#include "../extern/ICA/CharacterControl/MotionRepresentation.h"
+#include "../extern/ICA/Motion/MotionSegment.h"
+#include "../extern/ICA/Motion/Pose.h"
+#include "../extern/ICA/Motion/RootTrajectory.h"
 
 using namespace std;
 using namespace dart;
@@ -60,6 +66,7 @@ criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), viola
 	this->initCharacters(bvh_path);
 	// this->initMotionGenerator(nn_path);
 
+	this->nnPath = nn_path;
 	mNormalizer = new Normalizer("../extern/ICA/motions/"+nn_path+"/data/xNormal.dat", 
 								"../extern/ICA/motions/"+nn_path+"/data/yNormal.dat");
 }
@@ -1081,7 +1088,7 @@ getReward(int index, bool verbose)
 	// activates when fastTermination is on
 	bool fastViewTermination = true;
 
-	bool isDribble = false;
+	bool isDribble = true;
 
 	if(isDribble)
 	{
@@ -1122,6 +1129,11 @@ getReward(int index, bool verbose)
 			return 0;
 		}
 
+		if(mCharacters[index]->blocked == 0)
+			return 0.01;
+		else 
+			return 0;
+
 		// Dribble Direction Reward
 		Eigen::Vector3d targetPlaneNormal = mTargetBallPosition - mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM();
 		targetPlaneNormal[1] = 0.0;
@@ -1144,8 +1156,8 @@ getReward(int index, bool verbose)
 
 	else
 	{
-		// if(mCharacters[index]->blocked && mCurActionTypes[index] == 0)
-		// 	reward += 0.001;
+		if(mCharacters[index]->blocked && mCurActionTypes[index] == 0)
+			reward += 0.01;
 		// Shoot Reward
 		if(gotReward)
 			return 0;
@@ -1181,7 +1193,7 @@ getReward(int index, bool verbose)
 			if(!mCharacters[index]->blocked)
 				reward += exp(0.3 * -pow((targetPositionOnThePlane - ballPositionOnThePlane).norm(),2));
 			else
-				reward += 0.2 * exp(0.3 * -pow((targetPositionOnThePlane - ballPositionOnThePlane).norm(),2));
+				reward += 0.0 * exp(0.3 * -pow((targetPositionOnThePlane - ballPositionOnThePlane).norm(),2));
 
 			return reward;
 		}
@@ -1542,8 +1554,8 @@ isTerminalState()
 	// if((mCharacters[0]->getSkeleton()->getCOM()-mTargetBallPosition).norm() > 20.0)
 	// 	mIsTerminalState = true;
 
-	if(abs(mCharacters[0]->getSkeleton()->getCOM()[2])>15.0*0.5*1.3 || 
-		mCharacters[0]->getSkeleton()->getCOM()[0]>28.0*0.5*1.3 || mCharacters[0]->getSkeleton()->getCOM()[0] < -4.0)
+	if(abs(mCharacters[0]->getSkeleton()->getCOM()[2])>15.0*0.5*1.1 || 
+		mCharacters[0]->getSkeleton()->getCOM()[0]>28.0*0.5*1.1 || mCharacters[0]->getSkeleton()->getCOM()[0] < -4.0)
 	{
 		mIsTerminalState = true;
 
@@ -1603,7 +1615,7 @@ void
 Environment::
 slaveReset()
 {
-	resetCount = 50;
+	resetCount = 20;
 	mIsTerminalState = false;
 	mIsFoulState = false;
 	mTimeElapsed = 0;
@@ -1619,8 +1631,17 @@ slaveReset()
 	// std::cout<<"2222222222"<<std::endl;
 
 	mObstacles.clear();
-	for(int i=0;i<0;i++)
-		genObstacleNearGoalpost();
+	// for(int i=0;i<3;i++)
+	// 	genObstacleNearGoalpost();
+
+	genObstacleNearGoalpost(0);
+	genObstacleNearGoalpost(0.4);
+	genObstacleNearGoalpost(1.2);
+	genObstacleNearGoalpost(1.6);
+	genObstacleNearGoalpost(2.8);
+	genObstacleNearGoalpost(3.2);
+	// genObstacleNearGoalpost(1.2);
+
 
 	for(int i=0;i<mNumChars;i++)
 	{
@@ -1680,7 +1701,7 @@ slaveResetCharacterPositions()
 
 	if(useHalfCourt)
 	{
-		double r = (double) rand()/RAND_MAX * zRange * 0.8 + zRange*0.2;
+		double r = (double) rand()/RAND_MAX * zRange * 0.6 + zRange*0.4;
 		double theta = (double) rand()/RAND_MAX * M_PI;
 
 
@@ -2276,6 +2297,159 @@ computeCriticalActionTimes()
 
 }
 
+Eigen::Isometry2d 
+Environment::
+getLocationDisplacement(Motion::MotionSegment* ms, int start, int end)
+{
+	if(start > end)
+	{
+		std::cout<<__func__<<" : wrong input. start is bigger then end"<<std::endl;
+		return Eigen::Isometry2d::Identity();
+	}
+	Motion::Pose* startPose = ms->mPoses[start];
+	Motion::Root startRoot = startPose->getRoot();
+
+	Eigen::Isometry2d startT;
+	startT.setIdentity();
+
+	startT.translation() = startRoot.pos;
+
+	double cos = startRoot.dir[0];
+	double sin = startRoot.dir[1];
+
+	startT.linear() << cos, -sin, -sin, cos;
+
+
+	Motion::Pose* endPose = ms->mPoses[end];
+	Motion::Root endRoot = endPose->getRoot();
+	Eigen::Isometry2d endT;
+	endT.setIdentity();
+
+	endT.translation() = endRoot.pos;
+
+	cos = endRoot.dir[0];
+	sin = endRoot.dir[1];
+
+	endT.linear() << cos, -sin, -sin, cos;
+
+
+	Eigen::Isometry2d displacementT = startT.inverse()*endT;
+
+	displacementT.translation() /= 100.0;
+
+	return displacementT;
+}
+
+Eigen::Isometry2d
+Environment::
+getCorrectShootingLocationFromControl(Motion::Pose* criticalPose, std::vector<double> control, double random)
+{
+	Eigen::Vector3d criticalBallPosition = criticalPose->ballPosition/100.0;
+	Eigen::Vector2d projectedBallPosition;
+
+	projectedBallPosition[0] = criticalBallPosition[0];
+	projectedBallPosition[1] = criticalBallPosition[2];
+
+
+	Eigen::Isometry2d identityT;
+	identityT.setIdentity();
+
+
+	Eigen::Vector3d criticalBallVelocity;
+	criticalBallVelocity[0] = control[4+5+0];
+	criticalBallVelocity[1] = control[4+5+1];
+	criticalBallVelocity[2] = control[4+5+2];
+
+	criticalBallVelocity /= 100.0;
+
+	Eigen::Vector2d projectedBallVelocity;
+	projectedBallVelocity[0] = criticalBallVelocity[0];
+	projectedBallVelocity[1] = criticalBallVelocity[2];
+
+	// criticalBallVelocity = identityT.linear()*criticalBallVelocity;
+
+	Eigen::Vector2d projectedGoalpostPosition;
+	// Eigen::Vector3d goalpostPosition = mTargetBallPosition;
+	projectedGoalpostPosition[0] = mTargetBallPosition[0];
+	projectedGoalpostPosition[1] = mTargetBallPosition[2];
+
+
+	// first, flying time
+	double g = 9.81;
+	double h = mTargetBallPosition[1] - criticalBallPosition[1];
+
+	double v_y = criticalBallVelocity[1];
+
+	double t = (v_y+sqrt(v_y*v_y - 2*g*h))/g;
+
+	Eigen::Vector2d relThrowedBallPosition = projectedBallPosition + projectedBallVelocity*t;
+
+	// second, find position that do not need rotation
+	Eigen::Vector2d defaultPosition = projectedGoalpostPosition - relThrowedBallPosition;
+
+
+	Eigen::Vector2d goalPostToThrowedPosition = -relThrowedBallPosition;
+
+	double theta = atan2(goalPostToThrowedPosition[1], goalPostToThrowedPosition[0]);
+
+
+	double targetAngle = M_PI*1.5;
+
+
+	Eigen::Rotation2Dd rot(targetAngle-theta);
+
+	Eigen::Matrix2d rotM(rot);
+
+	identityT.linear() = rotM;
+
+	identityT.translation() = defaultPosition + (relThrowedBallPosition - rotM *relThrowedBallPosition);
+
+	return identityT;
+}
+
+
+void 
+Environment::
+genRewardTutorialTrajectory()
+{
+	std::string sub_dir = "data";
+	std::string xDataPath=  PathManager::getFilePath_data(this->nnPath, sub_dir, "xData.dat", 0 );
+	std::string xNormalPath=  PathManager::getFilePath_data(this->nnPath, sub_dir, "xNormal.dat");
+
+	std::string yDataPath=  PathManager::getFilePath_data(this->nnPath, sub_dir, "yData.dat", 0 );
+	std::string yNormalPath=  PathManager::getFilePath_data(this->nnPath, sub_dir, "yNormal.dat");
+
+	std::cout<<"Uploaded xData, yData:\n"<<xDataPath<<"\n "<<yDataPath<<std::endl;
+	std::cout<<"Start generating guiding trajectory"<<std::endl;
+
+	this->xData.push_back(MotionRepresentation::readXData(xNormalPath, xDataPath, sub_dir));
+    this->yData.push_back(std::vector<std::vector<double>>());
+    Motion::MotionSegment* ms= MotionRepresentation::restoreMotionSegment(yNormalPath, yDataPath, this->yData[0]);
+    std::cout<<ms->mPoses.size()<<std::endl;
+
+
+	std::vector<int> startFrames;
+	std::vector<int> endFrames;
+
+	startFrames	= {5330};
+	endFrames 	= {5439};
+
+	for(int i=0;i<startFrames.size();i++)
+	{
+		int startFrame = startFrames[i];
+		int endFrame = endFrames[i];
+		Eigen::Isometry2d displacementT = getLocationDisplacement(ms, startFrame, endFrame);
+		getCorrectShootingLocationFromControl(ms->mPoses[endFrame], xData[0][endFrame], 0.5);
+
+
+
+
+	}
+
+}
+
+
+
 
 EnvironmentPackage::EnvironmentPackage()
 {
@@ -2702,12 +2876,13 @@ Environment::genObstaclesToTargetDir(int numObstacles)
 
 
 void
-Environment::genObstacleNearGoalpost()
+Environment::genObstacleNearGoalpost(double angle)
 {
 	double dRange = 1.0;
 
 	double distance = 2.0;
-	double angle = (double) rand()/RAND_MAX * M_PI/1.0;// - M_PI/4.0;
+	if(angle == -1)
+		angle = (double) rand()/RAND_MAX * M_PI/1.0;// - M_PI/4.0;
 
 
 

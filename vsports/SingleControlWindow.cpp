@@ -132,7 +132,10 @@ SingleControlWindow(const char* nn_path,
 	mMotionGeneratorBatch = new ICA::dart::MotionGeneratorBatch(nn_path, mEnv->initDartNameIdMapping(), 1);
 
 	mEnv->initialize(mMotionGeneratorBatch, 0);
-	// mEnv->slaveReset();
+	// mEnv->genRewardTutorialTrajectory();
+
+
+
 	// mMotionGeneratorBatch->setCurrentDartPosition(mEnv->mCharacters[0]->getSkeleton()->getPositions(), 0);
 
 	p::str str = ("num_state = "+std::to_string(mEnv->getNumState())).c_str();
