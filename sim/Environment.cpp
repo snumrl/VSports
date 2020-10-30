@@ -1554,8 +1554,22 @@ isTerminalState()
 	// if((mCharacters[0]->getSkeleton()->getCOM()-mTargetBallPosition).norm() > 20.0)
 	// 	mIsTerminalState = true;
 
-	if(abs(mCharacters[0]->getSkeleton()->getCOM()[2])>15.0*0.5*1.1 || 
-		mCharacters[0]->getSkeleton()->getCOM()[0]>28.0*0.5*1.1 || mCharacters[0]->getSkeleton()->getCOM()[0] < -4.0)
+	Eigen::Isometry3d rootT = getRootT(0);
+	double goalPostDistance;
+
+	Eigen::Vector3d projectedCOM = rootT.translation();
+	projectedCOM[1] = 0.0;
+
+	Eigen::Vector3d projectedGoalpost = mTargetBallPosition;
+	projectedGoalpost[1] =0.0;
+
+	goalPostDistance = (projectedGoalpost-projectedCOM).norm();
+
+
+	if(abs(rootT.translation()[2])>15.0*0.5*1.1 || 
+		rootT.translation()[0]>28.0*0.5*0.9 || 
+		rootT.translation()[0] < -4.0 ||
+		goalPostDistance < 2.5)
 	{
 		mIsTerminalState = true;
 
