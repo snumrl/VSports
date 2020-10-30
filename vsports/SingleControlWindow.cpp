@@ -610,7 +610,7 @@ step()
 
 	for(int id=0;id<1;++id)
 	{
-		if(mEnv->resetCount<0)
+		if(mEnv->resetCount<=0)
 			concatControlVector.push_back(eigenToStdVec(mEnv->getMGAction(0)));
 		else
 			concatControlVector.push_back(eigenToStdVec(mEnv->slaveResetTargetVector));
@@ -792,7 +792,7 @@ display()
 	GUI::drawSkeleton(mEnv->ballSkel, Eigen::Vector3d(0.9, 0.6, 0.0));
 
 	Eigen::Vector3d skelColor(1.0, 1.0, 1.0);
-	if(mEnv->resetCount >= 0)
+	if(mEnv->resetCount > 0)
 		skelColor = Eigen::Vector3d(0.5, 0.5, 0.5);
 	GUI::drawSkeleton(chars[0]->getSkeleton(), skelColor);
 

@@ -42,7 +42,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 11
+nnCount = 13
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -545,6 +545,8 @@ class RL(object):
 			# print("time :", time.time() - start)
 
 			# start = time.time()
+			# embed()
+			# exit(0)
 			self.env.stepsAtOnce()
 
 			# print("time :", time.time() - start)

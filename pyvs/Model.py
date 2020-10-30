@@ -148,7 +148,7 @@ class ActorCriticNN(nn.Module):
 		self.rms.load(path)
 
 
-	def forward(self,x):
+	def forward(self,x, embedd = False):
 		# self.rms.apply(x)
 		x = x.cuda()
 
@@ -166,6 +166,8 @@ class ActorCriticNN(nn.Module):
 		# embed()
 		# exit(0)
 		if self.softmax:
+			# embed()
+			# exit(0)
 			sm =  nn.Softmax(dim = 1)
 			action = sm(action)
 		return MultiVariateNormal(action.unsqueeze(0),self.log_std.exp()), self.value(x)

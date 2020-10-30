@@ -309,7 +309,7 @@ stepsAtOnce()
 
 	for(int id=0;id<mNumSlaves;++id)
 	{
-		if(mSlaves[id]->resetCount<0)
+		if(mSlaves[id]->resetCount<=0)
 			concatControlVector.push_back(eigenToStdVec(mSlaves[id]->getMGAction(0)));
 		else
 			concatControlVector.push_back(eigenToStdVec(mSlaves[id]->slaveResetTargetVector));

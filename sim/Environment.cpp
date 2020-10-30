@@ -472,7 +472,7 @@ stepAtOnce()
 	}
 	// std::copy(mActions.begin(), mActions.end(), mPrevActions.begin());
 	resetCount--;
-	if(resetCount < -1)
+	if(resetCount < 0)
 		resetCount = -1;
 
 	curFrame++;
@@ -744,7 +744,7 @@ stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContact
 		this->step();
 	}
 	resetCount--;
-	if(resetCount < -1)
+	if(resetCount < 0)
 		resetCount = -1;
 	curFrame++;
 }
@@ -1230,7 +1230,7 @@ getRewards()
 		// 	// rewards.push_back();
 		// 	mAccScore[i] += getReward(i);
 		// }
-		if(resetCount<0)
+		if(resetCount<=0)
 			mAccScore[i] += getReward(i);
 		// std::cout<<"Reward : "<<mAccScore[i]<<std::endl;
 
@@ -1487,7 +1487,7 @@ setActionType(int index, int actionType)
 	int curActionType = actionType;
 
 	mCharacters[index]->inputActionType = actionType;
-	if(resetCount>=0)
+	if(resetCount>0)
 		curActionType = 0;
 	else if(actionType != 3)
 		curActionType = 0;
@@ -1539,7 +1539,7 @@ bool
 Environment::
 isTerminalState()
 {
-	if(resetCount>=0)
+	if(resetCount>0)
 	{
 		mIsTerminalState = false;
 		return false;
@@ -1681,7 +1681,7 @@ Environment::
 slaveResetCharacterPositions()
 {
 	bool useHalfCourt = true;
-	double xRange = 28.0*0.5*0.8;
+	double xRange = 28.0*0.5 -1.5;
 	double zRange = 15.0*0.5*0.8;
 
 	for(int i=0;i<mNumChars;i++)

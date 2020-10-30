@@ -755,6 +755,7 @@ class RL(object):
 					# num_layers = self.target_model[buff_index].num_layers
 
 					a_dist,v = self.target_model[0][buff_index].forward(Tensor(stack_s))	
+
 					
 					# hidden_list[timeStep] = list(cur_stack_hidden)
 
