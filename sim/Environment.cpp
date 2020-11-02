@@ -1088,7 +1088,7 @@ getReward(int index, bool verbose)
 	// activates when fastTermination is on
 	bool fastViewTermination = true;
 
-	bool isDribble = true;
+	bool isDribble = false;
 
 	if(isDribble)
 	{
@@ -1156,8 +1156,8 @@ getReward(int index, bool verbose)
 
 	else
 	{
-		if(mCharacters[index]->blocked && mCurActionTypes[index] == 0)
-			reward += 0.01;
+		// if(mCharacters[index]->blocked && mCurActionTypes[index] == 0)
+			// reward += 0.01;
 		// Shoot Reward
 		if(gotReward)
 			return 0;
@@ -1193,7 +1193,7 @@ getReward(int index, bool verbose)
 			if(!mCharacters[index]->blocked)
 				reward += exp(0.3 * -pow((targetPositionOnThePlane - ballPositionOnThePlane).norm(),2));
 			else
-				reward += 0.0 * exp(0.3 * -pow((targetPositionOnThePlane - ballPositionOnThePlane).norm(),2));
+				reward = 0.0 * exp(0.3 * -pow((targetPositionOnThePlane - ballPositionOnThePlane).norm(),2));
 
 			return reward;
 		}
@@ -1230,7 +1230,7 @@ getRewards()
 		// 	// rewards.push_back();
 		// 	mAccScore[i] += getReward(i);
 		// }
-		if(resetCount<=0)
+		if(resetCount<0)
 			mAccScore[i] += getReward(i);
 		// std::cout<<"Reward : "<<mAccScore[i]<<std::endl;
 
@@ -1539,7 +1539,7 @@ bool
 Environment::
 isTerminalState()
 {
-	if(resetCount>0)
+	if(resetCount>=0)
 	{
 		mIsTerminalState = false;
 		return false;
@@ -1629,7 +1629,7 @@ void
 Environment::
 slaveReset()
 {
-	resetCount = 20;
+	resetCount = 50;
 	mIsTerminalState = false;
 	mIsFoulState = false;
 	mTimeElapsed = 0;

@@ -792,7 +792,7 @@ display()
 	GUI::drawSkeleton(mEnv->ballSkel, Eigen::Vector3d(0.9, 0.6, 0.0));
 
 	Eigen::Vector3d skelColor(1.0, 1.0, 1.0);
-	if(mEnv->resetCount > 0)
+	if(mEnv->resetCount >= 0)
 		skelColor = Eigen::Vector3d(0.5, 0.5, 0.5);
 	GUI::drawSkeleton(chars[0]->getSkeleton(), skelColor);
 
@@ -1196,7 +1196,8 @@ getActionFromNN(int index)
 
 	// std::cout<<"mActionType : "<<mActionType.transpose()<<std::endl;
 	std::cout<<"mEnv->curFrame : "<<mEnv->curFrame<<std::endl;
-	if(mEnv->curFrame%10 == 1)
+	std::cout<<"mEnv->resetCount : "<<mEnv->resetCount<<std::endl;
+	if(mEnv->curFrame%10 == 0)
 		mActionType = toOneHotVectorWithConstraint(index, mActionType);
 	else
 	{
