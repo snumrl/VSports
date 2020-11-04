@@ -1549,7 +1549,7 @@ isTerminalState()
 	{
 		mIsTerminalState = true;
 	}
-	if(mCurCriticalActionTimes[0] < -40)
+	if(mCurCriticalActionTimes[0] <= -40)
 		mIsTerminalState= true;
 
 	// if((mCharacters[0]->getSkeleton()->getCOM()-mTargetBallPosition).norm() > 20.0)
@@ -2562,7 +2562,7 @@ genRewardTutorialTrajectory()
 			//angle E [M_PI*1.0/2.0, M_PI*3.0/2.0]
 			// M_PI*1.0/2.0 -> WEST
 			// M_PI*3.0/2.0 -> EAST
-			double angle = M_PI/2.0;
+			double angle = M_PI*(0.5 + 0.3);
 			orientation.translation() -= projectedGoalpostPosition;
 			orientation = Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitY())*orientation;
 			orientation.translation() += projectedGoalpostPosition;
