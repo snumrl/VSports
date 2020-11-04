@@ -422,6 +422,8 @@ public:
 	Eigen::Isometry2d getLocationDisplacement(Motion::MotionSegment* ms, int start, int end);
 	Eigen::Isometry2d getCorrectShootingLocationFromControl(Motion::Pose* criticalPose, std::vector<double> control, double random);
 
+	std::vector<std::vector<Eigen::VectorXd>> mTutorialTrajectories;
+
 };
 double getFacingAngleFromLocalState(Eigen::VectorXd curState);
 Eigen::VectorXd localStateToOriginState(Eigen::VectorXd localState, int mNumChars=6);

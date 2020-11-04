@@ -20,6 +20,7 @@
 #include "../extern/ICA/Motion/MotionSegment.h"
 #include "../extern/ICA/Motion/Pose.h"
 #include "../extern/ICA/Motion/RootTrajectory.h"
+#include "../extern/ICA/Utils/Functions.h"
 
 using namespace std;
 using namespace dart;
@@ -1088,7 +1089,7 @@ getReward(int index, bool verbose)
 	// activates when fastTermination is on
 	bool fastViewTermination = true;
 
-	bool isDribble = false;
+	bool isDribble = true;
 
 	if(isDribble)
 	{
@@ -1575,7 +1576,8 @@ isTerminalState()
 
 	}
 
-	return mIsTerminalState;
+	// return mIsTerminalState;
+	return false;
 }
 
 bool
@@ -2331,7 +2333,7 @@ getLocationDisplacement(Motion::MotionSegment* ms, int start, int end)
 	double cos = startRoot.dir[0];
 	double sin = startRoot.dir[1];
 
-	startT.linear() << cos, -sin, -sin, cos;
+	startT.linear() << cos, -sin, sin, cos;
 
 
 	Motion::Pose* endPose = ms->mPoses[end];
@@ -2344,7 +2346,7 @@ getLocationDisplacement(Motion::MotionSegment* ms, int start, int end)
 	cos = endRoot.dir[0];
 	sin = endRoot.dir[1];
 
-	endT.linear() << cos, -sin, -sin, cos;
+	endT.linear() << cos, -sin, sin, cos;
 
 
 	Eigen::Isometry2d displacementT = startT.inverse()*endT;
@@ -2358,12 +2360,18 @@ Eigen::Isometry2d
 Environment::
 getCorrectShootingLocationFromControl(Motion::Pose* criticalPose, std::vector<double> control, double random)
 {
+
+	Eigen::Isometry2d rootT = criticalPose->getRootT();
+
+	rootT.translation() /= 100.0;
+
 	Eigen::Vector3d criticalBallPosition = criticalPose->ballPosition/100.0;
 	Eigen::Vector2d projectedBallPosition;
 
 	projectedBallPosition[0] = criticalBallPosition[0];
 	projectedBallPosition[1] = criticalBallPosition[2];
 
+	projectedBallPosition = rootT.linear()*projectedBallPosition;
 
 	Eigen::Isometry2d identityT;
 	identityT.setIdentity();
@@ -2380,6 +2388,8 @@ getCorrectShootingLocationFromControl(Motion::Pose* criticalPose, std::vector<do
 	projectedBallVelocity[0] = criticalBallVelocity[0];
 	projectedBallVelocity[1] = criticalBallVelocity[2];
 
+	projectedBallVelocity = rootT.linear()*projectedBallVelocity;
+
 	// criticalBallVelocity = identityT.linear()*criticalBallVelocity;
 
 	Eigen::Vector2d projectedGoalpostPosition;
@@ -2394,9 +2404,16 @@ getCorrectShootingLocationFromControl(Motion::Pose* criticalPose, std::vector<do
 
 	double v_y = criticalBallVelocity[1];
 
+	// std::cout<<"criticalBallPosition[1] : "<<criticalBallPosition[1]<<std::endl;
+	// std::cout<<"control[4+5+3]/100.0 : "<<control[4+5+3]/100.0<<std::endl;
+	// std::cout<<"criticalBallVelocity : "<<criticalBallVelocity.transpose()<<std::endl;
+	// std::cout<<v_y<<std::endl;
+	// std::cout<<2*g*h<<std::endl;
+	// exit(0);
 	double t = (v_y+sqrt(v_y*v_y - 2*g*h))/g;
 
 	Eigen::Vector2d relThrowedBallPosition = projectedBallPosition + projectedBallVelocity*t;
+	// std::cout<<"relThrowedBallPosition.norm() : "<<relThrowedBallPosition.norm()<<std::endl;
 
 	// second, find position that do not need rotation
 	Eigen::Vector2d defaultPosition = projectedGoalpostPosition - relThrowedBallPosition;
@@ -2404,20 +2421,64 @@ getCorrectShootingLocationFromControl(Motion::Pose* criticalPose, std::vector<do
 
 	Eigen::Vector2d goalPostToThrowedPosition = -relThrowedBallPosition;
 
-	double theta = atan2(goalPostToThrowedPosition[1], goalPostToThrowedPosition[0]);
+
+	Eigen::Vector2d goalPostToThrowedPositionDirection = goalPostToThrowedPosition.normalized();
+	double theta = atan2(goalPostToThrowedPositionDirection[1], goalPostToThrowedPositionDirection[0]);
 
 
-	double targetAngle = M_PI*1.5;
+	double targetAngle = theta;
 
 
 	Eigen::Rotation2Dd rot(targetAngle-theta);
 
+	// std::cout<<"theta  : "<<theta<<std::endl;
+
 	Eigen::Matrix2d rotM(rot);
 
-	identityT.linear() = rotM;
+	Eigen::Isometry2d rotT;
+	rotT.setIdentity();
+	rotT.linear() = rotM;
 
-	identityT.translation() = defaultPosition + (relThrowedBallPosition - rotM *relThrowedBallPosition);
+	// std::cout<<"relThrowedBallPosition.transpose() : "<<relThrowedBallPosition.transpose()<<std::endl;
+	// std::cout<<"projectedGoalpostPosition.transpose() : "<<projectedGoalpostPosition.transpose()<<std::endl;
+	// std::cout<<""
 
+	// identityT.translation() = projectedGoalpostPosition +goalPostToThrowedPosition;
+	// identityT = rotT * identityT;
+	// identityT.translation() -= rotT.linear() * relThrowedBallPosition;
+
+
+
+	identityT.translation() = projectedGoalpostPosition + goalPostToThrowedPosition;
+	identityT.linear() = rootT.linear();
+	identityT.translation() -= projectedGoalpostPosition;
+
+	// std::cout<<"identityT.translation()11 : "<<identityT.translation().transpose()<<std::endl;
+	identityT = rotT * identityT;
+	// std::cout<<"identityT.translation()22 : "<<identityT.translation().transpose()<<std::endl;
+	identityT.translation() += projectedGoalpostPosition;
+	// std::cout<<"identityT.translation()33 : "<<identityT.translation().transpose()<<std::endl;
+
+	// identityT.translation() = projectedGoalpostPosition + rotT * goalPostToThrowedPosition;
+	// identityT.linear() = rotT.linear();
+
+
+
+	// std::cout<<"identityT.translation().norm() : "<<identityT.translation().norm()<<std::endl;
+
+	// std::cout<<"rootT.linear() * Eigen::Vector2d(1.0,0.0) : "<<rootT.linear() * Eigen::Vector2d(1.0,0.0)<<std::endl;
+
+	// std::cout<<"rootT.translation() : "<<rootT.translation().transpose()<<std::endl;
+	// std::cout<<"identityT.translation() : "<<identityT.translation().transpose()<<std::endl;
+
+
+
+	// std::cout<<"rootT.inverse()*identityT.translation() : "<<identityT.translation().transpose()<<std::endl;
+	// std::cout<<identityT.linear()<<std::endl;
+
+	// identityT.linear() = rootT.linear();
+
+	identityT = rootT.inverse()*identityT;
 	return identityT;
 }
 
@@ -2445,19 +2506,93 @@ genRewardTutorialTrajectory()
 	std::vector<int> startFrames;
 	std::vector<int> endFrames;
 
-	startFrames	= {5330};
-	endFrames 	= {5439};
+	startFrames	= {279};
+	endFrames 	= {379};
+	// std::cout<<"skeleton dofs : "<<mCharacters[0]->getSkeleton()->getNumDofs()<<std::endl;
 
 	for(int i=0;i<startFrames.size();i++)
 	{
 		int startFrame = startFrames[i];
 		int endFrame = endFrames[i];
-		Eigen::Isometry2d displacementT = getLocationDisplacement(ms, startFrame, endFrame);
-		getCorrectShootingLocationFromControl(ms->mPoses[endFrame], xData[0][endFrame], 0.5);
+		// Eigen::Isometry2d displacementT = getLocationDisplacement(ms, startFrame, endFrame);
+		Eigen::Isometry2d correctLocationT = getCorrectShootingLocationFromControl(ms->mPoses[endFrame], xData[0][endFrame], 0.5);
+		std::vector<Eigen::VectorXd> tutorialTrajectory;
+
+		for(int j=0;j<endFrame-startFrame+1;j++)
+		{
+			// Eigen::Isometry2d displacementT = getLocationDisplacement(ms, startFrame+j, endFrame);
+			// Eigen::Isometry2d correctDisplacementT = correctLocationT*displacementT.inverse();
+
+			Eigen::Isometry3d correctDisplacementT = Basic::to3d_i(correctLocationT); 
+			Eigen::Isometry3d rootT = Basic::to3d_i(ms->mPoses[startFrame+j]->getRootT());
+			Eigen::Isometry3d endRootT = Basic::to3d_i(ms->mPoses[endFrame]->getRootT());
+			rootT.translation() /= 100.0;
+
+			Eigen::VectorXd dartPosition = mMgb->ICAPoseToDartPosition(ms->mPoses[startFrame+j]);
+			// if(j==endFrame-startFrame)
+			// 	std::cout<<"dartPosition : "<<dartPosition.segment(0,6).transpose()<<std::endl;
+			Eigen::AngleAxisd aa = Eigen::AngleAxisd(dartPosition.segment(0,3).norm(), dartPosition.segment(0,3).normalized());
+
+
+			Eigen::Isometry3d orientation;
+			orientation.setIdentity();
+
+			orientation.linear() = aa.toRotationMatrix();
+			orientation.translation() = dartPosition.segment(3,3);
+
+			// std::cout<<"dart position angle : "<<aa.angle()<<std::endl;
+			// std::cout<<"dart position axis : "<<aa.axis().transpose()<<std::endl;
+
+			Eigen::Isometry3d displacementT = correctDisplacementT;
+			displacementT.linear()= correctDisplacementT.linear();
+			displacementT.translation()= Eigen::Vector3d(0.0, 0.0, 0.0);
 
 
 
+			orientation.translation() += endRootT.linear()*correctDisplacementT.translation();
 
+
+
+			Eigen::Vector3d projectedGoalpostPosition;
+			// Eigen::Vector3d goalpostPosition = mTargetBallPosition;
+			projectedGoalpostPosition[0] = mTargetBallPosition[0];
+			projectedGoalpostPosition[1] = 0.0;
+			projectedGoalpostPosition[2] = mTargetBallPosition[2];
+
+			//angle E [M_PI*1.0/2.0, M_PI*3.0/2.0]
+			// M_PI*1.0/2.0 -> WEST
+			// M_PI*3.0/2.0 -> EAST
+			double angle = M_PI/2.0;
+			orientation.translation() -= projectedGoalpostPosition;
+			orientation = Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitY())*orientation;
+			orientation.translation() += projectedGoalpostPosition;
+
+			
+
+			// orientation.linear() =
+
+			// orientation.translation() -= displacementT.linear()* correctDisplacementT.translation();
+
+
+			// orientation.translation() = getRootT(0).translation() + (getRootT(0)*correctDisplacementT).translation();
+			// orientation.translation() = Eigen::Vector3d(3.0, 0.0, 0.0);
+
+			// std::cout<<correctDisplacementT.translation().transpose()<<std::endl;
+			// std::cout<<"aa.axis().transpose(): "<<aa.axis().transpose()<<std::endl;
+			// std::cout<<"aa.angle(): "<<aa.angle()<<std::endl;
+
+			Eigen::AngleAxisd temp(orientation.linear());
+
+			dartPosition.segment(0,3) = temp.axis()*temp.angle();
+			dartPosition.segment(3,3) = orientation.translation();
+
+			tutorialTrajectory.push_back(dartPosition);
+			// if(j==endFrame-startFrame)
+			// 	std::cout<<"dartPosition2 : "<<dartPosition.segment(0,6).transpose()<<std::endl;
+
+		}
+
+		mTutorialTrajectories.push_back(tutorialTrajectory);
 	}
 
 }
@@ -2615,7 +2750,6 @@ updateHeightMap(int index)
 					mHeightMaps[index][i][j] = 1.0;
 				}
 			}
-
 		}
 	}
 }

@@ -42,7 +42,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 15
+nnCount = 16
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -138,8 +138,8 @@ class RL(object):
 		self.actionDecoders = [ VAEDecoder().to(device) for _ in range(self.num_action_types)]
 		# for i in range(self.num_action_types):
 
-		self.actionDecoders[0].load("vae_nn4/vae_action_decoder_"+str(0)+".pt")
-		self.actionDecoders[1].load("vae_nn4/vae_action_decoder_"+str(3)+".pt")
+		self.actionDecoders[0].load("vae_nn/vae_action_decoder_"+str(0)+".pt")
+		self.actionDecoders[1].load("vae_nn/vae_action_decoder_"+str(3)+".pt")
 
 		self.rms = RunningMeanStd(self.num_state-2)
 

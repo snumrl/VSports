@@ -58,7 +58,7 @@ initWindow(int _w, int _h, char* _name)
 
 SingleControlWindow::
 SingleControlWindow()
-:SimWindow(), mIsNNLoaded(false), mFrame(5273)
+:SimWindow(), mIsNNLoaded(false), mFrame(0)
 {
 
  	// srand (time(NULL));	
@@ -132,7 +132,7 @@ SingleControlWindow(const char* nn_path,
 	mMotionGeneratorBatch = new ICA::dart::MotionGeneratorBatch(nn_path, mEnv->initDartNameIdMapping(), 1);
 
 	mEnv->initialize(mMotionGeneratorBatch, 0);
-	// mEnv->genRewardTutorialTrajectory();
+	mEnv->genRewardTutorialTrajectory();
 
 
 
@@ -520,7 +520,6 @@ step()
 	if(mEnv->isTerminalState())// || mEnv->isFoulState())
 	{
 		sleep(1);
-		mFrame = 5273;
 		mEnv->slaveReset();
 	}
 	// std::cout<<"mFrame : "<<mFrame<<std::endl;
@@ -553,7 +552,7 @@ step()
 	// time_check_start();
 
 
-	getActionFromNN(0);
+	///////////// getActionFromNN(0);
 
 
 	// time_check_end();
@@ -637,6 +636,11 @@ step()
 		// this->stepAtOnce(id);
 	}
 
+	std::cout<<"mFrame : "<<mFrame<<std::endl;
+	std::cout<<"mEnv->mTutorialTrajectories[0].size (): "<<mEnv->mTutorialTrajectories[0].size()<<std::endl;
+	mEnv->getCharacter(0)->getSkeleton()->setPositions(mEnv->mTutorialTrajectories[0][mFrame]);
+
+
 
 
 
@@ -647,6 +651,8 @@ step()
     // std::cout<<std::endl;
 	mEnv->getRewards();
 	mFrame++;
+	if(mFrame>mEnv->mTutorialTrajectories[0].size()-1)
+		mFrame = mEnv->mTutorialTrajectories[0].size()-1;
 
 
 
