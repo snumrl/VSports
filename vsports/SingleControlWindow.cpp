@@ -132,7 +132,7 @@ SingleControlWindow(const char* nn_path,
 	mMotionGeneratorBatch = new ICA::dart::MotionGeneratorBatch(nn_path, mEnv->initDartNameIdMapping(), 1);
 
 	mEnv->initialize(mMotionGeneratorBatch, 0);
-	mEnv->genRewardTutorialTrajectory();
+	// mEnv->genRewardTutorialTrajectory();
 
 
 
@@ -221,8 +221,8 @@ SingleControlWindow(const char* nn_path,
 		load_decoders[i] = nn_module_decoders[i].attr("load");
 	}
 
-	load_decoders[0]("../pyvs/vae_nn4/vae_action_decoder_"+to_string(0)+".pt");
-	load_decoders[1]("../pyvs/vae_nn4/vae_action_decoder_"+to_string(3)+".pt");
+	load_decoders[0]("../pyvs/vae_nn/vae_action_decoder_"+to_string(0)+".pt");
+	load_decoders[1]("../pyvs/vae_nn/vae_action_decoder_"+to_string(3)+".pt");
 	std::cout<<"Loaded VAE decoder"<<std::endl;
 
 
@@ -552,7 +552,7 @@ step()
 	// time_check_start();
 
 
-	///////////// getActionFromNN(0);
+	getActionFromNN(0);
 
 
 	// time_check_end();
@@ -636,9 +636,9 @@ step()
 		// this->stepAtOnce(id);
 	}
 
-	std::cout<<"mFrame : "<<mFrame<<std::endl;
-	std::cout<<"mEnv->mTutorialTrajectories[0].size (): "<<mEnv->mTutorialTrajectories[0].size()<<std::endl;
-	mEnv->getCharacter(0)->getSkeleton()->setPositions(mEnv->mTutorialTrajectories[0][mFrame]);
+	// std::cout<<"mFrame : "<<mFrame<<std::endl;
+	// std::cout<<"mEnv->mTutorialTrajectories[0].size (): "<<mEnv->mTutorialTrajectories[1].size()<<std::endl;
+	// mEnv->getCharacter(0)->getSkeleton()->setPositions(mEnv->mTutorialTrajectories[1][mFrame]);
 
 
 
@@ -651,8 +651,8 @@ step()
     // std::cout<<std::endl;
 	mEnv->getRewards();
 	mFrame++;
-	if(mFrame>mEnv->mTutorialTrajectories[0].size()-1)
-		mFrame = mEnv->mTutorialTrajectories[0].size()-1;
+	// if(mFrame>mEnv->mTutorialTrajectories[1].size()-1)
+	// 	mFrame = mEnv->mTutorialTrajectories[1].size()-1;
 
 
 

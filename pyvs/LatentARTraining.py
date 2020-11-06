@@ -42,7 +42,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 16
+nnCount = 24
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -585,7 +585,7 @@ class RL(object):
 								# self.episodes_2[i][k] = RNNEpisodeBuffer()
 						print("nan", file=sys.stderr)
 						self.env.slaveReset(j)
-						self.env.setResetCount(50-counter%10, j);
+						self.env.setResetCount(20-counter%10, j);
 
 
 					if self.env.isTerminalState(j) is False:
@@ -624,7 +624,7 @@ class RL(object):
 									self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
 									self.episodes[h][j][i] = RNNEpisodeBuffer()
 						self.env.slaveReset(j)
-						self.env.setResetCount(50-counter%10, j);
+						self.env.setResetCount(20-counter%10, j);
 
 
 			if local_step >= self.buffer_size:
@@ -863,7 +863,7 @@ class RL(object):
 
 		self.generateTransitions()
 		self.computeTDandGAE()
-		# self.optimizeNN_h(0)
+		# self.optimizeNN_h(1)
 		self.optimizeModel()
 
 

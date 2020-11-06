@@ -1089,7 +1089,82 @@ getReward(int index, bool verbose)
 	// activates when fastTermination is on
 	bool fastViewTermination = true;
 
-	bool isDribble = true;
+	bool isDribble = false;
+	bool isDribbleAndShoot = true;
+
+	if(isDribbleAndShoot)
+	{
+		Eigen::Vector3d targetPlaneNormal = mObstacles[0] - mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM();
+		targetPlaneNormal[1] = 0.0;
+
+		Eigen::Vector3d comTargetDirection = targetPlaneNormal.normalized();
+
+		Eigen::Vector3d curRootVelocity = mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM() - mPrevCOMs[index];
+
+		reward += 0.01*comTargetDirection.dot(curRootVelocity);
+
+		if(targetPlaneNormal.norm() < 0.5)
+		{
+			mIsTerminalState = true;
+			return 1.0;
+
+
+			if(gotReward)
+				return 0;
+
+
+			if(!mCurBallPossessions[index])
+			{
+				if(fastViewTermination)
+					mIsTerminalState = true;
+				gotReward = true;
+
+				Eigen::Vector3d relTargetPosition = mTargetBallPosition - criticalPoint_targetBallPosition;
+
+				double h = relTargetPosition[1];
+
+				double v = criticalPoint_targetBallVelocity[1];
+				reward += 0.02*v*relTargetPosition.normalized().dot(criticalPoint_targetBallVelocity.normalized());
+
+				//vt + 1/2 gt^2 = h
+				// std::cout<<"v*v+2*g*h "<<v*v+2*g*h<<std::endl;
+				if(v*v+2*g*h<0)
+				{
+					return reward;
+				}
+				double t = (-v -sqrt(v*v+2*g*h))/g;
+
+				Eigen::Vector3d ballPositionOnThePlane = criticalPoint_targetBallPosition + criticalPoint_targetBallVelocity*t;
+				ballPositionOnThePlane[1] = 0.0;
+
+				Eigen::Vector3d targetPositionOnThePlane = mTargetBallPosition;
+				targetPositionOnThePlane[1] = 0.0;
+
+				// if(!mCharacters[index]->blocked)
+					reward += exp(0.3 * -pow((targetPositionOnThePlane - ballPositionOnThePlane).norm(),2));
+				// else
+				// 	reward = 0.0 * exp(0.3 * -pow((targetPositionOnThePlane - ballPositionOnThePlane).norm(),2));
+
+				return reward;
+			}
+			else
+			{
+				return reward;
+			}
+
+		}
+		else
+		{
+			if(mCurActionTypes[index] == 3)
+			{
+				mIsTerminalState = true;
+				return -0.1;
+			}
+		}
+
+		return reward;
+
+	}
 
 	if(isDribble)
 	{
@@ -1569,15 +1644,14 @@ isTerminalState()
 
 	if(abs(rootT.translation()[2])>15.0*0.5*1.1 || 
 		rootT.translation()[0]>28.0*0.5*0.9 || 
-		rootT.translation()[0] < -4.0 ||
-		goalPostDistance < 2.5)
+		rootT.translation()[0] < -4.0)
 	{
 		mIsTerminalState = true;
 
 	}
 
-	// return mIsTerminalState;
-	return false;
+	return mIsTerminalState;
+	// return false;
 }
 
 bool
@@ -1631,7 +1705,7 @@ void
 Environment::
 slaveReset()
 {
-	resetCount = 50;
+	resetCount = 20;
 	mIsTerminalState = false;
 	mIsFoulState = false;
 	mTimeElapsed = 0;
@@ -1650,13 +1724,13 @@ slaveReset()
 	// for(int i=0;i<3;i++)
 	// 	genObstacleNearGoalpost();
 
-	genObstacleNearGoalpost(0);
-	genObstacleNearGoalpost(0.4);
-	genObstacleNearGoalpost(1.2);
-	genObstacleNearGoalpost(1.6);
-	genObstacleNearGoalpost(2.8);
-	genObstacleNearGoalpost(3.2);
+	genObstacleNearGoalpost(-1);
+	// genObstacleNearGoalpost(0);
+	// genObstacleNearGoalpost(0.4);
 	// genObstacleNearGoalpost(1.2);
+	// genObstacleNearGoalpost(1.6);
+	// genObstacleNearGoalpost(2.8);
+	// genObstacleNearGoalpost(3.2);
 
 
 	for(int i=0;i<mNumChars;i++)
@@ -2506,8 +2580,8 @@ genRewardTutorialTrajectory()
 	std::vector<int> startFrames;
 	std::vector<int> endFrames;
 
-	startFrames	= {279};
-	endFrames 	= {379};
+	startFrames	= {279, 3379};
+	endFrames 	= {379, 3479};
 	// std::cout<<"skeleton dofs : "<<mCharacters[0]->getSkeleton()->getNumDofs()<<std::endl;
 
 	for(int i=0;i<startFrames.size();i++)
@@ -2587,9 +2661,6 @@ genRewardTutorialTrajectory()
 			dartPosition.segment(3,3) = orientation.translation();
 
 			tutorialTrajectory.push_back(dartPosition);
-			// if(j==endFrame-startFrame)
-			// 	std::cout<<"dartPosition2 : "<<dartPosition.segment(0,6).transpose()<<std::endl;
-
 		}
 
 		mTutorialTrajectories.push_back(tutorialTrajectory);
@@ -3035,6 +3106,7 @@ Environment::genObstacleNearGoalpost(double angle)
 
 
 	// std::cout<<angle<<std::endl;
+	distance = (double) rand()/RAND_MAX * 4.0 + 2.0;
 
 	Eigen::Vector3d obstaclePosition = mTargetBallPosition;
 	obstaclePosition += distance * Eigen::Vector3d(cos(M_PI/2.0 + angle), 0.0, sin(M_PI/2.0 + angle));
