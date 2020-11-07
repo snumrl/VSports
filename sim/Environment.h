@@ -215,7 +215,7 @@ public:
 	bool isCriticalAction(int actionType);
 
 	void slaveReset();
-	void slaveResetCharacterPositions();
+	void slaveResetCharacterPositions(bool randomPointTrajectoryStart = false);
 	void slaveResetTargetBallPosition();
 
 	Eigen::VectorXd slaveResetTargetVector;

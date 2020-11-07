@@ -1768,7 +1768,7 @@ slaveResetTargetBallPosition()
 
 void
 Environment::
-slaveResetCharacterPositions()
+slaveResetCharacterPositions(bool randomPointTrajectoryStart)
 {
 	bool useHalfCourt = true;
 	double xRange = 28.0*0.5 -1.5;
@@ -1785,9 +1785,16 @@ slaveResetCharacterPositions()
 
 	setPositionFromBVH(0, rand()%60+100);
 	Eigen::VectorXd standPosition = mCharacters[0]->getSkeleton()->getPositions();
-
-
 	standPosition[4] = 0.895;
+
+	if(randomPointTrajectoryStart)
+	{
+		int trajectoryLength = mTutorialTrajectories[0].size();
+		int randomPoint = rand()%trajectoryLength;
+
+		standPosition = mTutorialTrajectories[0][randomPoint];
+	}
+
 
 	if(useHalfCourt)
 	{
@@ -1804,42 +1811,44 @@ slaveResetCharacterPositions()
 		standPosition[5] = (double) rand()/RAND_MAX * zRange*2.0 - zRange;
 	}
 
-	Eigen::Vector3d curRootOrientation = standPosition.segment(0,3);
 
-	double angle = curRootOrientation.norm();
-	Eigen::Vector3d axis = curRootOrientation.normalized();
-
-	Eigen::Vector3d curDirection = Eigen::AngleAxisd(angle, axis) * Eigen::Vector3d::UnitY();
-	curDirection[1] = 0.0;
-
-	curDirection.normalize();
-
-	Eigen::AngleAxisd aa(angle, axis);
-	Eigen::Vector3d goalDirection = Eigen::Vector3d(14.0 -1.5 + 0.05, 3.1+0.2, 0.0)- standPosition.segment(3,3);
-	goalDirection[1] = 0.0;
-	goalDirection.normalize();
-	// std::cout<<curDirection.transpose()<<std::endl;
-	// std::cout<<goalDirection.transpose()<<std::endl;
-
-	if(curDirection.dot(goalDirection) <0.0)
+	if(!randomPointTrajectoryStart)
 	{
-		// std::cout<<"Reverse"<<std::endl;
-		aa = Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitY())*aa;
+		Eigen::Vector3d curRootOrientation = standPosition.segment(0,3);
+
+		double angle = curRootOrientation.norm();
+		Eigen::Vector3d axis = curRootOrientation.normalized();
+
+		Eigen::Vector3d curDirection = Eigen::AngleAxisd(angle, axis) * Eigen::Vector3d::UnitY();
+		curDirection[1] = 0.0;
+
+		curDirection.normalize();
+
+		Eigen::AngleAxisd aa(angle, axis);
+		Eigen::Vector3d goalDirection = Eigen::Vector3d(14.0 -1.5 + 0.05, 3.1+0.2, 0.0)- standPosition.segment(3,3);
+		goalDirection[1] = 0.0;
+		goalDirection.normalize();
+		// std::cout<<curDirection.transpose()<<std::endl;
+		// std::cout<<goalDirection.transpose()<<std::endl;
+
+		if(curDirection.dot(goalDirection) <0.0)
+		{
+			// std::cout<<"Reverse"<<std::endl;
+			aa = Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitY())*aa;
+		}
+
+		double randomDirection = rand()/(double)RAND_MAX * 2.0 * M_PI;
+
+		bool directionToGoal = true;
+		if(directionToGoal)
+		{
+			aa = Eigen::AngleAxisd(atan2(goalDirection[0], goalDirection[2])+M_PI/2.0 + randomDirection, Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(M_PI/2.0, Eigen::Vector3d::UnitZ());
+		}
+
+		Eigen::Vector3d newRootOrientation = aa.angle() * aa.axis();
+		// newRootOrientation.setZero();
+		standPosition.segment(0,3) = newRootOrientation;
 	}
-
-	double randomDirection = rand()/(double)RAND_MAX * 2.0 * M_PI;
-
-	bool directionToGoal = true;
-	if(directionToGoal)
-	{
-		aa = Eigen::AngleAxisd(atan2(goalDirection[0], goalDirection[2])+M_PI/2.0 + randomDirection, Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(M_PI/2.0, Eigen::Vector3d::UnitZ());
-	}
-
-	Eigen::Vector3d newRootOrientation = aa.angle() * aa.axis();
-	// newRootOrientation.setZero();
-
-	standPosition.segment(0,3) = newRootOrientation;
-
 
 
 

@@ -816,7 +816,7 @@ display()
 
 	glPopMatrix();
 
-	GUI::drawSphere(0.3, mEnv->mTargetBallPosition, Eigen::Vector3d(0.0, 0.0, 1.0));
+	// GUI::drawSphere(0.3, mEnv->mTargetBallPosition, Eigen::Vector3d(0.0, 0.0, 1.0));
 
 	glPushMatrix();
 	glTranslated(mEnv->mTargetBallPosition[0], 0, mEnv->mTargetBallPosition[2]);
@@ -835,8 +835,12 @@ display()
 	for(int i=0;i<mEnv->mObstacles.size();i++)
 	{
 		glPushMatrix();
-		glTranslated(mEnv->mObstacles[i][0], 2.0, mEnv->mObstacles[i][2]);
-		GUI::drawCylinder(0.5, 2.0, Eigen::Vector3d(0.3, 0.3, 0.3));
+		glTranslated(mEnv->mObstacles[i][0], 0.0, mEnv->mObstacles[i][2]);
+		// GUI::drawCylinder(0.5, 2.0, Eigen::Vector3d(0.3, 0.3, 0.3));
+		// GUI::drawCylinder(0.5, 2.0, Eigen::Vector3d(0.3, 0.3, 0.3));
+		glColor3f(0.0,0.0,1.0);
+		GUI::draw2dCircle(Eigen::Vector3d(0.0, 0.02, 0.0), Eigen::Vector3d::UnitX(), Eigen::Vector3d::UnitZ(),0.5, true);
+
 		glPopMatrix();
 	}
 
@@ -1203,6 +1207,8 @@ getActionFromNN(int index)
 	// std::cout<<"mActionType : "<<mActionType.transpose()<<std::endl;
 	std::cout<<"mEnv->curFrame : "<<mEnv->curFrame<<std::endl;
 	std::cout<<"mEnv->resetCount : "<<mEnv->resetCount<<std::endl;
+	std::cout<<"mActionType.transpose() : "<<mActionType.transpose()<<std::endl;
+
 	if(mEnv->curFrame%10 == 0)
 		mActionType = toOneHotVectorWithConstraint(index, mActionType);
 	else
