@@ -220,6 +220,9 @@ public:
 
 	Eigen::VectorXd slaveResetTargetVector;
 	std::vector<double> slaveResetStateVector;
+
+	Eigen::Vector3d slaveResetBallPosition;
+
 	Eigen::VectorXd slaveResetPositionVector;
 	int resetCount;
 
@@ -423,6 +426,8 @@ public:
 	Eigen::Isometry2d getCorrectShootingLocationFromControl(Motion::Pose* criticalPose, std::vector<double> control, double random);
 
 	std::vector<std::vector<Eigen::VectorXd>> mTutorialTrajectories;
+	std::vector<std::vector<Eigen::VectorXd>> mTutorialControlVectors;
+	std::vector<std::vector<Eigen::Vector3d>> mTutorialBallPositions;
 
 };
 double getFacingAngleFromLocalState(Eigen::VectorXd curState);

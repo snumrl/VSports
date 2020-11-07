@@ -86,6 +86,10 @@ Environment::initialize(ICA::dart::MotionGeneratorBatch* mgb, int batchIndex)
 	this->criticalPoint_targetBallVelocity = Eigen::Vector3d(0.0, 0.0, 0.0);
 	criticalPointFrame = 0;
 	curFrame = 0;
+
+
+	this->resetTargetBallPosition();
+	// this->genRewardTutorialTrajectory();
 	this->slaveReset();
 
 	// mPrevEnvSituations.resize(mNumChars);
@@ -1101,12 +1105,13 @@ getReward(int index, bool verbose)
 
 		Eigen::Vector3d curRootVelocity = mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM() - mPrevCOMs[index];
 
-		reward += 0.01*comTargetDirection.dot(curRootVelocity);
+		reward += 0.02*comTargetDirection.dot(curRootVelocity);
 
 		if(targetPlaneNormal.norm() < 0.5)
 		{
-			mIsTerminalState = true;
-			return 1.0;
+			// mIsTerminalState = true;
+			// return 1.0;
+			reward += 0.1;
 
 
 			if(gotReward)
@@ -1158,7 +1163,9 @@ getReward(int index, bool verbose)
 			if(mCurActionTypes[index] == 3)
 			{
 				mIsTerminalState = true;
-				return -0.1;
+
+				return -min(0.05*(targetPlaneNormal.norm()), 0.2);
+				// return -0.1;
 			}
 		}
 
@@ -1705,7 +1712,7 @@ void
 Environment::
 slaveReset()
 {
-	resetCount = 20;
+	resetCount = 50;
 	mIsTerminalState = false;
 	mIsFoulState = false;
 	mTimeElapsed = 0;
@@ -1715,7 +1722,7 @@ slaveReset()
 	mMgb->clear(mBatchIndex);
 
 	// std::cout<<"0000000000"<<std::endl;
-	slaveResetCharacterPositions();
+	slaveResetCharacterPositions(false);
 	// std::cout<<"1111111111"<<std::endl;
 	slaveResetTargetBallPosition();
 	// std::cout<<"2222222222"<<std::endl;
@@ -1793,27 +1800,28 @@ slaveResetCharacterPositions(bool randomPointTrajectoryStart)
 		int randomPoint = rand()%trajectoryLength;
 
 		standPosition = mTutorialTrajectories[0][randomPoint];
-	}
-
-
-	if(useHalfCourt)
-	{
-		double r = (double) rand()/RAND_MAX * zRange * 0.6 + zRange*0.4;
-		double theta = (double) rand()/RAND_MAX * M_PI;
-
-
-		standPosition[3] = xRange - r * sin(theta);
-		standPosition[5] = 0 + r * cos(theta);
+		
+		slaveResetTargetVector = mTutorialControlVectors[0][randomPoint];
+		std::cout<<"mTutorialBallPositions[0].size() : "<<mTutorialBallPositions[0].size()<<std::endl;
+		std::cout<<"mTutorialBallPositions[0][randomPoint] : "<<mTutorialBallPositions[0][randomPoint].transpose()<<std::endl;
+		slaveResetBallPosition = mTutorialBallPositions[0][randomPoint];	
 	}
 	else
 	{
-		standPosition[3] = (double) rand()/RAND_MAX * xRange*2.0 - xRange;
-		standPosition[5] = (double) rand()/RAND_MAX * zRange*2.0 - zRange;
-	}
+		if(useHalfCourt)
+		{
+			double r = (double) rand()/RAND_MAX * zRange * 0.6 + zRange*0.4;
+			double theta = (double) rand()/RAND_MAX * M_PI;
 
 
-	if(!randomPointTrajectoryStart)
-	{
+			standPosition[3] = xRange - r * sin(theta);
+			standPosition[5] = 0 + r * cos(theta);
+		}
+		else
+		{
+			standPosition[3] = (double) rand()/RAND_MAX * xRange*2.0 - xRange;
+			standPosition[5] = (double) rand()/RAND_MAX * zRange*2.0 - zRange;
+		}
 		Eigen::Vector3d curRootOrientation = standPosition.segment(0,3);
 
 		double angle = curRootOrientation.norm();
@@ -1848,22 +1856,34 @@ slaveResetCharacterPositions(bool randomPointTrajectoryStart)
 		Eigen::Vector3d newRootOrientation = aa.angle() * aa.axis();
 		// newRootOrientation.setZero();
 		standPosition.segment(0,3) = newRootOrientation;
+
+
+		if((double) rand()/RAND_MAX > 0.5)
+			dribbleDefaultVec[3] *= -1;
+
+		
+		slaveResetTargetVector = dribbleDefaultVec;
+		slaveResetBallPosition.setZero();
 	}
 
+	curBallPosition = slaveResetBallPosition;
 
 
 	criticalPoint_targetBallPosition = curBallPosition;
 	criticalPoint_targetBallVelocity.setZero();
 
 
-	if((double) rand()/RAND_MAX > 0.5)
-		dribbleDefaultVec[3] *= -1;
-
-	slaveResetTargetVector = dribbleDefaultVec;
 
 	mMgb->clear(mBatchIndex);
 	// std::cout<<"standPosition.transpose() "<<standPosition.transpose()<<std::endl;
-	slaveResetStateVector = mMgb->dartPositionToCombinedPosition(standPosition, mBatchIndex);
+
+	if(randomPointTrajectoryStart)
+		slaveResetStateVector = mMgb->dartPositionToCombinedPosition(standPosition, slaveResetBallPosition, mBatchIndex);
+	else
+		slaveResetStateVector = mMgb->dartPositionToCombinedPosition(standPosition, mBatchIndex);
+
+	// slaveResetStateVector = mMgb->dartPositionToCombinedPosition(standPosition, mBatchIndex);
+
 	slaveResetPositionVector = standPosition;
 
 
@@ -1877,7 +1897,7 @@ slaveResetCharacterPositions(bool randomPointTrajectoryStart)
 	// zeroAction.setZero();
 	// zeroAction[4+4] = 1;
 	// auto nextPoseAndContacts = mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(dribbleDefaultVec));
-	curBallPosition.setZero();
+	// curBallPosition.setZero();
 
     mCharacters[0]->getSkeleton()->setPositions(standPosition);
 	for(int i=0;i<3;i++)
@@ -2522,8 +2542,9 @@ getCorrectShootingLocationFromControl(Motion::Pose* criticalPose, std::vector<do
 	rotT.setIdentity();
 	rotT.linear() = rotM;
 
-	// std::cout<<"relThrowedBallPosition.transpose() : "<<relThrowedBallPosition.transpose()<<std::endl;
-	// std::cout<<"projectedGoalpostPosition.transpose() : "<<projectedGoalpostPosition.transpose()<<std::endl;
+	std::cout<<"relThrowedBallPosition.transpose() : "<<relThrowedBallPosition.transpose()<<std::endl;
+	std::cout<<"goalPostToThrowedPosition.transpose() : "<<goalPostToThrowedPosition.transpose()<<std::endl;
+	std::cout<<"projectedGoalpostPosition.transpose() : "<<projectedGoalpostPosition.transpose()<<std::endl;
 	// std::cout<<""
 
 	// identityT.translation() = projectedGoalpostPosition +goalPostToThrowedPosition;
@@ -2545,6 +2566,9 @@ getCorrectShootingLocationFromControl(Motion::Pose* criticalPose, std::vector<do
 	// identityT.translation() = projectedGoalpostPosition + rotT * goalPostToThrowedPosition;
 	// identityT.linear() = rotT.linear();
 
+	identityT.translation() = projectedGoalpostPosition + goalPostToThrowedPosition;
+	identityT.linear() = rootT.linear();
+
 
 
 	// std::cout<<"identityT.translation().norm() : "<<identityT.translation().norm()<<std::endl;
@@ -2552,7 +2576,7 @@ getCorrectShootingLocationFromControl(Motion::Pose* criticalPose, std::vector<do
 	// std::cout<<"rootT.linear() * Eigen::Vector2d(1.0,0.0) : "<<rootT.linear() * Eigen::Vector2d(1.0,0.0)<<std::endl;
 
 	// std::cout<<"rootT.translation() : "<<rootT.translation().transpose()<<std::endl;
-	// std::cout<<"identityT.translation() : "<<identityT.translation().transpose()<<std::endl;
+	std::cout<<"identityT.translation() : "<<identityT.translation().transpose()<<std::endl;
 
 
 
@@ -2570,6 +2594,9 @@ void
 Environment::
 genRewardTutorialTrajectory()
 {
+	//targetShootingAngle E [0.0, 1.0]
+	double targetShootingAngle = 0.5;
+
 	std::string sub_dir = "data";
 	std::string xDataPath=  PathManager::getFilePath_data(this->nnPath, sub_dir, "xData.dat", 0 );
 	std::string xNormalPath=  PathManager::getFilePath_data(this->nnPath, sub_dir, "xNormal.dat");
@@ -2600,6 +2627,8 @@ genRewardTutorialTrajectory()
 		// Eigen::Isometry2d displacementT = getLocationDisplacement(ms, startFrame, endFrame);
 		Eigen::Isometry2d correctLocationT = getCorrectShootingLocationFromControl(ms->mPoses[endFrame], xData[0][endFrame], 0.5);
 		std::vector<Eigen::VectorXd> tutorialTrajectory;
+		std::vector<Eigen::VectorXd> tutorialControlVector;
+		std::vector<Eigen::Vector3d> tutorialBallPosition;
 
 		for(int j=0;j<endFrame-startFrame+1;j++)
 		{
@@ -2610,6 +2639,9 @@ genRewardTutorialTrajectory()
 			Eigen::Isometry3d rootT = Basic::to3d_i(ms->mPoses[startFrame+j]->getRootT());
 			Eigen::Isometry3d endRootT = Basic::to3d_i(ms->mPoses[endFrame]->getRootT());
 			rootT.translation() /= 100.0;
+			endRootT.translation() /= 100.0;
+
+			Eigen::Isometry3d movedRootT = rootT;
 
 			Eigen::VectorXd dartPosition = mMgb->ICAPoseToDartPosition(ms->mPoses[startFrame+j]);
 			// if(j==endFrame-startFrame)
@@ -2634,6 +2666,7 @@ genRewardTutorialTrajectory()
 
 			orientation.translation() += endRootT.linear()*correctDisplacementT.translation();
 
+			movedRootT.translation() += endRootT.linear()*correctDisplacementT.translation();
 
 
 			Eigen::Vector3d projectedGoalpostPosition;
@@ -2645,12 +2678,33 @@ genRewardTutorialTrajectory()
 			//angle E [M_PI*1.0/2.0, M_PI*3.0/2.0]
 			// M_PI*1.0/2.0 -> WEST
 			// M_PI*3.0/2.0 -> EAST
-			double angle = M_PI*(0.5 + 0.3);
+
+			Eigen::Vector3d originalShootingLocation = endRootT*correctDisplacementT.translation();
+			Eigen::Vector2d curDirection(originalShootingLocation[2] - mTargetBallPosition[2],
+										originalShootingLocation[0] - mTargetBallPosition[0]);
+
+
+			curDirection.normalize();
+			// std::cout<<"originalShootingLocation.translation() : "<<originalShootingLocation.transpose()<<std::endl;
+			// std::cout<<"mTargetBallPosition.translation() : "<<mTargetBallPosition.transpose()<<std::endl;
+			// std::cout<<"curDirection "<<curDirection.transpose()<<std::endl;
+			double curAngle = atan2(curDirection[1], curDirection[0]);
+			// std::cout<<"curAngle : "<<curAngle<<std::endl;
+
+			double angle = M_PI- curAngle + M_PI*(targetShootingAngle);
+
 			orientation.translation() -= projectedGoalpostPosition;
 			orientation = Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitY())*orientation;
 			orientation.translation() += projectedGoalpostPosition;
 
+			movedRootT.translation() -= projectedGoalpostPosition;
+			movedRootT = Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitY())*movedRootT;
+			movedRootT.translation() += projectedGoalpostPosition;
+
 			
+
+			// std::cout<<"movedRootT.translation() : "<<movedRootT.translation().transpose()<<std::endl;
+			// std::cout<<"orientation.translation() : "<<orientation.translation().transpose()<<std::endl;
 
 			// orientation.linear() =
 
@@ -2670,9 +2724,15 @@ genRewardTutorialTrajectory()
 			dartPosition.segment(3,3) = orientation.translation();
 
 			tutorialTrajectory.push_back(dartPosition);
+			tutorialControlVector.push_back(Utils::toEigenVec((xData[0][startFrame+j])));
+
+
+			tutorialBallPosition.push_back(movedRootT*(ms->mPoses[startFrame+j]->ballPosition/100.0));
 		}
 
 		mTutorialTrajectories.push_back(tutorialTrajectory);
+		mTutorialControlVectors.push_back(tutorialControlVector);
+		mTutorialBallPositions.push_back(tutorialBallPosition);
 	}
 
 }

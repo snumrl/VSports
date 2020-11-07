@@ -132,7 +132,6 @@ SingleControlWindow(const char* nn_path,
 	mMotionGeneratorBatch = new ICA::dart::MotionGeneratorBatch(nn_path, mEnv->initDartNameIdMapping(), 1);
 
 	mEnv->initialize(mMotionGeneratorBatch, 0);
-	// mEnv->genRewardTutorialTrajectory();
 
 
 
@@ -598,10 +597,12 @@ step()
 
 	for(int id=0;id<1;++id)
 	{
-		if(mEnv->resetCount>30)
+		if(mEnv->resetCount>0)
 		{
 			// std::cout<<"slave reset state vector"<<std::endl;
-			mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, mEnv->slaveResetPositionVector);
+			mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, mEnv->slaveResetPositionVector, mEnv->slaveResetBallPosition);
+			// mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, mEnv->slaveResetPositionVector);
+			// mEnv->getCharacter(0)->getSkeleton()->setPositions(mEnv->slaveResetPositionVector);
 		}
 	}
 	// std::cout<<"1111"<<std::endl;
@@ -614,6 +615,8 @@ step()
 		else
 			concatControlVector.push_back(eigenToStdVec(mEnv->slaveResetTargetVector));
 	}
+
+	std::cout<<"mEnv->slaveResetTargetVector : "<<mEnv->slaveResetTargetVector.transpose()<<std::endl;
 	// std::cout<<"2222"<<std::endl;
 
 	// time_check_start();
@@ -639,10 +642,6 @@ step()
 	// std::cout<<"mFrame : "<<mFrame<<std::endl;
 	// std::cout<<"mEnv->mTutorialTrajectories[0].size (): "<<mEnv->mTutorialTrajectories[1].size()<<std::endl;
 	// mEnv->getCharacter(0)->getSkeleton()->setPositions(mEnv->mTutorialTrajectories[1][mFrame]);
-
-
-
-
 
 
 
