@@ -144,7 +144,7 @@ public:
 	void initFloor();
 	void initBall();
 
-	void initialize(ICA::dart::MotionGeneratorBatch* mgb, int batchIndex = 0);
+	void initialize(ICA::dart::MotionGeneratorBatch* mgb, int batchIndex = 0, bool initTutorialTrajectory = true);
 	void step();
 
 	void stepAtOnce();
@@ -224,6 +224,13 @@ public:
 	Eigen::Vector3d slaveResetBallPosition;
 
 	Eigen::VectorXd slaveResetPositionVector;
+
+
+
+	std::vector<Eigen::VectorXd> slaveResetTargetTrajectory;
+	std::vector<Eigen::VectorXd> slaveResetPositionTrajectory;
+	std::vector<Eigen::VectorXd> slaveResetBallPositionTrajectory;
+
 	int resetCount;
 
 	ICA::dart::MotionGeneratorBatch* mMgb;
@@ -428,6 +435,8 @@ public:
 	std::vector<std::vector<Eigen::VectorXd>> mTutorialTrajectories;
 	std::vector<std::vector<Eigen::VectorXd>> mTutorialControlVectors;
 	std::vector<std::vector<Eigen::Vector3d>> mTutorialBallPositions;
+
+	void copyTutorialTrajectory(Environment* env);
 
 };
 double getFacingAngleFromLocalState(Eigen::VectorXd curState);

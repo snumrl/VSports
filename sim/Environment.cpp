@@ -73,7 +73,7 @@ criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), viola
 }
 
 void 
-Environment::initialize(ICA::dart::MotionGeneratorBatch* mgb, int batchIndex)
+Environment::initialize(ICA::dart::MotionGeneratorBatch* mgb, int batchIndex, bool initTutorialTrajectory)
 {
 	mMgb = mgb;
 	mBatchIndex = batchIndex;
@@ -89,7 +89,10 @@ Environment::initialize(ICA::dart::MotionGeneratorBatch* mgb, int batchIndex)
 
 
 	this->resetTargetBallPosition();
-	// this->genRewardTutorialTrajectory();
+	if(initTutorialTrajectory)
+		this->genRewardTutorialTrajectory();
+	// else
+
 	this->slaveReset();
 
 	// mPrevEnvSituations.resize(mNumChars);
@@ -113,6 +116,15 @@ Environment::initialize(ICA::dart::MotionGeneratorBatch* mgb, int batchIndex)
 	actionNameMap[5] = "run";
 	actionNameMap[6] = "pivot_l";
 	actionNameMap[7] = "pivot_r";
+}
+
+void
+Environment::
+copyTutorialTrajectory(Environment* env)
+{
+	this->mTutorialTrajectories = env->mTutorialTrajectories;
+	this->mTutorialBallPositions = env->mTutorialBallPositions;
+	this->mTutorialControlVectors = env->mTutorialControlVectors;
 }
 
 void
@@ -235,6 +247,8 @@ initCharacters(std::string bvhPath)
 
 	// in the case of single player
 	mCharacters[0]->mSkeleton = bvhSkel;
+
+	mCharacters[0]->prevSkelPositions.resize(mCharacters[0]->mSkeleton->getNumDofs());
 
 
 	BVHmanager::setPositionFromBVH(bvhSkel, mBvhParser, 100);
@@ -517,6 +531,8 @@ void
 Environment::
 stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContacts)
 {
+	mCharacters[0]->prevSkelPositions = mCharacters[0]->getSkeleton()->getPositions();
+	mCharacters[0]->prevKeyJointPositions = mStates[0].segment(mCharacters[0]->getSkeleton()->getNumDofs(),6*3);
 	for(int index=0;index<mCharacters.size();index++)
 	{
 		// time_check_start();
@@ -743,6 +759,7 @@ stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContact
 	}
 
 
+
 	int sim_per_control = this->getSimulationHz()/this->getControlHz();
 	for(int i=0;i<sim_per_control;i++)
 	{
@@ -817,6 +834,24 @@ getState(int index)
 		skelPosition.segment(skel->getNumDofs()+3*i, 3) = rootT.inverse() * 
 			skel->getBodyNode(EEJoints[i])->getWorldTransform().translation();
 	}
+
+	Eigen::VectorXd skelVelocity(skel->getNumDofs() + 3*EEJoints.size());
+
+	// std::cout<<"###000000"<<std::endl;
+	skelVelocity.segment(0, skel->getNumDofs()) = 
+	skel->getPositionDifferences(skel->getPositions(), mCharacters[index]->prevSkelPositions);
+	// std::cout<<"###111111"<<std::endl;
+
+	if(resetCount<=0)
+	{
+		skelVelocity.segment(skel->getNumDofs(),3*EEJoints.size()) 
+		= skelPosition.segment(skel->getNumDofs(),3*EEJoints.size()) - mCharacters[index]->prevKeyJointPositions;
+	}
+	else
+	{
+		skelVelocity.segment(skel->getNumDofs(),3*EEJoints.size()).setZero();
+	}
+	// std::cout<<"###222222"<<std::endl;
 
 
 	Eigen::Vector3d relCurBallPosition = rootT.inverse()*curBallPosition;
@@ -925,27 +960,59 @@ getState(int index)
 	}
 
 
+	// mCharacters[index]->blocked = false;
+	// for(int i=0;i<relObstacles.size();i++)
+	// {
+	// 	Eigen::Vector3d projectedGoalpostPositions = goalpostPositions.segment(0,3);
+	// 	projectedGoalpostPositions[1] = 0.0;
+	// 	Eigen::Vector3d temp = projectedGoalpostPositions.normalized() * relObstacles[i].dot(projectedGoalpostPositions.normalized());
+	// 	// std::cout<<"temp.norm() : "<<temp.norm()<<std::endl;
+	// 	// std::cout<<"projectedGoalpostPositions.norm() : "<<projectedGoalpostPositions.norm()<<std::endl;
+	// 	if(temp.norm() > projectedGoalpostPositions.norm())
+	// 		continue;
+	// 	temp[1] = relObstacles[i][1];
+	// 	// std::cout<<"Temp : "<<temp.transpose()<<std::endl;
+	// 	// std::cout<<"relObstacles : "<<relObstacles[i].transpose()<<std::endl;
+	// 	double distance = (relObstacles[i] - temp).norm();
+	// 	// std::cout<<distance<<std::endl;
+	// 	if(distance < 0.5)
+	// 	{
+	// 		mCharacters[index]->blocked = true;
+	// 		break;
+	// 	}
+	// }
+
+
 	mCharacters[index]->blocked = false;
-	for(int i=0;i<relObstacles.size();i++)
-	{
-		Eigen::Vector3d projectedGoalpostPositions = goalpostPositions.segment(0,3);
-		projectedGoalpostPositions[1] = 0.0;
-		Eigen::Vector3d temp = projectedGoalpostPositions.normalized() * relObstacles[i].dot(projectedGoalpostPositions.normalized());
-		// std::cout<<"temp.norm() : "<<temp.norm()<<std::endl;
-		// std::cout<<"projectedGoalpostPositions.norm() : "<<projectedGoalpostPositions.norm()<<std::endl;
-		if(temp.norm() > projectedGoalpostPositions.norm())
-			continue;
-		temp[1] = relObstacles[i][1];
-		// std::cout<<"Temp : "<<temp.transpose()<<std::endl;
-		// std::cout<<"relObstacles : "<<relObstacles[i].transpose()<<std::endl;
-		double distance = (relObstacles[i] - temp).norm();
-		// std::cout<<distance<<std::endl;
-		if(distance < 0.5)
-		{
-			mCharacters[index]->blocked = true;
-			break;
-		}
-	}
+	Eigen::Vector3d targetPlaneNormal = mObstacles[0] - mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM();
+	targetPlaneNormal[1] = 0.0;
+
+	mCharacters[index]->blocked = targetPlaneNormal.norm()<0.75;
+
+
+	// for(int i=0;i<relObstacles.size();i++)
+	// {
+
+
+	// 	Eigen::Vector3d projectedGoalpostPositions = goalpostPositions.segment(0,3);
+	// 	projectedGoalpostPositions[1] = 0.0;
+	// 	Eigen::Vector3d temp = projectedGoalpostPositions.normalized() * relObstacles[i].dot(projectedGoalpostPositions.normalized());
+	// 	// std::cout<<"temp.norm() : "<<temp.norm()<<std::endl;
+	// 	// std::cout<<"projectedGoalpostPositions.norm() : "<<projectedGoalpostPositions.norm()<<std::endl;
+	// 	if(temp.norm() > projectedGoalpostPositions.norm())
+	// 		continue;
+	// 	temp[1] = relObstacles[i][1];
+	// 	// std::cout<<"Temp : "<<temp.transpose()<<std::endl;
+	// 	// std::cout<<"relObstacles : "<<relObstacles[i].transpose()<<std::endl;
+	// 	double distance = (relObstacles[i] - temp).norm();
+	// 	// std::cout<<distance<<std::endl;
+	// 	if(distance < 0.5)
+	// 	{
+	// 		mCharacters[index]->blocked = true;
+	// 		break;
+	// 	}
+	// }
+
 
 
 
@@ -961,7 +1028,7 @@ getState(int index)
 	// std::cout<<"goalpostPositions.transpose(): "<<goalpostPositions.transpose()<<std::endl;
 	// std::cout<<"contacts.transpose(): "<<contacts.transpose()<<std::endl;
 
-	state.resize(skelPosition.rows() + relCurBallPosition.rows() + relTargetPosition.rows() + relBallToTargetPosition.rows() + goalpostPositions.rows() 
+	state.resize(skelPosition.rows() + skelVelocity.rows() + relCurBallPosition.rows() + relTargetPosition.rows() + relBallToTargetPosition.rows() + goalpostPositions.rows() 
 		+ contacts.rows() + 1 + 1 + 3 +curActionType.rows()+curSMState.rows() + relObstacles.size()*3 + 1 +availableActions.rows());
 	 //+ ballVelocity.rows()+2+curActionType.rows());
 	
@@ -969,6 +1036,11 @@ getState(int index)
 	for(int i=0;i<skelPosition.rows();i++)
 	{
 		state[curIndex] = skelPosition[i];
+		curIndex++;
+	}
+	for(int i=0;i<skelVelocity.rows();i++)
+	{
+		state[curIndex] = skelVelocity[i];
 		curIndex++;
 	}
 	for(int i=0;i<relCurBallPosition.rows();i++)
@@ -1107,19 +1179,22 @@ getReward(int index, bool verbose)
 
 		reward += 0.02*comTargetDirection.dot(curRootVelocity);
 
-		if(targetPlaneNormal.norm() < 0.5)
+		if(targetPlaneNormal.norm() < 0.75)
 		{
 			// mIsTerminalState = true;
 			// return 1.0;
-			reward += 0.1;
 
 
 			if(gotReward)
 				return 0;
 
+			// if(mPrevActionTypes[index] == 0 && mCurActionTypes[index]==3)
+			// 	reward += 0.1;
+
 
 			if(!mCurBallPossessions[index])
 			{
+				reward += 0.1;
 				if(fastViewTermination)
 					mIsTerminalState = true;
 				gotReward = true;
@@ -1164,7 +1239,7 @@ getReward(int index, bool verbose)
 			{
 				mIsTerminalState = true;
 
-				return -min(0.05*(targetPlaneNormal.norm()), 0.2);
+				return 0.1*exp(-(targetPlaneNormal.norm()));
 				// return -0.1;
 			}
 		}
@@ -1564,17 +1639,21 @@ Environment::
 setActionType(int index, int actionType)
 {
 	// if(actionType == 1)
-	// 	std::cout<<"Action Type : "<<actionType<<std::endl;
+		// std::cout<<"Action Type : "<<actionType<<std::endl;
 	actionType *= 3;
 
 	int curActionType = actionType;
 
 	mCharacters[index]->inputActionType = actionType;
-	if(resetCount>0)
-		curActionType = 0;
-	else if(actionType != 3)
-		curActionType = 0;
+	// if(resetCount>0)
+	// 	curActionType = 0;
+	if(actionType != 3)
+	 	curActionType = 0;
+
+
+
 	// curActionType = 0;
+	 // std::cout<<"############# "<<curActionType<<std::endl;
 
 	// if(resetCount<0)
 	// {
@@ -1598,6 +1677,7 @@ setActionType(int index, int actionType)
 	    	else
 	    		curActionType = bsm[index]->transition(curActionType);    	
 	    }
+	 	// std::cout<<"1111############# "<<curActionType<<std::endl;
     }
 	else
     {
@@ -1610,10 +1690,13 @@ setActionType(int index, int actionType)
     	}
     	else
     		curActionType = bsm[index]->transition(curActionType);
+		// std::cout<<"2222############# "<<curActionType<<std::endl;
     }
     // std::cout<<"Set Action actiontype : "<<curActionType<<std::endl;
     // bsm[index]->transition(curActionType);
     mCurActionTypes[index] = curActionType;
+
+    // std::cout<<__func__<<" mCurActionTypes[index] :"<<mCurActionTypes[index]<<std::endl;
 
     return curActionType/3;
 }
@@ -1712,7 +1795,7 @@ void
 Environment::
 slaveReset()
 {
-	resetCount = 50;
+	resetCount = 60;
 	mIsTerminalState = false;
 	mIsFoulState = false;
 	mTimeElapsed = 0;
@@ -1722,7 +1805,7 @@ slaveReset()
 	mMgb->clear(mBatchIndex);
 
 	// std::cout<<"0000000000"<<std::endl;
-	slaveResetCharacterPositions(false);
+	slaveResetCharacterPositions(true);
 	// std::cout<<"1111111111"<<std::endl;
 	slaveResetTargetBallPosition();
 	// std::cout<<"2222222222"<<std::endl;
@@ -1781,6 +1864,8 @@ slaveResetCharacterPositions(bool randomPointTrajectoryStart)
 	double xRange = 28.0*0.5 -1.5;
 	double zRange = 15.0*0.5*0.8;
 
+	int resetDuration = 50;
+
 	for(int i=0;i<mNumChars;i++)
 	{
 		mCharacters[i]->curLeftFingerPosition = 0.0;
@@ -1797,14 +1882,24 @@ slaveResetCharacterPositions(bool randomPointTrajectoryStart)
 	if(randomPointTrajectoryStart)
 	{
 		int trajectoryLength = mTutorialTrajectories[0].size();
-		int randomPoint = rand()%trajectoryLength;
+		int randomPoint = rand()%(trajectoryLength-resetDuration)+resetDuration;
 
-		standPosition = mTutorialTrajectories[0][randomPoint];
+		standPosition = mTutorialTrajectories[0][randomPoint-resetDuration];
 		
-		slaveResetTargetVector = mTutorialControlVectors[0][randomPoint];
-		std::cout<<"mTutorialBallPositions[0].size() : "<<mTutorialBallPositions[0].size()<<std::endl;
-		std::cout<<"mTutorialBallPositions[0][randomPoint] : "<<mTutorialBallPositions[0][randomPoint].transpose()<<std::endl;
-		slaveResetBallPosition = mTutorialBallPositions[0][randomPoint];	
+		slaveResetTargetVector = mTutorialControlVectors[0][randomPoint-resetDuration];
+		slaveResetTargetTrajectory.clear();
+		slaveResetPositionTrajectory.clear();
+		slaveResetBallPositionTrajectory.clear();
+		for(int i=0;i<resetDuration;i++)
+		{
+			slaveResetTargetTrajectory.push_back(mTutorialControlVectors[0][randomPoint-resetDuration+i]);
+			slaveResetPositionTrajectory.push_back(mTutorialTrajectories[0][randomPoint-resetDuration+i]);
+			slaveResetBallPositionTrajectory.push_back(mTutorialBallPositions[0][randomPoint-resetDuration+i]);	
+		}
+
+		// std::cout<<"mTutorialBallPositions[0].size() : "<<mTutorialBallPositions[0].size()<<std::endl;
+		// std::cout<<"mTutorialBallPositions[0][randomPoint] : "<<mTutorialBallPositions[0][randomPoint].transpose()<<std::endl;
+		slaveResetBallPosition = mTutorialBallPositions[0][randomPoint-resetDuration];	
 	}
 	else
 	{
@@ -1865,6 +1960,9 @@ slaveResetCharacterPositions(bool randomPointTrajectoryStart)
 		slaveResetTargetVector = dribbleDefaultVec;
 		slaveResetBallPosition.setZero();
 	}
+
+	mCharacters[0]->prevSkelPositions = standPosition;
+	// mCharacters[0]->prevKeyJointPositions = mStates[0].segment(standPosition.size(),6*3);
 
 	curBallPosition = slaveResetBallPosition;
 
@@ -2616,7 +2714,7 @@ genRewardTutorialTrajectory()
 	std::vector<int> startFrames;
 	std::vector<int> endFrames;
 
-	startFrames	= {279, 3379};
+	startFrames	= {229, 3329};
 	endFrames 	= {379, 3479};
 	// std::cout<<"skeleton dofs : "<<mCharacters[0]->getSkeleton()->getNumDofs()<<std::endl;
 
@@ -3180,6 +3278,10 @@ Environment::genObstacleNearGoalpost(double angle)
 	Eigen::Vector3d obstaclePosition = mTargetBallPosition;
 	obstaclePosition += distance * Eigen::Vector3d(cos(M_PI/2.0 + angle), 0.0, sin(M_PI/2.0 + angle));
 	obstaclePosition[1] = 0.0;
+
+	obstaclePosition[0] = 7.2;
+	obstaclePosition[2] = 0.5;
+
 	mObstacles.push_back(obstaclePosition);
 	// updateHeightMap(0);
 }

@@ -14,6 +14,12 @@ Character3D(const std::string& name)
 	blocked = false;
 	inputActionType = 0;
 	availableActionTypes.resize(2);
+
+	// prevSkelPositions.resize(mSkeleton->getNumDofs());
+	// prevSkelPositions
+	prevKeyJointPositions.resize(6*3);
+	prevKeyJointPositions.setZero();
+
 }
 
 const dart::dynamics::SkeletonPtr&

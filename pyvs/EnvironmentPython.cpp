@@ -23,7 +23,13 @@ EnvironmentPython(int numAgent, std::string motion_nn_path, int numSlaves)
 
 	for(int i=0;i<mNumSlaves;i++)
 	{
-		mSlaves[i]->initialize(mMotionGeneratorBatch, i);
+		if(i == 0)
+			mSlaves[i]->initialize(mMotionGeneratorBatch, i, true);
+		else
+		{
+			mSlaves[i]->copyTutorialTrajectory(mSlaves[0]);
+			mSlaves[i]->initialize(mMotionGeneratorBatch, i, false);
+		}
 	}
 	mNumState = mSlaves[0]->getNumState();
 	mNumAction = mSlaves[0]->getNumAction();
@@ -224,12 +230,51 @@ setAction(np::ndarray np_array, int id, int index)
 	mSlaves[id]->setAction(index, denormalizedAction);
 }
 
+
+int
+EnvironmentPython::
+getActionTypeFromVec(Eigen::VectorXd action)
+{
+    int maxIndex = 0;
+    double maxValue = -100;
+    for(int i=0;i<action.size();i++)
+    {
+        if(action[i]> maxValue)
+        {
+        	maxValue= action[i];
+        	maxIndex = i;
+        }
+    }
+
+    return maxIndex;
+}
+
+
 int 
 EnvironmentPython::
 setActionType(int actionType, int id, int index)
 {
 	int constrainedActionType;
-	constrainedActionType = mSlaves[id]->setActionType(index, actionType);
+	int resetDuration = 50;
+	if(mSlaves[id]->resetCount<=0)
+		constrainedActionType = mSlaves[id]->setActionType(index, actionType);
+	else
+	{
+		if(mSlaves[id]->resetCount>resetDuration)
+		{
+			Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector.segment(4,5);
+			constrainedActionType = mSlaves[id]->setActionType(index, getActionTypeFromVec(actionTypeVector)/3);
+		}
+		else
+		{
+			Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetTrajectory[resetDuration-mSlaves[id]->resetCount].segment(4,5);
+			constrainedActionType = mSlaves[id]->setActionType(index, getActionTypeFromVec(actionTypeVector)/3);
+
+			// std::cout<<"actionTypeVector : "<<actionTypeVector<<std::endl;
+		}
+		// Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector
+	}
+
 
 	return constrainedActionType;
 }
@@ -294,15 +339,27 @@ stepsAtOnce()
 	// std::cout<<"0000"<<std::endl;
 	std::vector<std::vector<double>> concatControlVector;
 
+	int resetDuration = 50;
 
 	// std::cout<<"steps at once"<<std::endl;
 	// time_check_start();
 	for(int id=0;id<mNumSlaves;++id)
 	{
-		if(mSlaves[id]->resetCount>30)
+		if(mSlaves[id]->resetCount>resetDuration)
 		{
 			mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, mSlaves[id]->slaveResetPositionVector);
 		}
+		else if(mSlaves[id]->resetCount>20)
+		{
+			mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, 
+				mSlaves[id]->slaveResetPositionTrajectory[resetDuration - mSlaves[id]->resetCount], 
+				mSlaves[id]->slaveResetBallPositionTrajectory[resetDuration - mSlaves[id]->resetCount]);
+
+		}
+		// else if(mSlaves[id]->resetCount>0)
+		// {
+		// 	mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, mSlaves[id]->slaveResetPositionVector);
+		// }
 	}
 	// std::cout<<"1111"<<std::endl;
 
@@ -312,7 +369,32 @@ stepsAtOnce()
 		if(mSlaves[id]->resetCount<=0)
 			concatControlVector.push_back(eigenToStdVec(mSlaves[id]->getMGAction(0)));
 		else
-			concatControlVector.push_back(eigenToStdVec(mSlaves[id]->slaveResetTargetVector));
+		{
+			if(mSlaves[id]->resetCount>resetDuration)
+			{
+				concatControlVector.push_back(eigenToStdVec(mSlaves[id]->slaveResetTargetVector));
+				Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector.segment(4,5);
+
+
+			}
+			else
+			{
+				// std::cout<<"slave reset target vector"<<std::endl;
+
+				concatControlVector.push_back(eigenToStdVec(mSlaves[id]->slaveResetTargetTrajectory[resetDuration-mSlaves[id]->resetCount]));
+				Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetTrajectory[resetDuration-mSlaves[id]->resetCount].segment(4,5);
+
+				// std::cout<<"actionTypeVector : "<<actionTypeVector<<std::endl;
+			}
+
+
+
+
+
+
+			// concatControlVector.push_back(eigenToStdVec(mSlaves[id]->slaveResetTargetVector));
+			// Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector
+		}
 	}
 	// std::cout<<"2222"<<std::endl;
 

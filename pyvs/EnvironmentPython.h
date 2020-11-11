@@ -59,6 +59,9 @@ public:
     ICA::dart::MotionGeneratorBatch* mMotionGeneratorBatch;
 	std::map<std::string, int> dartNameIdMap;
 
+
+
+	int getActionTypeFromVec(Eigen::VectorXd action);
 	// Normalizer* mNormalizer;
 private:
 	std::vector<Environment*> mSlaves;

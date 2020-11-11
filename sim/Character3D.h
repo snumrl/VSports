@@ -25,6 +25,9 @@ public:
 
 	int inputActionType;
 	std::vector<int> availableActionTypes;
+
+	Eigen::VectorXd prevSkelPositions;
+	Eigen::VectorXd prevKeyJointPositions;
 	// double mDirection;
 };
 

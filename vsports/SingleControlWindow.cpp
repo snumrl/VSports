@@ -550,8 +550,10 @@ step()
 
 	// time_check_start();
 
+	mEnv->getState(0);
 
-	getActionFromNN(0);
+	if(mEnv->resetCount<=0)
+		getActionFromNN(0);
 
 
 	// time_check_end();
@@ -560,7 +562,8 @@ step()
 	// time_check_start();
 
 	// mEnv->setAction(0, remainedAction);
-	mEnv->setAction(0, mActions[0]);
+	
+
 	// time_check_end();
 
 	std::cout<<mEnv->mActions[0].segment(0,9).transpose()<<std::endl;
@@ -569,7 +572,8 @@ step()
 	std::cout<<std::endl;
 
 
-	
+	// mEnv->getState(0);
+
     // update prevHandTransform
     // updateHandTransform();
 
@@ -595,12 +599,23 @@ step()
 	// std::cout<<endl;
 	// std::cout<<mEnv->slaveResetStateVector.transpose()<<std::endl;
 
+	int resetDuration = 50;
+
 	for(int id=0;id<1;++id)
 	{
-		if(mEnv->resetCount>0)
+		if(mEnv->resetCount>resetDuration)
 		{
 			// std::cout<<"slave reset state vector"<<std::endl;
 			mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, mEnv->slaveResetPositionVector, mEnv->slaveResetBallPosition);
+			// mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, mEnv->slaveResetPositionVector);
+			// mEnv->getCharacter(0)->getSkeleton()->setPositions(mEnv->slaveResetPositionVector);
+		}
+		else if(mEnv->resetCount>20)
+		{
+			// std::cout<<"slave reset state vector"<<std::endl;
+			mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, 
+				mEnv->slaveResetPositionTrajectory[resetDuration - mEnv->resetCount], 
+				mEnv->slaveResetBallPositionTrajectory[resetDuration - mEnv->resetCount]);
 			// mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, mEnv->slaveResetPositionVector);
 			// mEnv->getCharacter(0)->getSkeleton()->setPositions(mEnv->slaveResetPositionVector);
 		}
@@ -611,12 +626,41 @@ step()
 	for(int id=0;id<1;++id)
 	{
 		if(mEnv->resetCount<=0)
+		{
 			concatControlVector.push_back(eigenToStdVec(mEnv->getMGAction(0)));
+			mEnv->setAction(0, mActions[0]);
+		}
 		else
-			concatControlVector.push_back(eigenToStdVec(mEnv->slaveResetTargetVector));
+		{
+			if(mEnv->resetCount>resetDuration)
+			{
+				concatControlVector.push_back(eigenToStdVec(mEnv->slaveResetTargetVector));
+				Eigen::VectorXd actionTypeVector = mEnv->slaveResetTargetVector.segment(4,5);
+				Eigen::VectorXd actionDetailVector(9);
+				actionDetailVector.segment(0,4) = mEnv->slaveResetTargetVector.segment(0,4);
+				actionDetailVector.segment(4,5) = mEnv->slaveResetTargetVector.segment(9,5);
+				mEnv->setActionType(0,getActionTypeFromVec(actionTypeVector)/3);
+				mEnv->setAction(0, actionDetailVector);
+
+			}
+			else
+			{
+				// std::cout<<"slave reset target vector"<<std::endl;
+
+				concatControlVector.push_back(eigenToStdVec(mEnv->slaveResetTargetTrajectory[resetDuration-mEnv->resetCount]));
+				Eigen::VectorXd actionTypeVector = mEnv->slaveResetTargetTrajectory[resetDuration-mEnv->resetCount].segment(4,5);
+				Eigen::VectorXd actionDetailVector(9);
+				actionDetailVector.segment(0,4) = mEnv->slaveResetTargetTrajectory[resetDuration-mEnv->resetCount].segment(0,4);
+				actionDetailVector.segment(4,5) = mEnv->slaveResetTargetTrajectory[resetDuration-mEnv->resetCount].segment(9,5);
+				mEnv->setActionType(0,getActionTypeFromVec(actionTypeVector)/3);
+				mEnv->setAction(0, actionDetailVector);
+				// std::cout<<"actionTypeVector : "<<actionTypeVector<<std::endl;
+			}
+
+		}
 	}
 
-	std::cout<<"mEnv->slaveResetTargetVector : "<<mEnv->slaveResetTargetVector.transpose()<<std::endl;
+	// std::cout<<"mEnv->slaveResetTargetVector : "<<mEnv->slaveResetTargetVector.transpose()<<std::endl;
 	// std::cout<<"2222"<<std::endl;
 
 	// time_check_start();
@@ -633,6 +677,7 @@ step()
 	for(int id=0;id<1;++id)
 	{
 		mEnv->stepAtOnce(nextPoseAndContactsWithBatch[id]);
+		// std::cout<<"mEnv->mCurActionTypes[0] : "<<mEnv->mCurActionTypes[0]<<std::endl;
 		// for(int j=0;j<num;j++)
 		// 	this->step(id);
 		// this->step
@@ -838,7 +883,7 @@ display()
 		// GUI::drawCylinder(0.5, 2.0, Eigen::Vector3d(0.3, 0.3, 0.3));
 		// GUI::drawCylinder(0.5, 2.0, Eigen::Vector3d(0.3, 0.3, 0.3));
 		glColor3f(0.0,0.0,1.0);
-		GUI::draw2dCircle(Eigen::Vector3d(0.0, 0.02, 0.0), Eigen::Vector3d::UnitX(), Eigen::Vector3d::UnitZ(),0.5, true);
+		GUI::draw2dCircle(Eigen::Vector3d(0.0, 0.02, 0.0), Eigen::Vector3d::UnitX(), Eigen::Vector3d::UnitZ(),0.75, true);
 
 		glPopMatrix();
 	}
