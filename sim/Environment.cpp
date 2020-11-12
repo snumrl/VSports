@@ -346,6 +346,8 @@ initCharacters(std::string bvhPath)
 	//**action Type
 
 	// dribbleDefaultVec.segment(0,2) = Eigen::Vector2d(30.0, 0.0);
+
+	dribbleDefaultVec[0] = 0.0;
 	dribbleDefaultVec.segment(2,2) = Eigen::Vector2d(50.0, -50.0);
 	dribbleDefaultVec[4] = 1.0;
 
@@ -1165,8 +1167,8 @@ getReward(int index, bool verbose)
 	// activates when fastTermination is on
 	bool fastViewTermination = true;
 
-	bool isDribble = false;
-	bool isDribbleAndShoot = true;
+	bool isDribble = true;
+	bool isDribbleAndShoot = false;
 
 	if(isDribbleAndShoot)
 	{
@@ -1250,29 +1252,8 @@ getReward(int index, bool verbose)
 
 	if(isDribble)
 	{
-		// if(mCurActionTypes[index] == 0)
-		// 	return 0.01;
-		// else
-		// {
-		// 	mIsTerminalState = true;
-		// 	return 0;
-		// }
-
-		// action type correction reward
-		// std::vector<int> availableActionTypes = mCharacters[index]->availableActionTypes;
-		// std::vector<int>::iterator iter;
-
-		// if(std::find(availableActionTypes.begin(), 
-		// 			availableActionTypes.end(), 
-		// 			mCharacters[index]->inputActionType) != availableActionTypes.end())
-		// 	reward += 0.001;
 
 		Eigen::Vector3d ballDisplacement = curBallPosition - prevBallPositions[0];
-
-		// std::cout<<"ballDisplacement norm : "<<ballDisplacement.norm()<<std::endl;
-
-		// if(ballDisplacement.norm() > 0.25)
-		// 	reward -= pow((ballDisplacement.norm()-0.1),2);
 
 
 		if(!mCurBallPossessions[index])
@@ -1287,13 +1268,13 @@ getReward(int index, bool verbose)
 			return 0;
 		}
 
-		if(mCharacters[index]->blocked == 0)
-			return 0.01;
-		else 
-			return 0;
+		// if(mCharacters[index]->blocked == 0)
+		// 	return 0.01;
+		// else 
+		// 	return 0;
 
 		// Dribble Direction Reward
-		Eigen::Vector3d targetPlaneNormal = mTargetBallPosition - mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM();
+		Eigen::Vector3d targetPlaneNormal = mObstacles[0] - mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM();
 		targetPlaneNormal[1] = 0.0;
 
 		Eigen::Vector3d comTargetDirection = targetPlaneNormal.normalized();
@@ -1795,7 +1776,7 @@ void
 Environment::
 slaveReset()
 {
-	resetCount = 60;
+	resetCount = 30;
 	mIsTerminalState = false;
 	mIsFoulState = false;
 	mTimeElapsed = 0;
@@ -1805,7 +1786,7 @@ slaveReset()
 	mMgb->clear(mBatchIndex);
 
 	// std::cout<<"0000000000"<<std::endl;
-	slaveResetCharacterPositions(true);
+	slaveResetCharacterPositions(false);
 	// std::cout<<"1111111111"<<std::endl;
 	slaveResetTargetBallPosition();
 	// std::cout<<"2222222222"<<std::endl;
@@ -3279,8 +3260,8 @@ Environment::genObstacleNearGoalpost(double angle)
 	obstaclePosition += distance * Eigen::Vector3d(cos(M_PI/2.0 + angle), 0.0, sin(M_PI/2.0 + angle));
 	obstaclePosition[1] = 0.0;
 
-	obstaclePosition[0] = 7.2;
-	obstaclePosition[2] = 0.5;
+	// obstaclePosition[0] = 7.2;
+	// obstaclePosition[2] = 0.5;
 
 	mObstacles.push_back(obstaclePosition);
 	// updateHeightMap(0);
