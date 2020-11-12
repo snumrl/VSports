@@ -119,7 +119,7 @@ class RL(object):
 		self.latent_size = 4
 
 		#contact, finger, finger-ball
-		self.num_action = [self.num_action_types, self.latent_size]
+		self.num_action = [self.num_action_types, self.num_action_types + self.latent_size]
 
 
 		self.num_h = len(self.num_action);
@@ -180,7 +180,7 @@ class RL(object):
 					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], 
 						log_std = -1.0, softmax = True, actionType = True)
 				else:
-					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], 
+					self.target_model[h][j] = ActorCriticNN(self.num_state, self.num_action[h], 
 						log_std = 0.0)
 
 				acc_num_action += self.num_action[h]
@@ -428,6 +428,21 @@ class RL(object):
 			return 0
 
 
+		def getActionTypeFromVector2(vec):
+			maxIndex = 0
+			maxValue = -100
+			for i in range(len(vec)):
+				if vec[i] > maxValue :
+					maxValue = vec[i]
+					maxIndex = i
+
+				# if vec[i] == 1:
+				# 	return i
+			return maxIndex
+			# print("Something wrong in vec")
+			# print(vec)
+			# return 0
+
 		while True:
 			counter += 1
 			if counter%10 == 0:
@@ -440,30 +455,30 @@ class RL(object):
 			a_dist_slave = [None]*self.num_agents
 			v_slave = [None]*self.num_agents
 
-			if counter%10 == 1:
-				for i in range(self.num_agents):
-					if teamDic[i] == learningTeam:
-						a_dist_slave_agent,v_slave_agent = self.target_model[0][self.indexToNetDic[i]].forward(\
-							Tensor(states_h[0][i]))
-						a_dist_slave[i] = a_dist_slave_agent
-						v_slave[i] = v_slave_agent
-						actions_h[0][i] = a_dist_slave[i].sample().cpu().detach().numpy().squeeze().squeeze();	
+			# if counter%10 == 1:
+			# 	for i in range(self.num_agents):
+			# 		if teamDic[i] == learningTeam:
+			# 			a_dist_slave_agent,v_slave_agent = self.target_model[0][self.indexToNetDic[i]].forward(\
+			# 				Tensor(states_h[0][i]))
+			# 			a_dist_slave[i] = a_dist_slave_agent
+			# 			v_slave[i] = v_slave_agent
+			# 			actions_h[0][i] = a_dist_slave[i].sample().cpu().detach().numpy().squeeze().squeeze();	
 
-				for i in range(self.num_agents):
-					if teamDic[i] == learningTeam:
-						logprobs_h[0][i] = a_dist_slave[i].log_prob(Tensor(actions_h[0][i]))\
-							.cpu().detach().numpy().reshape(-1);
-						values_h[0][i] = v_slave[i].cpu().detach().numpy().reshape(-1);
-
-
+			# 	for i in range(self.num_agents):
+			# 		if teamDic[i] == learningTeam:
+			# 			logprobs_h[0][i] = a_dist_slave[i].log_prob(Tensor(actions_h[0][i]))\
+			# 				.cpu().detach().numpy().reshape(-1);
+			# 			values_h[0][i] = v_slave[i].cpu().detach().numpy().reshape(-1);
 
 
-			actions_0_oneHot = arrayToOneHotVectorWithConstraint(actions_h[0])
+
+
+			# actions_0_oneHot = arrayToOneHotVectorWithConstraint(actions_h[0])
 
 			# generate transition of second hierachy
 			for h in range(1,self.num_h):
 				if h == 1:
-					states_h[h] = np.concatenate((states_h[0], actions_0_oneHot), axis=2)
+					states_h[h] = states_h[0]
 				else:
 					# print("value h : {}".format(h))
 					states_h[h] = np.concatenate((states_h[h-1], np.array(list(actions_h[h-1]))), axis=2)
@@ -493,14 +508,16 @@ class RL(object):
 			# actions_h = np.array(list(actions_h))
 
 
-			actions = actions_0_oneHot
+			# actions = actions_0_oneHot
 			# embed()
 			# exit(0)
-			for h in range(1, self.num_h):
-				# print(actions[0])
-				actions = np.concatenate((actions, np.array(list(actions_h[h]))), axis = 2)
-			# print(actions[0])
-
+			# for h in range(1, self.num_h):
+			# 	# print(actions[0])
+			# 	actions = np.concatenate((actions, np.array(list(actions_h[h]))), axis = 2)
+			# # print(actions[0])
+			# embed()
+			# exit(0)
+			actions = np.array(list(actions_h[h]))
 
 			actions = actions.astype(np.float32)
 			# embed()
@@ -516,9 +533,12 @@ class RL(object):
 			decodeShape[2] = 9
 			actionsDecoded =np.empty(decodeShape,dtype=np.float32)
 
-			for i in range(len(actionsDecodePart)):
-				for j in range(len(actionsDecodePart[i])):
-					curActionType = getActionTypeFromVector(actionTypePart[i][j])
+			for i in range(self.num_agents):
+				for j in range(self.num_slaves):
+					curActionType = getActionTypeFromVector2(actionTypePart[i][j])
+					# embed()
+					# exit(0)
+					self.env.setActionType(curActionType, j, i)
 					actionsDecoded[i][j] = self.actionDecoders[curActionType].decode(Tensor(actionsDecodePart[i][j])).cpu().detach().numpy()
 
 			# print("time :", time.time() - start)
@@ -574,7 +594,9 @@ class RL(object):
 					if nan_occur[j] is True:
 						for i in range(self.num_agents):
 							if teamDic[i] == learningTeam:
-								for h in range(self.num_h):
+								for h in range(1,2):
+									# embed()
+									# exit(0)
 									self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
 									self.episodes[h][j][i] = RNNEpisodeBuffer()
 
@@ -585,13 +607,13 @@ class RL(object):
 								# self.episodes_2[i][k] = RNNEpisodeBuffer()
 						print("nan", file=sys.stderr)
 						self.env.slaveReset(j)
-						self.env.setResetCount(20-counter%10, j);
+						self.env.setResetCount(30-counter%10, j);
 
 
 					if self.env.isTerminalState(j) is False:
 						for i in range(self.num_agents):
 							if teamDic[i] == learningTeam:
-								for h in range(self.num_h):
+								for h in range(1,2):
 									if h == 0:
 										if counter%10 == 0:
 											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
@@ -611,7 +633,7 @@ class RL(object):
 					else:
 						for i in range(self.num_agents):
 							if teamDic[i] == learningTeam:
-								for h in range(self.num_h):
+								for h in range(1,2):
 									if h == 0:
 										self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
 										accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
@@ -624,14 +646,14 @@ class RL(object):
 									self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
 									self.episodes[h][j][i] = RNNEpisodeBuffer()
 						self.env.slaveReset(j)
-						self.env.setResetCount(20-counter%10, j);
+						self.env.setResetCount(30-counter%10, j);
 
 
 			if local_step >= self.buffer_size:
 				for j in range(self.num_slaves):
 					for i in range(self.num_agents):
 						if teamDic[i] == learningTeam:
-							for h in range(self.num_h):
+							for h in range(1,2):
 								self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
 								self.episodes[h][j][i] = RNNEpisodeBuffer()
 
@@ -649,7 +671,7 @@ class RL(object):
 
 	def computeTDandGAE(self):
 
-		for h in range(self.num_h):
+		for h in range(1,2):
 			for index in range(self.num_policy):
 				self.buffer[h][index].clear()
 				if index == 0:
@@ -863,8 +885,8 @@ class RL(object):
 
 		self.generateTransitions()
 		self.computeTDandGAE()
-		# self.optimizeNN_h(1)
-		self.optimizeModel()
+		self.optimizeNN_h(1)
+		# self.optimizeModel()
 
 
 	def optimizeModel(self):

@@ -159,15 +159,15 @@ SingleControlWindow(const char* nn_path,
 
 	// reset_hidden = new boost::python::object[mEnv->mNumChars];
 
+	// for(int i=0;i<mEnv->mNumChars;i++)
+	// {
+	// 	nn_module_0[i] = p::eval(("ActorCriticNN(num_state, "+to_string(numActionTypes)+", 0.0, True).cuda()").data(), mns);
+	// 	load_0[i] = nn_module_0[i].attr("load");
+	// 	load_rms_0[i] = nn_module_0[i].attr("loadRMS");
+	// }
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module_0[i] = p::eval(("ActorCriticNN(num_state, "+to_string(numActionTypes)+", 0.0, True).cuda()").data(), mns);
-		load_0[i] = nn_module_0[i].attr("load");
-		load_rms_0[i] = nn_module_0[i].attr("loadRMS");
-	}
-	for(int i=0;i<mEnv->mNumChars;i++)
-	{
-		nn_module_1[i] = p::eval(("ActorCriticNN(num_state+"+to_string(numActionTypes)+", "+to_string(latentSize)+").cuda()").data(), mns);
+		nn_module_1[i] = p::eval(("ActorCriticNN(num_state, "+to_string(numActionTypes+latentSize)+").cuda()").data(), mns);
 		load_1[i] = nn_module_1[i].attr("load");
 		load_rms_1[i] = nn_module_1[i].attr("loadRMS");
 	}
@@ -191,7 +191,7 @@ SingleControlWindow(const char* nn_path,
 	// }
 
 
-	load_0[0](string(control_nn_path) + "_0.pt");
+	// load_0[0](string(control_nn_path) + "_0.pt");
 	load_1[0](string(control_nn_path) + "_1.pt");
 
 	std::string dir = control_nn_path;
@@ -203,7 +203,7 @@ SingleControlWindow(const char* nn_path,
 	}
 
 
-	load_rms_0[0]((subdir + "rms.ms").data());
+	// load_rms_0[0]((subdir + "rms.ms").data());
 	load_rms_1[0]((subdir + "rms.ms").data());
 
 
@@ -1227,52 +1227,52 @@ getActionFromNN(int index)
 	Eigen::VectorXd mActionType(numActions);
 	mActionType.setZero();
 
-	get_action_0 = nn_module_0[index].attr("get_action");
+	// get_action_0 = nn_module_0[index].attr("get_action");
 
-	p::tuple shape = p::make_tuple(state.size());
-	np::dtype dtype = np::dtype::get_builtin<float>();
-	np::ndarray state_np = np::empty(shape, dtype);
+	// p::tuple shape = p::make_tuple(state.size());
+	// np::dtype dtype = np::dtype::get_builtin<float>();
+	// np::ndarray state_np = np::empty(shape, dtype);
 
-	float* dest = reinterpret_cast<float*>(state_np.get_data());
-	for(int j=0;j<state.size();j++)
-	{
-		dest[j] = state[j];
-	}
+	// float* dest = reinterpret_cast<float*>(state_np.get_data());
+	// for(int j=0;j<state.size();j++)
+	// {
+	// 	dest[j] = state[j];
+	// }
 
-	p::object temp = get_action_0(state_np);
-	np::ndarray action_np = np::from_object(temp);
-	float* srcs = reinterpret_cast<float*>(action_np.get_data());
+	// p::object temp = get_action_0(state_np);
+	// np::ndarray action_np = np::from_object(temp);
+	// float* srcs = reinterpret_cast<float*>(action_np.get_data());
 
-	for(int j=0;j<numActions;j++)
-	{
-		mActionType[j] = srcs[j];
-	}
+	// for(int j=0;j<numActions;j++)
+	// {
+	// 	mActionType[j] = srcs[j];
+	// }
 
-	// std::cout<<"mActionType : "<<mActionType.transpose()<<std::endl;
-	std::cout<<"mEnv->curFrame : "<<mEnv->curFrame<<std::endl;
-	std::cout<<"mEnv->resetCount : "<<mEnv->resetCount<<std::endl;
-	std::cout<<"mActionType.transpose() : "<<mActionType.transpose()<<std::endl;
+	// // std::cout<<"mActionType : "<<mActionType.transpose()<<std::endl;
+	// std::cout<<"mEnv->curFrame : "<<mEnv->curFrame<<std::endl;
+	// std::cout<<"mEnv->resetCount : "<<mEnv->resetCount<<std::endl;
+	// std::cout<<"mActionType.transpose() : "<<mActionType.transpose()<<std::endl;
 
-	if(mEnv->curFrame%10 == 0)
-		mActionType = toOneHotVectorWithConstraint(index, mActionType);
-	else
-	{
-		mActionType.setZero();
-		int prevActionType = mEnv->mCurActionTypes[index]/3;
-		mActionType[prevActionType] = 1.0;
+	// if(mEnv->curFrame%10 == 0)
+	// 	mActionType = toOneHotVectorWithConstraint(index, mActionType);
+	// else
+	// {
+	// 	mActionType.setZero();
+	// 	int prevActionType = mEnv->mCurActionTypes[index]/3;
+	// 	mActionType[prevActionType] = 1.0;
 
-	}
+	// }
 
-	int actionType = getActionTypeFromVec(mActionType);
 
 	// mEnv->setActionType(index, actionType);
 
 
+	np::dtype dtype = np::dtype::get_builtin<float>();
+ 	p::object temp;
 	///////////////
-	Eigen::VectorXd mAction(mEnv->getNumAction() - numActions);
-	Eigen::VectorXd state_1(state.size()+numActions);
+	Eigen::VectorXd mAction(mEnv->getNumAction());
+	Eigen::VectorXd state_1(state.size());
 	state_1.segment(0,state.size()) = state;
-	state_1.segment(state.size(),numActions) = mActionType;
 
 	p::object get_action_1;
 
@@ -1291,7 +1291,7 @@ getActionFromNN(int index)
 	np::ndarray action_np_1 = np::from_object(temp);
 	float* srcs_1 = reinterpret_cast<float*>(action_np_1.get_data());
 
-	for(int j=0;j<latentSize;j++)
+	for(int j=0;j<latentSize+numActions;j++)
 	{
 		mAction[j] = srcs_1[j];
 	}
@@ -1299,10 +1299,13 @@ getActionFromNN(int index)
 	///////////////
 	// exit(0);
 	// mAction.segment(9,2) = mAction.segment(4,2);
+	mActionType = mAction.segment(0,numActions);
+	int actionType = getActionTypeFromVec(mActionType);
+	mEnv->setActionType(0, actionType);
 
 
 	Eigen::VectorXd encodedAction(latentSize);
-	encodedAction = mAction.segment(0,encodedAction.size());
+	encodedAction = mAction.segment(numActions,encodedAction.size());
 	Eigen::VectorXd decodedAction(9);
 
 	// encodedAction.setOnes();
