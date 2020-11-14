@@ -1166,7 +1166,7 @@ getReward(int index, bool verbose)
 	bool fastViewTermination = true;
 
 	bool isDribble = false;
-	bool isDribbleAndShoot = true;
+	bool isDribbleAndShoot = false;
 
 	if(isDribbleAndShoot)
 	{
@@ -1327,6 +1327,8 @@ getReward(int index, bool verbose)
 				mIsTerminalState = true;
 			gotReward = true;
 
+			if(!mCharacters[index]->blocked)
+				return 0;
 			Eigen::Vector3d relTargetPosition = mTargetBallPosition - criticalPoint_targetBallPosition;
 
 			double h = relTargetPosition[1];
@@ -1348,7 +1350,7 @@ getReward(int index, bool verbose)
 			Eigen::Vector3d targetPositionOnThePlane = mTargetBallPosition;
 			targetPositionOnThePlane[1] = 0.0;
 
-			if(!mCharacters[index]->blocked)
+			if(mCharacters[index]->blocked)
 				reward += exp(0.3 * -pow((targetPositionOnThePlane - ballPositionOnThePlane).norm(),2));
 			else
 				reward = 0.0 * exp(0.3 * -pow((targetPositionOnThePlane - ballPositionOnThePlane).norm(),2));
@@ -1733,7 +1735,7 @@ isTerminalState()
 
 
 	if(abs(rootT.translation()[2])>15.0*0.5*1.1 || 
-		rootT.translation()[0]>28.0*0.5*0.9 || 
+		rootT.translation()[0]>28.0*0.5*1.1 || 
 		rootT.translation()[0] < -4.0)
 	{
 		mIsTerminalState = true;
@@ -2714,7 +2716,7 @@ genRewardTutorialTrajectory()
 	std::vector<int> startFrames;
 	std::vector<int> endFrames;
 
-	startFrames	= {229, 3329};
+	startFrames	= {199, 3329};
 	endFrames 	= {379, 3479};
 	// std::cout<<"skeleton dofs : "<<mCharacters[0]->getSkeleton()->getNumDofs()<<std::endl;
 
