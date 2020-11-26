@@ -1166,7 +1166,7 @@ getReward(int index, bool verbose)
 	bool fastViewTermination = true;
 
 	bool isDribble = false;
-	bool isDribbleAndShoot = false;
+	bool isDribbleAndShoot = true;
 
 	if(isDribbleAndShoot)
 	{
@@ -1314,6 +1314,18 @@ getReward(int index, bool verbose)
 
 	else
 	{
+
+		if(mCurActionTypes[index] == 3)
+		{
+			mIsTerminalState = true;
+			if(mCharacters[index]->blocked)
+				return 1.0;
+			else
+				return 0.0;
+		}
+		else
+			return 0;
+
 		// if(mCharacters[index]->blocked && mCurActionTypes[index] == 0)
 			// reward += 0.01;
 		// Shoot Reward
@@ -1652,6 +1664,10 @@ setActionType(int index, int actionType)
 	if(actionType != 3)
 	 	curActionType = 0;
 
+	if(!mCharacters[index]->blocked)
+		curActionType = 0;
+	else
+		curActionType = 3;
 
 
 	// curActionType = 0;

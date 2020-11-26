@@ -42,7 +42,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 30
+nnCount = 32
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -863,8 +863,8 @@ class RL(object):
 
 		self.generateTransitions()
 		self.computeTDandGAE()
-		# self.optimizeNN_h(1)
-		self.optimizeModel()
+		self.optimizeNN_h(1)
+		# self.optimizeModel()
 
 
 	def optimizeModel(self):
