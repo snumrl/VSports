@@ -58,7 +58,7 @@ initWindow(int _w, int _h, char* _name)
 
 SingleControlWindow::
 SingleControlWindow()
-:SimWindow(), mIsNNLoaded(false), mFrame(0)
+:SimWindow(), mIsNNLoaded(false), mFrame(0), windowFrame(0)
 {
 
  	// srand (time(NULL));	
@@ -133,6 +133,7 @@ SingleControlWindow(const char* nn_path,
 
 	mEnv->initialize(mMotionGeneratorBatch, 0);
 
+	recorder = new Recorder();
 
 
 	// mMotionGeneratorBatch->setCurrentDartPosition(mEnv->mCharacters[0]->getSkeleton()->getPositions(), 0);
@@ -410,12 +411,27 @@ keyboard(unsigned char key, int x, int y)
 			break;
 		case ']':
 			mFrame += 100;
-			step();
+			if(mPlay)
+				step();
+			else
+				recorder->loadFrame(mEnv, windowFrame++);
+			if(windowFrame > recorder->getNumFrames())
+				windowFrame = recorder->getNumFrames();
 			break;
 		case '[':
 			mFrame -= 100;
 			if(mFrame <0)
 				mFrame = 0;
+
+			if(!mPlay)
+				recorder->loadFrame(mEnv, windowFrame--);
+			if(windowFrame < 0)
+				windowFrame = 0;
+			break;
+		case ' ':
+			if(!mPlay)
+				windowFrame = recorder->loadLastFrame(mEnv);
+			mPlay = !mPlay;
 			break;
 
 		default: SimWindow::keyboard(key, x, y);
@@ -460,8 +476,13 @@ SingleControlWindow::
 timer(int value)
 {
 	// time_check_start();
+
 	if(mPlay)
+	{
 		value = step();
+		recorder->recordCurrentFrame(mEnv);
+	}
+
 	// display();
 	// glutSwapBuffers();
 	glutPostRedisplay();
@@ -716,6 +737,7 @@ step()
     // time_check_end();
     // std::cout<<std::endl;
 	mEnv->getRewards();
+	windowFrame++;
 	mFrame++;
 	// if(mFrame>mEnv->mTutorialTrajectories[1].size()-1)
 	// 	mFrame = mEnv->mTutorialTrajectories[1].size()-1;

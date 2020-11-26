@@ -9,7 +9,7 @@
 #include "../motion/BVHparser.h"
 #include "../extern/ICA/plugin/MotionGenerator.h"
 #include "../pyvs/Normalizer.h"
-
+#include "../sim/Recorder.h"
 
 // #include <GL/glut.h>
 // #include <GL/glew.h>
@@ -163,6 +163,10 @@ public:
 	double fingerBallAngle;
 
 	int latentSize;
+
+	Recorder* recorder;
+
+	int windowFrame;
 
     // Eigen::Vector3d curBallPosition;
     // Eigen::Vector3d prevBallPosition;
