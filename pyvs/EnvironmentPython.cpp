@@ -351,9 +351,16 @@ stepsAtOnce()
 		}
 		else if(mSlaves[id]->resetCount>20)
 		{
-			mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, 
-				mSlaves[id]->slaveResetPositionTrajectory[resetDuration - mSlaves[id]->resetCount], 
-				mSlaves[id]->slaveResetBallPositionTrajectory[resetDuration - mSlaves[id]->resetCount]);
+			if(mSlaves[id]->randomPointTrajectoryStart)
+			{
+				mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, 
+					mSlaves[id]->slaveResetPositionTrajectory[resetDuration - mSlaves[id]->resetCount], 
+					mSlaves[id]->slaveResetBallPositionTrajectory[resetDuration - mSlaves[id]->resetCount]);
+			}
+			else
+			{
+				mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, mSlaves[id]->slaveResetPositionVector);
+			}
 
 		}
 		// else if(mSlaves[id]->resetCount>0)
@@ -374,24 +381,22 @@ stepsAtOnce()
 			{
 				concatControlVector.push_back(eigenToStdVec(mSlaves[id]->slaveResetTargetVector));
 				Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector.segment(4,5);
-
-
 			}
 			else
 			{
 				// std::cout<<"slave reset target vector"<<std::endl;
-
-				concatControlVector.push_back(eigenToStdVec(mSlaves[id]->slaveResetTargetTrajectory[resetDuration-mSlaves[id]->resetCount]));
-				Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetTrajectory[resetDuration-mSlaves[id]->resetCount].segment(4,5);
-
+				if(mSlaves[id]->randomPointTrajectoryStart)
+				{
+					concatControlVector.push_back(eigenToStdVec(mSlaves[id]->slaveResetTargetTrajectory[resetDuration-mSlaves[id]->resetCount]));
+					Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetTrajectory[resetDuration-mSlaves[id]->resetCount].segment(4,5);
+				}
+				else
+				{
+					concatControlVector.push_back(eigenToStdVec(mSlaves[id]->slaveResetTargetVector));
+					Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector.segment(4,5);
+				}
 				// std::cout<<"actionTypeVector : "<<actionTypeVector<<std::endl;
 			}
-
-
-
-
-
-
 			// concatControlVector.push_back(eigenToStdVec(mSlaves[id]->slaveResetTargetVector));
 			// Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector
 		}

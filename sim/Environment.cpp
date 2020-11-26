@@ -40,7 +40,8 @@ Environment::
 Environment(int control_Hz, int simulation_Hz, int numChars, std::string bvh_path, std::string nn_path)
 :mControlHz(control_Hz), mSimulationHz(simulation_Hz), mNumChars(numChars), mWorld(std::make_shared<dart::simulation::World>()),
 mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0), endTime(15),
-criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), violatedFrames(0)
+criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), violatedFrames(0),
+randomPointTrajectoryStart(true)
 {
 	std::cout<<"Envionment Generation --- ";
 	srand((unsigned int)time(0));
@@ -1823,7 +1824,7 @@ slaveReset()
 	mMgb->clear(mBatchIndex);
 
 	// std::cout<<"0000000000"<<std::endl;
-	slaveResetCharacterPositions(true);
+	slaveResetCharacterPositions();
 	// std::cout<<"1111111111"<<std::endl;
 	slaveResetTargetBallPosition();
 	// std::cout<<"2222222222"<<std::endl;
@@ -1876,7 +1877,7 @@ slaveResetTargetBallPosition()
 
 void
 Environment::
-slaveResetCharacterPositions(bool randomPointTrajectoryStart)
+slaveResetCharacterPositions()
 {
 	bool useHalfCourt = true;
 	double xRange = 28.0*0.5 -1.5;
@@ -3297,8 +3298,13 @@ Environment::genObstacleNearGoalpost(double angle)
 	obstaclePosition += distance * Eigen::Vector3d(cos(M_PI/2.0 + angle), 0.0, sin(M_PI/2.0 + angle));
 	obstaclePosition[1] = 0.0;
 
-	obstaclePosition[0] = 7.2;
-	obstaclePosition[2] = 0.5;
+
+	if(randomPointTrajectoryStart)
+	{
+		obstaclePosition[0] = 7.2;
+		obstaclePosition[2] = 0.5;
+	}
+
 
 	mObstacles.push_back(obstaclePosition);
 	// updateHeightMap(0);

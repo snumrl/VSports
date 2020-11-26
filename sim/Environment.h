@@ -215,7 +215,7 @@ public:
 	bool isCriticalAction(int actionType);
 
 	void slaveReset();
-	void slaveResetCharacterPositions(bool randomPointTrajectoryStart = false);
+	void slaveResetCharacterPositions();
 	void slaveResetTargetBallPosition();
 
 	Eigen::VectorXd slaveResetTargetVector;
@@ -437,6 +437,8 @@ public:
 	std::vector<std::vector<Eigen::Vector3d>> mTutorialBallPositions;
 
 	void copyTutorialTrajectory(Environment* env);
+
+	bool randomPointTrajectoryStart;
 
 };
 double getFacingAngleFromLocalState(Eigen::VectorXd curState);

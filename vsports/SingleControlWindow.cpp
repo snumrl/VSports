@@ -613,9 +613,18 @@ step()
 		else if(mEnv->resetCount>20)
 		{
 			// std::cout<<"slave reset state vector"<<std::endl;
-			mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, 
-				mEnv->slaveResetPositionTrajectory[resetDuration - mEnv->resetCount], 
-				mEnv->slaveResetBallPositionTrajectory[resetDuration - mEnv->resetCount]);
+
+			if(mEnv->randomPointTrajectoryStart)
+			{
+				mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, 
+					mEnv->slaveResetPositionTrajectory[resetDuration - mEnv->resetCount], 
+					mEnv->slaveResetBallPositionTrajectory[resetDuration - mEnv->resetCount]);
+			}
+			else
+			{
+				mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, mEnv->slaveResetPositionVector, mEnv->slaveResetBallPosition);
+			}
+
 			// mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, mEnv->slaveResetPositionVector);
 			// mEnv->getCharacter(0)->getSkeleton()->setPositions(mEnv->slaveResetPositionVector);
 		}
@@ -647,13 +656,26 @@ step()
 			{
 				// std::cout<<"slave reset target vector"<<std::endl;
 
-				concatControlVector.push_back(eigenToStdVec(mEnv->slaveResetTargetTrajectory[resetDuration-mEnv->resetCount]));
-				Eigen::VectorXd actionTypeVector = mEnv->slaveResetTargetTrajectory[resetDuration-mEnv->resetCount].segment(4,5);
-				Eigen::VectorXd actionDetailVector(9);
-				actionDetailVector.segment(0,4) = mEnv->slaveResetTargetTrajectory[resetDuration-mEnv->resetCount].segment(0,4);
-				actionDetailVector.segment(4,5) = mEnv->slaveResetTargetTrajectory[resetDuration-mEnv->resetCount].segment(9,5);
-				mEnv->setActionType(0,getActionTypeFromVec(actionTypeVector)/3);
-				mEnv->setAction(0, actionDetailVector);
+				if(mEnv->randomPointTrajectoryStart)
+				{
+					concatControlVector.push_back(eigenToStdVec(mEnv->slaveResetTargetTrajectory[resetDuration-mEnv->resetCount]));
+					Eigen::VectorXd actionTypeVector = mEnv->slaveResetTargetTrajectory[resetDuration-mEnv->resetCount].segment(4,5);
+					Eigen::VectorXd actionDetailVector(9);
+					actionDetailVector.segment(0,4) = mEnv->slaveResetTargetTrajectory[resetDuration-mEnv->resetCount].segment(0,4);
+					actionDetailVector.segment(4,5) = mEnv->slaveResetTargetTrajectory[resetDuration-mEnv->resetCount].segment(9,5);
+					mEnv->setActionType(0,getActionTypeFromVec(actionTypeVector)/3);
+					mEnv->setAction(0, actionDetailVector);
+				}
+				else
+				{
+					concatControlVector.push_back(eigenToStdVec(mEnv->slaveResetTargetVector));
+					Eigen::VectorXd actionTypeVector = mEnv->slaveResetTargetVector.segment(4,5);
+					Eigen::VectorXd actionDetailVector(9);
+					actionDetailVector.segment(0,4) = mEnv->slaveResetTargetVector.segment(0,4);
+					actionDetailVector.segment(4,5) = mEnv->slaveResetTargetVector.segment(9,5);
+					mEnv->setActionType(0,getActionTypeFromVec(actionTypeVector)/3);
+					mEnv->setAction(0, actionDetailVector);
+				}
 				// std::cout<<"actionTypeVector : "<<actionTypeVector<<std::endl;
 			}
 
