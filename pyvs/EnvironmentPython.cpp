@@ -267,8 +267,17 @@ setActionType(int actionType, int id, int index)
 		}
 		else
 		{
-			Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetTrajectory[resetDuration-mSlaves[id]->resetCount].segment(4,5);
-			constrainedActionType = mSlaves[id]->setActionType(index, getActionTypeFromVec(actionTypeVector)/3);
+			if(mSlaves[id]->randomPointTrajectoryStart)
+			{
+				Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetTrajectory[resetDuration-mSlaves[id]->resetCount].segment(4,5);
+				constrainedActionType = mSlaves[id]->setActionType(index, getActionTypeFromVec(actionTypeVector)/3);
+			}
+			else
+			{
+				Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector.segment(4,5);
+				constrainedActionType = mSlaves[id]->setActionType(index, getActionTypeFromVec(actionTypeVector)/3);
+			}
+
 
 			// std::cout<<"actionTypeVector : "<<actionTypeVector<<std::endl;
 		}
