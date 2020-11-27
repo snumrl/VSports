@@ -2514,11 +2514,11 @@ computeCriticalActionTimes()
 	    else
 	    {
 	    	mCurCriticalActionTimes[index] = (int) (mActions[index][4+NUM_ACTION_TYPE+4]+0.5);
-	    	if(mCurCriticalActionTimes[index] > 30)
-	    		mCurCriticalActionTimes[index] = 30;
-	    	if(mCurCriticalActionTimes[index] < 20)
-	    		mCurCriticalActionTimes[index] = 20;
-	    	// mCurCriticalActionTimes[index] = 30;
+	    	// if(mCurCriticalActionTimes[index] > 30)
+	    	// 	mCurCriticalActionTimes[index] = 30;
+	    	// if(mCurCriticalActionTimes[index] < 20)
+	    	// 	mCurCriticalActionTimes[index] = 20;
+	    	mCurCriticalActionTimes[index] = 30;
     		if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
     		{
     			mActionGlobalBallPosition[index] = mActions[index][4+NUM_ACTION_TYPE+3]/100.0;
@@ -3385,6 +3385,10 @@ applyAction(int index)
 	mCurBallPossessions[index] = std::get<2>(nextPoseAndContacts);
 	if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
 	{
+		if(mCurCriticalActionTimes[index]>10)
+			mCurBallPossessions[index] = true;
+		else
+			mCurBallPossessions[index] = false;
 
 		// if(mCurCriticalActionTimes[index] < -10)
 		// {
