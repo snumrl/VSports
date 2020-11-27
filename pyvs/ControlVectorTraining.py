@@ -115,7 +115,8 @@ class ComprehensiveControlVectorTraining():
 
 		self.controlVectorList = loadData(os.path.dirname(os.path.abspath(__file__)) + "/../extern/ICA/motions/%s/data/0_xData.dat"%(path))
 		self.controlVectorList = np.array(self.controlVectorList)
-		self.controlVectorListSplited = splitControlVector(self.controlVectorList , numActionTypes)
+		# self.controlVectorListSplited = splitControlVector(self.controlVectorList , numActionTypes)
+		# self.controlVectorListSplited = splitControlVector(self.controlVectorList , numActionTypes)
 		self.controlVectorListSplited = removeActionTypePart(self.controlVectorListSplited, numActionTypes)
 
 	def trainTargetCV(self,actionType):

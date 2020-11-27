@@ -1167,7 +1167,7 @@ getReward(int index, bool verbose)
 	bool fastViewTermination = true;
 
 	bool isDribble = false;
-	bool isDribbleAndShoot = true;
+	bool isDribbleAndShoot = false;
 
 	if(isDribbleAndShoot)
 	{
@@ -1180,7 +1180,7 @@ getReward(int index, bool verbose)
 
 		reward += 0.02*comTargetDirection.dot(curRootVelocity);
 
-		if(targetPlaneNormal.norm() < 0.75)
+		if(mCharacters[index]->blocked)
 		{
 			// mIsTerminalState = true;
 			// return 1.0;
@@ -1316,7 +1316,7 @@ getReward(int index, bool verbose)
 	else
 	{
 
-		if(mCurActionTypes[index] == 3)
+		if(!mCurBallPossessions[index])
 		{
 			mIsTerminalState = true;
 			if(mCharacters[index]->blocked)
@@ -1665,10 +1665,10 @@ setActionType(int index, int actionType)
 	if(actionType != 3)
 	 	curActionType = 0;
 
-	if(!mCharacters[index]->blocked)
-		curActionType = 0;
-	else
-		curActionType = 3;
+	// if(!mCharacters[index]->blocked)
+	// 	curActionType = 0;
+	// else
+	// 	curActionType = 3;
 
 
 	// curActionType = 0;
