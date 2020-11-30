@@ -214,6 +214,18 @@ class ActorCriticNN(nn.Module):
 		# return p.sample().cpu().detach().numpy().astype(np.float32)
 		return p.loc.cpu().detach().numpy().astype(np.float32)
 
+	def get_action_detail(self, s, actionType):
+		s[0:len(self.rms.mean)] = self.rms.applyOnly(s[0:len(self.rms.mean)])
+		# embed()
+		# exit(0)
+		s[0:len(self.rms.mean)] += actionType
+		ts = torch.tensor(s)
+
+
+		p, _v= self.forward(ts.unsqueeze(0))
+
+		return p.loc.cpu().detach().numpy().astype(np.float32)
+
 	def get_value(self, s):
 		ts = torch.tensor(s)
 
