@@ -461,6 +461,7 @@ class RL(object):
 				print('SIM : {}'.format(local_step),end='\r')
 
 
+			useEmbeding = True
 			# generate transition of first hierachy
 			states_h[0] = states
 
@@ -493,17 +494,20 @@ class RL(object):
 			# actions_0_oneHot = actions_0_oneHot*0
 
 			actions_0_scalar, actions_0_oneHot = arrayToScalarVectorWithConstraint(actions_h[0])
-
-			actions_0_oneHot = actions_0_oneHot*0
-
 			action_embeding_ones = np.ones(np.shape(states_h[0]),dtype=np.float32)
 
-			action_embeding_ones = 0.5 * action_embeding_ones*actions_0_scalar
+			if useEmbeding:
+				actions_0_oneHot = actions_0_oneHot*0
+				action_embeding_ones = 0.5 * action_embeding_ones*actions_0_scalar
+			else:
+				action_embeding_ones = 0.0 * action_embeding_ones*actions_0_scalar
+
 			# generate transition of second hierachy
 			for h in range(1,self.num_h):
 				if h == 1:
 					# embed()
 					# exit(0)
+
 					embededState = states_h[0]+action_embeding_ones
 
 					states_h[h] = np.concatenate((embededState, actions_0_oneHot), axis=2)
@@ -568,11 +572,13 @@ class RL(object):
 					# if curActionType != actions_0_scalar[i][j]:
 					# 	embed()
 					# 	exit(0)
-					actionsDecoded[i][j] = self.actionDecoders[curActionType].decode(Tensor(actionsDecodePart[i][j])).cpu().detach().numpy()
+					if not useEmbeding:
+						actionsDecoded[i][j] = self.actionDecoders[curActionType].decode(Tensor(actionsDecodePart[i][j])).cpu().detach().numpy()
 
 			# embed()
 			# exit(0)
-			actionsDecoded = self.actionDecoders[0].decode(Tensor(actionsDecodePart)).cpu().detach().numpy()
+			if useEmbeding:
+				actionsDecoded = self.actionDecoders[0].decode(Tensor(actionsDecodePart)).cpu().detach().numpy()
 
 			# print("time :", time.time() - start)
 
