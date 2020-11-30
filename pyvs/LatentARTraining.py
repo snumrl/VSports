@@ -42,7 +42,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 33
+nnCount = 34
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -398,6 +398,33 @@ class RL(object):
 					result[agent][slaves][maxIndex] = 1.0
 			return result
 
+		def arrayToScalarVectorWithConstraint(nparr):
+			temp = np.array(list(np.copy(nparr)))
+			tempShape = np.shape(temp)
+			scalarVectorShape = list(tempShape)
+			scalarVectorShape[2] = 1
+
+			result = np.zeros(scalarVectorShape);
+
+			result_oneHot = np.array(list(np.copy(nparr)))
+
+			for agent in range(len(nparr)):
+				for slaves in range(len(nparr[agent])):
+					maxIndex = 0
+					maxValue = -100
+					for i in range(len(nparr[agent][slaves])):
+						result_oneHot[agent][slaves][i] = 0.0
+						if nparr[agent][slaves][i] > maxValue:
+							maxValue = nparr[agent][slaves][i]
+							maxIndex = i
+					maxIndex = self.env.setActionType(maxIndex, slaves, agent)
+					# print(maxIndex)
+					result[agent][slaves] = maxIndex
+					result_oneHot[agent][slaves][maxIndex] = 1.0
+
+			return result, result_oneHot
+
+
 
 		# def arrayToOneHotVector(nparr):
 		# 	result = np.array(list(np.copy(nparr)))
@@ -458,12 +485,26 @@ class RL(object):
 
 
 
-			actions_0_oneHot = arrayToOneHotVectorWithConstraint(actions_h[0])
+			# actions_0_oneHot = arrayToOneHotVectorWithConstraint(actions_h[0])
 
+			# actions_0_oneHot = np.array(list(np.copy(actions_h[0])))
+			# embed()
+			# exit(0)
+			# actions_0_oneHot = actions_0_oneHot*0
+
+			actions_0_scalar, actions_0_oneHot = arrayToScalarVectorWithConstraint(actions_h[0])
+
+			action_embeding_ones = np.ones(np.shape(states_h[0]),dtype=np.float32)
+
+			action_embeding_ones = action_embeding_ones*actions_0_scalar
 			# generate transition of second hierachy
 			for h in range(1,self.num_h):
 				if h == 1:
-					states_h[h] = np.concatenate((states_h[0], actions_0_oneHot), axis=2)
+					# embed()
+					# exit(0)
+					embededState = states_h[0]+action_embeding_ones
+
+					states_h[h] = np.concatenate((embededState, actions_0_oneHot), axis=2)
 				else:
 					# print("value h : {}".format(h))
 					states_h[h] = np.concatenate((states_h[h-1], np.array(list(actions_h[h-1]))), axis=2)
