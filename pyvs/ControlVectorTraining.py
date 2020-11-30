@@ -115,7 +115,7 @@ class ComprehensiveControlVectorTraining():
 
 		self.controlVectorList = loadData(os.path.dirname(os.path.abspath(__file__)) + "/../extern/ICA/motions/%s/data/0_xData.dat"%(path))
 		self.controlVectorList = np.array(self.controlVectorList)
-		# self.controlVectorListSplited = splitControlVector(self.controlVectorList , numActionTypes)
+		self.controlVectorListSplited = splitControlVector(self.controlVectorList, numActionTypes)
 		# self.controlVectorListSplited = splitControlVector(self.controlVectorList , numActionTypes)
 		self.controlVectorListSplited = removeActionTypePart(self.controlVectorListSplited, numActionTypes)
 
@@ -158,9 +158,56 @@ class ComprehensiveControlVectorTraining():
 		                loss.item() / len(data)))
 			print('===> Epoch: {} Arverage loss: {:.4f}'.format(1, train_loss / 12800))
 		# self.VAEDecoders[0].save("vae_nn/vae_action_decoder_"+str(actionType)+".pt")	
-		self.VAEDecoders[actionType].save("vae_nn/vae_action_decoder_"+str(actionType)+".pt")	
-		self.VAEEncoder.save("vae_nn/vae_action_encoder.pt")	
+		self.VAEDecoders[actionType].save("vae_nn1/vae_action_decoder_"+str(actionType)+".pt")	
+		self.VAEEncoder.save("vae_nn1/vae_action_encoder.pt")	
 
+	# def trainTargetCV(self,actionType1, actionType2):
+	# 	print('Train control vector of actiontype {}, Size : {}'.format(actionType1, len(self.controlVectorListSplited[actionType1])))
+	# 	print('Train control vector of actiontype {}, Size : {}'.format(actionType2, len(self.controlVectorListSplited[actionType2])))
+	# 	for epoch in range(3):
+	# 		self.VAEEncoder.train()
+	# 		# self.VAEDecoders[0].train()
+	# 		self.VAEDecoders[actionType1].train()
+	# 		self.VAEDecoders[actionType2].train()
+	# 		train_loss = 0
+	# 		# embed()
+	# 		# exit(0)
+	# 		# action_controlVectorList = self.controlVectorListSplited[actionType2]
+
+	# 		action_controlVectorList=np.concatenate((self.controlVectorListSplited[actionType1], self.controlVectorListSplited[actionType2]),axis=0)
+	# 		np.random.shuffle(action_controlVectorList)
+	# 		# for i in range(int(len(action_controlVectorList)/64)):
+	# 		for i in range(200):
+	# 			data = action_controlVectorList[i*64:(i+1)*64]
+	# 			data = Tensor(data)
+	# 			# self.optimizers[0].zero_grad()
+	# 			self.optimizers[actionType1].zero_grad()
+	# 			latent, mu, logvar = self.VAEEncoder(data)
+
+	# 			# recon_batch = self.VAEDecoders[0](latent)
+	# 			recon_batch = self.VAEDecoders[actionType1](latent)
+
+	# 			# if i == 0:
+	# 			# 	print(data.view(-1,9)[0])
+	# 			# 	print(recon_batch[0])
+	# 			# 	print(latent[0])
+	# 			# 	print("")
+
+	# 			loss = loss_function(recon_batch, data, mu, logvar)
+	# 			loss.backward()
+	# 			train_loss += loss.item()
+	# 			# self.optimizers[0].step()
+	# 			self.optimizers[actionType1].step()
+	# 			if i % 40 == 0:
+	# 				print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+	# 	                epoch, i * len(data), 12800,
+	# 	                100. * i / (200),
+	# 	                loss.item() / len(data)))
+	# 		print('===> Epoch: {} Arverage loss: {:.4f}'.format(1, train_loss / 12800))
+	# 	# self.VAEDecoders[0].save("vae_nn/vae_action_decoder_"+str(actionType)+".pt")	
+	# 	self.VAEDecoders[actionType1].save("vae_nn/vae_action_decoder_"+str(actionType1)+".pt")	
+	# 	self.VAEDecoders[actionType1].save("vae_nn/vae_action_decoder_"+str(actionType2)+".pt")	
+	# 	self.VAEEncoder.save("vae_nn/vae_action_encoder.pt")	
 
 	# def trainComprehensiveLatentSpace(self, actionTypeSource, actionTypeTarget):
 
