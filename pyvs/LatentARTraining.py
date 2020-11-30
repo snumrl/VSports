@@ -563,22 +563,23 @@ class RL(object):
 			decodeShape[2] = 9
 			actionsDecoded =np.empty(decodeShape,dtype=np.float32)
 
-			for i in range(len(actionsDecodePart)):
-				for j in range(len(actionsDecodePart[i])):
-					# curActionType = getActionTypeFromVector(actionTypePart[i][j])
-					# embed()
-					# exit(0)
-					curActionType = int(actions_0_scalar[i][j][0])
-					# if curActionType != actions_0_scalar[i][j]:
-					# 	embed()
-					# 	exit(0)
-					if not useEmbeding:
-						actionsDecoded[i][j] = self.actionDecoders[curActionType].decode(Tensor(actionsDecodePart[i][j])).cpu().detach().numpy()
+			# for i in range(len(actionsDecodePart)):
+			# 	for j in range(len(actionsDecodePart[i])):
+			# 		# curActionType = getActionTypeFromVector(actionTypePart[i][j])
+			# 		# embed()
+			# 		# exit(0)
+			# 		curActionType = int(actions_0_scalar[i][j][0])
+			# 		# if curActionType != actions_0_scalar[i][j]:
+			# 		# 	embed()
+			# 		# 	exit(0)
+			# 		if not useEmbeding:
+			# 			actionsDecoded[i][j] = self.actionDecoders[curActionType].decode(Tensor(actionsDecodePart[i][j])).cpu().detach().numpy()
 
 			# embed()
 			# exit(0)
-			if useEmbeding:
-				actionsDecoded = self.actionDecoders[0].decode(Tensor(actionsDecodePart)).cpu().detach().numpy()
+			# if useEmbeding:
+			
+			actionsDecoded = self.actionDecoders[0].decode(Tensor(actionsDecodePart)).cpu().detach().numpy()
 
 			# print("time :", time.time() - start)
 
