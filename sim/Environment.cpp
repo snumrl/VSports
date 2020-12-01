@@ -1167,7 +1167,7 @@ getReward(int index, bool verbose)
 	bool fastViewTermination = true;
 
 	bool isDribble = false;
-	bool isDribbleAndShoot = false;
+	bool isDribbleAndShoot = true;
 
 	if(isDribbleAndShoot)
 	{
