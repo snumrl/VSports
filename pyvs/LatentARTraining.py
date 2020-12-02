@@ -110,10 +110,10 @@ class RL(object):
 		self.gamma = 0.997
 		self.lb = 0.95
 
-		# self.buffer_size = 8*1024
-		# self.batch_size = 512
-		self.buffer_size = 2*1024
-		self.batch_size = 128
+		self.buffer_size = 8*1024
+		self.batch_size = 512
+		# self.buffer_size = 2*1024
+		# self.batch_size = 128
 		self.num_action_types = 2
 		self.latent_size = 4
 
