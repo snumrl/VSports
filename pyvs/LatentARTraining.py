@@ -906,10 +906,6 @@ class RL(object):
 					self.optimizer[h][buff_index].zero_grad()
 					
 
-					if loss_actor.detach().cpu().numpy() > 100 :
-						embed()
-						exit(0)
-
 					# print(str(timeStep)+" "+str(offset))
 					# start = time.time()
 					loss.backward()
