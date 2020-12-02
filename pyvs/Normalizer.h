@@ -9,7 +9,7 @@ class Normalizer
 	Eigen::VectorXd normalizeState(Eigen::VectorXd state);
 	// Eigen::VectorXd denormalizeState(Eigen::VectorXd state);
 
-	// Eigen::VectorXd normalizeAction(Eigen::VectorXd action);
+	Eigen::VectorXd normalizeAction(Eigen::VectorXd action);
 	Eigen::VectorXd denormalizeAction(Eigen::VectorXd action);
 
 	Eigen::VectorXd xMean, xStd;

@@ -188,6 +188,47 @@ denormalizeAction(Eigen::VectorXd action)
 	return denormalizedAction;
 }
 
+Eigen::VectorXd
+Normalizer::
+normalizeAction(Eigen::VectorXd action)
+{
+	//critical action time dimension
+	int numActionTypes = 5;
+	// std::cout<<action.rows()<<std::endl;
+
+	assert(action.rows() == dimX - numActionTypes);
+
+	// std::cout<<"------------------"<<std::endl;
+	// std::cout<<action.transpose()<<std::endl;
+
+	// Eigen::VectorXd allignedAction(action.rows()-2);
+	// allignedAction.segment(0,action.rows()-2) = action.segment(0,action.rows()-2);
+	int actionLength = action.rows();
+
+	// Eigen::VectorXd allignedAction(actionLength);
+	// // allignedAction.segment(4,numActionTypes) = action.segment(0,numActionTypes);
+	// allignedAction.segment(0,4) = action.segment(0,4);
+	// allignedAction.segment(4,5) = action.segment(4,5);
+
+
+	Eigen::VectorXd normalizedAction = action; 
+
+	// std::cout<<allignedAction.transpose()<<std::endl;
+	// std::cout<<std::endl;
+
+	// std::cout<<xMean.transpose()<<std::endl;
+	// std::cout<<xStd.transpose()<<std::endl;
+	// exit(0);
+	normalizedAction.segment(0,4) = normalizedAction.segment(0,4)- xMean.segment(0,4);
+	normalizedAction.segment(0,4) = normalizedAction.segment(0,4).cwiseProduct(xStd.segment(0,4).cwiseInverse());
+
+	normalizedAction.segment(4,5) = normalizedAction.segment(4,5) - xMean.segment(4+numActionTypes,5);
+	normalizedAction.segment(4,5) = normalizedAction.segment(4,5).cwiseProduct(xStd.segment(4+numActionTypes,5).cwiseInverse());
+
+	return normalizedAction;
+}
+
+
 // Eigen::VectorXd
 // Normalizer::
 // normalizeAction(Eigen::VectorXd action)

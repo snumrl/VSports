@@ -151,6 +151,48 @@ getState(int id, int index)
 
 	return Wrapper::toNumPyArray(mSlaves[id]->getState(index));
 }
+
+np::ndarray
+EnvironmentPython::
+getCorrectActionType(int id, int index)
+{
+	Eigen::VectorXd denormalizedAction = mSlaves[id]->mTutorialControlVectors[0][mSlaves[id]->curTrajectoryFrame];
+
+	// Eigen::VectorXd normalizedAction = denormalizedAction;
+
+	Eigen::VectorXd simpleActionType(2);
+
+	int actionType = getActionTypeFromVec(denormalizedAction.segment(4,5));
+	// std::cout<<denormalizedAction.segment(4,5).transpose()<<std::endl;
+	// std::cout<<"###### : "<<mSlaves[id]->curTrajectoryFrame<<"/"<< mSlaves[id]->mTutorialControlVectors[0].size()<<" "<<actionType<<std::endl;
+	if(actionType == 2)
+	{
+		std::cout<<"Cur Action type is 2??"<<std::endl;
+		std::cout<<mSlaves[id]->curTrajectoryFrame<<std::endl;
+		exit(0);
+	}
+	actionType /= 3;
+	simpleActionType.setZero();
+	simpleActionType[actionType] = 1.0;
+
+
+	return Wrapper::toNumPyArray(simpleActionType);
+}
+
+np::ndarray
+EnvironmentPython::
+getCorrectActionDetail(int id, int index)
+{
+	Eigen::VectorXd denormalizedAction = mSlaves[id]->mTutorialControlVectors[0][mSlaves[id]->curTrajectoryFrame];
+
+	Eigen::VectorXd normalizedAction(denormalizedAction.size()-5);
+	normalizedAction.segment(0,4) = denormalizedAction.segment(0,4);
+	normalizedAction.segment(4,5) = denormalizedAction.segment(9,5);
+
+	normalizedAction = mSlaves[id]->mNormalizer->normalizeAction(normalizedAction);
+	return Wrapper::toNumPyArray(normalizedAction);
+}
+
 // np::ndarray
 // EnvironmentPython::
 // getLocalState(int id, int index)
@@ -549,6 +591,8 @@ BOOST_PYTHON_MODULE(pyvs)
 		.def("isTerminalState",&EnvironmentPython::isTerminalState)
 		.def("isFoulState",&EnvironmentPython::isFoulState)
 		.def("getState",&EnvironmentPython::getState)
+		.def("getCorrectActionType",&EnvironmentPython::getCorrectActionType)
+		.def("getCorrectActionDetail",&EnvironmentPython::getCorrectActionDetail)
 		// .def("getLocalState",&EnvironmentPython::getLocalState)
 		// .def("getSchedulerState",&EnvironmentPython::getSchedulerState)
 		// .def("getLinearActorState",&EnvironmentPython::getLinearActorState)

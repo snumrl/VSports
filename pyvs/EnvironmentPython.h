@@ -62,6 +62,9 @@ public:
 
 
 	int getActionTypeFromVec(Eigen::VectorXd action);
+
+	np::ndarray getCorrectActionType(int id, int index);
+	np::ndarray getCorrectActionDetail(int id, int index);
 	// Normalizer* mNormalizer;
 private:
 	std::vector<Environment*> mSlaves;

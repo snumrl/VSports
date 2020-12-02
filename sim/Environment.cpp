@@ -40,7 +40,7 @@ Environment::
 Environment(int control_Hz, int simulation_Hz, int numChars, std::string bvh_path, std::string nn_path)
 :mControlHz(control_Hz), mSimulationHz(simulation_Hz), mNumChars(numChars), mWorld(std::make_shared<dart::simulation::World>()),
 mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0), endTime(15),
-criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), violatedFrames(0),
+criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), violatedFrames(0),curTrajectoryFrame(0),
 randomPointTrajectoryStart(true)
 {
 	std::cout<<"Envionment Generation --- ";
@@ -496,7 +496,7 @@ stepAtOnce()
 		resetCount = -1;
 
 	curFrame++;
-
+	curTrajectoryFrame++;
 	// if(isTerminalState())
 	// {
 	// 	reset();
@@ -770,6 +770,10 @@ stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContact
 	if(resetCount < 0)
 		resetCount = -1;
 	curFrame++;
+	curTrajectoryFrame++;
+
+	if(curTrajectoryFrame > mTutorialControlVectors[0].size()-1)
+		curTrajectoryFrame = mTutorialControlVectors[0].size()-1;
 }
 
 
@@ -1503,7 +1507,9 @@ setAction(int index, const Eigen::VectorXd& a)
 	{
 		std::cout<<"Nan Action"<<std::endl;
 		mActions[index].setZero();
-		// mActions[index][4+4] = 1.0;
+		mActions[index][4+0] = 1.0;
+		mIsTerminalState = true;
+		return;
 	}
 
 	// int curActionType = 0;
@@ -1898,10 +1904,23 @@ slaveResetCharacterPositions()
 	Eigen::VectorXd standPosition = mCharacters[0]->getSkeleton()->getPositions();
 	standPosition[4] = 0.895;
 
+	bool isNan = false;
+	for(int i=0;i<standPosition.size();i++)
+	{
+		if(std::isnan(standPosition[i]))
+		{
+			isNan = true;
+		}
+	}
+	if(isNan)
+		standPosition = mTutorialTrajectories[0][0];
+
 	if(randomPointTrajectoryStart)
 	{
 		int trajectoryLength = mTutorialTrajectories[0].size();
 		int randomPoint = rand()%(trajectoryLength-resetDuration)+resetDuration;
+
+		curTrajectoryFrame = randomPoint - resetDuration;
 
 		standPosition = mTutorialTrajectories[0][randomPoint-resetDuration];
 		
@@ -2733,7 +2752,7 @@ genRewardTutorialTrajectory()
 	std::vector<int> startFrames;
 	std::vector<int> endFrames;
 
-	startFrames	= {199, 3329};
+	startFrames	= {222, 3329};
 	endFrames 	= {379, 3479};
 	// std::cout<<"skeleton dofs : "<<mCharacters[0]->getSkeleton()->getNumDofs()<<std::endl;
 

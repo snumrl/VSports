@@ -20,8 +20,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import torchvision.transforms as T
 from Utils import RunningMeanStd
-from VAE import VAEDecoder
-from random import random
+from VAE import VAEDecoder, VAEEncoder
 
 import numpy as np
 
@@ -42,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 36
+nnCount = 37
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -111,10 +110,10 @@ class RL(object):
 		self.gamma = 0.997
 		self.lb = 0.95
 
-		self.buffer_size = 8*1024
-		self.batch_size = 512
-		
-
+		# self.buffer_size = 8*1024
+		# self.batch_size = 512
+		self.buffer_size = 2*1024
+		self.batch_size = 128
 		self.num_action_types = 2
 		self.latent_size = 4
 
@@ -136,10 +135,13 @@ class RL(object):
 
 
 		self.actionDecoders = [ VAEDecoder().to(device) for _ in range(self.num_action_types)]
+		self.actionEncoder = VAEEncoder().to(device)
 		# for i in range(self.num_action_types):
 
 		self.actionDecoders[0].load("vae_nn/vae_action_decoder_"+str(0)+".pt")
 		self.actionDecoders[1].load("vae_nn/vae_action_decoder_"+str(3)+".pt")
+
+		self.actionEncoder.load("vae_nn/vae_action_encoder.pt")
 
 		self.rms = RunningMeanStd(self.num_state-2)
 
@@ -358,6 +360,8 @@ class RL(object):
 		# logprobs_2 = [None]*self.num_slaves*self.num_agents
 		# values_2 = [None]*self.num_slaves*self.num_agents
 
+		followTutorial = [False]*self.num_slaves;
+
 
 
 		terminated = [False]*self.num_slaves*self.num_agents
@@ -460,6 +464,7 @@ class RL(object):
 			if counter%10 == 0:
 				print('SIM : {}'.format(local_step),end='\r')
 
+			tutorialRatio = 0.05
 
 			useEmbeding = True
 			# generate transition of first hierachy
@@ -475,7 +480,12 @@ class RL(object):
 							Tensor(states_h[0][i]))
 						a_dist_slave[i] = a_dist_slave_agent
 						v_slave[i] = v_slave_agent
-						actions_h[0][i] = a_dist_slave[i].sample().cpu().detach().numpy().squeeze().squeeze();	
+						actions_h[0][i] = a_dist_slave[i].sample().cpu().detach().numpy().squeeze().squeeze();
+						for j in range(self.num_slaves):
+							if followTutorial[j] is True:
+								actions_h[0][i][j] = self.env.getCorrectActionType(j,i)
+								# print("actions_h[0][i][j] : {}".format(actions_h[0][i][j]))
+
 
 				for i in range(self.num_agents):
 					if teamDic[i] == learningTeam:
@@ -524,6 +534,14 @@ class RL(object):
 						v_slave[i] = v_slave_agent
 
 						actions_h[h][i] = a_dist_slave[i].sample().cpu().detach().numpy().squeeze().squeeze();
+						for j in range(self.num_slaves):
+							# embed()
+							# exit(0)
+							if followTutorial[j] is True:
+								decodedActionDetail = self.env.getCorrectActionDetail(j,i)
+								encodedActionDetail, _ = self.actionEncoder.encode(Tensor(decodedActionDetail))
+								encodedActionDetail= encodedActionDetail.cpu().detach().numpy()
+								actions_h[h][i][j] = encodedActionDetail
 
 
 				for i in range(self.num_agents):
@@ -645,6 +663,7 @@ class RL(object):
 								# self.episodes_2[i][k] = RNNEpisodeBuffer()
 						print("nan", file=sys.stderr)
 						self.env.slaveReset(j)
+						followTutorial[j] = random.random()<tutorialRatio
 						self.env.setResetCount(60-counter%10, j);
 
 
@@ -656,10 +675,11 @@ class RL(object):
 										if counter%10 == 0:
 											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
 											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											
 									else :
 										self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
 											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
-
+									
 								# print(len(self.episodes[0][j][i].data))
 								# print(len(self.episodes[1][j][i].data))
 								# print("")
@@ -675,15 +695,17 @@ class RL(object):
 									if h == 0:
 										self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
 										accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+										# if followTutorial[j] is True:
+										# 	print("Follow tutorial acc reward  : {}".format(accRewards[i][j]))		
 									else :
 										self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
 											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
-
 
 								for h in range(self.num_h):
 									self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
 									self.episodes[h][j][i] = RNNEpisodeBuffer()
 						self.env.slaveReset(j)
+						followTutorial[j] = random.random()<tutorialRatio
 						self.env.setResetCount(60-counter%10, j);
 
 
@@ -696,6 +718,7 @@ class RL(object):
 								self.episodes[h][j][i] = RNNEpisodeBuffer()
 
 					self.env.slaveReset(j)
+					followTutorial[j] = random.random()<tutorialRatio
 				break
 
 			for i in range(self.num_agents):
@@ -860,15 +883,19 @@ class RL(object):
 
 
 					'''Actor Loss'''
+
 					ratio = torch.exp(a_dist.log_prob(Tensor(stack_a))-Tensor(stack_lp))
+
 					stack_gae = (stack_gae-stack_gae.mean())/(stack_gae.std()+1E-5)
 					stack_gae = Tensor(stack_gae)
 					surrogate1 = ratio * stack_gae
 					surrogate2 = torch.clamp(ratio, min=1.0-self.clip_ratio, max=1.0+self.clip_ratio) * stack_gae
 
-					loss_actor = - torch.min(surrogate1, surrogate2).mean()
-					# loss_actor = - surrogate2.mean()
-
+					# loss_actor = - torch.min(surrogate1, surrogate2).mean()
+					loss_actor = - surrogate2.mean()
+					# if h == 1:
+					# 	embed()
+					# 	exit(0)
 					'''Entropy Loss'''
 					loss_entropy = - self.w_entropy * a_dist.entropy().mean()
 
@@ -877,8 +904,11 @@ class RL(object):
 
 					loss = loss_actor + loss_critic + loss_entropy
 					self.optimizer[h][buff_index].zero_grad()
+					
 
-
+					if loss_actor.detach().cpu().numpy() > 100 :
+						embed()
+						exit(0)
 
 					# print(str(timeStep)+" "+str(offset))
 					# start = time.time()
@@ -886,13 +916,19 @@ class RL(object):
 
 					# print("time :", time.time() - start)
 
+					detectNan = False
 					for param in self.target_model[h][buff_index].parameters():
+						if torch.isnan(param.grad).any():
+							detectNan = True
+							# print("nan")
 						if param.grad is not None:
 							param.grad.data.clamp_(-0.5, 0.5)
 
-					self.optimizer[h][buff_index].step()
+					if not detectNan:
+						self.optimizer[h][buff_index].step()
 					self.sum_loss_actor[h][buff_index] += loss_actor.detach()*self.batch_size/self.num_epochs
 					self.sum_loss_critic[h][buff_index] += loss_critic.detach()*self.batch_size/self.num_epochs
+
 					loss_entropy = loss_entropy.detach()
 					loss_actor = loss_actor.detach()
 					loss_critic = loss_critic.detach()
