@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 39
+nnCount = 37
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -52,7 +52,7 @@ if not exists(nndir):
 	mkdir(nndir)
 
 
-RNNEpisode = namedtuple('RNNEpisode', ('s','a','r','value','logprob'))
+RNNEpisode = namedtuple('RNNEpisode', ('s','a','r','value','logprob','hidden','hidden_h','hidden_c'))
 
 class RNNEpisodeBuffer(object):
 	def __init__(self):
@@ -349,6 +349,10 @@ class RL(object):
 		values_h = np.array([[None for _ in range(self.num_agents)] for _ in range(self.num_h)])
 		is_exploitation = np.array([None for _ in range(self.num_agents)])
 
+		hiddens = np.array([[None for _ in range(self.num_agents)] for _ in range(self.num_h)])
+		hiddens_forward = np.array([[None for _ in range(self.num_agents)] for _ in range(self.num_h)])
+
+
 		# states_1 = [None]*self.num_slaves*self.num_agents
 		# actions_1 = [None]*self.num_slaves*self.num_agents
 		# logprobs_1 = [None]*self.num_slaves*self.num_agents
@@ -369,6 +373,14 @@ class RL(object):
 		for i in range(self.num_agents):
 			for j in range(self.num_slaves):
 				states[i][j] = self.env.getState(j,i).astype(np.float32)
+		for h in range(self.num_h):
+			for i in range(self.num_agents):
+				hiddens[h][i] = self.target_model[h].init_hidden(self.num_slaves)
+				hiddens[h][i] = (hiddens[h][i][0].cpu().detach().numpy(), \
+							hiddens[h][i][1].cpu().detach().numpy())
+				# hiddens_forward[h][i] = self.model[0].init_hidden(self.num_slaves)
+
+
 
 		states = np.array(states)
 		states[:,:,:-2] = self.rms.apply(states[:,:,:-2])
@@ -468,16 +480,17 @@ class RL(object):
 
 			useEmbeding = True
 			# generate transition of first hierachy
+			states_h[0] = states
 
 			a_dist_slave = [None]*self.num_agents
 			v_slave = [None]*self.num_agents
+			hiddens_slave = [None]*self.num_agents
 
 			if counter%10 == 1:
-				states_h[0] = states
 				for i in range(self.num_agents):
 					if teamDic[i] == learningTeam:
-						a_dist_slave_agent,v_slave_agent = self.target_model[0][self.indexToNetDic[i]].forward(\
-							Tensor(states_h[0][i]))
+						a_dist_slave_agent,v_slave_agent, hiddens_slave_agent = self.target_model[0][self.indexToNetDic[i]].forward(\
+							Tensor(states_h[0][i]), (Tensor(hiddens[0][i][0]), Tensor(hiddens[0][i][1])))
 						a_dist_slave[i] = a_dist_slave_agent
 						v_slave[i] = v_slave_agent
 						actions_h[0][i] = a_dist_slave[i].sample().cpu().detach().numpy().squeeze().squeeze();
@@ -485,13 +498,14 @@ class RL(object):
 							if followTutorial[j] is True:
 								actions_h[0][i][j] = self.env.getCorrectActionType(j,i)
 								# print("actions_h[0][i][j] : {}".format(actions_h[0][i][j]))
-
+						hiddens_slave[i] = (hiddens_slave_agent[0].cpu().detach().numpy(), hiddens_slave_agent[1].cpu().detach().numpy())
 
 				for i in range(self.num_agents):
 					if teamDic[i] == learningTeam:
 						logprobs_h[0][i] = a_dist_slave[i].log_prob(Tensor(actions_h[0][i]))\
 							.cpu().detach().numpy().reshape(-1);
 						values_h[0][i] = v_slave[i].cpu().detach().numpy().reshape(-1);
+						hiddens_forward[0][i] = hiddens_slave[i]
 
 
 
@@ -518,18 +532,19 @@ class RL(object):
 					# embed()
 					# exit(0)
 
-					embededState = states+action_embeding_ones
+					embededState = states_h[0]+action_embeding_ones
 
 					states_h[h] = np.concatenate((embededState, actions_0_oneHot), axis=2)
-				# else:
-				# 	# print("value h : {}".format(h))
-				# 	states_h[h] = np.concatenate((states, np.array(list(actions_h[h-1]))), axis=2)
+				else:
+					# print("value h : {}".format(h))
+					states_h[h] = np.concatenate((states_h[h-1], np.array(list(actions_h[h-1]))), axis=2)
 				a_dist_slave = [None]*self.num_agents
 				v_slave = [None]*self.num_agents
+				hiddens_slave = [None]*self.num_agents
 				for i in range(self.num_agents):
 					if teamDic[i] == learningTeam:
-						a_dist_slave_agent,v_slave_agent = self.target_model[h][self.indexToNetDic[i]].forward(\
-							Tensor([states_h[h][i]]))
+						a_dist_slave_agent,v_slave_agent, hiddens_slave_agent = self.target_model[h][self.indexToNetDic[i]].forward(\
+							Tensor([states_h[h][i]]), (Tensor(hiddens[1][i][0]), Tensor(hiddens[1][i][1])))
 						a_dist_slave[i] = a_dist_slave_agent
 						v_slave[i] = v_slave_agent
 
@@ -542,6 +557,7 @@ class RL(object):
 								encodedActionDetail, _ = self.actionEncoder.encode(Tensor(decodedActionDetail))
 								encodedActionDetail= encodedActionDetail.cpu().detach().numpy()
 								actions_h[h][i][j] = encodedActionDetail
+						hiddens_slave[i] = (hiddens_slave_agent[0].cpu().detach().numpy(), hiddens_slave_agent[1].cpu().detach().numpy())
 
 
 				for i in range(self.num_agents):
@@ -549,6 +565,7 @@ class RL(object):
 						logprobs_h[h][i] = a_dist_slave[i].log_prob(Tensor(actions_h[h][i]))\
 							.cpu().detach().numpy().reshape(-1);
 						values_h[h][i] = v_slave[i].cpu().detach().numpy().reshape(-1);
+						hiddens_forward[1][i] = hiddens_slave[i]
 						# embed()
 						# exit(0)
 
@@ -674,11 +691,11 @@ class RL(object):
 									if h == 0:
 										if counter%10 == 0:
 											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j], hiddens[h][i][j])
 											
 									else :
 										self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j], hiddens[h][i][j])
 									
 								# print(len(self.episodes[0][j][i].data))
 								# print(len(self.episodes[1][j][i].data))
@@ -694,12 +711,12 @@ class RL(object):
 								for h in range(self.num_h):
 									if h == 0:
 										self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-										accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+										accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j], hiddens[h][i][j])
 										# if followTutorial[j] is True:
 										# 	print("Follow tutorial acc reward  : {}".format(accRewards[i][j]))		
 									else :
 										self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j], hiddens[h][i][j])
 
 								for h in range(self.num_h):
 									self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
@@ -743,7 +760,7 @@ class RL(object):
 					# print(size)
 					if size == 0:
 						continue
-					states, actions, rewards, values, logprobs = zip(*data)
+					states, actions, rewards, values, logprobs, hiddens = zip(*data)
 					values = np.concatenate((values, np.zeros(1)), axis=0)
 					advantages = np.zeros(size)
 					ad_t = 0
@@ -765,7 +782,7 @@ class RL(object):
 						rnn_replay_buffer = RNNReplayBuffer(10000)
 						for i in range(size):
 
-							rnn_replay_buffer.push(states[i], actions[i], logprobs[i], TD[i], advantages[i])
+							rnn_replay_buffer.push(states[i], actions[i], logprobs[i], TD[i], advantages[i], hiddens[i][0], hiddens[i][1])
 
 						self.buffer[h][index].push(rnn_replay_buffer)
 

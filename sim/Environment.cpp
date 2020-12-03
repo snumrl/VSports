@@ -1243,8 +1243,9 @@ getReward(int index, bool verbose)
 			if(mCurActionTypes[index] == 3)
 			{
 				mIsTerminalState = true;
-
-				return 0.1*exp(-(targetPlaneNormal.norm()));
+				return 0;
+				// return - 0.1*targetPlaneNormal.norm();
+				// return 0.1*exp(-(targetPlaneNormal.norm()));
 				// return -0.1;
 			}
 		}
