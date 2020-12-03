@@ -572,6 +572,7 @@ step()
 	// time_check_start();
 
 	mEnv->getState(0);
+	std::cout<<"Root transform : "<<mEnv->mStates[0].segment(0,4).transpose()<<std::endl;
 
 	if(mEnv->resetCount<=0)
 		getActionFromNN(0);
@@ -1320,9 +1321,7 @@ getActionFromNN(int index)
 
 	p::object get_action_1;
 
-	std::cout<<"00000000000"<<std::endl;
 	get_action_1 = nn_module_1[index].attr("get_action_detail");
-	std::cout<<"1111111111111"<<std::endl;
 
 	p::tuple shape_1 = p::make_tuple(state_1.size());
 	np::ndarray state_np_1 = np::empty(shape_1, dtype);
@@ -1332,12 +1331,10 @@ getActionFromNN(int index)
 	{
 		dest_1[j] = state_1[j];
 	}
-	std::cout<<"22222222222222"<<std::endl;
 
 	temp = get_action_1(state_np_1, actionType);
 	np::ndarray action_np_1 = np::from_object(temp);
 	float* srcs_1 = reinterpret_cast<float*>(action_np_1.get_data());
-	std::cout<<"333333333333"<<std::endl;
 
 	for(int j=0;j<latentSize;j++)
 	{

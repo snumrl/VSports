@@ -20,6 +20,8 @@ Character3D(const std::string& name)
 	prevKeyJointPositions.resize(6*3);
 	prevKeyJointPositions.setZero();
 
+	prevRootT.setIdentity();
+
 }
 
 const dart::dynamics::SkeletonPtr&

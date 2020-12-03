@@ -28,6 +28,8 @@ public:
 
 	Eigen::VectorXd prevSkelPositions;
 	Eigen::VectorXd prevKeyJointPositions;
+
+	Eigen::Isometry3d prevRootT;
 	// double mDirection;
 };
 

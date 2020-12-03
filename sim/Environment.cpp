@@ -534,6 +534,7 @@ stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContact
 {
 	mCharacters[0]->prevSkelPositions = mCharacters[0]->getSkeleton()->getPositions();
 	mCharacters[0]->prevKeyJointPositions = mStates[0].segment(mCharacters[0]->getSkeleton()->getNumDofs(),6*3);
+	mCharacters[0]->prevRootT = getRootT(0);
 	for(int index=0;index<mCharacters.size();index++)
 	{
 		// time_check_start();
@@ -804,6 +805,8 @@ getState(int index)
 		contacts[3] = 1.0;
 	}
 
+	Eigen::Vector4d rootTransform = ICAPosition.segment(4,4);
+
 	// Motion::Root root = ms->getLastPose()->getRoot();
 
 	// Eigen::Isometry3d baseToRoot = ICA::dart::getBaseToRootMatrix(root);
@@ -856,7 +859,19 @@ getState(int index)
 	{
 		skelVelocity.segment(skel->getNumDofs(),3*EEJoints.size()).setZero();
 	}
+
+
+	skelVelocity.segment(3,3) = rootT.linear().inverse() * skelVelocity.segment(3,3);
 	// std::cout<<"###222222"<<std::endl;
+
+	// Eigen::VectorXd rootState(3 + 3);
+	// rootState.segment(0,3) = skelPosition.segment(3,3);
+	// rootState.segment(3,3) = skelVelocity.segment(3,3);
+
+	// rootState.segment(3,3) = rootT.linear().inverse() * rootState.segment(3,3);
+
+
+
 
 
 	Eigen::Vector3d relCurBallPosition = rootT.inverse()*curBallPosition;
@@ -1033,11 +1048,16 @@ getState(int index)
 	// std::cout<<"goalpostPositions.transpose(): "<<goalpostPositions.transpose()<<std::endl;
 	// std::cout<<"contacts.transpose(): "<<contacts.transpose()<<std::endl;
 
-	state.resize(skelPosition.rows() + skelVelocity.rows() + relCurBallPosition.rows() + relTargetPosition.rows() + relBallToTargetPosition.rows() + goalpostPositions.rows() 
+	state.resize(rootTransform.rows() + skelPosition.rows() + skelVelocity.rows() + relCurBallPosition.rows() + relTargetPosition.rows() + relBallToTargetPosition.rows() + goalpostPositions.rows() 
 		+ contacts.rows() + 1 + 1 + 3 +curActionType.rows()+curSMState.rows() + relObstacles.size()*3 + 1 +availableActions.rows());
 	 //+ ballVelocity.rows()+2+curActionType.rows());
 	
 	int curIndex = 0;
+	for(int i=0;i<rootTransform.rows();i++)
+	{
+		state[curIndex] = rootTransform[i];
+		curIndex++;
+	}
 	for(int i=0;i<skelPosition.rows();i++)
 	{
 		state[curIndex] = skelPosition[i];
