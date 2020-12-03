@@ -904,7 +904,6 @@ class RL(object):
 
 					loss = loss_actor + loss_critic + loss_entropy
 					self.optimizer[h][buff_index].zero_grad()
-					
 
 					# print(str(timeStep)+" "+str(offset))
 					# start = time.time()
