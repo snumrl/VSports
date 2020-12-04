@@ -59,6 +59,7 @@ file(GLOB srcs
 		"vsports/common.h"
 		#"vsports/SingleBasketballWindow.h" "vsports/SingleBasketballWindow.cpp"
 		"vsports/SingleControlWindow.h" "vsports/SingleControlWindow.cpp"
+		"vsports/MultiHeadWindow.h" "vsports/MultiHeadWindow.cpp"
 		"utils/*.h" "utils/*.cpp"
 		"motion/*.h" "motion/*.cpp")
 

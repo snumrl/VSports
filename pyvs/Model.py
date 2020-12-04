@@ -251,48 +251,31 @@ class ActorCriticNN(nn.Module):
 
 
 
-class ActorCriticRNN(nn.Module):
-	def __init__(self, num_states, num_actions, log_std = 0.0, softmax = False, actionType = False):
-		super(ActorCriticNN, self).__init__()
-		self.softmax = softmax
+class MultiHeadNetwork(nn.Module):
+	def __init__(self, num_states, num_actionTypes, num_actionDetails, log_std = 0.0):
+		super(MultiHeadNetwork, self).__init__()
 		self.num_policyInput = num_states
-
-		self.hidden_size = 128
-		self.num_layers = 1
-		self.actionType = actionType
-		self.softmax = softmax
-
-		self.rnn = nn.LSTM(self.num_policyInput, self.hidden_size, num_layers=self.num_layers)
-		self.cur_hidden = self.init_hidden(1)
 
 		num_h1 = 256
 		num_h2 = 256
 		# num_h3 = 256
 		# self.policy = None
 
-		if self.softmax :
-			self.policy = nn.Sequential(
-				nn.Linear(self.num_policyInput, num_h1),
-				nn.LeakyReLU(0.2, inplace=True),
-				nn.Linear(num_h1, num_h2),
-				nn.LeakyReLU(0.2, inplace=True),
-				nn.Linear(num_h2, num_actions),
-				# nn.Softmax(dim = 1)
-				# nn.Tanh()
-				# nn.LeakyReLU(0.2, inplace=True),
-				# nn.Linear(num_h3, num_actions)
-			)
-		else:
-			self.policy = nn.Sequential(
-				nn.Linear(self.num_policyInput, num_h1),
-				nn.LeakyReLU(0.2, inplace=True),
-				nn.Linear(num_h1, num_h2),
-				nn.LeakyReLU(0.2, inplace=True),
-				nn.Linear(num_h2, num_actions),
-				# nn.Tanh()
-				# nn.LeakyReLU(0.2, inplace=True),
-				# nn.Linear(num_h3, num_actions)
-			)
+		self.policy = nn.Sequential(
+			nn.Linear(self.num_policyInput, num_h1),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h1, num_h2),
+			nn.LeakyReLU(0.2, inplace=True),
+			# nn.Softmax(dim = 1)
+			# nn.Tanh()
+			# nn.LeakyReLU(0.2, inplace=True),
+			# nn.Linear(num_h3, num_actions)
+		)
+
+		self.nn_actionType = nn.Linear(num_h2, num_actionTypes)
+
+		self.nn_actionDetail = nn.Linear(num_h2, num_actionDetails)
+
 		self.value = nn.Sequential(
 			nn.Linear(self.num_policyInput, num_h1),
 			nn.LeakyReLU(0.2, inplace=True),
@@ -304,7 +287,9 @@ class ActorCriticRNN(nn.Module):
 		)
 
 
-		self.log_std = nn.Parameter(log_std * torch.ones(num_actions))
+		# self.log_std_actionType = nn.Parameter(log_std * torch.ones(num_actionTypes))
+		# self.log_std_actionDetail = nn.Parameter(log_std * torch.ones(num_actionDetails))
+		self.log_std = nn.Parameter(log_std * torch.ones(num_actionTypes+num_actionDetails))
 		# self.log_std = nn.Parameter(Tensor([0, 0, -2]))
 
 		# self.rnn.apply(weights_init)
@@ -321,40 +306,22 @@ class ActorCriticRNN(nn.Module):
 		# self.rms.apply(x)
 		x = x.cuda()
 
-		# batch_size = x.size()[0];
+		h2 = self.policy(x)
 
-		action = self.policy(x)
-	
-		if self.actionType:
-			mask = x[:,-2:]
-			action = torch.mul(action, mask)
-			# embed()
-			# exit(0)
+		actionType = self.nn_actionType(h2)
+		mask = x[:,-2:]
+		actionType = torch.mul(actionType, mask)
 
+		sm = nn.Softmax(dim = 1)
+		actionType = sm(actionType)
+
+
+		actionDetail = self.nn_actionDetail(h2)
 
 		# embed()
 		# exit(0)
-		if self.softmax:
-			# embed()
-			# exit(0)
-			sm =  nn.Softmax(dim = 1)
-			action = sm(action)
+		action = torch.cat((actionType, actionDetail),axis=1)
 		return MultiVariateNormal(action.unsqueeze(0),self.log_std.exp()), self.value(x)
-		# return MultiVariateNormal(self.policy(rnnOutput).unsqueeze(0),self.log_std.exp()), self.value(rnnOutput), out_hidden
-
-	# def forwardAndUpdate(self,x):
-
-
-
-	# 	x = x.cuda()
-
-	# 	batch_size = x.size()[0];
-
-	# 	# self.log_std = nn.Parameter(Tensor([0, 0, -2]))
-	# 	# k = np.exp(-0.01*num_eval)
-	# 	# rnnOutput, out_hidden = self.rnn(x.view(1, batch_size,-1), in_hidden)
-	# 	return MultiVariateNormal(self.policy(x).unsqueeze(0),self.log_std.exp()), self.value(x)
-	# 	# return MultiVariateNormal(self.policy(rnnOutput).unsqueeze(0),self.log_std.exp()), self.value(rnnOutput), out_hidden
 
 
 	def load(self,path):

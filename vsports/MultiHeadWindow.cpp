@@ -1,4 +1,4 @@
-#include "SingleControlWindow.h"
+#include "MultiHeadWindow.h"
 #include "../render/GLfunctionsDART.h"
 #include "../model/SkelMaker.h"
 #include "../model/SkelHelper.h"
@@ -33,7 +33,7 @@ namespace np = boost::python::numpy;
 // double floorDepth = -0.1;
 
 void
-SingleControlWindow::
+MultiHeadWindow::
 initWindow(int _w, int _h, char* _name)
 {
 	mWindows.push_back(this);
@@ -56,8 +56,8 @@ initWindow(int _w, int _h, char* _name)
 
 
 
-SingleControlWindow::
-SingleControlWindow()
+MultiHeadWindow::
+MultiHeadWindow()
 :SimWindow(), mIsNNLoaded(false), mFrame(0), windowFrame(0)
 {
 
@@ -119,10 +119,10 @@ SingleControlWindow()
 
 }
 
-SingleControlWindow::
-SingleControlWindow(const char* nn_path,
+MultiHeadWindow::
+MultiHeadWindow(const char* nn_path,
 					const char* control_nn_path)
-:SingleControlWindow()
+:MultiHeadWindow()
 {
 	int numActionTypes = 2;
 	latentSize = 4;
@@ -162,38 +162,16 @@ SingleControlWindow(const char* nn_path,
 
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module_0[i] = p::eval(("ActorCriticNN(num_state, "+to_string(numActionTypes)+", 0.0, True).cuda()").data(), mns);
+		nn_module_0[i] = p::eval(("MultiHeadNetwork(num_state, "+to_string(numActionTypes)+","
+			+to_string(latentSize)+ ", 0.0).cuda()").data(), mns);
 		load_0[i] = nn_module_0[i].attr("load");
 		load_rms_0[i] = nn_module_0[i].attr("loadRMS");
 	}
-	for(int i=0;i<mEnv->mNumChars;i++)
-	{
-		nn_module_1[i] = p::eval(("ActorCriticNN(num_state+"+to_string(numActionTypes)+", "+to_string(latentSize)+").cuda()").data(), mns);
-		load_1[i] = nn_module_1[i].attr("load");
-		load_rms_1[i] = nn_module_1[i].attr("loadRMS");
-	}
-	// for(int i=0;i<mEnv->mNumChars;i++)
-	// {
-	// 	nn_module_2[i] = p::eval("ActorCriticNN(num_state+5+5, 6 ).cuda()", mns);
-	// 	load_2[i] = nn_module_2[i].attr("load");
-	// }
 
-
-
-	// for(int i=0;i<mEnv->mNumChars;i++)
-	// {
-	// 	nn_module_0[i] = p::eval("ActorCriticNN(num_state, 4).cuda()", mns);
-	// 	load_0[i] = nn_module_0[i].attr("load");
-	// }
-	// for(int i=0;i<mEnv->mNumChars;i++)
-	// {
-	// 	nn_module_1[i] = p::eval("ActorCriticNN(num_state+4, 2).cuda()", mns);
-	// 	load_1[i] = nn_module_1[i].attr("load");
-	// }
 
 
 	load_0[0](string(control_nn_path) + "_0.pt");
-	load_1[0](string(control_nn_path) + "_1.pt");
+	// load_1[0](string(control_nn_path) + "_1.pt");
 
 	std::string dir = control_nn_path;
 	std::string subdir = "";
@@ -205,7 +183,7 @@ SingleControlWindow(const char* nn_path,
 
 
 	load_rms_0[0]((subdir + "rms.ms").data());
-	load_rms_1[0]((subdir + "rms.ms").data());
+	// load_rms_1[0]((subdir + "rms.ms").data());
 
 
 	// load_2[0](string(control_nn_path) + "_2.pt");
@@ -274,7 +252,7 @@ SingleControlWindow(const char* nn_path,
 
 
 // void
-// SingleControlWindow::
+// MultiHeadWindow::
 // initDartNameIdMapping()
 // {    
 // 	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
@@ -294,7 +272,7 @@ SingleControlWindow(const char* nn_path,
 // }
 
 void
-SingleControlWindow::
+MultiHeadWindow::
 initCustomView()
 {
 	// mCamera->eye = Eigen::Vector3d(3.60468, -4.29576, 1.87037);
@@ -307,7 +285,7 @@ initCustomView()
 }
 
 void
-SingleControlWindow::
+MultiHeadWindow::
 initGoalpost()
 {
 	redGoalpostSkel = SkelHelper::makeGoalpost(Eigen::Vector3d(-8.0, 0.25 + floorDepth, 0.0), "red");
@@ -320,7 +298,7 @@ initGoalpost()
 
 
 void
-SingleControlWindow::
+MultiHeadWindow::
 keyboard(unsigned char key, int x, int y)
 {
 	SkeletonPtr manualSkel = mEnv->getCharacter(0)->getSkeleton();
@@ -438,7 +416,7 @@ keyboard(unsigned char key, int x, int y)
 	}
 }
 void
-SingleControlWindow::
+MultiHeadWindow::
 keyboardUp(unsigned char key, int x, int y)
 {
 	SkeletonPtr manualSkel = mEnv->getCharacter(0)->getSkeleton();
@@ -472,7 +450,7 @@ keyboardUp(unsigned char key, int x, int y)
 	}
 }
 void
-SingleControlWindow::
+MultiHeadWindow::
 timer(int value)
 {
 	// time_check_start();
@@ -493,7 +471,7 @@ timer(int value)
 
 
 void
-SingleControlWindow::
+MultiHeadWindow::
 applyKeyBoardEvent()
 {
     double scale = 150.0;
@@ -522,7 +500,7 @@ applyKeyBoardEvent()
         this->targetLocal.segment(0,2) += scale*rightVec;
 }
 void
-SingleControlWindow::
+MultiHeadWindow::
 applyMouseEvent()
 {
     Eigen::Vector3d facing = mCamera->lookAt - mCamera->eye;
@@ -533,7 +511,7 @@ applyMouseEvent()
 }
 
 int
-SingleControlWindow::
+MultiHeadWindow::
 step()
 {
 	std::chrono::time_point<std::chrono::system_clock> m_time_check_s = std::chrono::system_clock::now();
@@ -587,6 +565,9 @@ step()
 	
 
 	// time_check_end();
+	// if(mEnv->resetCount<=0)
+	// 	exit(0);
+	// std::cout<<"mEnv->mActions[0].size()"<<mEnv->mActions.size()<<std::endl;
 
 	std::cout<<mEnv->mActions[0].segment(0,9).transpose()<<std::endl;
 	std::cout<<mEnv->mActions[0].segment(9,5).transpose()<<std::endl;
@@ -613,7 +594,7 @@ step()
 
 
 	std::vector<std::vector<double>> concatControlVector;
-	// std::cout<<"In SingleControlWindow :"<<std::endl;
+	// std::cout<<"In MultiHeadWindow :"<<std::endl;
 	// for(int i=0;i<mEnv->slaveResetStateVector.size();i++)
 	// {
 	// 	std::cout<<mEnv->slaveResetStateVector[i]<<" ";
@@ -753,7 +734,7 @@ step()
 }
 
 // void 
-// SingleControlWindow::
+// MultiHeadWindow::
 // setBallPosition(bool leftContact)
 // {
 // 	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
@@ -779,7 +760,7 @@ step()
 
 
 // void 
-// SingleControlWindow::
+// MultiHeadWindow::
 // setBallVelocity(bool leftContact)
 // {
 // 	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
@@ -810,7 +791,7 @@ step()
 // }
 
 // void
-// SingleControlWindow::
+// MultiHeadWindow::
 // updateHandTransform()
 // {
 // 	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
@@ -826,7 +807,7 @@ step()
 // }
 
 void
-SingleControlWindow::
+MultiHeadWindow::
 display()
 {
 
@@ -1098,7 +1079,7 @@ display()
 }
 
 std::string
-SingleControlWindow::
+MultiHeadWindow::
 indexToStateString(int index)
 {
 	switch(index)
@@ -1144,7 +1125,7 @@ indexToStateString(int index)
 }
 
 void
-SingleControlWindow::
+MultiHeadWindow::
 mouse(int button, int state, int x, int y) 
 {
     mPrevX = x;
@@ -1185,14 +1166,14 @@ mouse(int button, int state, int x, int y)
 
 
 void
-SingleControlWindow::
+MultiHeadWindow::
 motion(int x, int y)
 {
 	SimWindow::motion(x, y);
 }
 
 Eigen::VectorXd
-SingleControlWindow::
+MultiHeadWindow::
 toOneHotVector(Eigen::VectorXd action)
 {
     int maxIndex = 0;
@@ -1213,7 +1194,7 @@ toOneHotVector(Eigen::VectorXd action)
 
 
 Eigen::VectorXd
-SingleControlWindow::
+MultiHeadWindow::
 toOneHotVectorWithConstraint(int index, Eigen::VectorXd action)
 {
 	// std::cout<<"acition type "<<action.transpose()<<std::endl;
@@ -1236,7 +1217,7 @@ toOneHotVectorWithConstraint(int index, Eigen::VectorXd action)
 
 
 int
-SingleControlWindow::
+MultiHeadWindow::
 getActionTypeFromVec(Eigen::VectorXd action)
 {
     int maxIndex = 0;
@@ -1256,7 +1237,7 @@ getActionTypeFromVec(Eigen::VectorXd action)
 
 
 void
-SingleControlWindow::
+MultiHeadWindow::
 getActionFromNN(int index)
 {
 	p::object get_action_0;
@@ -1264,13 +1245,16 @@ getActionFromNN(int index)
 	Eigen::VectorXd state = mEnv->getState(index);
 	std::cout<<"action mask : "<<state.segment(state.size()-2, 2).transpose()<<std::endl;
 
-	int numActions = 2;
+	int numActionTypes = 2;
 	// int latentSize = 4;
 	// std::cout<<state.segment(155,6).transpose()<<std::endl;
 	// std::cout<<state.segment(mEnv->mCharacters[0]->getSkeleton()->getNumDofs(),12).transpose()<<std::endl;
 
-	Eigen::VectorXd mActionType(numActions);
+	Eigen::VectorXd mActionType(numActionTypes);
 	mActionType.setZero();
+
+	Eigen::VectorXd encodedAction(latentSize);
+	Eigen::VectorXd decodedAction(9);
 
 	get_action_0 = nn_module_0[index].attr("get_action");
 
@@ -1288,9 +1272,13 @@ getActionFromNN(int index)
 	np::ndarray action_np = np::from_object(temp);
 	float* srcs = reinterpret_cast<float*>(action_np.get_data());
 
-	for(int j=0;j<numActions;j++)
+	for(int j=0;j<numActionTypes;j++)
 	{
 		mActionType[j] = srcs[j];
+	}
+	for(int j=0;j<latentSize;j++)
+	{
+		encodedAction[j] = srcs[j+numActionTypes];
 	}
 
 	// std::cout<<"mActionType : "<<mActionType.transpose()<<std::endl;
@@ -1298,58 +1286,11 @@ getActionFromNN(int index)
 	std::cout<<"mEnv->resetCount : "<<mEnv->resetCount<<std::endl;
 	std::cout<<"mActionType.transpose() : "<<mActionType.transpose()<<std::endl;
 
-	if(mEnv->curFrame%10 == 0)
-		mActionType = toOneHotVectorWithConstraint(index, mActionType);
-	else
-	{
-		mActionType.setZero();
-		int prevActionType = mEnv->mCurActionTypes[index]/3;
-		mActionType[prevActionType] = 1.0;
-
-	}
+	mActionType = toOneHotVectorWithConstraint(index, mActionType);
 
 	int actionType = getActionTypeFromVec(mActionType);
 
 	// mEnv->setActionType(index, actionType);
-
-
-	///////////////
-	Eigen::VectorXd mAction(mEnv->getNumAction() - numActions);
-	Eigen::VectorXd state_1(state.size()+numActions);
-	state_1.segment(0,state.size()) = state;
-	state_1.segment(state.size(),numActions) = mActionType;
-
-	p::object get_action_1;
-
-	get_action_1 = nn_module_1[index].attr("get_action_detail");
-
-	p::tuple shape_1 = p::make_tuple(state_1.size());
-	np::ndarray state_np_1 = np::empty(shape_1, dtype);
-
-	float* dest_1 = reinterpret_cast<float*>(state_np_1.get_data());
-	for(int j=0;j<state_1.size();j++)
-	{
-		dest_1[j] = state_1[j];
-	}
-
-	temp = get_action_1(state_np_1, actionType);
-	np::ndarray action_np_1 = np::from_object(temp);
-	float* srcs_1 = reinterpret_cast<float*>(action_np_1.get_data());
-
-	for(int j=0;j<latentSize;j++)
-	{
-		mAction[j] = srcs_1[j];
-	}
-
-	///////////////
-	// exit(0);
-	// mAction.segment(9,2) = mAction.segment(4,2);
-
-
-	Eigen::VectorXd encodedAction(latentSize);
-	encodedAction = mAction.segment(0,encodedAction.size());
-	Eigen::VectorXd decodedAction(9);
-
 	// encodedAction.setOnes();
 	// encodedAction *= -5.0;
 
@@ -1383,42 +1324,6 @@ getActionFromNN(int index)
 
 
 
-/*	Eigen::VectorXd mActionHandContact(6);
-	Eigen::VectorXd state_2(state_1.size()+encodedAction.rows());
-	state_2.segment(0,state_1.size()) = state_1;
-	state_2.segment(state_1.size(),encodedAction.rows()) = encodedAction;
-
-	p::object get_action_2;
-
-	get_action_2 = nn_module_2[index].attr("get_action");
-
-	p::tuple shape_2 = p::make_tuple(state_2.size());
-	np::ndarray state_np_2 = np::empty(shape_2, dtype);
-
-	float* dest_2 = reinterpret_cast<float*>(state_np_2.get_data());
-	for(int j=0;j<state_2.size();j++)
-	{
-		dest_2[j] = state_2[j];
-	}
-
-	temp = get_action_2(state_np_2);
-	np::ndarray action_np_2 = np::from_object(temp);
-	float* srcs_2 = reinterpret_cast<float*>(action_np_2.get_data());
-
-	for(int j=0;j<mActionHandContact.size();j++)
-	{
-		mActionHandContact[j] = srcs_2[j];
-	}
-*/
-	// mAction.segment(0, decodedAction.size()) = decodedAction;
-	// mAction.segment(decodedAction.size(),mActionHandContact.size()) = mActionHandContact;
-
-
-
-
-
-
-
 	// std::cout<<"Decoded Action :"<<std::endl;
 	// std::cout<<mAction.transpose()<<std::endl;
 
@@ -1426,10 +1331,14 @@ getActionFromNN(int index)
 	// mAction = mEnv->mNormalizer->denormalizeAction(mAction);
 	// std::cout<<mAction.segment(0,4).transpose()<<std::endl;
 	// std::cout<<mAction.segment(4,8).transpose()<<std::endl;
-	// std::cout<<mAction.segment(12,7).transpose()<<std::endl;
+	// std::cout<<mAction.segment(12,7).transpose()<<std1::endl;
 	// std::cout<<std::endl;
 	// std::cout<<"-------------"<<std::endl;	
+
+	// std::cout<<mActions.size()<<std::endl;
 	mActions[index] = mEnv->mNormalizer->denormalizeAction(decodedAction);
+	// exit(0);
+	// std::cout<<"--------------"<<std::endl;
 	// mActions[index] = mAction;
 
 	// return mActions[index];
@@ -1439,7 +1348,7 @@ getActionFromNN(int index)
 
 /*
 void
-SingleControlWindow::
+MultiHeadWindow::
 getActionFromNN(int index)
 {
 	p::object get_action_0;
@@ -1545,7 +1454,7 @@ getActionFromNN(int index)
 
 */
 /*void
-SingleControlWindow::
+MultiHeadWindow::
 getActionFromNN(int index)
 {
 	p::object get_action_0;
@@ -1657,7 +1566,7 @@ getActionFromNN(int index)
 */
 
 void
-SingleControlWindow::
+MultiHeadWindow::
 showAvailableActions()
 {
 	std::vector<int> aa = mEnv->bsm[0]->getAvailableActions();
@@ -1677,7 +1586,7 @@ showAvailableActions()
 
 
 // void
-// SingleControlWindow::
+// MultiHeadWindow::
 // getActionFromNN(int index)
 // {
 // 	p::object get_action;
@@ -1735,8 +1644,10 @@ showAvailableActions()
 // 	mActions[index] = mAction;
 // 	// cout<<"NO"
 // }
+
+
 // void
-// SingleControlWindow::
+// MultiHeadWindow::
 // getControlMeanStdByActionType(int actionType)
 // {
 // 	// std::cout<<this->xData[0].size()<<std::endl;
