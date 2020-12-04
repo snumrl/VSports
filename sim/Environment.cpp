@@ -1049,7 +1049,7 @@ getState(int index)
 	// std::cout<<"contacts.transpose(): "<<contacts.transpose()<<std::endl;
 
 	state.resize(rootTransform.rows() + skelPosition.rows() + skelVelocity.rows() + relCurBallPosition.rows() + relTargetPosition.rows() + relBallToTargetPosition.rows() + goalpostPositions.rows() 
-		+ contacts.rows() + 1 + 1 + 3 +curActionType.rows()+curSMState.rows() + relObstacles.size()*3 + 1 +availableActions.rows());
+		+ contacts.rows() + 1 + 1 + 3 +curActionType.rows()+curSMState.rows() + relObstacles.size()*3 + 10 +availableActions.rows());
 	 //+ ballVelocity.rows()+2+curActionType.rows());
 	
 	int curIndex = 0;
@@ -1134,8 +1134,12 @@ getState(int index)
 		state[curIndex] = relObstacles[i][2];
 		curIndex++;
 	}
-	state[curIndex] = mCharacters[index]->blocked;
-	curIndex++;
+
+	for(int i=0;i<10;i++)
+	{
+		state[curIndex] = mCharacters[index]->blocked;
+		curIndex++;
+	}
 
 	for(int i=0;i<availableActions.rows();i++)
 	{
