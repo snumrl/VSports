@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 41
+nnCount = 42
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -250,10 +250,11 @@ class RL(object):
 
 
 		self.rewards = []
+		self.numSteps = []
 
 		self.sum_return = 0.0
 
-		self.max_return = 0.0
+		self.max_return = -10.0
 
 		self.max_winRate = 0.0
 
@@ -982,6 +983,10 @@ class RL(object):
 				if self.num_tuple[h][i] is 0:
 					self.num_tuple[h][i] = 1
 
+		if self.max_return < self.sum_return/self.num_episode:
+			self.max_return = self.sum_return/self.num_episode
+			self.max_return_epoch = self.num_evaluation
+
 		print('# {} === {}h:{}m:{}s ==='.format(self.num_evaluation,hour,m,s))
 		print('||--------------ActorCriticNN------------------')
 
@@ -1008,6 +1013,7 @@ class RL(object):
 		# print('||Avg Reward per transition: {:.3f}'.format(self.sum_return/self.num_tuple))
 		for i in range(self.num_policy):
 			print('||Avg Step per episode {}   : {:.1f}'.format(i, self.num_tuple[1][i]/self.num_episode))
+		print('||Max Return per episode   : {:.3f}'.format(self.max_return))
 		# print('||Max Win Rate So far      : {:.3f} at #{}'.format(self.max_winRate,self.max_winRate_epoch))
 		# print('||Current Win Rate         : {:.3f}'.format(self.winRate[-1]))
 
@@ -1016,11 +1022,12 @@ class RL(object):
 
 
 		self.rewards.append(self.sum_return/self.num_episode)
+		self.numSteps.append(self.num_tuple[1][0]/self.num_episode)
 		
 		self.saveModels()
 		
 		print('=============================================')
-		return np.array(self.rewards)
+		return np.array(self.rewards), np.array(self.numSteps)
 
 
 
@@ -1059,6 +1066,32 @@ def plot(y,title,num_fig=1,ylim=True,path=""):
 	fig.canvas.flush_events()
 
 
+
+def plot_numSteps(y,title,num_fig=1,ylim=True,path=""):
+	temp_y = np.zeros(y.shape)
+	if y.shape[0]>5:
+		temp_y[0] = y[0]
+		temp_y[1] = 0.5*(y[0] + y[1])
+		temp_y[2] = 0.3333*(y[0] + y[1] + y[2])
+		temp_y[3] = 0.25*(y[0] + y[1] + y[2] + y[3])
+		for i in range(4,y.shape[0]):
+			temp_y[i] = np.sum(y[i-4:i+1])*0.2
+
+	fig = plt.figure(num_fig)
+	plt.clf()
+	plt.title(title)
+	plt.plot(y,'b')
+	
+	plt.plot(temp_y,'r')
+
+	plt.savefig(path, format="png")
+
+	# plt.show()
+	if ylim:
+		plt.ylim([0,1])
+
+	fig.canvas.draw()
+	fig.canvas.flush_events()
 
 import argparse
 if __name__=="__main__":
@@ -1103,14 +1136,17 @@ if __name__=="__main__":
 	# for i in range(ppo.max_iteration-5):
 
 	result_figure = nndir+"/"+"result.png"
+	result_figure_numSteps = nndir+"/"+"result_numSteps.png"
 	result_figure_num = 0
 	while Path(result_figure).is_file():
 		result_figure = nndir+"/"+"result_{}.png".format(result_figure_num)
+		result_figure_numSteps = nndir+"/"+"result_numSteps_{}.png".format(result_figure_num)
 		result_figure_num+=1
 
 	for i in range(5000000):
 		rl.train()
-		rewards = rl.evaluate()
+		rewards, numSteps = rl.evaluate()
 		plot(rewards, graph_name + 'Reward',0,False, path=result_figure)
+		plot(numSteps, graph_name + 'Avg number of steps per episode',1,False, path=result_figure_numSteps)
 		# plot_winrate(winRate, graph_name + 'vs Hardcoded Winrate',1,False)
 

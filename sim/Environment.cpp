@@ -1048,7 +1048,8 @@ getState(int index)
 	// std::cout<<"goalpostPositions.transpose(): "<<goalpostPositions.transpose()<<std::endl;
 	// std::cout<<"contacts.transpose(): "<<contacts.transpose()<<std::endl;
 
-	state.resize(rootTransform.rows() + skelPosition.rows() + skelVelocity.rows() + relCurBallPosition.rows() + relTargetPosition.rows() + relBallToTargetPosition.rows() + goalpostPositions.rows() 
+	state.resize(rootTransform.rows() + skelPosition.rows() + skelVelocity.rows() + relCurBallPosition.rows() 
+		+ relTargetPosition.rows() + relBallToTargetPosition.rows() + goalpostPositions.rows() 
 		+ contacts.rows() + 1 + 1 + 3 +curActionType.rows()+curSMState.rows() + relObstacles.size()*3 + 10 +availableActions.rows());
 	 //+ ballVelocity.rows()+2+curActionType.rows());
 	
@@ -1206,7 +1207,7 @@ getReward(int index, bool verbose)
 
 		Eigen::Vector3d curRootVelocity = mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM() - mPrevCOMs[index];
 
-		reward += 0.02*comTargetDirection.dot(curRootVelocity);
+		//reward += 0.02*comTargetDirection.dot(curRootVelocity);
 
 		if(mCharacters[index]->blocked)
 		{
@@ -1233,13 +1234,14 @@ getReward(int index, bool verbose)
 				double h = relTargetPosition[1];
 
 				double v = criticalPoint_targetBallVelocity[1];
-				reward += 0.02*v*relTargetPosition.normalized().dot(criticalPoint_targetBallVelocity.normalized());
+				// reward += 0.02*v*relTargetPosition.normalized().dot(criticalPoint_targetBallVelocity.normalized());
 
 				//vt + 1/2 gt^2 = h
 				// std::cout<<"v*v+2*g*h "<<v*v+2*g*h<<std::endl;
 				if(v*v+2*g*h<0)
 				{
-					return reward;
+					return 0;
+					// return reward;
 				}
 				double t = (-v -sqrt(v*v+2*g*h))/g;
 
