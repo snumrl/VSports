@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 42
+nnCount = 50
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -145,6 +145,8 @@ class RL(object):
 
 		self.rms = RunningMeanStd(self.num_state-2)
 
+		self.num_c = 4
+
 
 		# self.buffer_0 = [ [None] for i in range(self.num_policy)]
 		# for i in range(self.num_policy):
@@ -179,10 +181,12 @@ class RL(object):
 		for h in range(self.num_h):
 			for j in range(self.num_policy):
 				if h== 0:
-					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], 
-						log_std = 0.0, softmax = True, actionType = True)
+					self.target_model[h][j] = MultiHeadNetwork(self.num_state, self.num_action[0], self.num_c, 
+						log_std = 0.0)
+					# self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], 
+					# 	log_std = 0.0, softmax = True, actionType = True)
 				else:
-					self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], 
+					self.target_model[h][j] = ActorCriticNN(self.num_state + self.num_c, self.num_action[h], 
 						log_std = 0.0)
 
 				acc_num_action += self.num_action[h]
@@ -413,11 +417,16 @@ class RL(object):
 
 			result_oneHot = np.array(list(np.copy(nparr)))
 
+			oneHotVectorShape = list(tempShape)
+			oneHotVectorShape[2] = self.num_action_types
+
+			result_oneHot = np.zeros(oneHotVectorShape)
+
 			for agent in range(len(nparr)):
 				for slaves in range(len(nparr[agent])):
 					maxIndex = 0
 					maxValue = -100
-					for i in range(len(nparr[agent][slaves])):
+					for i in range(self.num_action_types):
 						result_oneHot[agent][slaves][i] = 0.0
 						if nparr[agent][slaves][i] > maxValue:
 							maxValue = nparr[agent][slaves][i]
@@ -465,7 +474,7 @@ class RL(object):
 			if counter%10 == 0:
 				print('SIM : {}'.format(local_step),end='\r')
 
-			tutorialRatio = 0.05
+			tutorialRatio = 0.0
 
 			useEmbeding = True
 			# generate transition of first hierachy
@@ -484,7 +493,9 @@ class RL(object):
 						actions_h[0][i] = a_dist_slave[i].sample().cpu().detach().numpy().squeeze().squeeze();
 						for j in range(self.num_slaves):
 							if followTutorial[j] is True:
-								actions_h[0][i][j] = self.env.getCorrectActionType(j,i)
+								# embed()
+								# exit(0)
+								actions_h[0][i][j][0:2] = self.env.getCorrectActionType(j,i)
 								# print("actions_h[0][i][j] : {}".format(actions_h[0][i][j]))
 
 
@@ -503,6 +514,9 @@ class RL(object):
 			# embed()
 			# exit(0)
 			# actions_0_oneHot = actions_0_oneHot*0
+			actions_c = np.array(list(np.copy(actions_h[0])))
+
+			actions_c = actions_c[:,:,-self.num_c:]
 
 			actions_0_scalar, actions_0_oneHot = arrayToScalarVectorWithConstraint(actions_h[0])
 			action_embeding_ones = np.ones(np.shape(states_h[0]),dtype=np.float32)
@@ -521,7 +535,7 @@ class RL(object):
 
 					embededState = states+action_embeding_ones
 
-					states_h[h] = np.concatenate((embededState, actions_0_oneHot), axis=2)
+					states_h[h] = np.concatenate((embededState, actions_c), axis=2)
 				# else:
 				# 	# print("value h : {}".format(h))
 				# 	states_h[h] = np.concatenate((states, np.array(list(actions_h[h-1]))), axis=2)
@@ -556,25 +570,27 @@ class RL(object):
 
 
 
-			# actions_h = np.array(list(actions_h))
+			# # actions_h = np.array(list(actions_h))
 
 
-			actions = actions_0_oneHot
-			# embed()
-			# exit(0)
-			for h in range(1, self.num_h):
-				# print(actions[0])
-				actions = np.concatenate((actions, np.array(list(actions_h[h]))), axis = 2)
-			# print(actions[0])
+			# actions = actions_0_oneHot
+			# # embed()
+			# # exit(0)
+			# for h in range(1, self.num_h):
+			# 	# print(actions[0])
+			# 	actions = np.concatenate((actions, np.array(list(actions_h[h]))), axis = 2)
+			# # print(actions[0])
 
 
-			actions = actions.astype(np.float32)
+			# actions = actions.astype(np.float32)
 			# embed()
 			# exit(0)
 			# action : torch.Size([1, 16, 6])
 
-			actionTypePart = actions[:,:,0:self.num_action_types]
-			actionsDecodePart = actions[:,:,self.num_action_types:self.num_action_types+self.latent_size]
+			# actionTypePart = actions[:,:,0:self.num_action_types]
+			actionsDecodePart = np.array(list(actions_h[h]))
+
+			
 			# actionsRemainPart = actions[:,:,self.num_action_types+self.latent_size:]
 
 
@@ -645,7 +661,7 @@ class RL(object):
 
 							if np.any(np.isnan(rewards[i][j])):
 								nan_occur[j] = True
-							if np.any(np.isnan(states[i][j])) or np.any(np.isnan(actions[i][j])):
+							if np.any(np.isnan(states[i][j])) or np.any(np.isnan(envActions[i][j])):
 								nan_occur[j] = True
 
 			for j in range(self.num_slaves):

@@ -163,6 +163,7 @@ public:
 	double fingerBallAngle;
 
 	int latentSize;
+	int cSize;
 
 	Recorder* recorder;
 

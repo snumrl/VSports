@@ -1,7 +1,7 @@
 // #include "vsports/BvhWindow.h"
 // #include "vsports/SingleBasketballWindow.h"
-// #include "vsports/SingleControlWindow.h"
-#include "vsports/MultiHeadWindow.h"
+#include "vsports/SingleControlWindow.h"
+// #include "vsports/MultiHeadWindow.h"
 #include "vsports/common.h"
 
 #include <GL/glut.h>
@@ -23,8 +23,8 @@ int main(int argc, char** argv)
 	if(argc==3)
 	{
 
-		// SingleControlWindow* simwindow = new SingleControlWindow(argv[1], argv[2]);
-		MultiHeadWindow* simwindow = new MultiHeadWindow(argv[1], argv[2]);
+		SingleControlWindow* simwindow = new SingleControlWindow(argv[1], argv[2]);
+		// MultiHeadWindow* simwindow = new MultiHeadWindow(argv[1], argv[2]);
 		simwindow->initWindow(1500, 1200, "Render");
 	}
 	glutMainLoop();
