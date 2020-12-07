@@ -178,15 +178,14 @@ class RL(object):
 
 
 		acc_num_action = 0
+		self.num_hidden = 128
 		for h in range(self.num_h):
 			for j in range(self.num_policy):
 				if h== 0:
-					self.target_model[h][j] = MultiHeadNetwork(self.num_state, self.num_action[0], self.num_c, 
-						log_std = 0.0)
-					# self.target_model[h][j] = ActorCriticNN(self.num_state + acc_num_action, self.num_action[h], 
-					# 	log_std = 0.0, softmax = True, actionType = True)
+					self.target_model[h][j] = ActorCriticNN(self.num_state, self.num_action[h], 
+						log_std = 0.0, softmax = True, actionMask = True)
 				else:
-					self.target_model[h][j] = ActorCriticNN(self.num_state + self.num_c, self.num_action[h], 
+					self.target_model[h][j] = ActorCriticNN(self.num_state + self.num_hidden, self.num_action[h], 
 						log_std = 0.0)
 
 				acc_num_action += self.num_action[h]
@@ -473,6 +472,7 @@ class RL(object):
 			print(vec)
 			return 0
 
+		h_slave = [None]*self.num_agents
 
 		while True:
 			counter += 1
@@ -491,10 +491,11 @@ class RL(object):
 				states_h[0] = states
 				for i in range(self.num_agents):
 					if teamDic[i] == learningTeam:
-						a_dist_slave_agent,v_slave_agent = self.target_model[0][self.indexToNetDic[i]].forward(\
-							Tensor(states_h[0][i]))
+						a_dist_slave_agent,v_slave_agent,h_slave_agent = \
+							self.target_model[0][self.indexToNetDic[i]].forward_with_hidden(Tensor(states_h[0][i]))
 						a_dist_slave[i] = a_dist_slave_agent
 						v_slave[i] = v_slave_agent
+						h_slave[i] = h_slave_agent.cpu().detach().numpy()
 						actions_h[0][i] = a_dist_slave[i].sample().cpu().detach().numpy().squeeze().squeeze();
 						for j in range(self.num_slaves):
 							if followTutorial[j] is True:
@@ -519,6 +520,9 @@ class RL(object):
 			# embed()
 			# exit(0)
 			# actions_0_oneHot = actions_0_oneHot*0
+
+			h_slave = np.array(h_slave)
+
 			actions_c = np.array(list(np.copy(actions_h[0])))
 
 			actions_c = actions_c[:,:,-self.num_c:]
@@ -537,10 +541,10 @@ class RL(object):
 				if h == 1:
 					# embed()
 					# exit(0)
-
+					# print("???")
 					embededState = states+action_embeding_ones
 
-					states_h[h] = np.concatenate((embededState, actions_c), axis=2)
+					states_h[h] = np.concatenate((embededState, h_slave), axis=2)
 				# else:
 				# 	# print("value h : {}".format(h))
 				# 	states_h[h] = np.concatenate((states, np.array(list(actions_h[h-1]))), axis=2)

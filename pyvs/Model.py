@@ -83,47 +83,38 @@ class SimulationNN(nn.Module):
 
 
 class ActorCriticNN(nn.Module):
-	def __init__(self, num_states, num_actions, log_std = 0.0, softmax = False, actionType = False):
+	def __init__(self, num_states, num_actions, log_std = 0.0, softmax = False, actionMask = False):
 		super(ActorCriticNN, self).__init__()
 		self.softmax = softmax
 		self.num_policyInput = num_states
 
 		self.hidden_size = 128
 		self.num_layers = 1
-		self.actionType = actionType
+		self.actionMask = actionMask
 		self.softmax = softmax
 
 		# self.rnn = nn.LSTM(self.num_policyInput, self.hidden_size, num_layers=self.num_layers)
 		# self.cur_hidden = self.init_hidden(1)
 
 		num_h1 = 256
-		num_h2 = 256
+		num_h2 = 128
 		# num_h3 = 256
 		# self.policy = None
 
-		if self.softmax :
-			self.policy = nn.Sequential(
-				nn.Linear(self.num_policyInput, num_h1),
-				nn.LeakyReLU(0.2, inplace=True),
-				nn.Linear(num_h1, num_h2),
-				nn.LeakyReLU(0.2, inplace=True),
-				nn.Linear(num_h2, num_actions),
-				# nn.Softmax(dim = 1)
-				# nn.Tanh()
-				# nn.LeakyReLU(0.2, inplace=True),
-				# nn.Linear(num_h3, num_actions)
-			)
-		else:
-			self.policy = nn.Sequential(
-				nn.Linear(self.num_policyInput, num_h1),
-				nn.LeakyReLU(0.2, inplace=True),
-				nn.Linear(num_h1, num_h2),
-				nn.LeakyReLU(0.2, inplace=True),
-				nn.Linear(num_h2, num_actions),
-				# nn.Tanh()
-				# nn.LeakyReLU(0.2, inplace=True),
-				# nn.Linear(num_h3, num_actions)
-			)
+		self.policy = nn.Sequential(
+			nn.Linear(self.num_policyInput, num_h1),
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h1, num_h2),
+			# nn.LeakyReLU(0.2, inplace=True),
+			# nn.Linear(num_h2, num_actions),
+
+		)
+
+		self.policy2 = nn.Sequential(
+			nn.LeakyReLU(0.2, inplace=True),
+			nn.Linear(num_h2, num_actions),
+		)
+
 		self.value = nn.Sequential(
 			nn.Linear(self.num_policyInput, num_h1),
 			nn.LeakyReLU(0.2, inplace=True),
@@ -148,15 +139,17 @@ class ActorCriticNN(nn.Module):
 		self.rms.load(path)
 
 
-	def forward(self,x, embedd = False):
+	def forward(self,x):
 		# self.rms.apply(x)
 		x = x.cuda()
 
 		# batch_size = x.size()[0];
 
-		action = self.policy(x)
+		h = self.policy(x)
+
+		action = self.policy2(h)
 	
-		if self.actionType:
+		if self.actionMask:
 			mask = x[:,-2:]
 			action = torch.mul(action, mask)
 			# embed()
@@ -171,6 +164,37 @@ class ActorCriticNN(nn.Module):
 			sm =  nn.Softmax(dim = 1)
 			action = sm(action)
 		return MultiVariateNormal(action.unsqueeze(0),self.log_std.exp()), self.value(x)
+
+
+
+
+
+	def forward_with_hidden(self,x):
+		# self.rms.apply(x)
+		x = x.cuda()
+
+		# batch_size = x.size()[0];
+		h = self.policy(x)
+
+		action = self.policy2(h)
+	
+	
+		if self.actionMask:
+			mask = x[:,-2:]
+			action = torch.mul(action, mask)
+			# embed()
+			# exit(0)
+
+
+		# embed()
+		# exit(0)
+		if self.softmax:
+			# embed()
+			# exit(0)
+			sm =  nn.Softmax(dim = 1)
+			action = sm(action)
+		return MultiVariateNormal(action.unsqueeze(0),self.log_std.exp()), self.value(x), h
+
 		# return MultiVariateNormal(self.policy(rnnOutput).unsqueeze(0),self.log_std.exp()), self.value(rnnOutput), out_hidden
 
 	# def forwardAndUpdate(self,x):
@@ -246,9 +270,6 @@ class ActorCriticNN(nn.Module):
 
 		# return p.sample().cpu().detach().numpy()
 		return p.sample.cpu().detach().numpy() - p.loc.cpu().detach().numpy()
-
-
-
 
 
 class MultiHeadNetwork(nn.Module):
@@ -349,39 +370,6 @@ class MultiHeadNetwork(nn.Module):
 		# return p.sample().cpu().detach().numpy()
 		# return p.sample().cpu().detach().numpy().astype(np.float32)
 		return p.loc.cpu().detach().numpy().astype(np.float32)
-
-	def get_action_detail(self, s, actionType):
-		s[0:len(self.rms.mean)] = self.rms.applyOnly(s[0:len(self.rms.mean)])
-		# embed()
-		# exit(0)
-		s[0:len(self.rms.mean)] += actionType
-		ts = torch.tensor(s)
-
-
-		p, _v= self.forward(ts.unsqueeze(0))
-
-		return p.loc.cpu().detach().numpy().astype(np.float32)
-
-	def get_value(self, s):
-		ts = torch.tensor(s)
-
-		_p, v= self.forward(ts.unsqueeze(0))
-
-		# self.cur_hidden = new_hidden
-
-		# return p.sample().cpu().detach().numpy()
-		return v.cpu().detach().numpy()[0]
-
-	def get_actionNoise(self,s):
-		ts = torch.tensor(s)
-
-		p, _v= self.forward(ts.unsqueeze(0))
-
-		# self.cur_hidden = new_hidden
-		# print(p.loc.cpu().detach().numpy())
-
-		# return p.sample().cpu().detach().numpy()
-		return p.sample.cpu().detach().numpy() - p.loc.cpu().detach().numpy()
 
 
 
