@@ -340,6 +340,11 @@ class RL(object):
 		# self.total_episodes_0 = [[] for i in range(self.num_policy)]
 		# self.total_episodes_1 = [[] for i in range(self.num_policy)]
 		# self.total_episodes_2 = [[] for i in range(self.num_policy)]
+		self.sum_return = 0;
+		self.num_episode = 0;
+		for h in range(self.num_h):
+			for index in range(self.num_policy):
+				self.num_tuple[h][index] = 0
 
 		self.total_episodes = [ [[] for i in range(self.num_policy)] for _ in range(self.num_h)]
 
@@ -474,7 +479,7 @@ class RL(object):
 			if counter%10 == 0:
 				print('SIM : {}'.format(local_step),end='\r')
 
-			tutorialRatio = 0.0
+			tutorialRatio = 0.05
 
 			useEmbeding = True
 			# generate transition of first hierachy
@@ -590,7 +595,7 @@ class RL(object):
 			# actionTypePart = actions[:,:,0:self.num_action_types]
 			actionsDecodePart = np.array(list(actions_h[h]))
 
-			
+
 			# actionsRemainPart = actions[:,:,self.num_action_types+self.latent_size:]
 
 
@@ -663,6 +668,8 @@ class RL(object):
 								nan_occur[j] = True
 							if np.any(np.isnan(states[i][j])) or np.any(np.isnan(envActions[i][j])):
 								nan_occur[j] = True
+							if followTutorial[j] is False:
+								self.sum_return += rewards[i][j]
 
 			for j in range(self.num_slaves):
 				if not self.env.isOnResetProcess(j):
@@ -672,6 +679,8 @@ class RL(object):
 								for h in range(self.num_h):
 									self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
 									self.episodes[h][j][i] = RNNEpisodeBuffer()
+									if followTutorial[j] is False:
+										self.num_episode += 1
 
 								# self.total_episodes_1[self.indexToNetDic[k]].append(self.episodes_1[i][k])
 								# self.total_episodes_2[self.indexToNetDic[k]].append(self.episodes_2[i][k])
@@ -692,11 +701,14 @@ class RL(object):
 										if counter%10 == 0:
 											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
 											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
-											
+											if followTutorial[j] is False:
+												self.num_tuple[h][self.indexToNetDic[i]] += 1
 									else :
 										self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
 											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
-									
+										if followTutorial[j] is False:
+											self.num_tuple[h][self.indexToNetDic[i]] += 1
+	
 								# print(len(self.episodes[0][j][i].data))
 								# print(len(self.episodes[1][j][i].data))
 								# print("")
@@ -712,15 +724,21 @@ class RL(object):
 									if h == 0:
 										self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
 										accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+										if followTutorial[j] is False:
+											self.num_tuple[h][self.indexToNetDic[i]] += 1
 										# if followTutorial[j] is True:
 										# 	print("Follow tutorial acc reward  : {}".format(accRewards[i][j]))		
 									else :
 										self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
 											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+										if followTutorial[j] is False:
+											self.num_tuple[h][self.indexToNetDic[i]] += 1
 
 								for h in range(self.num_h):
 									self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
 									self.episodes[h][j][i] = RNNEpisodeBuffer()
+									if followTutorial[j] is False:
+										self.num_episode += 1
 						self.env.slaveReset(j)
 						followTutorial[j] = random.random()<tutorialRatio
 						self.env.setResetCount(60-counter%10, j);
@@ -733,6 +751,8 @@ class RL(object):
 							for h in range(self.num_h):
 								self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
 								self.episodes[h][j][i] = RNNEpisodeBuffer()
+								if followTutorial[j] is False:
+									self.num_episode += 1
 
 					self.env.slaveReset(j)
 					followTutorial[j] = random.random()<tutorialRatio
@@ -752,8 +772,8 @@ class RL(object):
 		for h in range(self.num_h):
 			for index in range(self.num_policy):
 				self.buffer[h][index].clear()
-				if index == 0:
-					self.sum_return = 0.0
+				# if index == 0:
+				# 	self.sum_return = 0.0
 				for epi in self.total_episodes[h][index]:
 					data = epi.getData()
 					size = len(data)
@@ -773,8 +793,8 @@ class RL(object):
 						advantages[i] = ad_t
 
 					if not np.isnan(epi_return):
-						if index == 0:
-							self.sum_return += epi_return
+						# if index == 0:
+						# 	self.sum_return += epi_return
 
 						TD = values[:size] + advantages
 
@@ -851,14 +871,14 @@ class RL(object):
 
 
 			''' counting numbers '''
-		for index in range(self.num_policy):
-			self.num_episode = len(self.total_episodes[0][0])
+		# for index in range(self.num_policy):
+		# 	self.num_episode = len(self.total_episodes[0][0])
 		for h in range(self.num_h):
 			for index in range(self.num_policy):
-					self.num_tuple[h][index] = 0
-					for rnn_replay_buffer in self.buffer[h][index].buffer:
-						self.num_tuple[h][index] += len(rnn_replay_buffer.buffer)
-					self.num_tuple_so_far[h][index] += self.num_tuple[h][index]
+				# self.num_tuple[h][index] = 0
+				# for rnn_replay_buffer in self.buffer[h][index].buffer:
+				# 	self.num_tuple[h][index] += len(rnn_replay_buffer.buffer)
+				self.num_tuple_so_far[h][index] += self.num_tuple[h][index]
 
 	def optimizeNN_h(self, h = 0):
 		for i in range(self.num_policy):
