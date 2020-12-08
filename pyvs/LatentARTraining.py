@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 50
+nnCount = 52
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -178,7 +178,7 @@ class RL(object):
 
 
 		acc_num_action = 0
-		self.num_hidden = 128
+		self.num_hidden = 64
 		for h in range(self.num_h):
 			for j in range(self.num_policy):
 				if h== 0:
@@ -254,6 +254,7 @@ class RL(object):
 
 		self.rewards = []
 		self.numSteps = []
+		self.num_correct_throwings = []
 
 		self.sum_return = 0.0
 
@@ -341,6 +342,7 @@ class RL(object):
 		# self.total_episodes_2 = [[] for i in range(self.num_policy)]
 		self.sum_return = 0;
 		self.num_episode = 0;
+		self.num_correct_throwing = 0;
 		for h in range(self.num_h):
 			for index in range(self.num_policy):
 				self.num_tuple[h][index] = 0
@@ -730,6 +732,8 @@ class RL(object):
 										accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 										if followTutorial[j] is False:
 											self.num_tuple[h][self.indexToNetDic[i]] += 1
+											if accRewards[i][j] >= 0.1:
+												self.num_correct_throwing += 1
 										# if followTutorial[j] is True:
 										# 	print("Follow tutorial acc reward  : {}".format(accRewards[i][j]))		
 									else :
@@ -1049,11 +1053,13 @@ class RL(object):
 
 
 		print('||Num Episode              : {}'.format(self.num_episode))
-		print('||Avg Return per episode   : {:.3f}'.format(self.sum_return/self.num_episode))
 		# print('||Avg Reward per transition: {:.3f}'.format(self.sum_return/self.num_tuple))
 		for i in range(self.num_policy):
 			print('||Avg Step per episode {}   : {:.1f}'.format(i, self.num_tuple[1][i]/self.num_episode))
+
+		print('||Avg Num Correct Throwings per episode   : {:.3f}'.format(self.num_correct_throwing/self.num_episode))
 		print('||Max Return per episode   : {:.3f}'.format(self.max_return))
+		print('||Avg Return per episode   : {:.3f}'.format(self.sum_return/self.num_episode))
 		# print('||Max Win Rate So far      : {:.3f} at #{}'.format(self.max_winRate,self.max_winRate_epoch))
 		# print('||Current Win Rate         : {:.3f}'.format(self.winRate[-1]))
 
@@ -1063,11 +1069,11 @@ class RL(object):
 
 		self.rewards.append(self.sum_return/self.num_episode)
 		self.numSteps.append(self.num_tuple[1][0]/self.num_episode)
-		
+		self.num_correct_throwings.append(self.num_correct_throwing/self.num_episode)
 		self.saveModels()
 		
 		print('=============================================')
-		return np.array(self.rewards), np.array(self.numSteps)
+		return np.array(self.rewards), np.array(self.numSteps), np.array(self.num_correct_throwings)
 
 
 
@@ -1177,6 +1183,7 @@ if __name__=="__main__":
 
 	result_figure = nndir+"/"+"result.png"
 	result_figure_numSteps = nndir+"/"+"result_numSteps.png"
+	result_figure_numCTs = nndir+"/"+"result_numCTs.png"
 	result_figure_num = 0
 	while Path(result_figure).is_file():
 		result_figure = nndir+"/"+"result_{}.png".format(result_figure_num)
@@ -1185,8 +1192,9 @@ if __name__=="__main__":
 
 	for i in range(5000000):
 		rl.train()
-		rewards, numSteps = rl.evaluate()
+		rewards, numSteps, numCTs = rl.evaluate()
 		plot(rewards, graph_name + 'Reward',0,False, path=result_figure)
 		plot(numSteps, graph_name + 'Avg number of steps per episode',1,False, path=result_figure_numSteps)
+		plot(numCTs, graph_name + 'Avg number of correct throwings per episode',2,False, path=result_figure_numCTs)
 		# plot_winrate(winRate, graph_name + 'vs Hardcoded Winrate',1,False)
 
