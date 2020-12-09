@@ -1214,6 +1214,14 @@ getReward(int index, bool verbose)
 			// mIsTerminalState = true;
 			// return 1.0;
 
+			if(mCurActionTypes[index] == 3)
+			{
+				mIsTerminalState = true;
+				return 1.0;
+			}
+			else
+				return 0;
+
 
 			if(gotReward)
 				return 0;

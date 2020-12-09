@@ -106,14 +106,14 @@ class ActorCriticNN(nn.Module):
 			nn.Linear(self.num_policyInput, num_h1),
 			nn.LeakyReLU(0.2, inplace=True),
 			nn.Linear(num_h1, num_h2),
-			nn.LeakyReLU(0.2, inplace=True),
-			nn.Linear(num_h2, num_h3),
+			# nn.LeakyReLU(0.2, inplace=True),
+			# nn.Linear(num_h2, num_h3),
 
 		)
 
 		self.policy2 = nn.Sequential(
 			nn.LeakyReLU(0.2, inplace=True),
-			nn.Linear(num_h3, num_actions),
+			nn.Linear(num_h2, num_actions),
 		)
 
 		self.value = nn.Sequential(
