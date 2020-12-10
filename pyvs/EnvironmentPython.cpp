@@ -297,7 +297,7 @@ EnvironmentPython::
 setActionType(int actionType, int id, int index)
 {
 	int constrainedActionType;
-	int resetDuration = 50;
+	int resetDuration = mSlaves[0]->resetDuration;
 	if(mSlaves[id]->resetCount<=0)
 		constrainedActionType = mSlaves[id]->setActionType(index, actionType);
 	else
@@ -390,7 +390,7 @@ stepsAtOnce()
 	// std::cout<<"0000"<<std::endl;
 	std::vector<std::vector<double>> concatControlVector;
 
-	int resetDuration = 50;
+	int resetDuration = mSlaves[0]->resetDuration;
 
 	// std::cout<<"steps at once"<<std::endl;
 	// time_check_start();
@@ -569,7 +569,12 @@ isOnResetProcess(int id)
 {
 	return mSlaves[id]->resetCount>=0;
 }
-
+int 
+EnvironmentPython::
+getResetDuration()
+{
+	return mSlaves[0]->resetDuration;
+}
 
 
 using namespace boost::python;
@@ -612,6 +617,7 @@ BOOST_PYTHON_MODULE(pyvs)
 		// .def("setLinearActorState",&EnvironmentPython::setLinearActorState)
 		.def("endOfIteration",&EnvironmentPython::endOfIteration)
 		.def("setResetCount",&EnvironmentPython::setResetCount)
+		.def("getResetDuration",&EnvironmentPython::getResetDuration)
 		// .def("isActionTypeChangingFrame",&EnvironmentPython::isActionTypeChangingFrame)
 		// .def("getNumBallTouch",&EnvironmentPython::getNumBallTouch);
 		// .def("setHindsightGoal",&EnvironmentPython::setHindsightGoal)

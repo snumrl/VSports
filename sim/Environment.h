@@ -441,6 +441,7 @@ public:
 	bool randomPointTrajectoryStart;
 
 	int curTrajectoryFrame;
+	int resetDuration;
 
 };
 double getFacingAngleFromLocalState(Eigen::VectorXd curState);

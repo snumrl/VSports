@@ -41,7 +41,7 @@ Environment(int control_Hz, int simulation_Hz, int numChars, std::string bvh_pat
 :mControlHz(control_Hz), mSimulationHz(simulation_Hz), mNumChars(numChars), mWorld(std::make_shared<dart::simulation::World>()),
 mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0), endTime(15),
 criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), violatedFrames(0),curTrajectoryFrame(0),
-randomPointTrajectoryStart(true)
+randomPointTrajectoryStart(true), resetDuration(30)
 {
 	std::cout<<"Envionment Generation --- ";
 	srand((unsigned int)time(0));
@@ -1211,8 +1211,8 @@ getReward(int index, bool verbose)
 
 		if(mCharacters[index]->blocked)
 		{
-			// mIsTerminalState = true;
-			// return 1.0;
+			mIsTerminalState = true;
+			return 1.0;
 
 			if(mCurActionTypes[index] == 3)
 			{
@@ -1855,7 +1855,7 @@ void
 Environment::
 slaveReset()
 {
-	resetCount = 60;
+	resetCount = resetDuration;
 	mIsTerminalState = false;
 	mIsFoulState = false;
 	mTimeElapsed = 0;
@@ -1924,7 +1924,7 @@ slaveResetCharacterPositions()
 	double xRange = 28.0*0.5 -1.5;
 	double zRange = 15.0*0.5*0.8;
 
-	int resetDuration = 50;
+	// int resetDuration;
 
 	for(int i=0;i<mNumChars;i++)
 	{

@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 53
+nnCount = 54
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -116,6 +116,8 @@ class RL(object):
 		# self.batch_size = 128
 		self.num_action_types = 2
 		self.latent_size = 4
+
+		self.resetDuration = self.env.getResetDuration()
 
 		#contact, finger, finger-ball
 		self.num_action = [self.num_action_types, self.latent_size]
@@ -697,7 +699,7 @@ class RL(object):
 						print("nan", file=sys.stderr)
 						self.env.slaveReset(j)
 						followTutorial[j] = random.random()<tutorialRatio
-						self.env.setResetCount(60-counter%10, j);
+						self.env.setResetCount(self.resetDuration-counter%10, j);
 
 
 					if self.env.isTerminalState(j) is False:
@@ -750,7 +752,7 @@ class RL(object):
 										self.num_episode += 1
 						self.env.slaveReset(j)
 						followTutorial[j] = random.random()<tutorialRatio
-						self.env.setResetCount(60-counter%10, j);
+						self.env.setResetCount(self.resetDuration-counter%10, j);
 
 
 			if local_step >= self.buffer_size:

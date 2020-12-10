@@ -163,14 +163,14 @@ SingleControlWindow(const char* nn_path,
 
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module_0[i] = p::eval(("MultiHeadNetwork(num_state, "+to_string(numActionTypes)+","
+		nn_module_0[i] = p::eval(("ActorCriticNN(num_state, "+to_string(numActionTypes)+","
 			+to_string(cSize)+ ", 0.0).cuda()").data(), mns);
 		load_0[i] = nn_module_0[i].attr("load");
 		load_rms_0[i] = nn_module_0[i].attr("loadRMS");
 	}
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module_1[i] = p::eval(("ActorCriticNN(num_state+"+to_string(cSize)+", "+to_string(latentSize)+").cuda()").data(), mns);
+		nn_module_1[i] = p::eval(("ActorCriticNN(num_state, "+to_string(latentSize)+").cuda()").data(), mns);
 		load_1[i] = nn_module_1[i].attr("load");
 		load_rms_1[i] = nn_module_1[i].attr("loadRMS");
 	}
@@ -623,7 +623,7 @@ step()
 	// std::cout<<endl;
 	// std::cout<<mEnv->slaveResetStateVector.transpose()<<std::endl;
 
-	int resetDuration = 50;
+	int resetDuration = mEnv->resetDuration;
 
 	for(int id=0;id<1;++id)
 	{
@@ -1295,12 +1295,12 @@ getActionFromNN(int index)
 		mActionType[j] = srcs[j];
 	}
 
-	Eigen::VectorXd mComunication(cSize);
-	// Comunication Vector
-	for(int j=0;j<cSize;j++)
-	{
-		mComunication[j] = srcs[j+numActions];
-	}
+	// Eigen::VectorXd mComunication(cSize);
+	// // Comunication Vector
+	// for(int j=0;j<cSize;j++)
+	// {
+	// 	mComunication[j] = srcs[j+numActions];
+	// }
 
 	// std::cout<<"mActionType : "<<mActionType.transpose()<<std::endl;
 	std::cout<<"mEnv->curFrame : "<<mEnv->curFrame<<std::endl;
@@ -1332,9 +1332,9 @@ getActionFromNN(int index)
 	state_1.segment(0,state.size()) = state;
 	state_1.segment(state.size(),numActions) = mActionType;
 */
-	Eigen::VectorXd state_1(state.size()+cSize);
+	Eigen::VectorXd state_1(state.size());
 	state_1.segment(0,state.size()) = state;
-	state_1.segment(state.size(),cSize) = mComunication;
+	// state_1.segment(state.size(),cSize) = mComunication;
 
 	p::object get_action_1;
 

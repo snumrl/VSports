@@ -65,6 +65,8 @@ public:
 
 	np::ndarray getCorrectActionType(int id, int index);
 	np::ndarray getCorrectActionDetail(int id, int index);
+
+	int getResetDuration();
 	// Normalizer* mNormalizer;
 private:
 	std::vector<Environment*> mSlaves;
