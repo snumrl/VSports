@@ -541,7 +541,16 @@ step()
 	std::chrono::time_point<std::chrono::system_clock> m_time_check_s = std::chrono::system_clock::now();
 	if(mEnv->isTerminalState())// || mEnv->isFoulState())
 	{
-		sleep(1);
+		if(mTakeScreenShot)
+		{
+			for(int i=0;i<15;i++)
+				screenshot();
+		}
+		else
+		{
+			sleep(1);
+		}
+		
 		mEnv->slaveReset();
 	}
 	// std::cout<<"mFrame : "<<mFrame<<std::endl;

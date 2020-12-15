@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 61
+nnCount = 62
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -361,6 +361,8 @@ class RL(object):
 		logprobs_h = np.array([[None for _ in range(self.num_agents)] for _ in range(self.num_h)])
 		values_h = np.array([[None for _ in range(self.num_agents)] for _ in range(self.num_h)])
 		is_exploitation = np.array([None for _ in range(self.num_agents)])
+		
+		followTutorial = [False]*self.num_slaves;
 
 		# states_1 = [None]*self.num_slaves*self.num_agents
 		# actions_1 = [None]*self.num_slaves*self.num_agents
@@ -482,7 +484,7 @@ class RL(object):
 			if counter%10 == 0:
 				print('SIM : {}'.format(local_step),end='\r')
 
-			tutorialRatio = 0.0
+			tutorialRatio = 0.01
 
 			useEmbeding = True
 			# generate transition of first hierachy
@@ -500,6 +502,11 @@ class RL(object):
 						v_slave[i] = v_slave_agent
 						# h_slave[i] = h_slave_agent.cpu().detach().numpy()
 						actions_h[0][i] = a_dist_slave[i].sample().cpu().detach().numpy().squeeze().squeeze();
+						for j in range(self.num_slaves):
+							if followTutorial[j] is True:
+								# embed()
+								# exit(0)
+								actions_h[0][i][j][0:2] = self.env.getCorrectActionType(j,i)
 
 				for i in range(self.num_agents):
 					if teamDic[i] == learningTeam:
@@ -555,6 +562,11 @@ class RL(object):
 						v_slave[i] = v_slave_agent
 
 						actions_h[h][i] = a_dist_slave[i].sample().cpu().detach().numpy().squeeze().squeeze();
+						if followTutorial[j] is True:
+								decodedActionDetail = self.env.getCorrectActionDetail(j,i)
+								encodedActionDetail, _ = self.actionEncoder.encode(Tensor(decodedActionDetail))
+								encodedActionDetail= encodedActionDetail.cpu().detach().numpy()
+								actions_h[h][i][j] = encodedActionDetail
 
 
 				for i in range(self.num_agents):
@@ -661,7 +673,9 @@ class RL(object):
 								nan_occur[j] = True
 							if np.any(np.isnan(states[i][j])) or np.any(np.isnan(envActions[i][j])):
 								nan_occur[j] = True
-							self.sum_return += rewards[i][j]
+
+							if followTutorial[j] is False:
+								self.sum_return += rewards[i][j]
 
 			for j in range(self.num_slaves):
 				if not self.env.isOnResetProcess(j):
@@ -671,7 +685,8 @@ class RL(object):
 								for h in range(self.num_h):
 									self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
 									self.episodes[h][j][i] = RNNEpisodeBuffer()
-								self.num_episode += 1
+								if followTutorial[j] is False:
+									self.num_episode += 1
 
 								# self.total_episodes_1[self.indexToNetDic[k]].append(self.episodes_1[i][k])
 								# self.total_episodes_2[self.indexToNetDic[k]].append(self.episodes_2[i][k])
@@ -681,6 +696,7 @@ class RL(object):
 						print("nan", file=sys.stderr)
 						self.env.slaveReset(j)
 						self.env.setResetCount(self.resetDuration-counter%10, j);
+						followTutorial[j] = random.random()<tutorialRatio
 
 
 					if self.env.isTerminalState(j) is False:
@@ -695,8 +711,8 @@ class RL(object):
 									else :
 										self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
 											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
-										# if followTutorial[j] is False:
-										self.num_tuple[h][self.indexToNetDic[i]] += 1
+										if followTutorial[j] is False:
+											self.num_tuple[h][self.indexToNetDic[i]] += 1
 	
 								# print(len(self.episodes[0][j][i].data))
 								# print(len(self.episodes[1][j][i].data))
@@ -726,9 +742,10 @@ class RL(object):
 								for h in range(self.num_h):
 									self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
 									self.episodes[h][j][i] = RNNEpisodeBuffer()
-								self.num_episode += 1
+								if followTutorial[j] is False:
+									self.num_episode += 1
 						self.env.slaveReset(j)
-						# followTutorial[j] = random.random()<tutorialRatio
+						followTutorial[j] = random.random()<tutorialRatio
 						self.env.setResetCount(self.resetDuration-counter%10, j);
 
 
@@ -739,11 +756,11 @@ class RL(object):
 							for h in range(self.num_h):
 								self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
 								self.episodes[h][j][i] = RNNEpisodeBuffer()
-							# if followTutorial[j] is False:
-							self.num_episode += 1
+							if followTutorial[j] is False:
+								self.num_episode += 1
 
 					self.env.slaveReset(j)
-					# followTutorial[j] = random.random()<tutorialRatio
+					followTutorial[j] = random.random()<tutorialRatio
 				break
 
 			for i in range(self.num_agents):
