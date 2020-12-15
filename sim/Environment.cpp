@@ -979,6 +979,7 @@ getState(int index)
 		// relObstacles[i][1] = 0;
 	}
 
+	// std::cout<<"relObstacles[0].transpose() : "<<relObstacles[0].transpose()<<std::endl;
 
 	// mCharacters[index]->blocked = false;
 	// for(int i=0;i<relObstacles.size();i++)
@@ -1211,8 +1212,8 @@ getReward(int index, bool verbose)
 
 		if(mCharacters[index]->blocked)
 		{
-			mIsTerminalState = true;
-			return 1.0;
+			// mIsTerminalState = true;
+			// return 1.0;
 
 			if(mCurActionTypes[index] == 3)
 			{
@@ -1248,7 +1249,7 @@ getReward(int index, bool verbose)
 				// std::cout<<"v*v+2*g*h "<<v*v+2*g*h<<std::endl;
 				if(v*v+2*g*h<0)
 				{
-					return 0;
+					return reward;
 					// return reward;
 				}
 				double t = (-v -sqrt(v*v+2*g*h))/g;
@@ -1277,7 +1278,8 @@ getReward(int index, bool verbose)
 			if(mCurActionTypes[index] == 3)
 			{
 				mIsTerminalState = true;
-				return 0;
+				return -0.0625* pow(targetPlaneNormal.norm(),2);
+				// return 0;
 				// return - 0.1*targetPlaneNormal.norm();
 				// return 0.1*exp(-(targetPlaneNormal.norm()));
 				// return -0.1;
@@ -1707,7 +1709,7 @@ setActionType(int index, int actionType)
 	 	curActionType = 0;
 
 	// if(!mCharacters[index]->blocked)
-	// 	curActionType = 0;
+		// curActionType = 0;
 	// else
 	// 	curActionType = 3;
 
