@@ -302,13 +302,13 @@ setActionType(int actionType, int id, int index)
 		constrainedActionType = mSlaves[id]->setActionType(index, actionType);
 	else
 	{
-		if(mSlaves[id]->resetCount>resetDuration)
-		{
-			Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector.segment(4,5);
-			constrainedActionType = mSlaves[id]->setActionType(index, getActionTypeFromVec(actionTypeVector)/3);
-		}
-		else
-		{
+		// if(mSlaves[id]->resetCount>resetDuration)
+		// {
+		// 	Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector.segment(4,5);
+		// 	constrainedActionType = mSlaves[id]->setActionType(index, getActionTypeFromVec(actionTypeVector)/3);
+		// }
+		// else
+		// {
 			if(mSlaves[id]->randomPointTrajectoryStart)
 			{
 				Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetTrajectory[resetDuration-mSlaves[id]->resetCount].segment(4,5);
@@ -322,7 +322,7 @@ setActionType(int actionType, int id, int index)
 
 
 			// std::cout<<"actionTypeVector : "<<actionTypeVector<<std::endl;
-		}
+		// }
 		// Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector
 	}
 
@@ -396,11 +396,7 @@ stepsAtOnce()
 	// time_check_start();
 	for(int id=0;id<mNumSlaves;++id)
 	{
-		if(mSlaves[id]->resetCount>resetDuration)
-		{
-			mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, mSlaves[id]->slaveResetPositionVector);
-		}
-		else if(mSlaves[id]->resetCount>20)
+		if(mSlaves[id]->resetCount>resetDuration/2)
 		{
 			if(mSlaves[id]->randomPointTrajectoryStart)
 			{
@@ -428,13 +424,13 @@ stepsAtOnce()
 			concatControlVector.push_back(eigenToStdVec(mSlaves[id]->getMGAction(0)));
 		else
 		{
-			if(mSlaves[id]->resetCount>resetDuration)
-			{
-				concatControlVector.push_back(eigenToStdVec(mSlaves[id]->slaveResetTargetVector));
-				Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector.segment(4,5);
-			}
-			else
-			{
+			// if(mSlaves[id]->resetCount>resetDuration)
+			// {
+			// 	concatControlVector.push_back(eigenToStdVec(mSlaves[id]->slaveResetTargetVector));
+			// 	Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector.segment(4,5);
+			// }
+			// else
+			// {
 				// std::cout<<"slave reset target vector"<<std::endl;
 				if(mSlaves[id]->randomPointTrajectoryStart)
 				{
@@ -447,7 +443,7 @@ stepsAtOnce()
 					Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector.segment(4,5);
 				}
 				// std::cout<<"actionTypeVector : "<<actionTypeVector<<std::endl;
-			}
+			// }
 			// concatControlVector.push_back(eigenToStdVec(mSlaves[id]->slaveResetTargetVector));
 			// Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector
 		}

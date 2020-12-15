@@ -627,14 +627,7 @@ step()
 
 	for(int id=0;id<1;++id)
 	{
-		if(mEnv->resetCount>resetDuration)
-		{
-			// std::cout<<"slave reset state vector"<<std::endl;
-			mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, mEnv->slaveResetPositionVector, mEnv->slaveResetBallPosition);
-			// mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, mEnv->slaveResetPositionVector);
-			// mEnv->getCharacter(0)->getSkeleton()->setPositions(mEnv->slaveResetPositionVector);
-		}
-		else if(mEnv->resetCount>20)
+		if(mEnv->resetCount>resetDuration/2)
 		{
 			// std::cout<<"slave reset state vector"<<std::endl;
 

@@ -479,7 +479,7 @@ class RL(object):
 
 		while True:
 			counter += 1
-			if counter%10 == 0:
+			if counter%5 == 0:
 				print('SIM : {}'.format(local_step),end='\r')
 
 			tutorialRatio = 0.0
@@ -490,7 +490,7 @@ class RL(object):
 			a_dist_slave = [None]*self.num_agents
 			v_slave = [None]*self.num_agents
 
-			if counter%10 == 1:
+			if counter%5 == 1:
 				states_h[0] = states
 				for i in range(self.num_agents):
 					if teamDic[i] == learningTeam:
@@ -652,7 +652,7 @@ class RL(object):
 					for i in range(self.num_agents):
 						if teamDic[i] == learningTeam:
 							rewards[i][j] = self.env.getReward(j, i, True)
-							if counter%10 == 1:
+							if counter%5 == 1:
 								accRewards[i][j] = rewards[i][j]
 							else:
 								accRewards[i][j] += rewards[i][j]
@@ -680,7 +680,7 @@ class RL(object):
 								# self.episodes_2[i][k] = RNNEpisodeBuffer()
 						print("nan", file=sys.stderr)
 						self.env.slaveReset(j)
-						self.env.setResetCount(self.resetDuration-counter%10, j);
+						self.env.setResetCount(self.resetDuration-counter%5, j);
 
 
 					if self.env.isTerminalState(j) is False:
@@ -688,7 +688,7 @@ class RL(object):
 							if teamDic[i] == learningTeam:
 								for h in range(self.num_h):
 									if h == 0:
-										if counter%10 == 0:
+										if counter%5 == 0:
 											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
 											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 											self.num_tuple[h][self.indexToNetDic[i]] += 1
@@ -729,7 +729,7 @@ class RL(object):
 								self.num_episode += 1
 						self.env.slaveReset(j)
 						# followTutorial[j] = random.random()<tutorialRatio
-						self.env.setResetCount(self.resetDuration-counter%10, j);
+						self.env.setResetCount(self.resetDuration-counter%5, j);
 
 
 			if local_step >= self.buffer_size:

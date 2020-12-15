@@ -41,7 +41,7 @@ Environment(int control_Hz, int simulation_Hz, int numChars, std::string bvh_pat
 :mControlHz(control_Hz), mSimulationHz(simulation_Hz), mNumChars(numChars), mWorld(std::make_shared<dart::simulation::World>()),
 mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0), endTime(15),
 criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), violatedFrames(0),curTrajectoryFrame(0),
-randomPointTrajectoryStart(true), resetDuration(30)
+randomPointTrajectoryStart(true), resetDuration(10)
 {
 	std::cout<<"Envionment Generation --- ";
 	srand((unsigned int)time(0));
@@ -1709,7 +1709,7 @@ setActionType(int index, int actionType)
 	 	curActionType = 0;
 
 	// if(!mCharacters[index]->blocked)
-		curActionType = 0;
+		// curActionType = 0;
 	// else
 	// 	curActionType = 3;
 
@@ -1955,7 +1955,7 @@ slaveResetCharacterPositions()
 	if(randomPointTrajectoryStart)
 	{
 		int trajectoryLength = mTutorialTrajectories[0].size();
-		int randomPoint = rand()%(trajectoryLength-resetDuration)+resetDuration;
+		int randomPoint = rand()%(trajectoryLength-30-resetDuration)+resetDuration;
 
 		curTrajectoryFrame = randomPoint - resetDuration;
 
