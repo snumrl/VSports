@@ -28,6 +28,7 @@ public:
 	void reset(int id);
 	void resets();
 	void slaveReset(int id);
+	void foulReset(int id);
 	void slaveResets();
 	bool isTerminalState(int id);
 	bool isFoulState(int id);

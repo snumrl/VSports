@@ -539,7 +539,7 @@ SingleControlWindow::
 step()
 {
 	std::chrono::time_point<std::chrono::system_clock> m_time_check_s = std::chrono::system_clock::now();
-	if(mEnv->isTerminalState())// || mEnv->isFoulState())
+	if(mEnv->isTerminalState() || mEnv->isFoulState())
 	{
 		if(mTakeScreenShot)
 		{

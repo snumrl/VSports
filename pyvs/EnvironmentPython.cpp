@@ -81,6 +81,13 @@ slaveReset(int id)
 	mMotionGeneratorBatch->setCurrentDartPosition(mSlaves[id]->mCharacters[0]->getSkeleton()->getPositions(), id);
 }
 
+void
+EnvironmentPython::
+foulReset(int id)
+{
+	mSlaves[id]->foulReset();
+	mMotionGeneratorBatch->setCurrentDartPosition(mSlaves[id]->mCharacters[0]->getSkeleton()->getPositions(), id);
+}
 int
 EnvironmentPython::
 getNumState()
@@ -588,6 +595,7 @@ BOOST_PYTHON_MODULE(pyvs)
 		.def("reset",&EnvironmentPython::reset)
 		.def("resets",&EnvironmentPython::resets)
 		.def("slaveReset",&EnvironmentPython::slaveReset)
+		.def("foulReset",&EnvironmentPython::foulReset)
 		// .def("slaveResets",&EnvironmentPython::slaveResets)
 		.def("isTerminalState",&EnvironmentPython::isTerminalState)
 		.def("isFoulState",&EnvironmentPython::isFoulState)

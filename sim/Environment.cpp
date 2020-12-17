@@ -1208,13 +1208,11 @@ getReward(int index, bool verbose)
 
 		Eigen::Vector3d curRootVelocity = mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM() - mPrevCOMs[index];
 
-		//reward += 0.02*comTargetDirection.dot(curRootVelocity);
-
-		if(mCharacters[index]->inputActionType != 0)
-		{
-			mCharacters[index]->inputActionType = 0;
-			reward -= 0.1;
-		}
+		// if(mCharacters[index]->inputActionType != 0)
+		// {
+		// 	mCharacters[index]->inputActionType = 0;
+		// 	reward -= 0.1;
+		// }
 
 		if(mCharacters[index]->blocked)
 		{
@@ -1283,7 +1281,7 @@ getReward(int index, bool verbose)
 		{
 			if(mCurActionTypes[index] == 3)
 			{
-				mIsTerminalState = true;
+				mIsFoulState = true;
 				// return -0.0625* pow(targetPlaneNormal.norm(),2);
 				return 0;
 				// return - 0.1*targetPlaneNormal.norm();
@@ -1709,26 +1707,14 @@ setActionType(int index, int actionType, bool isNew)
 
 	int curActionType = actionType;
 
-	if(isNew)
-		mCharacters[index]->inputActionType = actionType;
-	// if(resetCount>0)
-	// 	curActionType = 0;
+	// if(isNew)
+	// 	mCharacters[index]->inputActionType = actionType;
+
 	if(actionType != 3)
 	 	curActionType = 0;
 
-	if(!mCharacters[index]->blocked)
-		curActionType = 0;
-	// else
-	// 	curActionType = 3;
-
-
-	// curActionType = 0;
-	 // std::cout<<"############# "<<curActionType<<std::endl;
-
-	// if(resetCount<0)
-	// {
-	// 	std::cout<<"#########3curActionType : " <<curActionType<<std::endl;
-	// }
+	// if(!mCharacters[index]->blocked)
+	// 	curActionType = 0;
 
     if(isCriticalAction(mPrevActionTypes[index]))
     {
@@ -1813,7 +1799,6 @@ isTerminalState()
 	return mIsTerminalState;
 	// return false;
 }
-
 bool
 Environment::
 isFoulState()
@@ -1864,6 +1849,64 @@ reset()
 void
 Environment::
 slaveReset()
+{
+	resetCount = resetDuration;
+	mIsTerminalState = false;
+	mIsFoulState = false;
+	mTimeElapsed = 0;
+
+	mAccScore.setZero();
+	mNumBallTouch = 0;
+	mMgb->clear(mBatchIndex);
+
+	// std::cout<<"0000000000"<<std::endl;
+	slaveResetCharacterPositions();
+	// std::cout<<"1111111111"<<std::endl;
+	slaveResetTargetBallPosition();
+	// std::cout<<"2222222222"<<std::endl;
+
+	mObstacles.clear();
+	// for(int i=0;i<3;i++)
+	// 	genObstacleNearGoalpost();
+
+	genObstacleNearGoalpost(-1);
+	// genObstacleNearGoalpost(0);
+	// genObstacleNearGoalpost(0.4);
+	// genObstacleNearGoalpost(1.2);
+	// genObstacleNearGoalpost(1.6);
+	// genObstacleNearGoalpost(2.8);
+	// genObstacleNearGoalpost(3.2);
+
+
+	for(int i=0;i<mNumChars;i++)
+	{
+		mActions[i].setZero();
+		mPrevActions[i].setZero();
+		// mActions[i][4+4] = 1.0;
+		// mPrevActions[i][4+4] = 1.0;
+
+		// mCurActionTypes[i] = 4;
+		// mPrevActionTypes[i] = 4;
+		int curDefaultActionType = 0;
+
+		mActions[i][4+curDefaultActionType] = 1.0;
+		mPrevActions[i][4+0] = 1.0;
+
+		mCurActionTypes[i] = curDefaultActionType;
+		mPrevActionTypes[i] = 0;
+
+		mCurCriticalActionTimes[i] = 30;
+		mChangeContactIsActive[i] = false;
+
+		curContact[i] = -1;
+		prevFreeBallPositions.clear();
+	}
+	gotReward = false;
+}
+
+void
+Environment::
+foulReset()
 {
 	resetCount = resetDuration;
 	mIsTerminalState = false;

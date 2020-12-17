@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 70
+nnCount = 71
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -724,39 +724,7 @@ class RL(object):
 						self.env.setResetCount(self.resetDuration-counter%10, j);
 						followTutorial[j] = random.random()<tutorialRatio
 
-
-					if self.env.isTerminalState(j) is False:
-						for i in range(self.num_agents):
-							if teamDic[i] == learningTeam:
-								for h in range(self.num_h):
-									if h == 0:
-										if counter%10 == 0:
-											if followTutorial[j] is False:
-												self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-												accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
-												self.num_tuple[h][self.indexToNetDic[i]] += 1
-											else:
-												self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-												accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
-												self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
-									else :
-										if followTutorial[j] is False:
-											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-												rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
-											self.num_tuple[h][self.indexToNetDic[i]] += 1
-										else:
-											self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
-											self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
-								# print(len(self.episodes[0][j][i].data))
-								# print(len(self.episodes[1][j][i].data))
-								# print("")
-								# self.episodes_1[i][k].push(states_1[i*self.num_agents+k], actions_1[i*self.num_agents+k],\
-								# 	rewards[i*self.num_agents+k], values_1[i*self.num_agents+k], logprobs_1[i*self.num_agents+k])
-								# self.episodes_2[i][k].push(states_2[i*self.num_agents+k], actions_2[i*self.num_agents+k],\
-								# 	rewards[i*self.num_agents+k], values_2[i*self.num_agents+k], logprobs_2[i*self.num_agents+k])
-								local_step += 1
-					else:
+					if self.env.isTerminalState(j) is True:
 						for i in range(self.num_agents):
 							if teamDic[i] == learningTeam:
 								for h in range(self.num_h):
@@ -792,6 +760,75 @@ class RL(object):
 						followTutorial[j] = random.random()<tutorialRatio
 						self.env.setResetCount(self.resetDuration-counter%10, j);
 
+					elif self.env.isFoulState(j) is True:
+						for i in range(self.num_agents):
+							if teamDic[i] == learningTeam:
+								for h in range(self.num_h):
+									if h == 0:
+										if followTutorial[j] is False:
+											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											self.num_tuple[h][self.indexToNetDic[i]] += 1
+											if accRewards[i][j] >= 0.1:
+												self.num_correct_throwing += 1
+										else:
+											self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
+									else :
+										if followTutorial[j] is False:
+											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+												rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											self.num_tuple[h][self.indexToNetDic[i]] += 1
+										else:
+											self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
+
+								for h in range(self.num_h):
+									self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
+									self.episodes[h][j][i] = RNNEpisodeBuffer()
+									self.total_episodes[h][self.indexToNetDic[i]].append(self.tutorial_episodes[h][j][i])
+									self.tutorial_episodes[h][j][i] = RNNEpisodeBuffer()
+								if followTutorial[j] is False:
+									self.num_episode += 1
+
+						self.env.foulReset(j)
+						followTutorial[j] = random.random()<tutorialRatio
+						# self.env.setResetCount(self.resetDuration-counter%10, j);
+
+					else:
+						for i in range(self.num_agents):
+							if teamDic[i] == learningTeam:
+								for h in range(self.num_h):
+									if h == 0:
+										if counter%10 == 0:
+											if followTutorial[j] is False:
+												self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+												accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+												self.num_tuple[h][self.indexToNetDic[i]] += 1
+											else:
+												self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+												accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+												self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
+									else :
+										if followTutorial[j] is False:
+											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+												rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											self.num_tuple[h][self.indexToNetDic[i]] += 1
+										else:
+											self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
+								# print(len(self.episodes[0][j][i].data))
+								# print(len(self.episodes[1][j][i].data))
+								# print("")
+								# self.episodes_1[i][k].push(states_1[i*self.num_agents+k], actions_1[i*self.num_agents+k],\
+								# 	rewards[i*self.num_agents+k], values_1[i*self.num_agents+k], logprobs_1[i*self.num_agents+k])
+								# self.episodes_2[i][k].push(states_2[i*self.num_agents+k], actions_2[i*self.num_agents+k],\
+								# 	rewards[i*self.num_agents+k], values_2[i*self.num_agents+k], logprobs_2[i*self.num_agents+k])
+								local_step += 1
+					
 
 			if local_step >= self.buffer_size:
 				for j in range(self.num_slaves):

@@ -236,6 +236,7 @@ public:
 	ICA::dart::MotionGeneratorBatch* mMgb;
 	int mBatchIndex;
 
+	void foulReset();
 
 public:
 	dart::simulation::WorldPtr mWorld;
@@ -259,6 +260,7 @@ public:
 	double floorDepth = 0.0;
 
 	bool mIsTerminalState;
+	bool mIsFoulState;
 
 	Eigen::VectorXd mScoreBoard;
 
@@ -346,8 +348,6 @@ public:
 	int mPrevPlayer;
 
 	std::vector<bool> mDribbled;
-
-	bool mIsFoulState;
 
 	bool isFoulState();
 
