@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 62
+nnCount = 67
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -107,7 +107,7 @@ class RL(object):
 		self.num_control_Hz = self.env.getControlHz()
 		self.num_simulation_per_control = self.num_simulation_Hz // self.num_control_Hz
 
-		self.gamma = 0.997
+		self.gamma = 0.999
 		self.lb = 0.95
 
 		self.buffer_size = 8*1024
@@ -128,12 +128,20 @@ class RL(object):
 		self.num_tuple_so_far = [[0, 0] for _ in range(self.num_h)]
 		# self.num_episode = [0, 0]
 		self.num_tuple = [[0, 0] for _ in range(self.num_h)]
+		self.num_tutorial_tuple = [[0, 0] for _ in range(self.num_h)]
 
 		self.buffer = [[ [None] for _ in range(self.num_policy)] for _ in range(self.num_h)];
 
 		for h in range(self.num_h):
 			for i in range(self.num_policy):
 				self.buffer[h][i] = Buffer(100000)
+
+		self.tutorial_buffer = [[ [None] for _ in range(self.num_policy)] for _ in range(self.num_h)];
+
+		for h in range(self.num_h):
+			for i in range(self.num_policy):
+				self.tutorial_buffer[h][i] = Buffer(100000)
+
 
 
 		self.actionDecoders = [ VAEDecoder().to(device) for _ in range(self.num_action_types)]
@@ -243,6 +251,10 @@ class RL(object):
 		self.sum_loss_actor = [[0.0 for _ in range(self.num_policy)] for _ in range(self.num_h)] 
 		self.sum_loss_critic = [[0.0 for _ in range(self.num_policy)] for _ in range(self.num_h)] 
 
+
+
+		self.sum_tutorial_loss_critic = [[0.0 for _ in range(self.num_policy)] for _ in range(self.num_h)] 
+
 		# self.sum_loss_actor_0 = [0.0 for _ in range(self.num_policy)]
 		# self.sum_loss_critic_0 = [0.0 for _ in range(self.num_policy)]
 
@@ -275,6 +287,7 @@ class RL(object):
 		# self.episodes_2 = [[RNNEpisodeBuffer() for y in range(self.num_agents)] for x in range(self.num_slaves)]
 
 		self.episodes = [[[RNNEpisodeBuffer() for _ in range(self.num_agents)] for _ in range(self.num_slaves)] for _ in range(self.num_h)]
+		self.tutorial_episodes = [[[RNNEpisodeBuffer() for _ in range(self.num_agents)] for _ in range(self.num_slaves)] for _ in range(self.num_h)]
         
 		self.indexToNetDic = {0:0, 1:0}
 
@@ -348,8 +361,10 @@ class RL(object):
 		for h in range(self.num_h):
 			for index in range(self.num_policy):
 				self.num_tuple[h][index] = 0
+				self.num_tutorial_tuple[h][index] = 0
 
 		self.total_episodes = [ [[] for i in range(self.num_policy)] for _ in range(self.num_h)]
+		self.total_tutorial_episodes = [ [[] for i in range(self.num_policy)] for _ in range(self.num_h)]
 
 		states = [[None for _ in range(self.num_slaves)] for _ in range(self.num_agents)]
 		actions = [[None for _ in range(self.num_slaves)] for _ in range(self.num_agents)]
@@ -683,8 +698,12 @@ class RL(object):
 						for i in range(self.num_agents):
 							if teamDic[i] == learningTeam:
 								for h in range(self.num_h):
-									self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
-									self.episodes[h][j][i] = RNNEpisodeBuffer()
+									if followTutorial[j] is False:
+										self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
+										self.episodes[h][j][i] = RNNEpisodeBuffer()
+									else:
+										self.total_episodes[h][self.indexToNetDic[i]].append(self.tutorial_episodes[h][j][i])
+										self.tutorial_episodes[h][j][i] = RNNEpisodeBuffer()
 								if followTutorial[j] is False:
 									self.num_episode += 1
 
@@ -705,15 +724,23 @@ class RL(object):
 								for h in range(self.num_h):
 									if h == 0:
 										if counter%10 == 0:
-											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
-											self.num_tuple[h][self.indexToNetDic[i]] += 1
+											if followTutorial[j] is False:
+												self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+												accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+												self.num_tuple[h][self.indexToNetDic[i]] += 1
+											else:
+												self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+												accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+												self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
 									else :
-										self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 										if followTutorial[j] is False:
+											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+												rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 											self.num_tuple[h][self.indexToNetDic[i]] += 1
-	
+										else:
+											self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
 								# print(len(self.episodes[0][j][i].data))
 								# print(len(self.episodes[1][j][i].data))
 								# print("")
@@ -727,21 +754,31 @@ class RL(object):
 							if teamDic[i] == learningTeam:
 								for h in range(self.num_h):
 									if h == 0:
-										self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-										accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
-										self.num_tuple[h][self.indexToNetDic[i]] += 1
-										if accRewards[i][j] >= 0.1:
-											self.num_correct_throwing += 1
-										# if followTutorial[j] is True:
-										# 	print("Follow tutorial acc reward  : {}".format(accRewards[i][j]))		
+										if followTutorial[j] is False:
+											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											self.num_tuple[h][self.indexToNetDic[i]] += 1
+											if accRewards[i][j] >= 0.1:
+												self.num_correct_throwing += 1
+										else:
+											self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
 									else :
-										self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
-										self.num_tuple[h][self.indexToNetDic[i]] += 1
+										if followTutorial[j] is False:
+											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+												rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											self.num_tuple[h][self.indexToNetDic[i]] += 1
+										else:
+											self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
 
 								for h in range(self.num_h):
 									self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
 									self.episodes[h][j][i] = RNNEpisodeBuffer()
+									self.total_episodes[h][self.indexToNetDic[i]].append(self.tutorial_episodes[h][j][i])
+									self.tutorial_episodes[h][j][i] = RNNEpisodeBuffer()
 								if followTutorial[j] is False:
 									self.num_episode += 1
 						self.env.slaveReset(j)
@@ -756,6 +793,9 @@ class RL(object):
 							for h in range(self.num_h):
 								self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
 								self.episodes[h][j][i] = RNNEpisodeBuffer()
+
+								self.total_episodes[h][self.indexToNetDic[i]].append(self.tutorial_episodes[h][j][i])
+								self.tutorial_episodes[h][j][i] = RNNEpisodeBuffer()
 							if followTutorial[j] is False:
 								self.num_episode += 1
 
@@ -885,6 +925,43 @@ class RL(object):
 				# 	self.num_tuple[h][index] += len(rnn_replay_buffer.buffer)
 				self.num_tuple_so_far[h][index] += self.num_tuple[h][index]
 
+	def tutorial_computeTDandGAE(self):
+
+		for h in range(self.num_h):
+			for index in range(self.num_policy):
+				self.tutorial_buffer[h][index].clear()
+				# if index == 0:
+				# 	self.sum_return = 0.0
+				for epi in self.total_tutorial_episodes[h][index]:
+					data = epi.getData()
+					size = len(data)
+					# print(size)
+					if size == 0:
+						continue
+					states, actions, rewards, values, logprobs = zip(*data)
+					values = np.concatenate((values, np.zeros(1)), axis=0)
+					advantages = np.zeros(size)
+					ad_t = 0
+
+					epi_return = 0.0
+					for i in reversed(range(len(data))):
+						epi_return += rewards[i]
+						delta = rewards[i] + values[i+1] * self.gamma - values[i]
+						ad_t = delta + self.gamma * self.lb * ad_t
+						advantages[i] = ad_t
+
+					if not np.isnan(epi_return):
+						TD = values[:size] + advantages
+						rnn_replay_buffer = RNNReplayBuffer(10000)
+						for i in range(size):
+
+							rnn_replay_buffer.push(states[i], actions[i], logprobs[i], TD[i], advantages[i])
+
+						self.tutorial_buffer[h][index].push(rnn_replay_buffer)
+
+
+
+
 	def optimizeNN_h(self, h = 0):
 		for i in range(self.num_policy):
 			self.sum_loss_actor[h][i] = 0.0
@@ -977,6 +1054,72 @@ class RL(object):
 		# print('')
 
 
+	def tutorial_optimizeNN_h(self, h = 0):
+		for i in range(self.num_policy):
+			self.sum_tutorial_loss_critic[h][i] = 0.0
+
+		for buff_index in range(self.num_policy):
+			all_rnn_replay_buffer= np.array(self.tutorial_buffer[h][buff_index].buffer)
+			for j in range(self.num_epochs):
+				all_segmented_transitions = []
+				for rnn_replay_buffer in all_rnn_replay_buffer:
+					rnn_replay_buffer_size = len(rnn_replay_buffer.buffer)
+					for i in range(rnn_replay_buffer_size):
+						all_segmented_transitions.append(rnn_replay_buffer.buffer[i])
+
+				np.random.shuffle(all_segmented_transitions)
+
+				tutorial_batchSize = self.batch_size//16
+				for i in range(len(all_segmented_transitions)//tutorial_batchSize):
+					batch_segmented_transitions = all_segmented_transitions[i*tutorial_batchSize:(i+1)*tutorial_batchSize]
+
+					batch = RNNTransition(*zip(*batch_segmented_transitions))
+
+					stack_s = np.vstack(batch.s).astype(np.float32)
+					stack_a = np.vstack(batch.a).astype(np.float32)
+					stack_lp = np.vstack(batch.logprob).astype(np.float32)
+					stack_td = np.vstack(batch.TD).astype(np.float32)
+					stack_gae = np.vstack(batch.GAE).astype(np.float32)
+
+					# num_layers = self.target_model[buff_index].num_layers
+
+					a_dist,v = self.target_model[h][buff_index].forward(Tensor(stack_s))	
+					
+					# hidden_list[timeStep] = list(cur_stack_hidden)
+
+
+					loss_critic = ((v-Tensor(stack_td)).pow(2)).mean()
+
+
+					# self.loss_actor[buff_index] = loss_actor.cpu().detach().numpy().tolist()
+					# self.loss_critic[buff_index] = loss_critic.cpu().detach().numpy().tolist()
+
+					loss = loss_critic
+					self.optimizer[h][buff_index].zero_grad()
+
+					# print(str(timeStep)+" "+str(offset))
+					# start = time.time()
+					loss.backward()
+
+					# print("time :", time.time() - start)
+
+					detectNan = False
+					for param in self.target_model[h][buff_index].parameters():
+						if torch.isnan(param.grad).any():
+							detectNan = True
+							# print("nan")
+						if param.grad is not None:
+							param.grad.data.clamp_(-0.5, 0.5)
+
+					self.sum_tutorial_loss_critic[h][buff_index] += loss_critic.detach()*tutorial_batchSize/self.num_epochs
+					loss_critic = loss_critic.detach()
+					loss= loss.detach()
+
+
+				print('Optimizing actor-critic nn_{} : {}/{}'.format(h, j+1,self.num_epochs),end='\r')
+			print('')
+		# print('')
+
 	def train(self):
 		frac = 1.0
 		self.learning_rate = self.default_learning_rate*frac
@@ -996,6 +1139,7 @@ class RL(object):
 
 		self.generateTransitions()
 		self.computeTDandGAE()
+		# self.tutorial_computeTDandGAE()
 		# self.optimizeNN_h(1)
 		self.optimizeModel()
 
@@ -1003,6 +1147,7 @@ class RL(object):
 	def optimizeModel(self):
 		for h in range(self.num_h):
 			self.optimizeNN_h(h)
+			# self.tutorial_optimizeNN_h(h)
 		# self.optimizeNN_0()
 		# self.optimizeNN_1()
 		# self.optimizeNN_2()
@@ -1023,6 +1168,8 @@ class RL(object):
 			for i in range(self.num_policy):
 				if self.num_tuple[h][i] is 0:
 					self.num_tuple[h][i] = 1
+				if self.num_tutorial_tuple[h][i] is 0:
+					self.num_tutorial_tuple[h][i] = 1
 
 		if self.max_return < self.sum_return/self.num_episode:
 			self.max_return = self.sum_return/self.num_episode
@@ -1063,6 +1210,9 @@ class RL(object):
 		# print('||Avg Loss Predictor RND   : {:.4f}'.format(self.sum_loss_rnd/(self.num_tuple[0]+self.num_tuple[1])))
 
 
+		# for i in range(self.num_policy):
+		# 	for h in range(self.num_h):
+		# 		print('||Avg Tutorial Loss Critic {} {}  : {:.4f}'.format(h, i, self.sum_tutorial_loss_critic[h][i]/self.num_tutorial_tuple[h][i]))
 
 		self.rewards.append(self.sum_return/self.num_episode)
 		self.numSteps.append(self.num_tuple[1][0]/self.num_episode)

@@ -691,6 +691,16 @@ step()
 					actionDetailVector.segment(4,5) = mEnv->slaveResetTargetTrajectory[resetDuration-mEnv->resetCount].segment(9,5);
 					mEnv->setActionType(0,getActionTypeFromVec(actionTypeVector)/3);
 					mEnv->setAction(0, actionDetailVector);
+
+
+					// concatControlVector.push_back(eigenToStdVec(mEnv->mTutorialControlVectors[0][mEnv->curTrajectoryFrame]));
+					// Eigen::VectorXd actionTypeVector = mEnv->mTutorialControlVectors[0][mEnv->curTrajectoryFrame].segment(4,5);
+					// Eigen::VectorXd actionDetailVector(9);
+					// actionDetailVector.segment(0,4) = mEnv->mTutorialControlVectors[0][mEnv->curTrajectoryFrame].segment(0,4);
+					// actionDetailVector.segment(4,5) = mEnv->mTutorialControlVectors[0][mEnv->curTrajectoryFrame].segment(9,5);
+					// mEnv->setActionType(0,getActionTypeFromVec(actionTypeVector)/3);
+					// mEnv->setAction(0, actionDetailVector);
+
 				}
 				else
 				{
@@ -1308,6 +1318,13 @@ getActionFromNN(int index)
 	std::cout<<"mEnv->curFrame : "<<mEnv->curFrame<<std::endl;
 	std::cout<<"mEnv->resetCount : "<<mEnv->resetCount<<std::endl;
 	std::cout<<"mActionType.transpose() : "<<mActionType.transpose()<<std::endl;
+	
+	// Eigen::VectorXd denormalizedAction = mEnv->mTutorialControlVectors[0][mEnv->curTrajectoryFrame];
+	// int _curActionType = getActionTypeFromVec(denormalizedAction)/3;
+
+	// mActionType.setZero();
+	// mActionType[_curActionType] = 1.0;
+
 
 	if(mEnv->curFrame%10 == 0)
 		mActionType = toOneHotVectorWithConstraint(index, mActionType);

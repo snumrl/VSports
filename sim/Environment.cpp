@@ -41,7 +41,7 @@ Environment(int control_Hz, int simulation_Hz, int numChars, std::string bvh_pat
 :mControlHz(control_Hz), mSimulationHz(simulation_Hz), mNumChars(numChars), mWorld(std::make_shared<dart::simulation::World>()),
 mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0), endTime(15),
 criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), violatedFrames(0),curTrajectoryFrame(0),
-randomPointTrajectoryStart(true), resetDuration(10)
+randomPointTrajectoryStart(true), resetDuration(30)
 {
 	std::cout<<"Envionment Generation --- ";
 	srand((unsigned int)time(0));
@@ -1212,16 +1212,16 @@ getReward(int index, bool verbose)
 
 		if(mCharacters[index]->blocked)
 		{
-			mIsTerminalState = true;
-			return 1.0;
+			// mIsTerminalState = true;
+			// return 1.0;
 
-			if(mCurActionTypes[index] == 3)
-			{
-				mIsTerminalState = true;
-				return 1.0;
-			}
-			else
-				return 0;
+			// if(mCurActionTypes[index] == 3)
+			// {
+			// 	mIsTerminalState = true;
+			// 	return 1.0;
+			// }
+			// else
+			// 	return 0;
 
 
 			if(gotReward)
@@ -1651,18 +1651,19 @@ setAction(int index, const Eigen::VectorXd& a)
 
 
 
-    if(mActions[index].segment(4+NUM_ACTION_TYPE,3).norm()>1300.0)
+    if(mActions[index].segment(4+NUM_ACTION_TYPE,3).norm()>1100.0)
     {
-    	mActions[index].segment(4+NUM_ACTION_TYPE,3) *= 1300.0/mActions[index].segment(4+NUM_ACTION_TYPE,3).norm();
+    	mActions[index].segment(4+NUM_ACTION_TYPE,3) *= 1100.0/mActions[index].segment(4+NUM_ACTION_TYPE,3).norm();
     }
 
-    if(mActions[index][4+NUM_ACTION_TYPE+3] > 250.0)
+    if(mActions[index][4+NUM_ACTION_TYPE+3] > 300.0)
     {
-    	mActions[index][4+NUM_ACTION_TYPE+3]  = 250.0;
+    	mActions[index][4+NUM_ACTION_TYPE+3]  = 300.0;
     }
-    else if(mActions[index][4+NUM_ACTION_TYPE+3] < 50.0)
+
+    else if(mActions[index][4+NUM_ACTION_TYPE+3] < 200.0)
     {
-    	mActions[index][4+NUM_ACTION_TYPE+3] = 50.0;
+    	mActions[index][4+NUM_ACTION_TYPE+3] = 200.0;
     }
 
     if(!isCriticalAction(mCurActionTypes[index]))
@@ -1955,7 +1956,7 @@ slaveResetCharacterPositions()
 	if(randomPointTrajectoryStart)
 	{
 		int trajectoryLength = mTutorialTrajectories[0].size();
-		int randomPoint = rand()%(trajectoryLength-30-resetDuration)+resetDuration;
+		int randomPoint = rand()%(trajectoryLength-resetDuration)+resetDuration;
 
 		curTrajectoryFrame = randomPoint - resetDuration;
 
