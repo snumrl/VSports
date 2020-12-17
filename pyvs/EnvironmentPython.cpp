@@ -294,12 +294,12 @@ getActionTypeFromVec(Eigen::VectorXd action)
 
 int 
 EnvironmentPython::
-setActionType(int actionType, int id, int index)
+setActionType(int actionType, int id, int index, bool isNew)
 {
 	int constrainedActionType;
 	int resetDuration = mSlaves[0]->resetDuration;
 	if(mSlaves[id]->resetCount<=0)
-		constrainedActionType = mSlaves[id]->setActionType(index, actionType);
+		constrainedActionType = mSlaves[id]->setActionType(index, actionType, isNew);
 	else
 	{
 		// if(mSlaves[id]->resetCount>resetDuration)
@@ -312,12 +312,12 @@ setActionType(int actionType, int id, int index)
 			if(mSlaves[id]->randomPointTrajectoryStart)
 			{
 				Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetTrajectory[resetDuration-mSlaves[id]->resetCount].segment(4,5);
-				constrainedActionType = mSlaves[id]->setActionType(index, getActionTypeFromVec(actionTypeVector)/3);
+				constrainedActionType = mSlaves[id]->setActionType(index, getActionTypeFromVec(actionTypeVector)/3, isNew);
 			}
 			else
 			{
 				Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector.segment(4,5);
-				constrainedActionType = mSlaves[id]->setActionType(index, getActionTypeFromVec(actionTypeVector)/3);
+				constrainedActionType = mSlaves[id]->setActionType(index, getActionTypeFromVec(actionTypeVector)/3, isNew);
 			}
 
 

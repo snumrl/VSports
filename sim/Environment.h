@@ -417,7 +417,7 @@ public:
 	int violatedFrames;
 	// AgentEnvWindow* mWindow;
 
-	int setActionType(int index, int actionType);
+	int setActionType(int index, int actionType, bool isNew = true);
 
 	void genObstacleNearGoalpost(double angle = -1);
 	void removeOldestObstacle();

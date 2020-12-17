@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 67
+nnCount = 70
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -431,7 +431,7 @@ class RL(object):
 					result[agent][slaves][maxIndex] = 1.0
 			return result
 
-		def arrayToScalarVectorWithConstraint(nparr):
+		def arrayToScalarVectorWithConstraint(nparr, isNew):
 			temp = np.array(list(np.copy(nparr)))
 			tempShape = np.shape(temp)
 			scalarVectorShape = list(tempShape)
@@ -455,7 +455,7 @@ class RL(object):
 						if nparr[agent][slaves][i] > maxValue:
 							maxValue = nparr[agent][slaves][i]
 							maxIndex = i
-					maxIndex = self.env.setActionType(maxIndex, slaves, agent)
+					maxIndex = self.env.setActionType(maxIndex, slaves, agent, isNew)
 					# print(maxIndex)
 					result[agent][slaves] = maxIndex
 					result_oneHot[agent][slaves][maxIndex] = 1.0
@@ -499,7 +499,7 @@ class RL(object):
 			if counter%10 == 0:
 				print('SIM : {}'.format(local_step),end='\r')
 
-			tutorialRatio = 0.01
+			tutorialRatio = 0.0
 
 			useEmbeding = True
 			# generate transition of first hierachy
@@ -545,7 +545,14 @@ class RL(object):
 
 			actions_c = actions_c[:,:,-self.num_c:]
 
-			actions_0_scalar, actions_0_oneHot = arrayToScalarVectorWithConstraint(actions_h[0])
+			actions_0_scalar = None
+			actions_0_oneHot = None
+
+			if counter%10 == 1:
+				actions_0_scalar, actions_0_oneHot = arrayToScalarVectorWithConstraint(actions_h[0], True)
+			else:
+				actions_0_scalar, actions_0_oneHot = arrayToScalarVectorWithConstraint(actions_h[0], False)
+
 			action_embeding_ones = np.ones(np.shape(states_h[0]),dtype=np.float32)
 
 			if useEmbeding:
@@ -1335,6 +1342,7 @@ if __name__=="__main__":
 	while Path(result_figure).is_file():
 		result_figure = nndir+"/"+"result_{}.png".format(result_figure_num)
 		result_figure_numSteps = nndir+"/"+"result_numSteps_{}.png".format(result_figure_num)
+		result_figure_numCTs = nndir+"/"+"result_numCTs_{}.png".format(result_figure_num)
 		result_figure_num+=1
 
 	for i in range(5000000):
