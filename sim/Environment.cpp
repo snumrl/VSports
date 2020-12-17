@@ -558,10 +558,10 @@ stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContact
 		mCurBallPossessions[index] = std::get<2>(nextPoseAndContacts);
 		if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
 		{
-			if(mCurCriticalActionTimes[index] >=0)
-			{
-				mCurBallPossessions[index] = true;
-			}
+			// if(mCurCriticalActionTimes[index] >=0)
+			// {
+			// 	mCurBallPossessions[index] = true;
+			// }
 
 			if(mCurCriticalActionTimes[index] < 0)
 			{
@@ -1651,9 +1651,9 @@ setAction(int index, const Eigen::VectorXd& a)
 
 
 
-    if(mActions[index].segment(4+NUM_ACTION_TYPE,3).norm()>1100.0)
+    if(mActions[index].segment(4+NUM_ACTION_TYPE,3).norm()>800.0)
     {
-    	mActions[index].segment(4+NUM_ACTION_TYPE,3) *= 1100.0/mActions[index].segment(4+NUM_ACTION_TYPE,3).norm();
+    	mActions[index].segment(4+NUM_ACTION_TYPE,3) *= 800.0/mActions[index].segment(4+NUM_ACTION_TYPE,3).norm();
     }
 
     if(mActions[index][4+NUM_ACTION_TYPE+3] > 300.0)
