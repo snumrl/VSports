@@ -163,8 +163,7 @@ SingleControlWindow(const char* nn_path,
 
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module_0[i] = p::eval(("ActorCriticNN(num_state, "+to_string(numActionTypes)+","
-			+to_string(cSize)+ ", 0.0).cuda()").data(), mns);
+		nn_module_0[i] = p::eval(("ActorCriticNN(num_state, "+to_string(numActionTypes)+", 0.0, True, True).cuda()").data(), mns);
 		load_0[i] = nn_module_0[i].attr("load");
 		load_rms_0[i] = nn_module_0[i].attr("loadRMS");
 	}
@@ -1322,7 +1321,7 @@ getActionFromNN(int index)
 	// 	mComunication[j] = srcs[j+numActions];
 	// }
 
-	// std::cout<<"mActionType : "<<mActionType.transpose()<<std::endl;
+	std::cout<<"#########mActionType : "<<mActionType.transpose()<<std::endl;
 	std::cout<<"mEnv->curFrame : "<<mEnv->curFrame<<std::endl;
 	std::cout<<"mEnv->resetCount : "<<mEnv->resetCount<<std::endl;
 	// std::cout<<"mActionType.transpose() : "<<mActionType.transpose()<<std::endl;

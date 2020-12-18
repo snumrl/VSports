@@ -99,7 +99,7 @@ class RL(object):
 		self.num_policy = 1
 
 
-		self.num_epochs = 4
+		self.num_epochs = 1
 		self.num_evaluation = 0
 
 

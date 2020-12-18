@@ -41,7 +41,7 @@ Environment(int control_Hz, int simulation_Hz, int numChars, std::string bvh_pat
 :mControlHz(control_Hz), mSimulationHz(simulation_Hz), mNumChars(numChars), mWorld(std::make_shared<dart::simulation::World>()),
 mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0), endTime(15),
 criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), violatedFrames(0),curTrajectoryFrame(0),
-randomPointTrajectoryStart(false), resetDuration(10), goBackFrame(20), savedFrame(0)
+randomPointTrajectoryStart(false), resetDuration(10), goBackFrame(10), savedFrame(0)
 {
 	std::cout<<"Envionment Generation --- ";
 	srand((unsigned int)time(0));
@@ -1610,7 +1610,10 @@ setActionType(int index, int actionType, bool isNew)
 	{
 		curActionType = mPrevActionTypes[index];
 	}
-
+	// else
+	// {
+	// 	std::cout<<"##########"<<curActionType<<std::endl;
+	// }
 
 	// if(isNew)
 	// 	mCharacters[index]->inputActionType = actionType;
@@ -2826,7 +2829,7 @@ saveEnvironment()
 		savedFrame = curFrame;
 	}
 
-	if(curFrame>1 && curFrame%goBackFrame == 1)
+	else if(curFrame>1 && curFrame%goBackFrame == 1)
 	{
 		// std::cout<<"BatchIndex : "<<mBatchIndex<<" Saved"<<std::endl;
 		mPrevEnvSituation->saveEnvironment(this);
