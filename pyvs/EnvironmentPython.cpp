@@ -110,14 +110,6 @@ step(int id)
 	mSlaves[id]->step();
 }
 
-void
-EnvironmentPython::
-stepAtOnce(int id)
-{
-	// std::cout<<"Step in "<<id<<"'th slave"<<std::endl;
-	mSlaves[id]->stepAtOnce();
-}
-
 
 bool
 EnvironmentPython::
@@ -513,6 +505,7 @@ EnvironmentPython::
 setResetCount(int resetCount, int id)
 {
 	mSlaves[id]->resetCount = resetCount;
+	mSlaves[id]->curFrame = mSlaves[id]->resetDuration - resetCount;
 }
 
 

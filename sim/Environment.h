@@ -71,6 +71,7 @@ public:
 	int getStateWithInt();
 	bool isAvailable(int action);
 	std::vector<int> getAvailableActions();
+	void copy(BStateMachine *bsm);
 	int prevAction;
 };
 
@@ -79,7 +80,7 @@ class Environment;
 class EnvironmentPackage
 {
 public:
-	EnvironmentPackage();
+	EnvironmentPackage(Environment* env, int numAgents);
 	void saveEnvironment(Environment* env);
 	void copyEnvironmentPackage(EnvironmentPackage* envPack);
 	void restoreEnvironment(Environment* env);
@@ -130,6 +131,23 @@ public:
 
 	std::vector<Eigen::Vector3d> mLLastFootPosition;
 	std::vector<Eigen::Vector3d> mRLastFootPosition;
+
+
+	bool mIsTerminalState;
+	bool mIsFoulState;
+	double mTimeElapsed;
+	Eigen::VectorXd mAccScore;
+	std::vector<int> mPrevActionTypes;
+	std::vector<double> prevFreeBallPositions;
+	bool gotReward;
+
+
+	Eigen::VectorXd ballSkelPosition;
+	dart::dynamics::SkeletonPtr ballSkel;
+	ICA::dart::MotionGeneratorBatch* mMgb;
+	std::vector<Character3D*> mCharacters;
+	std::vector<BStateMachine*> bsm;
+	int numChars;
 };
 
 
@@ -139,7 +157,7 @@ class Environment
 {
 public:
 	Environment(int control_Hz, int simulation_Hz, int numChars, std::string bvh_path, std::string nn_path);
-	void resetCharacterPositions();
+	// void resetCharacterPositions();
 	void initGoalposts();
 	void initFloor();
 	void initBall();
@@ -147,7 +165,7 @@ public:
 	void initialize(ICA::dart::MotionGeneratorBatch* mgb, int batchIndex = 0, bool initTutorialTrajectory = true);
 	void step();
 
-	void stepAtOnce();
+	// void stepAtOnce();
 	void stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContacts);
 
 	void reset();
@@ -238,6 +256,8 @@ public:
 
 	void foulReset();
 
+	int savedFrame = 0;
+
 public:
 	dart::simulation::WorldPtr mWorld;
 	int mNumChars;
@@ -319,9 +339,6 @@ public:
 	std::vector<int> prevContact;
 	std::vector<int> curContact;
 
-
-    ICA::dart::MotionGenerator* mMotionGenerator;
-
     BVHparser* mBvhParser;
 	void initCharacters(std::string bvhPath);
 
@@ -381,7 +398,7 @@ public:
 
 	std::vector<float> getHeightMapState(int index);
 
-	std::vector<EnvironmentPackage*> mPrevEnvSituations;
+	EnvironmentPackage* mPrevEnvSituation;
 
 	void saveEnvironment();
 	void goBackEnvironment();
@@ -442,6 +459,8 @@ public:
 
 	int curTrajectoryFrame;
 	int resetDuration;
+
+	int goBackFrame;
 
 };
 double getFacingAngleFromLocalState(Eigen::VectorXd curState);

@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 71
+nnCount = 73
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -549,6 +549,7 @@ class RL(object):
 			actions_0_oneHot = None
 
 			if counter%10 == 1:
+				# print("counter : {}".format(counter))
 				actions_0_scalar, actions_0_oneHot = arrayToScalarVectorWithConstraint(actions_h[0], True)
 			else:
 				actions_0_scalar, actions_0_oneHot = arrayToScalarVectorWithConstraint(actions_h[0], False)
@@ -701,6 +702,10 @@ class RL(object):
 
 			for j in range(self.num_slaves):
 				if not self.env.isOnResetProcess(j):
+					# if counter > 42:
+					# 	exit(0)
+					# print("on resetprocess counter : {}".format(counter))
+
 					if nan_occur[j] is True:
 						for i in range(self.num_agents):
 							if teamDic[i] == learningTeam:
@@ -793,6 +798,7 @@ class RL(object):
 								if followTutorial[j] is False:
 									self.num_episode += 1
 
+						# print("Foul reset : {}".format(j))
 						self.env.foulReset(j)
 						followTutorial[j] = random.random()<tutorialRatio
 						# self.env.setResetCount(self.resetDuration-counter%10, j);

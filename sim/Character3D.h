@@ -12,7 +12,11 @@ public:
 
 	std::string getName() {return mName;}
 	std::string getTeamName() {return mName.substr(0,1);}
+
 	dart::dynamics::SkeletonPtr mSkeleton;
+
+	void copy(Character3D *c3d);
+
 	// dart::dynamics::SkeletonPtr mArrow;
 	std::string mName;
 

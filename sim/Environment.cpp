@@ -41,7 +41,7 @@ Environment(int control_Hz, int simulation_Hz, int numChars, std::string bvh_pat
 :mControlHz(control_Hz), mSimulationHz(simulation_Hz), mNumChars(numChars), mWorld(std::make_shared<dart::simulation::World>()),
 mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0), endTime(15),
 criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), violatedFrames(0),curTrajectoryFrame(0),
-randomPointTrajectoryStart(false), resetDuration(10)
+randomPointTrajectoryStart(false), resetDuration(10), goBackFrame(20), savedFrame(0)
 {
 	std::cout<<"Envionment Generation --- ";
 	srand((unsigned int)time(0));
@@ -96,6 +96,7 @@ Environment::initialize(ICA::dart::MotionGeneratorBatch* mgb, int batchIndex, bo
 
 	this->slaveReset();
 
+	mPrevEnvSituation = new EnvironmentPackage(this, mNumChars);
 	// mPrevEnvSituations.resize(mNumChars);
 	// for(int i=0;i<2;i++)
 	// {
@@ -135,35 +136,6 @@ setPositionFromBVH(int index, int bvhFrame)
 	BVHmanager::setPositionFromBVH(mCharacters[index]->getSkeleton(), mBvhParser, bvhFrame);
 }
 
-// void
-// Environment::
-// initMotionGenerator(std::string dataPath)
-// {
-// 	initDartNameIdMapping();
-// 	mMotionGenerator = new ICA::dart::MotionGenerator(dataPath, this->dartNameIdMap);
-
-// 	Eigen::VectorXd targetZeroVec(15);
-// 	targetZeroVec.setZero();
-
-// 	targetZeroVec[4+4] = 1;
-
-// 	BVHmanager::setPositionFromBVH(mCharacters[0]->getSkeleton(), mBvhParser, 50);
-// 	Eigen::VectorXd bvhPosition = mCharacters[0]->getSkeleton()->getPositions();
-
-// 	for(int i=0;i<RESET_ADAPTING_FRAME;i++)
-// 		mMotionGenerator->setCurrentPose(bvhPosition, Utils::toStdVec(dribbleDefaultVec));
-
-
-// 	for(int i=0;i<RESET_ADAPTING_FRAME;i++)
-// 		mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(dribbleDefaultVec));
-
-// 	// Eigen::VectorXd zeroAction = mActions[0];
-// 	// zeroAction.setZero();
-// 	auto nextPoseAndContacts = mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(dribbleDefaultVec));
-//     Eigen::VectorXd nextPosition = std::get<0>(nextPoseAndContacts);
-//     mCharacters[0]->getSkeleton()->setPositions(nextPosition);
-// 	curFrame++;
-// }
 
 std::map<std::string, int>
 Environment::
@@ -198,14 +170,6 @@ void Environment::addFingerSegmentToSkel(SkeletonPtr skel)
 	SkelMaker::makeWeldJointBody("RightFinger", skel, skel->getBodyNode("RightHand"), SHAPE_TYPE::BOX, Eigen::Vector3d(fingerLength, 0.03, 0.05),
 	 pb2j, cb2j);
 
-	// pb2j.setIdentity();
-	// pb2j.translation() = Eigen::Vector3d(fingerLength/2.0, 0.0, 0.0);
-	// cb2j.setIdentity();
-	// cb2j.translation() = Eigen::Vector3d(0.0, -0.125, 0.0);
-	// SkelMaker::makeRevoluteJointBody("RightFingerBall", skel, skel->getBodyNode("RightFinger"), SHAPE_TYPE::BALL, Eigen::Vector3d(0.02, 0.02, 0.02),
-	//  pb2j, cb2j);
-
-
 	pb2j.setIdentity();
 	pb2j.translation() = Eigen::Vector3d(0.095, 0.0, 0.0);
 	cb2j.setIdentity();
@@ -213,12 +177,6 @@ void Environment::addFingerSegmentToSkel(SkeletonPtr skel)
 	SkelMaker::makeWeldJointBody("LeftFinger", skel, skel->getBodyNode("LeftHand"), SHAPE_TYPE::BOX, Eigen::Vector3d(fingerLength, 0.03, 0.05),
 	 pb2j, cb2j);
 
-	// pb2j.setIdentity();
-	// pb2j.translation() = Eigen::Vector3d(fingerLength/2.0, 0.0, 0.0);
-	// cb2j.setIdentity();
-	// cb2j.translation() = Eigen::Vector3d(0.0, -0.125, 0.0);
-	// SkelMaker::makeRevoluteJointBody("LeftFingerBall", skel, skel->getBodyNode("LeftFinger"), SHAPE_TYPE::BALL, Eigen::Vector3d(0.02, 0.02, 0.02),
-	//  pb2j, cb2j);
 
 
 }
@@ -239,11 +197,6 @@ initCharacters(std::string bvhPath)
 
 	SkeletonPtr bvhSkel = dart::utils::SkelParser::readSkeleton(mBvhParser->skelFilePath);
 	addFingerSegmentToSkel(bvhSkel);
-	// cout<<charNames[0]<<endl;
-
-	// std::cout<<"LeftHand : "<<bvhSkel->getIndexOf(bvhSkel->getBodyNode("LeftHand"))<<std::endl;;
-	// std::cout<<"LeftFinger : "<<bvhSkel->getIndexOf(bvhSkel->getBodyNode("LeftFinger"))<<std::endl;;
-	// std::cout<<"LeftFingerBall : "<<bvhSkel->getIndexOf(bvhSkel->getBodyNode("LeftFingerBall"))<<std::endl;;
 
 
 	// in the case of single player
@@ -469,69 +422,23 @@ step()
 }
 
 
-void
-Environment::
-stepAtOnce()
-{
-	// cout<<"Start"<<endl;
-
-	// saveEnvironment();
-
-	for(int i=0;i<mCharacters.size();i++)
-	{
-		applyAction(i);
-	}
-	// std::cout<<mPrevActions[0].transpose()<<std::endl;
-	// std::cout<<mActions[0].transpose()<<std::endl;
-	// std::cout<<std::endl;
-
-	int sim_per_control = this->getSimulationHz()/this->getControlHz();
-	for(int i=0;i<sim_per_control;i++)
-	{
-		this->step();
-	}
-	// std::copy(mActions.begin(), mActions.end(), mPrevActions.begin());
-	resetCount--;
-	if(resetCount < 0)
-		resetCount = -1;
-
-	curFrame++;
-	curTrajectoryFrame++;
-	// if(isTerminalState())
-	// {
-	// 	reset();
-	// }
-
-	// getRewards();
-	// cout<<"Here?"<<endl;
-	// mWindow->display();
-	// cout<<"end"<<endl;
-}
-
-// finger : -0.4 ~ M_PI/2.0
-// fingerBall : -1.3 ~ 0.2
-double constrainedFingerAngle(double fingerAngle)
-{
-	if(fingerAngle < -0.4)
-		return -0.4;
-	if(fingerAngle > 1.0)
-		return 1.0;
-	return fingerAngle;
-}
-
-double constrainedFingerBallAngle(double fingerBallAngle)
-{
-	if(fingerBallAngle<-1.2)
-		return -1.2;
-	if(fingerBallAngle>0.2)
-		return 0.2;
-	return fingerBallAngle;
-}
 
 void
 Environment::
 stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContacts)
 {
+	// int sum = 0;
+	// for(int i=0;i<mMgb->motionGenerators[0]->mMotionSegments.size();i++)
+	// {
+	// 	sum += mMgb->motionGenerators[0]->mMotionSegments[i]->mPoses.size();
+	// }
+	// std::cout<<"mBatchIndex "<<mBatchIndex<<" Total mPoses : "<<sum<<std::endl;
+
+	// if(mBatchIndex<5)
+		// std::cout<<mBatchIndex<<": "<<curFrame<<", "<<resetCount<<std::endl;
+
+
+	saveEnvironment();
 	mCharacters[0]->prevSkelPositions = mCharacters[0]->getSkeleton()->getPositions();
 	mCharacters[0]->prevKeyJointPositions = mStates[0].segment(mCharacters[0]->getSkeleton()->getNumDofs(),6*3);
 	mCharacters[0]->prevRootT = getRootT(0);
@@ -820,13 +727,6 @@ getState(int index)
 	std::vector<std::string> EEJoints;
 	EEJoints.push_back("LeftHand");
 	EEJoints.push_back("RightHand");
-
-	// EEJoints.push_back("LeftFinger");
-	// EEJoints.push_back("RightFinger");
-
-	// EEJoints.push_back("LeftFingerBall");
-	// EEJoints.push_back("RightFingerBall");
-
 
 	EEJoints.push_back("LeftToe");
 	EEJoints.push_back("RightToe");
@@ -1706,12 +1606,22 @@ setActionType(int index, int actionType, bool isNew)
 	actionType *= 3;
 
 	int curActionType = actionType;
+	if(curFrame%10 != 0)
+	{
+		curActionType = mPrevActionTypes[index];
+	}
+
 
 	// if(isNew)
 	// 	mCharacters[index]->inputActionType = actionType;
 
 	if(actionType != 3)
 	 	curActionType = 0;
+
+	if(curFrame <=19)
+	{
+		curActionType =0;
+	}
 
 	// if(!mCharacters[index]->blocked)
 	// 	curActionType = 0;
@@ -1817,8 +1727,7 @@ reset()
 	mAccScore.setZero();
 	mNumBallTouch = 0;
 
-	// mMotionGenerator->clear();
-	resetCharacterPositions();
+	// resetCharacterPositions();
 	resetTargetBallPosition();
 	for(int i=0;i<mNumChars;i++)
 	{
@@ -1908,58 +1817,11 @@ void
 Environment::
 foulReset()
 {
-	resetCount = resetDuration;
+
 	mIsTerminalState = false;
 	mIsFoulState = false;
-	mTimeElapsed = 0;
-
-	mAccScore.setZero();
-	mNumBallTouch = 0;
-	mMgb->clear(mBatchIndex);
-
-	// std::cout<<"0000000000"<<std::endl;
-	slaveResetCharacterPositions();
-	// std::cout<<"1111111111"<<std::endl;
-	slaveResetTargetBallPosition();
-	// std::cout<<"2222222222"<<std::endl;
-
-	mObstacles.clear();
-	// for(int i=0;i<3;i++)
-	// 	genObstacleNearGoalpost();
-
-	genObstacleNearGoalpost(-1);
-	// genObstacleNearGoalpost(0);
-	// genObstacleNearGoalpost(0.4);
-	// genObstacleNearGoalpost(1.2);
-	// genObstacleNearGoalpost(1.6);
-	// genObstacleNearGoalpost(2.8);
-	// genObstacleNearGoalpost(3.2);
-
-
-	for(int i=0;i<mNumChars;i++)
-	{
-		mActions[i].setZero();
-		mPrevActions[i].setZero();
-		// mActions[i][4+4] = 1.0;
-		// mPrevActions[i][4+4] = 1.0;
-
-		// mCurActionTypes[i] = 4;
-		// mPrevActionTypes[i] = 4;
-		int curDefaultActionType = 0;
-
-		mActions[i][4+curDefaultActionType] = 1.0;
-		mPrevActions[i][4+0] = 1.0;
-
-		mCurActionTypes[i] = curDefaultActionType;
-		mPrevActionTypes[i] = 0;
-
-		mCurCriticalActionTimes[i] = 30;
-		mChangeContactIsActive[i] = false;
-
-		curContact[i] = -1;
-		prevFreeBallPositions.clear();
-	}
-	gotReward = false;
+	goBackEnvironment();
+	// slaveReset();
 }
 
 void
@@ -1978,15 +1840,6 @@ slaveResetCharacterPositions()
 	double zRange = 15.0*0.5*0.8;
 
 	// int resetDuration;
-
-	for(int i=0;i<mNumChars;i++)
-	{
-		mCharacters[i]->curLeftFingerPosition = 0.0;
-		mCharacters[i]->curRightFingerPosition = 0.0;
-		mCharacters[i]->curLeftFingerBallPosition = 0.0;
-		mCharacters[i]->curRightFingerBallPosition = 0.0;
-		mCharacters[i]->inputActionType = 0;
-	}
 
 	setPositionFromBVH(0, rand()%60+100);
 	Eigen::VectorXd standPosition = mCharacters[0]->getSkeleton()->getPositions();
@@ -2114,14 +1967,7 @@ slaveResetCharacterPositions()
 	criticalPoint_targetBallPosition = curBallPosition;
 	criticalPoint_targetBallVelocity.setZero();
 
-	// if((double) rand()/RAND_MAX > 0.5)
-	// 	dribbleDefaultVec[3] *= -1;
 
-	// Eigen::VectorXd zeroAction = mActions[0];
-	// zeroAction.setZero();
-	// zeroAction[4+4] = 1;
-	// auto nextPoseAndContacts = mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(dribbleDefaultVec));
-	// curBallPosition.setZero();
 
     mCharacters[0]->getSkeleton()->setPositions(standPosition);
 	for(int i=0;i<3;i++)
@@ -2164,126 +2010,10 @@ slaveResetCharacterPositions()
 	}
 
 	curFrame = 0;
+	savedFrame = 0;
 	criticalPointFrame = 0; 
 }
 
-void 
-Environment::
-resetCharacterPositions()
-{
-
-	// std::cout<<"A"<<std::endl;
-	bool useHalfCourt = true;
-	double xRange = 28.0*0.5*0.8;
-	double zRange = 15.0*0.5*0.8;	
-
-
-
-	Eigen::VectorXd standPosition = mCharacters[0]->getSkeleton()->getPositions();
-	standPosition[4] = 0.895;
-
-	if(useHalfCourt)
-	{
-		double r = (double) rand()/RAND_MAX * zRange * 0.8 + zRange*0.2;
-		double theta = (double) rand()/RAND_MAX * M_PI;
-		// standPosition[3] = (double) rand()/RAND_MAX * xRange*1.0;
-		// standPosition[5] = (double) rand()/RAND_MAX * zRange*1.0;
-
-		standPosition[3] = xRange - r * sin(theta);
-		standPosition[5] = 0 + r * cos(theta);
-	}
-	else
-	{
-		standPosition[3] = (double) rand()/RAND_MAX * xRange*2.0 - xRange;
-		standPosition[5] = (double) rand()/RAND_MAX * zRange*2.0 - zRange;
-	}
-
-	Eigen::Vector3d curRootOrientation = standPosition.segment(0,3);
-
-	double angle = curRootOrientation.norm();
-	Eigen::Vector3d axis = curRootOrientation.normalized();
-
-	Eigen::Vector3d curDirection = Eigen::AngleAxisd(angle, axis) * Eigen::Vector3d::UnitY();
-	curDirection[1] = 0.0;
-	curDirection.normalize();
-	// std::cout<<curDirection.transpose()<<std::endl;
-
-	Eigen::AngleAxisd aa(angle, axis);
-	Eigen::Vector3d goalDirection = Eigen::Vector3d(14.0 -1.5 + 0.05, 3.1+0.2, 0.0)- standPosition.segment(3,3);
-	if(curDirection.dot(goalDirection) <0.0)
-	{
-		aa = Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitY())*aa;
-	}
-	Eigen::Vector3d newRootOrientation = aa.angle() * aa.axis();
-
-	standPosition.segment(0,3) = newRootOrientation;
-
-	criticalPoint_targetBallPosition = curBallPosition;
-	criticalPoint_targetBallVelocity.setZero();
-
-	if((double) rand()/RAND_MAX > 0.5)
-		dribbleDefaultVec[3] *= -1;
-
-	for(int i=0;i<RESET_ADAPTING_FRAME;i++)
-		mMotionGenerator->setCurrentPose(standPosition, Utils::toStdVec(dribbleDefaultVec));
-
-	for(int i=0;i<RESET_ADAPTING_FRAME;i++)
-		mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(dribbleDefaultVec));
-	// Eigen::VectorXd zeroAction = mActions[0];
-	// zeroAction.setZero();
-	// zeroAction[4+4] = 1;
-	auto nextPoseAndContacts = mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(dribbleDefaultVec));
-    Eigen::VectorXd nextPosition = std::get<0>(nextPoseAndContacts);
-    mCharacters[0]->getSkeleton()->setPositions(nextPosition);
-    curBallPosition = std::get<1>(nextPoseAndContacts).segment(4,3);
-	for(int i=0;i<3;i++)
-	{
-		updatePrevBallPositions(curBallPosition);
-	}
-
-	Eigen::Vector6d ballPosition = ballSkel->getPositions();
-	ballPosition.setZero();
-	ballPosition.segment(3,3) = curBallPosition;
-	ballSkel->setPositions(ballPosition);
-
-	for(int i=0;i<mNumChars;i++)
-	{
-		mPrevCOMs[i] = mCharacters[i]->getSkeleton()->getRootBodyNode()->getCOM();
-	}
-	mPrevBallPosition = ballSkel->getCOM();
-
-	for(int i=0;i<mNumChars;i++)
-	{
-		mPrevBallPossessions[i] = false;
-		mCurBallPossessions[i] =false;
-		mDribbled[i] = false;
-
-		mLFootDetached[i] = false;
-		mRFootDetached[i] = false;
-		// bsm[i]->curState = BasketballState::POSITIONING;
-		// bsm[i]->prevAction = 4;
-
-
-		bsm[i]->curState = BasketballState::DRIBBLING;
-		bsm[i]->prevAction = 0;
-
-		mLFootContacting[i] = false;
-		mRFootContacting[i] = false;
-
-		mLLastFootPosition[i].setZero();
-		mRLastFootPosition[i].setZero();
-
-	}
-	// for(int i=0;i<mNumChars;i++)
-	// {
-	// 	mCharacters[i]->getSkeleton()->setPositions(standPosition);
-	// }
-
-	curFrame = 0;
-	criticalPointFrame = 0; 
-	// std::cout<<"B"<<std::endl;
-
-}
 
 void
 Environment::
@@ -2446,46 +2176,14 @@ computeHandBallPosition(int index)
 	{
 		Eigen::Isometry3d handTransform = skel->getBodyNode("LeftHand")->getWorldTransform();
 		Eigen::Vector3d ballPosition = handTransform * relBallPosition;
-/*
-		Eigen::Vector3d ballPosition = skel->getBodyNode("LeftFingerBall")->getWorldTransform().translation();
 
-		if((ballPosition - curBallPosition).norm() >0.15)
-		{
-			Eigen::Vector3d ballPositionR = skel->getBodyNode("RightFingerBall")->getWorldTransform().translation();
-			if((ballPosition-curBallPosition).norm() > (ballPositionR -curBallPosition).norm())
-			{
-				curContact[index] = 1;
-				return ballPositionR;
-			}
-			else
-			{
-				// std::cout<<"Too far ball to left hand"<<std::endl;
-				return ballPosition;
-			}
-		}
-		else*/
 			return ballPosition;
 	}
 	else if(curContact[index] == 1)
 	{
 		Eigen::Isometry3d handTransform = skel->getBodyNode("RightHand")->getWorldTransform();
 		Eigen::Vector3d ballPosition = handTransform * relBallPosition;
-		/*Eigen::Vector3d ballPosition = skel->getBodyNode("RightFingerBall")->getWorldTransform().translation();
-		if((ballPosition - curBallPosition).norm() >0.15)
-		{
-			Eigen::Vector3d ballPositionL = skel->getBodyNode("LeftFingerBall")->getWorldTransform().translation();
-			if((ballPosition-curBallPosition).norm() > (ballPositionL -curBallPosition).norm())
-			{
-				curContact[index] = 0;
-				return ballPositionL;
-			}
-			else
-			{
-				// std::cout<<"Too far ball to right hand"<<std::endl;
-				return ballPosition;
-			}
-		}
-		else*/
+
 			return ballPosition;
 	}
 	if(curContact[index] == 2)
@@ -2495,30 +2193,9 @@ computeHandBallPosition(int index)
 		Eigen::Vector3d ballPosition = Eigen::Vector3d(0.14, 0.16, 0.0);
 
 		ballPosition = (leftHandTransform*relBallPosition + rightHandTransform*relBallPosition)/2.0;
-		/*Eigen::Vector3d ballPosition = (skel->getBodyNode("LeftFingerBall")->getWorldTransform().translation() + 
-						skel->getBodyNode("RightFingerBall")->getWorldTransform().translation())/2.0;
-		if((ballPosition - curBallPosition).norm() >0.15)
-		{
-			Eigen::Vector3d ballPositionL = skel->getBodyNode("LeftFingerBall")->getWorldTransform().translation();
-			Eigen::Vector3d ballPositionR = skel->getBodyNode("RightFingerBall")->getWorldTransform().translation();
-			if((ballPositionL-curBallPosition).norm() > (ballPositionR -curBallPosition).norm())
-			{
-				curContact[index] = 1;
-				// std::cout<<"Too far ball to two hand"<<std::endl;
-				return ballPositionR;
-			}
-			else
-			{
-				curContact[index] = 0;
-				// std::cout<<"Too far ball to two hand"<<std::endl;
-				return ballPositionL;
-			}
-		}
-		else*/
-			return ballPosition;
+		return ballPosition;
 
 	}
-	// return ballPosition;
 }
 //upper bound for fast binary search
 double getBounceTime(double startPosition, double startVelocity, double upperbound)
@@ -2564,35 +2241,8 @@ void
 Environment::
 computeCriticalActionTimes()
 {
-	// std::cout<<"mActions[index][4+8+6] "<<mActions[0][4+8+6]<<std::endl;
 	for(int index=0;index<mNumChars;index++)
 	{
-	    // int curActionType = 0;
-	    // int maxIndex = 0;
-	    // double maxValue = -100;
-	    // for(int i=4;i<12;i++)
-	    // {
-	    //     if(mActions[index][i] > maxValue)
-	    //     {
-	    //         maxValue = mActions[index][i];
-	    //         maxIndex = i;
-	    //     }
-	    // }
-	    // curActionType = maxIndex-4;
-
-	    // int prevActionType = 0;
-	    // maxIndex = 0;
-	    // maxValue = -100;
-	    // for(int i=4;i<12;i++)
-	    // {
-	    //     if(mPrevActions[index][i] > maxValue)
-	    //     {
-	    //         maxValue = mActions[index][i];
-	    //         maxIndex = i;
-	    //     }
-	    // }
-	    // prevActionType = maxIndex-4;
-
 		double interp = 0.0;
     	Eigen::Isometry3d rootT = getRootT(index);
 	    if(mCurActionTypes[index] == mPrevActionTypes[index])
@@ -2964,8 +2614,19 @@ genRewardTutorialTrajectory()
 
 
 
-EnvironmentPackage::EnvironmentPackage()
+EnvironmentPackage::EnvironmentPackage(Environment* env, int numChars)
 {
+	this->numChars = numChars;
+	this->bsm.resize(numChars);
+	this->mCharacters.resize(numChars);
+	for(int i=0;i<numChars;i++)
+	{
+		this->bsm[i] = new BStateMachine();
+		this->mCharacters[i] = new Character3D("");
+		SkeletonPtr bvhSkel = dart::utils::SkelParser::readSkeleton(env->mBvhParser->skelFilePath);
+		env->addFingerSegmentToSkel(bvhSkel);
+		this->mCharacters[i]->mSkeleton = bvhSkel;
+	}
 }
 
 void
@@ -2989,57 +2650,35 @@ saveEnvironment(Environment* env)
 	this->mPrevCOMs = env-> mPrevCOMs;
 	this->mPrevBallPosition = env-> mPrevBallPosition;
 	this->mCurCriticalActionTimes = env-> mCurCriticalActionTimes;
-	this->mPrevPlayer = env-> mPrevPlayer;
-	this->mDribbled = env-> mDribbled;
 	this->mLFootDetached = env->mLFootDetached;
 	this->mRFootDetached = env->mRFootDetached;
 	this->mObstacles = env->mObstacles;
-	this->mCurHeadingAngle = env->mCurHeadingAngle;
 
 	this->mLFootContacting = env->mLFootContacting;
 	this->mRFootContacting = env->mRFootContacting;
 	this->mLLastFootPosition = env->mLLastFootPosition;
 	this->mRLastFootPosition = env->mRLastFootPosition;
 
-	env->mMotionGenerator->motionGenerators[0]->saveHiddenState();
-}
-
-void
-EnvironmentPackage::
-copyEnvironmentPackage(EnvironmentPackage* envPack)
-{
-	// this->skelPosition = env-> skelPosition;
-	this->mActions = envPack-> mActions;
-	this->mPrevBallPossessions = envPack-> mPrevBallPossessions;
-	this->mCurBallPossessions = envPack-> mCurBallPossessions;
-	this->prevBallPositions = envPack-> prevBallPositions;
-	this->curBallPosition = envPack-> curBallPosition;
-	this->criticalPoint_targetBallPosition = envPack-> criticalPoint_targetBallPosition;
-	this->criticalPoint_targetBallVelocity = envPack-> criticalPoint_targetBallVelocity;
-	this->prevContact = envPack-> prevContact;
-	this->curContact = envPack-> curContact;
-	this->criticalPointFrame = envPack-> criticalPointFrame;
-	this->curFrame = envPack-> curFrame;
-	this->mTargetBallPosition = envPack-> mTargetBallPosition;
-	this->mPrevActions = envPack-> mPrevActions;
-	this->mCurActionTypes = envPack-> mCurActionTypes;
-	this->mPrevCOMs = envPack-> mPrevCOMs;
-	this->mPrevBallPosition = envPack-> mPrevBallPosition;
-	this->mCurCriticalActionTimes = envPack-> mCurCriticalActionTimes;
-	this->mPrevPlayer = envPack-> mPrevPlayer;
-	this->mDribbled = envPack-> mDribbled;
-	this->mLFootDetached = envPack->mLFootDetached;
-	this->mRFootDetached = envPack->mRFootDetached;
-	this->mObstacles = envPack->mObstacles;
-	this->mCurHeadingAngle = envPack->mCurHeadingAngle;
+	this->mIsTerminalState = env->mIsTerminalState;
+	this->mIsFoulState = env->mIsFoulState;
+	this->mTimeElapsed = env->mTimeElapsed;
+	this->mAccScore = env->mAccScore;
+	this->mPrevActionTypes = env->mPrevActionTypes;
+	this->prevFreeBallPositions = env->prevFreeBallPositions;
+	this->gotReward = env->gotReward;
 
 
-	this->mLFootContacting = envPack->mLFootContacting;
-	this->mRFootContacting = envPack->mRFootContacting;
-	this->mLLastFootPosition = envPack->mLLastFootPosition;
-	this->mRLastFootPosition = envPack->mRLastFootPosition;
+	this->ballSkelPosition = env->ballSkel->getPositions();
+
+	for(int i=0;i<numChars;i++)
+	{
+		this->bsm[i]->copy(env->bsm[i]);
+		this->mCharacters[i]->copy(env->mCharacters[i]);
+	}
+	env->mMgb->motionGenerators[0]->saveHiddenState(env->mBatchIndex);
 
 }
+
 
 void
 EnvironmentPackage::
@@ -3062,8 +2701,6 @@ restoreEnvironment(Environment* env)
 	env->mPrevCOMs = this->mPrevCOMs;
 	env->mPrevBallPosition = this->mPrevBallPosition;
 	env->mCurCriticalActionTimes = this->mCurCriticalActionTimes;
-	env->mPrevPlayer = this->mPrevPlayer;
-	env->mDribbled = this->mDribbled;
 	env->mLFootDetached = this->mLFootDetached;
 	env->mRFootDetached = this->mRFootDetached;
 	env->mObstacles = this->mObstacles;
@@ -3074,8 +2711,24 @@ restoreEnvironment(Environment* env)
 	env->mLLastFootPosition = this->mLLastFootPosition;
 	env->mRLastFootPosition = this->mRLastFootPosition;
 
-	env->mMotionGenerator->motionGenerators[0]->restoreHiddenState();
+	env->mIsTerminalState = this->mIsTerminalState;
+	env->mIsFoulState = this->mIsFoulState;
+	env->mTimeElapsed = this->mTimeElapsed;
+	env->mAccScore = this->mAccScore;
+	env->mPrevActionTypes = this->mPrevActionTypes;
+	env->prevFreeBallPositions = this->prevFreeBallPositions;
+	env->gotReward = this->gotReward;
 
+
+	env->ballSkel->setPositions(this->ballSkelPosition);
+	for(int i=0;i<numChars;i++)
+	{
+		env->bsm[i]->copy(this->bsm[i]);
+		env->mCharacters[i]->copy(this->mCharacters[i]);
+
+	}
+
+	env->mMgb->motionGenerators[0]->restoreHiddenState(env->mBatchIndex);
 }
 
 void 
@@ -3152,24 +2805,32 @@ void
 Environment::
 goBackEnvironment()
 {
-	mPrevEnvSituations[1]->restoreEnvironment(this);
-	// saveEnvironment();
-	for(int i=0;i<2;i++)
-	{
-		saveEnvironment();
-	}
-	curFrame++;
-
+	mPrevEnvSituation->restoreEnvironment(this);
 }
 
 void
 Environment::
 saveEnvironment()
 {
-	if(curFrame%20 == 0)
+	// return;
+	//Initial save
+	if(curFrame == savedFrame)
 	{
-		mPrevEnvSituations[1]->copyEnvironmentPackage(mPrevEnvSituations[0]);
-		mPrevEnvSituations[0]->saveEnvironment(this);
+		// std::cout<<"BatchIndex : "<<mBatchIndex<<" Should not be saved"<<std::endl;
+		return;
+	}
+	if(curFrame == 11)
+	{
+		// std::cout<<"BatchIndex : "<<mBatchIndex<<" Saved"<<std::endl;
+		mPrevEnvSituation->saveEnvironment(this);
+		savedFrame = curFrame;
+	}
+
+	if(curFrame>1 && curFrame%goBackFrame == 1)
+	{
+		// std::cout<<"BatchIndex : "<<mBatchIndex<<" Saved"<<std::endl;
+		mPrevEnvSituation->saveEnvironment(this);
+		savedFrame = curFrame;
 	}
 }
 
@@ -3181,6 +2842,14 @@ BStateMachine::BStateMachine()
 
 	curState = BasketballState::DRIBBLING;
 	prevAction = 0;
+}
+
+void
+BStateMachine::
+copy(BStateMachine *bsm)
+{
+	this->curState = bsm->curState;
+	this->prevAction = bsm->prevAction;
 }
 
 int
@@ -3442,1336 +3111,3 @@ getRootT(int index)
 	rootIsometry.translation()[1] = 0.0;
 	return rootIsometry;
 }
-
-
-void
-Environment::
-applyAction(int index)
-{
-	// for(int i=4;i<12;i++)
-	// {
-	// 	mActions[index][i] = 0;
-	// }
-	// mActions[index][4] = 1;
-
-	// mActions[index][18] = 0;
-
-	// mActions[index].segment(4+8,6).setZero();
-
-	// std::cout<<mActions[index].segment(0,4).transpose()<<std::endl;
-	// std::cout<<mActions[index].segment(4,6).transpose()<<std::endl;
-	// std::cout<<mActions[index].segment(10,6).transpose()<<std::endl;
-	// std::cout<<mActions[index].segment(16,2).transpose()<<std::endl;
-	// std::cout<<endl;
-
-
-
-	// Eigen::VectorXd mgAction = mActions[index].segment(0,15);
-
-	auto nextPoseAndContacts = mMotionGenerator->generateNextPoseAndContacts(Utils::toStdVec(getMGAction(index)));
-
-	mPrevBallPosition = ballSkel->getCOM();
-	for(int i=0;i<mNumChars;i++)
-	{
-		mPrevCOMs[i] = mCharacters[i]->getSkeleton()->getRootBodyNode()->getCOM();
-		mPrevBallPossessions[i] = mCurBallPossessions[i];
-	    // mPrevLHandTranform[index] = mCharacters[i]->getSkeleton()->getBodyNode("LeftHand")->getWorldTransform();
-	    // mPrevRHandTranform[index] = mCharacters[i]->getSkeleton()->getBodyNode("RightHand")->getWorldTransform();
-
-	}
-
-
-    Eigen::VectorXd nextPosition = std::get<0>(nextPoseAndContacts);
-
-    mCharacters[index]->mSkeleton->setPositions(nextPosition);
-    mCharacters[index]->mSkeleton->setVelocities(mCharacters[0]->mSkeleton->getVelocities().setZero());
-
-
-    Eigen::Vector4d nextContacts = std::get<1>(nextPoseAndContacts).segment(0,4);
-    // mCurActionTypes[index] = std::get<2>(nextPoseAndContacts);
-	mCurBallPossessions[index] = std::get<2>(nextPoseAndContacts);
-	if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
-	{
-		if(mCurCriticalActionTimes[index]>10)
-			mCurBallPossessions[index] = true;
-		else
-			mCurBallPossessions[index] = false;
-
-		// if(mCurCriticalActionTimes[index] < -10)
-		// {
-		// 	mCurBallPossessions[index] = false;
-		// }
-	}
-	if(mCurActionTypes[index] == 2)
-	{
-		// if(mCurCriticalActionTimes[index] > 0)
-		// {
-		// 	mCurBallPossessions[index] = false;
-		// }
-		// else
-		// 	mCurBallPossessions[index] = true;
-	}
-	if(mCurActionTypes[index] == 4 || mCurActionTypes[index] == 5)
-	{
-		mCurBallPossessions[index] = false;
-	}
-	if(mCurActionTypes[index] == 0 || mCurActionTypes[index] == 6 || mCurActionTypes[index] == 7)
-	{
-		mCurBallPossessions[index] = true;
-	}
-
-    // std::cout<<mActions[index].transpose()<<std::endl;
-
-	// mCurActionTypes[index] = mActions[index];
-
-
-    // int curActionType = 0;
-    // int maxIndex = 0;
-    // double maxValue = -100;
-    // for(int i=4;i<12;i++)
-    // {
-    //     if(mActions[index][i] > maxValue)
-    //     {
-    //         maxValue = mActions[index][i];
-    //         maxIndex = i;
-    //     }
-    // }
-
-    // curActionType = maxIndex-4;
-
-
-    
- //    if(!mCurBallPossessions[index])
-	// {
-	// 	// std::cout<<"--"<<std::endl;
-	// 	curBallPosition = computeBallPosition();
-	// }
-
-
-
-    //belows are ball control
-
-	// if(mCurCriticalActionTimes[index]<-10)
-	// {
-	// 	if((mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3))
-	// 	{
-
-	// 	}
-	// }
-
-
-    //Update hand Contacts;
-    if(mChangeContactIsActive[index])
-    {
-    	std::cout<<"mChangeContactIsActive"<<std::endl;
-    	updatePrevContacts(index, mActions[index].segment(4+NUM_ACTION_TYPE+5,2));
-    	if(curContact[index] == -1)
-    	{
-    		mChangeContactIsActive[index] = false;
-    		mCurBallPossessions[index] = false;
-    		// std::cout<<"here"<<std::endl;
-    	}
-    	else
-    	{
-    		mCurBallPossessions[index] = true;
-    	}
-    	// std::cout<<curContact[index]<<std::endl;
-    	// std::cout<<std::endl;
-
-    }
-    else
-    {
-    	if((mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3) 
-    		&& mCurCriticalActionTimes[index]<10
-    		&& !mChangeContactIsActive[index])
-    	{
-    		updatePrevContacts(index, Eigen::Vector2d::Zero());
-    		mCurBallPossessions[index] = false;
-    	}
-    	else
-   			updatePrevContacts(index, std::get<1>(nextPoseAndContacts).segment(2,2));
-
-    }
-
-    if((mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3) 
-    		&& mCurCriticalActionTimes[index]<-10)
-    {
-    	curContact[index] = -1;
-    }
-
-    // std::cout<<curContact[index]<<std::endl;
-    // std::cout<<mCurBallPossessions[index]<<std::endl;
-
-   //  if(curContact[index] == -1)
-   //  {
-   //  	if(mCurActionTypes[index]==6 || mCurActionTypes[index] == 7)
-   //  	{
-   //  		curContact[index] = prevContact[index];
-   //  		if(prevContact[index] == -1)
-   //  			mIsTerminalState = true;
-   //  	}
-   //  	if(mCurActionTypes[index]==1 || mCurActionTypes[index] == 3)
-   //  	{
-			// // if(mCurCriticalActionTimes[index]<10 && mCurCriticalActionTimes[index]>0)
-   // //  		{
-   // //  			curContact[index] = prevContact[index];
-   // //  			if(prevContact[index] == -1)
-   // //  				mIsTerminalState = true;
-   // //  		}		
-			// // else
-			// // 	curContact[index] = -1;
-
-   //  	}
-
-   //  	// if(mCurActionTypes[index] == 1 ||mCurActionTypes[index] == 3 && mCurCriticalActionTimes[index]>0)
-   //  	// {
-   //  	// 	curContact[index] = prevContact[index];
-   //  	// }
-   //  	// else if(mCurActionTypes[index] == 2 && mCurCriticalActionTimes[index]<=0)
-   //  	// {
-   //  	// 	curContact[index] = prevContact[index];
-   //  	// }
-   //  }
-
-
- //   	if(mCurActionTypes[index] == 2)
-	// {
-	// }
-    // if(bsm[index]->curState = BasketballState::)
-    // std::cout<<curContact[index]<<std::endl;
-
-
-    if(mCurActionTypes[index] == 4 || mCurActionTypes[index] == 5)
-    {
-    	updatePrevBallPositions(computeBallPosition());
-    }
-    else if(curContact[index] >= 0)
-    {
-    // 	if(mCurActionTypes[index] ==1 || mCurActionTypes[index] == 3)
-    // 	{
-    // 		if(mCurCriticalActionTimes[index] == 1)
-    // 		{
-    // 			Eigen::Isometry3d curHandTransform;
-    // 			if(curContact[index] == 0)
-    // 			{
-    // 				curHandTransform = mCharacters[index]->getSkeleton()->getBodyNode("LeftHand")->getWorldTransform();
-    // 			}
-    // 			else if(curContact[index] == 1)
-    // 			{
-    // 				curHandTransform = mCharacters[index]->getSkeleton()->getBodyNode("RightHand")->getWorldTransform();
-    // 			}
-    // 			else
-    // 			{
-    // 				updatePrevBallPositions(computeHandBallPosition(index));
-    // 			}
-
-				// Eigen::Vector3d handProjectedBallPosition = curHandTransform.inverse() * prevBallPositions[0];
-				// handProjectedBallPosition[1] = 0.0;
-				// Eigen::Vector3d handCenter = Eigen::Vector3d(0.05,0.0,0.0);
-				// Eigen::Vector3d ballOffset = (handProjectedBallPosition-handCenter).normalized()* 0.15;
-				// ballOffset[1] = 0.23;
-				// ballOffset += handCenter;
-				// updatePrevBallPositions(curHandTransform*ballOffset);
-    // 		}
-    // 		else
-    // 		{
-    // 			updatePrevBallPositions(computeHandBallPosition(index));
-    // 		}
-
-    // 	}
-    // 	else
-    // 	{
-    		updatePrevBallPositions(computeHandBallPosition(index));
-    	// }
-    }
-    else if(mCurActionTypes[index] == 0)
-    {
-		updatePrevBallPositions(std::get<1>(nextPoseAndContacts).segment(4,3));
-    }
-    else if(mCurBallPossessions[index])
-    {
-    	updatePrevBallPositions(std::get<1>(nextPoseAndContacts).segment(4,3));
-    }
-    else
-    {
-    	updatePrevBallPositions(computeBallPosition());
-    }
-
-
-    Eigen::Vector6d ballPosition;
-    ballPosition.setZero();
-
-    ballPosition.segment(3,3) = curBallPosition;
-
-    ballSkel->setPositions(ballPosition);
-
-    Eigen::Vector6d zeroVelocity;
-    zeroVelocity.setZero();
-    ballSkel->setVelocities(zeroVelocity);
-
-  //   if(mCurBallPossessions[index])
-		// mPrevPlayer = index;
-
-    mPrevActionTypes[index] = mCurActionTypes[index];
-
-
-
-
-
-    // check rule violation
-
-    //double dribble
- //    if(mPrevPlayer== index && !mPrevBallPossessions[index] && mCurBallPossessions[index])
- //    {
- //    	// std::cout<<"Foul : double dribble"<<std::endl;
-	// 	// mIsTerminalState = true;
-	// 	mIsFoulState = true;
- //    }
-
-	// // pass recieve
-	// if(mCurActionTypes[index] == 2 && mCurBallPossessions[index])
-	// 	mPrevPlayer = index;
-
-	// // predict ball possession before pass recieve
-	// if(mPrevPlayer != index && mCurBallPossessions[index])
-	// {
-	// 	// std::cout<<"Getting ball before pass receive"<<std::endl;
-	// 	// mIsTerminalState = true;
-	// 	mIsFoulState = true;
-	// }
-
-
-    //** get foot contacting
-	SkeletonPtr skel = mCharacters[index]->getSkeleton();
-	if(std::get<1>(nextPoseAndContacts)[0] > 0.5)
-	{
-		if(!mLFootContacting[index])
-			mLLastFootPosition[index] = skel->getBodyNode("LeftToe")->getWorldTransform().translation();
-		mLFootContacting[index] = true;
-	}
-	else
-	{
-		mLFootContacting[index] = false;
-	}
-
-	if(std::get<1>(nextPoseAndContacts)[1] > 0.5)
-	{
-		if(!mRFootContacting[index])
-			mRLastFootPosition[index] = skel->getBodyNode("RightToe")->getWorldTransform().translation();
-		mRFootContacting[index] = true;
-	}
-	else
-	{
-		mRFootContacting[index] = false;
-	}
-
-
-	if(mLFootContacting[index])
-	{
-		Eigen::Vector3d curLFootPosition = skel->getBodyNode("LeftToe")->getWorldTransform().translation();
-		Eigen::Vector3d footDiff = curLFootPosition - mLLastFootPosition[index];
-		footDiff[1] = 0.0;
-		// std::cout<<(curLFootPosition - mLLastFootPosition[index]).norm()<<std::endl;
-		if(footDiff.norm()>0.35)
-		{
-			// std::cout<<"Left Foot Sliding"<<std::endl;
-			mIsTerminalState = true;
-		}
-	}
-
-	if(mRFootContacting[index])
-	{
-		Eigen::Vector3d curRFootPosition = skel->getBodyNode("RightToe")->getWorldTransform().translation();
-		Eigen::Vector3d footDiff = curRFootPosition - mRLastFootPosition[index];
-		footDiff[1] = 0.0;
-		if(footDiff.norm()>0.35)
-		{
-			// std::cout<<"Right Foot Sliding"<<std::endl;
-			mIsTerminalState = true;
-		}
-	}
-
-
-	// if(mCurBallPossessions[index] && curContact[index] == -1)
-	// {
-	// 	if(mCurActionTypes[index] != 0)
-	// 	{
-	// 		mIsTerminalState = true;
-	// 	}
-
-	// }
-
-	/*if((curBallPosition - mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM()).norm() < 0.10)
-	{
-		mIsTerminalState = true;
-	}*/
-
-
-	// if(mCurActionTypes[index] == 0)
-	// {
-	// 	mDribbled[index] = true;
-	// 	mLFootDetached[index] = false;
-	// 	mRFootDetached[index] = false;
-	// }
-	// if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
-	// {
-	// 	if(!mCurBallPossessions[index])
-	// 	{
-	// 		mDribbled[index] = false;
-	// 			mPrevPlayer = -1;
-	// 	}
-	// }
-
-
-
-
-
-    // if(curActionType == 1 || curActionType == 3)
-    // {
-    	//Let's check if this is critical point or not
-
-    if(mCurBallPossessions[index])
-    {
-        this-> criticalPoint_targetBallPosition = this->prevBallPositions[0];
-        this-> criticalPoint_targetBallVelocity = (this->prevBallPositions[0] - this->prevBallPositions[2])*15*1.5;
-        if(this-> criticalPoint_targetBallVelocity.norm() >8)
-        {
-        	this->criticalPoint_targetBallVelocity = 8.0 * this->criticalPoint_targetBallVelocity.normalized();
-        }
-        this->criticalPointFrame = curFrame;
-    }
-
-// 	if(prevContact[index] != -1 && curContact[index] == -1)
-// 	{
-//         this-> criticalPoint_targetBallPosition = this->prevBallPositions[0];
-//         this-> criticalPoint_targetBallVelocity = (this->prevBallPositions[0] - this->prevBallPositions[2])*15*1.5;
-//         if(this-> criticalPoint_targetBallVelocity.norm() >8)
-//         {
-//         	this->criticalPoint_targetBallVelocity = 8.0 * this->criticalPoint_targetBallVelocity.normalized();
-//         }
-//         // std::cout<<"this->prevBallPosition : "<<this->prevBallPosition.transpose()<<std::endl;
-//         // std::cout<<"this->pprevBallPosition : "<<this->pprevBallPosition.transpose()<<std::endl;
-//         // std::cout<<"this->ppprevBallPosition : "<<this->ppprevBallPosition.transpose()<<std::endl;
-        
-
-//         this->criticalPointFrame = curFrame-1;
-// 	}
-
-    // }
-	// std::cout<<"################# "<<mCurActionTypes[index]<< "###############"<<std::endl;
-
-
-
-	// if(mCurActionTypes[index] != 0 && !curContact)
-
-
-
-}
-
-// Eigen::Vector3d 
-// Environment::
-// getTargetBallGlobalPosition();
-// {
-// 	Motion::MotionSegment* ms = mMotionGenerator->motionGenerators[0]->mMotionSegment;
-// 	Motion::Root root = ms->getLastPose()->getRoot();
-
-// 	Eigen::Isometry3d baseToRoot = mMotionGenerator->getBaseToRootMatrix(root);
-
-
-// 	// Get goalpost position
-// 	Eigen::Vector3d relTargetPosition;
-// 	relTargetPosition = baseToRoot.inverse()*mTargetBallPosition;
-
-// 	state.resize(ICAPosition.rows() + relTargetPosition.rows());
-// }
-
-
-/*
-bool isNotCloseToBall(Eigen::VectorXd curState)
-{
-	return curState.segment(_ID_BALL_P,2).norm() >= 0.15;
-}
-
-bool isNotCloseToBall_soft(Eigen::VectorXd curState)
-{
-	return curState.segment(_ID_BALL_P,2).norm() >= 0.25;
-}
-
-
-Eigen::VectorXd localStateToOriginState(Eigen::VectorXd localState, int mNumChars)
-{
-	Eigen::VectorXd originState = localState;
-	return originState;
-}
-
-double getFacingAngleFromLocalState(Eigen::VectorXd localState)
-{
-	Eigen::Vector2d goalToGoal = (localState.segment(_ID_GOALPOST_P, 2) - localState.segment(_ID_GOALPOST_P+6, 2));
-
-	goalToGoal.normalize();
-	return -atan2(goalToGoal[1], goalToGoal[0]);
-}
-
-double hardcodedShootingPower = 0.7;
-double controlHz = 30.0;
-double torqueScale = 0.4;
-
-Eigen::VectorXd
-actionCloseToBall(Eigen::VectorXd localState)
-{
-	Eigen::VectorXd curState = localStateToOriginState(localState);
-	Eigen::VectorXd curVel = curState.segment(_ID_V,2);
-	Eigen::VectorXd targetVel = curState.segment(_ID_BALL_P,2);
-
-	if(targetVel.norm() !=0)
-		targetVel = targetVel.normalized()*4.0;
-	Eigen::VectorXd action(4);
-	action.setZero();
-	action.segment(0,2) = targetVel - curVel;
-
-	// Eigen::Vector2d direction = targetVel - curVel;
-	// direction.normalize();
-	// action[2] = directionToTheta(direction);
-
-	double curFacingAngle = getFacingAngleFromLocalState(localState);
-
-	double targetFacingAngle = directionToTheta(curState.segment(_ID_V,2));
-	double direction = targetFacingAngle - (curFacingAngle);
-	// cout<<targetFacingAngle<<" "<<curFacingAngle<<" "<<curState[_ID_FACING_V]<<" "<<controlHz<<endl;
-	// cout<<targetFacingAngle<<" "<<(curFacingAngle + curState[_ID_FACING_V]/controlHz)<<endl;
-	if(direction > M_PI)
-	{
-		direction = direction - 2*M_PI;
-	}
-	if(direction < -M_PI)
-	{
-		direction = direction + 2*M_PI;
-	}
-
-	action[2] = torqueScale*direction;
-	// cout<<action[2]<<endl;
-	// action[2] = sin(facingAngle - curFacingAngle);
-	// action[3] = cos(facingAngle - curFacingAngle);
-
-	action.segment(0,2) = rotate2DVector(action.segment(0,2), -curFacingAngle);
-	// action.segment(0,2) = rotate2DVector(action.segment(0,2), -curFacingAngle);
-	action.segment(0,2).normalize();
-	action[3] = -hardcodedShootingPower;
-	
-	return action;
-}
-
-Eigen::VectorXd
-actionCloseToBallWithShooting(Eigen::VectorXd localState)
-{
-	Eigen::VectorXd curState = localStateToOriginState(localState);
-	Eigen::VectorXd curVel = curState.segment(_ID_V,2);
-	Eigen::VectorXd targetVel = curState.segment(_ID_BALL_P,2);
-
-	if(targetVel.norm() !=0)
-		targetVel = targetVel.normalized()*4.0;
-	Eigen::VectorXd action(4);
-	action.setZero();
-	action.segment(0,2) = targetVel - curVel;
-
-	double curFacingAngle = getFacingAngleFromLocalState(localState);
-
-	double targetFacingAngle = directionToTheta(curState.segment(_ID_V,2));
-	double direction = targetFacingAngle - (curFacingAngle);
-	if(direction > M_PI)
-		direction = direction - 2*M_PI;
-	else if(direction < -M_PI)
-		direction = direction + 2*M_PI;
-
-	action[2] = torqueScale*direction;
-	action.segment(0,2) = rotate2DVector(action.segment(0,2),  -(curFacingAngle));
-	action.segment(0,2).normalize();
-
-	action[3] = hardcodedShootingPower;
-
-	
-	return action;
-}
-bool isNotVelHeadingGoal(Eigen::VectorXd localState)
-{
-	Eigen::VectorXd curState = localStateToOriginState(localState);
-	Eigen::VectorXd p = curState.segment(_ID_P, 2);
-	Eigen::VectorXd v = curState.segment(_ID_V, 2);
-	Eigen::VectorXd agentToGoalpost = (curState.segment(_ID_GOALPOST_P, 2) + curState.segment(_ID_GOALPOST_P+2, 2))/2.0;
-
-	double cosTheta =  v.normalized().dot(agentToGoalpost.normalized());
-	
-	return cosTheta < 0.95 && curState.segment(_ID_BALL_P,2).norm() < 0.23;
-}
-Eigen::VectorXd
-actionVelHeadingGoal(Eigen::VectorXd localState)
-{
-	Eigen::VectorXd curState = localStateToOriginState(localState);
-	Eigen::VectorXd p = curState.segment(_ID_P,2);
-	Eigen::VectorXd ballP = p + curState.segment(_ID_BALL_P,2);
-	Eigen::VectorXd targetVel = (curState.segment(_ID_GOALPOST_P, 2) + curState.segment(_ID_GOALPOST_P+2, 2))/2.0;
-
-	Eigen::VectorXd curVel = curState.segment(_ID_V,2);
-
-	if(targetVel.norm() !=0)
-		targetVel = targetVel.normalized()*4.0;
-	Eigen::VectorXd action(4);
-	action.setZero();
-	action.segment(0,2) = targetVel- curVel;
-
-	double curFacingAngle = getFacingAngleFromLocalState(localState);
-
-	double targetFacingAngle = directionToTheta(curState.segment(_ID_V,2));
-	double direction = targetFacingAngle - (curFacingAngle);
-	if(direction > M_PI)
-		direction = direction - 2*M_PI;
-	else if(direction < -M_PI)
-		direction = direction + 2*M_PI;
-
-	action[2] = torqueScale*direction;
-
-	action.segment(0,2) = rotate2DVector(action.segment(0,2), -(curFacingAngle));
-	action.segment(0,2).normalize();
-
-	action[3] = -hardcodedShootingPower;
-	
-	return action;
-}
-
-bool isNotBallHeadingGoal(Eigen::VectorXd localState)
-{
-	Eigen::VectorXd curState = localStateToOriginState(localState);
-	Eigen::VectorXd p = curState.segment(_ID_P,2);
-	Eigen::VectorXd ballP = p + curState.segment(_ID_BALL_P,2);
-	Eigen::VectorXd centerOfGoalpost = p + (curState.segment(_ID_GOALPOST_P, 2) + curState.segment(_ID_GOALPOST_P+2, 2))/2.0;
-
-
-	Eigen::VectorXd v =curState.segment(_ID_V, 2);
-	Eigen::VectorXd ballV = v + curState.segment(_ID_BALL_V, 2);
-
-	Eigen::VectorXd ballToGoalpost = centerOfGoalpost - ballP;
-
-	double cosTheta =  ballV.normalized().dot(ballToGoalpost.normalized());
-	
-	return cosTheta < 0.9 && curState.segment(_ID_BALL_P,2).norm() < 0.23;
-}
-Eigen::VectorXd
-actionBallHeadingGoal(Eigen::VectorXd localState)
-{
-	Eigen::VectorXd curState = localStateToOriginState(localState);
-	Eigen::VectorXd p = curState.segment(_ID_P,2);
-	Eigen::VectorXd ballP = p + curState.segment(_ID_BALL_P,2);
-	Eigen::VectorXd targetVel = (curState.segment(_ID_GOALPOST_P, 2) + curState.segment(_ID_GOALPOST_P+2, 2))/2.0;
-
-	Eigen::VectorXd curVel = curState.segment(_ID_V,2);
-
-	if(targetVel.norm() !=0)
-		targetVel = targetVel.normalized()*4.0;
-	Eigen::VectorXd action(4);
-	action.setZero();
-	action.segment(0,2) = targetVel - curVel;
-
-	double curFacingAngle = getFacingAngleFromLocalState(localState);
-
-	double targetFacingAngle = directionToTheta(curState.segment(_ID_V,2));
-	double direction = targetFacingAngle - (curFacingAngle);
-	if(direction > M_PI)
-		direction = direction - 2*M_PI;
-	else if(direction < -M_PI)
-		direction = direction + 2*M_PI;
-
-	action[2] = torqueScale*direction;
-
-	action.segment(0,2) = rotate2DVector(action.segment(0,2),  -(curFacingAngle));
-	action.segment(0,2).normalize();
-
-	action[3] = hardcodedShootingPower;
-	
-	return action;
-}
-
-bool isBallInPenalty(Eigen::VectorXd localState)
-{
-	Eigen::VectorXd curState = localStateToOriginState(localState);
-	Eigen::VectorXd ballPosition = curState.segment(_ID_P,2) + curState.segment(_ID_BALL_P,2);
-
-	return ballPosition[0] < -3.0;
-}
-bool isNotBallInPenalty(Eigen::VectorXd localState)
-{
-	Eigen::VectorXd curState = localStateToOriginState(localState);
-	Eigen::VectorXd ballPosition = curState.segment(_ID_P,2) + curState.segment(_ID_BALL_P,2);
-
-	return ballPosition[0] >= -3.0;
-}
-
-Eigen::VectorXd actionBallInPenalty(Eigen::VectorXd localState)
-{
-	Eigen::VectorXd curState = localStateToOriginState(localState);
-	Eigen::VectorXd targetPosition = curState.segment(_ID_P,2);
-	// targetPosition[0] = 4.0 * (rand()/(double)RAND_MAX );
-	// targetPosition[1] = 3.0 * (rand()/(double)RAND_MAX ) - 6.0/2.0;
-	// cout<<"@"<<endl;
-
-	double distanceAlly1 = curState.segment(_ID_ALLY1_P, 2).norm();
-	double distanceAlly2 = curState.segment(_ID_ALLY2_P, 2).norm();
-
-	Eigen::VectorXd oppAttackerPosition;
-	if(distanceAlly1 <= distanceAlly2)
-	{
-		oppAttackerPosition = curState.segment(_ID_P,2) + curState.segment(_ID_OP_ATK1_P, 2);
-	}
-	else
-	{
-		oppAttackerPosition = curState.segment(_ID_P,2) + curState.segment(_ID_OP_ATK2_P, 2);
-	}
-
-	double oppAttackerDirection = oppAttackerPosition[1];
-	oppAttackerDirection /= abs(oppAttackerDirection);
-	targetPosition[1] = -oppAttackerDirection*3.0;
-
-	Eigen::VectorXd targetVel = targetPosition - curState.segment(_ID_P,2);
-
-	Eigen::VectorXd curVel = curState.segment(_ID_V, 2);
-
-	if(targetVel.norm() !=0)
-		targetVel = targetVel.normalized()*4.0;
-	Eigen::VectorXd action(4);
-	action.setZero();
-	action.segment(0,2) = targetVel - curVel;
-
-	double curFacingAngle = getFacingAngleFromLocalState(localState);
-
-	double targetFacingAngle = directionToTheta(curState.segment(_ID_V,2));
-	double direction = targetFacingAngle - (curFacingAngle);
-	if(direction > M_PI)
-		direction = direction - 2*M_PI;
-	else if(direction < -M_PI)
-		direction = direction + 2*M_PI;
-
-	action[2] = torqueScale*direction;
-
-	action.segment(0,2) = rotate2DVector(action.segment(0,2), -curFacingAngle);
-	action.segment(0,2).normalize();
-	action[3] = -hardcodedShootingPower;
-	
-	return action;
-}
-
-double closeFactor = 0.4;
-
-bool isNotPlayerOnBallToGoal(Eigen::VectorXd localState)
-{
-	Eigen::VectorXd curState = localStateToOriginState(localState);
-	Eigen::VectorXd p = curState.segment(_ID_P,2);
-	Eigen::VectorXd ballP = p + curState.segment(_ID_BALL_P,2);
-	Eigen::VectorXd centerOfGoalpost = p + (curState.segment(_ID_GOALPOST_P+4, 2) + curState.segment(_ID_GOALPOST_P+6, 2))/2.0;
-
-	Eigen::VectorXd goalpostToBall = (ballP - centerOfGoalpost);
-	if(goalpostToBall.norm() > closeFactor)
-		goalpostToBall = goalpostToBall.normalized() * closeFactor;
-	Eigen::VectorXd targetPosition = centerOfGoalpost + goalpostToBall;
-
-	return (targetPosition - p).norm() >= 0.3 || (ballP - centerOfGoalpost).norm() > 1.8;
-}
-bool isPlayerOnBallToGoal(Eigen::VectorXd localState)
-{
-	Eigen::VectorXd curState = localStateToOriginState(localState);
-	Eigen::VectorXd p = curState.segment(_ID_P,2);
-	Eigen::VectorXd ballP = p + curState.segment(_ID_BALL_P,2);
-	Eigen::VectorXd centerOfGoalpost = p + (curState.segment(_ID_GOALPOST_P+4, 2) + curState.segment(_ID_GOALPOST_P+6, 2))/2.0;
-
-	Eigen::VectorXd goalpostToBall = (ballP - centerOfGoalpost);
-	double d_goalpostToP = (p - centerOfGoalpost).norm();
-	Eigen::VectorXd goalpostToTarget;// = goalpostToBall;
-	// if(goalpostToBall.norm() > d_goalpostToP)
-	goalpostToTarget = goalpostToBall.normalized() * d_goalpostToP;
-	Eigen::VectorXd targetPosition = centerOfGoalpost + goalpostToTarget;
-
-	return (targetPosition - p).norm() < 0.3 && (ballP - centerOfGoalpost).norm() < 1.8;
-}
-
-Eigen::VectorXd actionPlayerOnBallToGoal(Eigen::VectorXd localState)
-{
-	Eigen::VectorXd curState = localStateToOriginState(localState);
-	Eigen::VectorXd p = curState.segment(_ID_P,2);
-	Eigen::VectorXd ballP = p + curState.segment(_ID_BALL_P,2);
-	Eigen::VectorXd centerOfGoalpost = p + (curState.segment(_ID_GOALPOST_P+4, 2) + curState.segment(_ID_GOALPOST_P+6, 2))/2.0;
-
-	Eigen::VectorXd goalpostToBall = (ballP - centerOfGoalpost);
-	if(goalpostToBall.norm() > closeFactor)
-		goalpostToBall = goalpostToBall.normalized() * closeFactor;
-	Eigen::VectorXd targetPosition = centerOfGoalpost + goalpostToBall;
-
-	Eigen::VectorXd targetVel = targetPosition - curState.segment(_ID_P,2);
-
-	Eigen::VectorXd curVel = curState.segment(_ID_V, 2);
-
-	// if(targetVel.norm() !=0)
-	targetVel = targetVel*4.0;
-	
-	Eigen::VectorXd action(4);
-	action.setZero();
-	action.segment(0,2) = targetVel - curVel;
-	action.segment(0,2).normalize();
-
-	double curFacingAngle = getFacingAngleFromLocalState(localState);
-
-	double targetFacingAngle = 0;
-	double direction = targetFacingAngle - (curFacingAngle);
-	// cout<<direction<<" "<<curFacingAngle<<endl;
-	if(direction > M_PI)
-		direction = direction - 2*M_PI;
-	else if(direction < -M_PI)
-		direction = direction + 2*M_PI;
-
-	action[2] = torqueScale*direction;
-
-	action.segment(0,2) = rotate2DVector(action.segment(0,2), -curFacingAngle);
-	action[3] = -hardcodedShootingPower;
-	// action[3] = 1.0;
-
-	
-	return action;
-}
-
-bool isNotVelHeadingPlayer(Eigen::VectorXd localState)
-{
-	Eigen::VectorXd curState = localStateToOriginState(localState);
-	Eigen::VectorXd p = curState.segment(_ID_P, 2);
-	Eigen::VectorXd v = curState.segment(_ID_V, 2);
-
-	double distanceAlly1 = curState.segment(_ID_ALLY1_P, 2).norm();
-	double distanceAlly2 = curState.segment(_ID_ALLY2_P, 2).norm();
-
-	Eigen::VectorXd targetVel;
-	if(distanceAlly1 <= distanceAlly2)
-	{
-		targetVel = curState.segment(_ID_ALLY1_P, 2);
-	}
-	else
-	{
-		targetVel = curState.segment(_ID_ALLY2_P, 2);
-	}
-
-	// Eigen::VectorXd targetVel = curState.segment(_ID_ALLY_P, 2);
-
-	double cosTheta =  v.normalized().dot(targetVel.normalized());
-	
-	return cosTheta <= 1.0 && curState.segment(_ID_BALL_P,2).norm() < 0.30;
-}
-Eigen::VectorXd
-actionVelHeadingPlayer(Eigen::VectorXd localState)
-{
-	Eigen::VectorXd curState = localStateToOriginState(localState);
-	Eigen::VectorXd p = curState.segment(_ID_P,2);
-	double distanceAlly1 = curState.segment(_ID_ALLY1_P, 2).norm();
-	double distanceAlly2 = curState.segment(_ID_ALLY2_P, 2).norm();
-
-	Eigen::VectorXd targetVel;
-	if(distanceAlly1 <= distanceAlly2)
-	{
-		targetVel = curState.segment(_ID_ALLY1_P, 2);
-	}
-	else
-	{
-		targetVel = curState.segment(_ID_ALLY2_P, 2);
-	}
-
-	Eigen::VectorXd curVel = curState.segment(_ID_V,2);
-
-	if(targetVel.norm() !=0)
-		targetVel = targetVel.normalized()*4.0;
-	Eigen::VectorXd action(4);
-	action.setZero();
-	action.segment(0,2) = targetVel- curVel;
-
-
-	Eigen::VectorXd v = curState.segment(_ID_V, 2);
-
-	Eigen::VectorXd allyP;
-	if(distanceAlly1 <= distanceAlly2)
-	{
-		allyP = curState.segment(_ID_ALLY1_P, 2);
-
-	}
-	else
-	{
-		allyP = curState.segment(_ID_ALLY2_P, 2);
-	}
-
-
-	double cosTheta =  v.normalized().dot(allyP.normalized());
-
-	double curFacingAngle = getFacingAngleFromLocalState(localState);
-
-	double targetFacingAngle = directionToTheta(curState.segment(_ID_V,2));
-	double direction = targetFacingAngle - (curFacingAngle);
-	if(direction > M_PI)
-		direction = direction - 2*M_PI;
-	else if(direction < -M_PI)
-		direction = direction + 2*M_PI;
-
-	action[2] = torqueScale*direction;
-
-	action.segment(0,2) = rotate2DVector(action.segment(0,2), -curFacingAngle);
-	action.segment(0,2).normalize();
-
-	action[3] = -hardcodedShootingPower;
-	if(cosTheta>0.95)
-		action[3] = hardcodedShootingPower;
-	
-	return action;
-}
-
-// bool isNotBallHeadingPlayer(Eigen::VectorXd curState)
-// {
-// 	Eigen::VectorXd p = curState.segment(_ID_P,2);
-// 	Eigen::VectorXd ballP = p + curState.segment(_ID_BALL_P,2);
-// 	Eigen::VectorXd allyP = p + curState.segment(_ID_ALLY_P, 2);
-
-
-// 	Eigen::VectorXd v =curState.segment(_ID_V, 2);
-// 	Eigen::VectorXd ballV = v + curState.segment(_ID_BALL_V, 2);
-
-// 	Eigen::VectorXd ballToAlly = allyP - ballP;
-
-// 	double cosTheta =  ballV.normalized().dot(ballToAlly.normalized());
-	
-// 	return cosTheta < 0.95 && curState.segment(_ID_BALL_P,2).norm() < 0.23;
-// }
-// Eigen::VectorXd
-// actionBallHeadingPlayer(Eigen::VectorXd curState)
-// {
-// 	Eigen::VectorXd p = curState.segment(_ID_P,2);
-// 	Eigen::VectorXd ballP = p + curState.segment(_ID_BALL_P,2);
-// 	Eigen::VectorXd targetVel = (curState.segment(_ID_ALLY_P, 2) + curState.segment(_ID_ALLY_P+2, 2))/2.0;
-
-// 	Eigen::VectorXd curVel = curState.segment(_ID_V,2);
-
-// 	if(targetVel.norm() !=0)
-// 		targetVel = targetVel.normalized()*4.0;
-// 	Eigen::VectorXd action(4);
-// 	action.setZero();
-// 	action.segment(0,2) = targetVel - curVel;
-
-// 	Eigen::VectorXd v =curState.segment(_ID_V, 2);
-// 	Eigen::VectorXd ballV = v + curState.segment(_ID_BALL_V, 2);
-// 	Eigen::VectorXd allyP = p + (curState.segment(_ID_ALLY_P, 2) + curState.segment(_ID_ALLY_P+2, 2))/2.0;
-
-// 	Eigen::VectorXd ballToAlly = allyP - ballP;
-
-// 	double cosTheta =  ballV.normalized().dot(ballToAlly.normalized());
-// 	if(cosTheta<0.95)
-// 		action[3] = 1.0;
-// 	return action;
-// }
-
-
-
-
-bool trueReturnFunction(Eigen::VectorXd curState)
-{
-	return true;
-}
-
-BNode* basicPlayer()
-{
-	BNode* shootRootNode = new BNode("Shooting_Root", BNType::ROOT);
-
-	BNode* infWNode = new BNode("Infinite_While", BNType::WHILE, shootRootNode);
-	infWNode->setConditionFunction(trueReturnFunction);
-
-	BNode* shootSNode = new BNode("Shooting_Sequence", BNType::SEQUENCE, infWNode);
-
-		BNode* followWNode = new BNode("Follow_While", BNType::WHILE, shootSNode);
-		followWNode->setConditionFunction(isNotCloseToBall);
-
-			BNode* followENode = new BNode("Follow_Execution", BNType::EXECUTION, followWNode);
-			followENode->setActionFunction(actionCloseToBall);
-
-		BNode* velWNode = new BNode("Vel_While", BNType::WHILE, shootSNode);
-		velWNode->setConditionFunction(isNotVelHeadingGoal);
-
-			BNode* velENode = new BNode("Vel_Exceution", BNType::EXECUTION, velWNode);
-			velENode->setActionFunction(actionVelHeadingGoal);
-
-		BNode* shootWNode = new BNode("Shoot_While", BNType::WHILE, shootSNode);
-		shootWNode->setConditionFunction(isNotBallHeadingGoal);
-
-			BNode* shootENode = new BNode("Shoot_Exceution", BNType::EXECUTION, shootWNode);
-			shootENode->setActionFunction(actionBallHeadingGoal);
-
-	return shootRootNode;
-}
-
-BNode* attackerPlayer()
-{
-	BNode* shootRootNode = new BNode("Shooting_Root", BNType::ROOT);
-
-	BNode* infWNode = new BNode("Infinite_While", BNType::WHILE, shootRootNode);
-	infWNode->setConditionFunction(trueReturnFunction);
-
-	BNode* attackerSNode = new BNode("Shooting_Sequence", BNType::SEQUENCE, infWNode);
-
-	// BNode* attackerINode = new BNode("Position_If", BNType::IF, shootSNode);
-	// 	attackerINode->setConditionFunction(isBallOverPenalty);
-
-		BNode* attackerWNode = new BNode("Position_While", BNType::WHILE, attackerSNode);
-		attackerWNode->setConditionFunction(isBallInPenalty);
-
-			BNode* attackerENode = new BNode("Position_Excecution", BNType::EXECUTION, attackerWNode);
-			attackerENode->setActionFunction(actionBallInPenalty);
-
-		BNode* attackerIFNode = new BNode("Position_While_false", BNType::IF, attackerSNode);
-		attackerIFNode->setConditionFunction(isNotBallInPenalty);
-
-			BNode* shootSNode = new BNode("Shooting_Sequence", BNType::SEQUENCE, attackerIFNode);
-
-				BNode* followWNode = new BNode("Follow_While", BNType::WHILE, shootSNode);
-				followWNode->setConditionFunction(isNotCloseToBall);
-
-					BNode* followENode = new BNode("Follow_Execution", BNType::EXECUTION, followWNode);
-					followENode->setActionFunction(actionCloseToBall);
-
-				BNode* velWNode = new BNode("Vel_While", BNType::WHILE, shootSNode);
-				velWNode->setConditionFunction(isNotVelHeadingGoal);
-
-					BNode* velENode = new BNode("Vel_Exceution", BNType::EXECUTION, velWNode);
-					velENode->setActionFunction(actionVelHeadingGoal);
-
-				BNode* shootWNode = new BNode("Shoot_While", BNType::WHILE, shootSNode);
-				shootWNode->setConditionFunction(isNotBallHeadingGoal);
-
-					BNode* shootENode = new BNode("Shoot_Exceution", BNType::EXECUTION, shootWNode);
-					shootENode->setActionFunction(actionBallHeadingGoal);
-
-	return shootRootNode;
-}
-
-BNode* defenderPlayer()
-{
-	BNode* shootRootNode = new BNode("Defending_Root", BNType::ROOT);
-
-	BNode* infWNode = new BNode("Infinite_While", BNType::WHILE, shootRootNode);
-	infWNode->setConditionFunction(trueReturnFunction);
-
-	BNode* defenderSNode = new BNode("Defending_Sequence", BNType::SEQUENCE, infWNode);
-
-		BNode* defenderWNode = new BNode("Position_While", BNType::WHILE, defenderSNode);
-		defenderWNode->setConditionFunction(isNotPlayerOnBallToGoal);
-
-			BNode* defenderENode = new BNode("Position_Excecution", BNType::EXECUTION, defenderWNode);
-			defenderENode->setActionFunction(actionPlayerOnBallToGoal);
-
-		BNode* defenderIFNode = new BNode("Position_IF_FALSE", BNType::IF, defenderSNode);
-		defenderIFNode->setConditionFunction(isPlayerOnBallToGoal);
-
-			BNode* passSNode = new BNode("Pass_Sequence", BNType::SEQUENCE, defenderIFNode);
-
-				BNode* followWNode = new BNode("Follow_While", BNType::WHILE, passSNode);
-				followWNode->setConditionFunction(isNotCloseToBall_soft);
-
-					BNode* followENode = new BNode("Follow_Execution", BNType::EXECUTION, followWNode);
-					followENode->setActionFunction(actionCloseToBall);
-
-				BNode* passVelWNode = new BNode("PassVel_While", BNType::WHILE, passSNode);
-				passVelWNode->setConditionFunction(isNotVelHeadingPlayer);
-
-					BNode* velENode = new BNode("PassVel_Exceution", BNType::EXECUTION, passVelWNode);
-					velENode->setActionFunction(actionVelHeadingPlayer);
-
-				// BNode* passWNode = new BNode("Pass_While", BNType::WHILE, passSNode);
-				// passWNode->setConditionFunction(isNotBallHeadingPlayer);
-
-				// 	BNode* passENode = new BNode("Pass_Exceution", BNType::EXECUTION, passWNode);
-				// 	passENode->setActionFunction(actionBallHeadingPlayer);
-
-	return shootRootNode;
-}
-
-void
-Environment::
-initBehaviorTree()
-{
-	//Basic ball chasing
-	if(mNumChars == 6)
-	{
-		mBTs[0] = defenderPlayer();
-		mBTs[1] = attackerPlayer();
-		mBTs[2] = attackerPlayer();
-
-		// mBTs[0] = basicPlayer();
-		// mBTs[1] = basicPlayer();
-
-
-		mBTs[3] = defenderPlayer();
-		mBTs[4] = attackerPlayer();
-		mBTs[5] = attackerPlayer();
-
-		// mBTs[2] = basicPlayer();
-		// mBTs[3] = basicPlayer();
-	}
-
-
-
-	if(mNumChars == 4)
-	{
-		mBTs[0] = defenderPlayer();
-		mBTs[1] = attackerPlayer();
-
-		// mBTs[0] = basicPlayer();
-		// mBTs[1] = basicPlayer();
-
-
-		mBTs[2] = defenderPlayer();
-		mBTs[3] = attackerPlayer();
-
-		// mBTs[2] = basicPlayer();
-		// mBTs[3] = basicPlayer();
-	}
-	if(mNumChars == 2)
-	{
-		mBTs[0] = basicPlayer();
-		mBTs[1] = basicPlayer();
-		// mBTs[1] = attackerPlayer();
-
-	}
-}
-
-Eigen::VectorXd
-Environment::
-getActionFromBTree(int index)
-{
-	// Eigen::VectorXd state = getState(index);
-	// cout<<mStates[index].size()<<endl;
-	// cout<<"Facing vel : "<<mFacingVels[0]<<" "<<mFacingVels[1]<<" "<<mFacingVels[2]<<" "<<mFacingVels[3]<<endl;
-
-	return mBTs[index]->getActionFromBTree(mLocalStates[index]);
-}
-
-// void
-// Environment::
-// setHardcodedAction(int index)
-// {
-// 	for(int i=0;i<4;i++)
-// 	{
-// 		setAction(i, getActionFromBTree(i));
-// 	}
-// }
-
-
-// std::vector<int> 
-// Environment::
-// getAgentViewImg(int index)
-// {
-
-// }
-
-void
-Environment::
-reconEnvFromState(int index, Eigen::VectorXd curLocalState)
-{
-	Eigen::VectorXd curState = localStateToOriginState(curLocalState, mNumChars);
-
-	double facingAngle = getFacingAngleFromLocalState(curLocalState);
-
-
-	double reviseStateByTeam = -1;
-	if(mCharacters[index]->getTeamName() == mGoalposts[0].first)
-	{
-		reviseStateByTeam = 1;
-	}
-	facingAngle = M_PI * (1-reviseStateByTeam)/2.0 + facingAngle;
-	// this->getCharacter(index)->getSkeleton()->setPosition(2, facingAngle);
-
-
-
-	Eigen::Vector2d p = curState.segment(_ID_P, 2);
-	Eigen::Vector2d v = curState.segment(_ID_V, 2);
-	Eigen::Vector2d temp;
-
-	if(mNumChars == 6)
-	{
-
-		if(index%3 == 0)
-		{
-			this->getCharacter(0)->getSkeleton()->setPosition(0, 8.0*curState[_ID_P]);
-			this->getCharacter(0)->getSkeleton()->setPosition(1, 8.0*curState[_ID_P+1]);
-
-			this->getCharacter(0)->getSkeleton()->setVelocity(0, 8.0*curState[_ID_V]);
-			this->getCharacter(0)->getSkeleton()->setVelocity(1, 8.0*curState[_ID_V+1]);
-
-			temp = curState.segment(_ID_ALLY1_P, 2);
-			this->getCharacter(1)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
-			this->getCharacter(1)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
-
-			temp = curState.segment(_ID_ALLY1_V, 2);
-			this->getCharacter(1)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
-			this->getCharacter(1)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
-		}
-		else
-		{
-
-			this->getCharacter(1)->getSkeleton()->setPosition(0, 8.0*curState[_ID_P]);
-			this->getCharacter(1)->getSkeleton()->setPosition(1, 8.0*curState[_ID_P+1]);
-
-			this->getCharacter(1)->getSkeleton()->setVelocity(0, 8.0*curState[_ID_V]);
-			this->getCharacter(1)->getSkeleton()->setVelocity(1, 8.0*curState[_ID_V+1]);
-
-			temp = curState.segment(_ID_ALLY1_P, 2);
-			this->getCharacter(0)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
-			this->getCharacter(0)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
-
-			temp = curState.segment(_ID_ALLY1_V, 2);
-			this->getCharacter(0)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
-			this->getCharacter(0)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
-		}
-
-		temp = curState.segment(_ID_ALLY2_P, 2);
-		this->getCharacter(2)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
-		this->getCharacter(2)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
-
-		temp = curState.segment(_ID_ALLY2_V, 2);
-		this->getCharacter(2)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
-		this->getCharacter(2)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
-
-		temp = curState.segment(_ID_OP_DEF_P, 2);
-		this->getCharacter(3)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
-		this->getCharacter(3)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
-
-		temp = curState.segment(_ID_OP_DEF_V, 2);
-		this->getCharacter(3)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
-		this->getCharacter(3)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
-
-		temp = curState.segment(_ID_OP_ATK1_P, 2);
-		this->getCharacter(4)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
-		this->getCharacter(4)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
-
-		temp = curState.segment(_ID_OP_ATK1_V, 2);
-		this->getCharacter(4)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
-		this->getCharacter(4)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
-
-
-		temp = curState.segment(_ID_OP_ATK2_P, 2);
-		this->getCharacter(5)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
-		this->getCharacter(5)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
-
-		temp = curState.segment(_ID_OP_ATK2_V, 2);
-		this->getCharacter(5)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
-		this->getCharacter(5)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
-	}
-	else if(mNumChars == 2)
-	{
-
-		this->getCharacter(0)->getSkeleton()->setPosition(0, 8.0*curState[_ID_P]);
-		this->getCharacter(0)->getSkeleton()->setPosition(1, 8.0*curState[_ID_P+1]);
-
-		this->getCharacter(0)->getSkeleton()->setVelocity(0, 8.0*curState[_ID_V]);
-		this->getCharacter(0)->getSkeleton()->setVelocity(1, 8.0*curState[_ID_V+1]);
-
-		temp = curState.segment(_ID_OP_P, 2);
-		this->getCharacter(1)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
-		this->getCharacter(1)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
-
-		temp = curState.segment(_ID_OP_V, 2);
-		this->getCharacter(1)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
-		this->getCharacter(1)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
-
-	}
-	if(mNumChars == 4)
-	{
-		if(index == 0 || index == 1)
-		{
-			this->getCharacter(0)->getSkeleton()->setPosition(0, 8.0*curState[_ID_P]);
-			this->getCharacter(0)->getSkeleton()->setPosition(1, 8.0*curState[_ID_P+1]);
-
-			this->getCharacter(0)->getSkeleton()->setVelocity(0, 8.0*curState[_ID_V]);
-			this->getCharacter(0)->getSkeleton()->setVelocity(1, 8.0*curState[_ID_V+1]);
-
-			temp = curState.segment(_ID_ALLY_P, 2);
-			this->getCharacter(1)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
-			this->getCharacter(1)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
-
-			temp = curState.segment(_ID_ALLY_V, 2);
-			this->getCharacter(1)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
-			this->getCharacter(1)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
-
-			temp = curState.segment(_ID_OP_DEF_P, 2);
-			this->getCharacter(2)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
-			this->getCharacter(2)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
-
-			temp = curState.segment(_ID_OP_DEF_V, 2);
-			this->getCharacter(2)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
-			this->getCharacter(2)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
-
-			temp = curState.segment(_ID_OP_ATK_P, 2);
-			this->getCharacter(3)->getSkeleton()->setPosition(0, 8.0*(p+temp)[0]);
-			this->getCharacter(3)->getSkeleton()->setPosition(1, 8.0*(p+temp)[1]);
-
-			temp = curState.segment(_ID_OP_ATK_V, 2);
-			this->getCharacter(3)->getSkeleton()->setVelocity(0, 8.0*(v+temp)[0]);
-			this->getCharacter(3)->getSkeleton()->setVelocity(1, 8.0*(v+temp)[1]);
-
-
-			temp = curState.segment(_ID_BALL_P, 2);
-			this->ballSkel->setPosition(0, 8.0*(p+temp)[0]);
-			this->ballSkel->setPosition(1, 8.0*(p+temp)[1]);
-
-			temp = curState.segment(_ID_BALL_V, 2);
-			this->ballSkel->setVelocity(0, 8.0*(v+temp)[0]);
-			this->ballSkel->setVelocity(1, 8.0*(v+temp)[1]);
-		}
-		else
-		{
-			this->getCharacter(2)->getSkeleton()->setPosition(0, -8.0*curState[_ID_P]);
-			this->getCharacter(2)->getSkeleton()->setPosition(1, -8.0*curState[_ID_P+1]);
-
-			this->getCharacter(2)->getSkeleton()->setVelocity(0, -8.0*curState[_ID_V]);
-			this->getCharacter(2)->getSkeleton()->setVelocity(1, -8.0*curState[_ID_V+1]);
-
-			temp = curState.segment(_ID_ALLY_P, 2);
-			this->getCharacter(3)->getSkeleton()->setPosition(0, -8.0*(p+temp)[0]);
-			this->getCharacter(3)->getSkeleton()->setPosition(1, -8.0*(p+temp)[1]);
-
-			temp = curState.segment(_ID_ALLY_V, 2);
-			this->getCharacter(3)->getSkeleton()->setVelocity(0, -8.0*(v+temp)[0]);
-			this->getCharacter(3)->getSkeleton()->setVelocity(1, -8.0*(v+temp)[1]);
-
-			temp = curState.segment(_ID_OP_DEF_P, 2);
-			this->getCharacter(0)->getSkeleton()->setPosition(0, -8.0*(p+temp)[0]);
-			this->getCharacter(0)->getSkeleton()->setPosition(1, -8.0*(p+temp)[1]);
-
-			temp = curState.segment(_ID_OP_DEF_V, 2);
-			this->getCharacter(0)->getSkeleton()->setVelocity(0, -8.0*(v+temp)[0]);
-			this->getCharacter(0)->getSkeleton()->setVelocity(1, -8.0*(v+temp)[1]);
-
-			temp = curState.segment(_ID_OP_ATK_P, 2);
-			this->getCharacter(1)->getSkeleton()->setPosition(0, -8.0*(p+temp)[0]);
-			this->getCharacter(1)->getSkeleton()->setPosition(1, -8.0*(p+temp)[1]);
-
-			temp = curState.segment(_ID_OP_ATK_V, 2);
-			this->getCharacter(1)->getSkeleton()->setVelocity(0, -8.0*(v+temp)[0]);
-			this->getCharacter(1)->getSkeleton()->setVelocity(1, -8.0*(v+temp)[1]);
-
-			temp = curState.segment(_ID_BALL_P, 2);
-			this->ballSkel->setPosition(0, -8.0*(p+temp)[0]);
-			this->ballSkel->setPosition(1, -8.0*(p+temp)[1]);
-
-			temp = curState.segment(_ID_BALL_V, 2);
-			this->ballSkel->setVelocity(0, -8.0*(v+temp)[0]);
-			this->ballSkel->setVelocity(1, -8.0*(v+temp)[1]);
-
-		}
-		
-	}
-
-	// temp = curState.segment(_ID_BALL_P, 2);
-	// this->ballSkel->setPosition(0, 8.0*(p+temp)[0]);
-	// this->ballSkel->setPosition(1, 8.0*(p+temp)[1]);
-
-	// temp = curState.segment(_ID_BALL_V, 2);
-	// this->ballSkel->setVelocity(0, 8.0*(v+temp)[0]);
-	// this->ballSkel->setVelocity(1, 8.0*(v+temp)[1]);
-}
-*/

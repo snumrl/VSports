@@ -538,8 +538,16 @@ int
 SingleControlWindow::
 step()
 {
+	std::cout<<"mEnv->curFrame : "<<mEnv->curFrame<<std::endl;
 	std::chrono::time_point<std::chrono::system_clock> m_time_check_s = std::chrono::system_clock::now();
-	if(mEnv->isTerminalState() || mEnv->isFoulState())
+	if(mEnv->isFoulState())
+	{
+		sleep(1);
+		std::cout<<"Foul Reset"<<std::endl;
+		mEnv->foulReset();
+	}
+
+	if(mEnv->isTerminalState())
 	{
 		if(mTakeScreenShot)
 		{
@@ -583,7 +591,7 @@ step()
 	// time_check_start();
 
 	mEnv->getState(0);
-	std::cout<<"Root transform : "<<mEnv->mStates[0].segment(0,4).transpose()<<std::endl;
+	// std::cout<<"Root transform : "<<mEnv->mStates[0].segment(0,4).transpose()<<std::endl;
 
 	if(mEnv->resetCount<=0)
 		getActionFromNN(0);
@@ -1276,7 +1284,7 @@ getActionFromNN(int index)
 	p::object get_action_0;
 
 	Eigen::VectorXd state = mEnv->getState(index);
-	std::cout<<"action mask : "<<state.segment(state.size()-2, 2).transpose()<<std::endl;
+	// std::cout<<"action mask : "<<state.segment(state.size()-2, 2).transpose()<<std::endl;
 
 	int numActions = 2;
 	// int latentSize = 4;
@@ -1317,7 +1325,7 @@ getActionFromNN(int index)
 	// std::cout<<"mActionType : "<<mActionType.transpose()<<std::endl;
 	std::cout<<"mEnv->curFrame : "<<mEnv->curFrame<<std::endl;
 	std::cout<<"mEnv->resetCount : "<<mEnv->resetCount<<std::endl;
-	std::cout<<"mActionType.transpose() : "<<mActionType.transpose()<<std::endl;
+	// std::cout<<"mActionType.transpose() : "<<mActionType.transpose()<<std::endl;
 	
 	// Eigen::VectorXd denormalizedAction = mEnv->mTutorialControlVectors[0][mEnv->curTrajectoryFrame];
 	// int _curActionType = getActionTypeFromVec(denormalizedAction)/3;
@@ -1414,8 +1422,8 @@ getActionFromNN(int index)
 	}
 
 	std::cout<<"Cur Action Type : "<<actionType<<std::endl;
-	std::cout<<"Encoded Action : "<<encodedAction.transpose()<<std::endl;
-	std::cout<<"Decoded Action : "<<decodedAction.transpose()<<std::endl;
+	// std::cout<<"Encoded Action : "<<encodedAction.transpose()<<std::endl;
+	// std::cout<<"Decoded Action : "<<decodedAction.transpose()<<std::endl;
 
 
 
