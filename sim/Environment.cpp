@@ -1616,7 +1616,10 @@ setActionType(int index, int actionType, bool isNew)
 	}
 
 	if(foulResetCount>0)
-		curActionType = 0;
+	{
+		if(rand()%2==0)
+			curActionType = 0;
+	}
 
 	// else
 	// {
