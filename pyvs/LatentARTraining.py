@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 77
+nnCount = 78
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -159,6 +159,8 @@ class RL(object):
 		self.rms = RunningMeanStd(self.num_state-2)
 
 		self.num_c = 4
+
+		self.stdScale = 1.5
 
 
 		# self.buffer_0 = [ [None] for i in range(self.num_policy)]
@@ -533,6 +535,14 @@ class RL(object):
 							.cpu().detach().numpy().reshape(-1);
 						values_h[0][i] = v_slave[i].cpu().detach().numpy().reshape(-1);
 
+				for i in range(self.num_agents):
+					for j in range(self.num_slaves):
+						if self.env.isOnFoulReset(j):
+							temp_a_dist,_ = self.target_model[0][self.indexToNetDic[i]].forward(\
+								Tensor([states_h[0][i][j]]),self.stdScale)
+							actions_h[0][i][j] = temp_a_dist.sample().cpu().detach().numpy()
+							logprobs_h[0][i][j] = temp_a_dist.log_prob(Tensor(actions_h[0][i][j])).cpu().detach().numpy().reshape(-1)[0]
+	
 
 
 
@@ -587,9 +597,10 @@ class RL(object):
 							Tensor([states_h[h][i]]))
 						a_dist_slave[i] = a_dist_slave_agent
 						v_slave[i] = v_slave_agent
-
 						actions_h[h][i] = a_dist_slave[i].sample().cpu().detach().numpy().squeeze().squeeze();
-						if followTutorial[j] is True:
+
+						for j in range(self.num_slaves):
+							if followTutorial[j] is True:
 								decodedActionDetail = self.env.getCorrectActionDetail(j,i)
 								encodedActionDetail, _ = self.actionEncoder.encode(Tensor(decodedActionDetail))
 								encodedActionDetail= encodedActionDetail.cpu().detach().numpy()
@@ -604,7 +615,15 @@ class RL(object):
 						# embed()
 						# exit(0)
 
-
+				for i in range(self.num_agents):
+					for j in range(self.num_slaves):
+						if self.env.isOnFoulReset(j):
+							temp_a_dist,_ = self.target_model[h][self.indexToNetDic[i]].forward(\
+								Tensor([states_h[h][i][j]]),self.stdScale)
+							actions_h[h][i][j] = temp_a_dist.sample().cpu().detach().numpy()
+							logprobs_h[h][i][j] = temp_a_dist.log_prob(Tensor(actions_h[h][i][j])).cpu().detach().numpy().reshape(-1)[0]
+							# embed()
+							# exit(0)
 
 
 			# # actions_h = np.array(list(actions_h))
