@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 78
+nnCount = 79
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -63,6 +63,9 @@ class RNNEpisodeBuffer(object):
 
 	def pop(self):
 		self.data.pop()
+
+	def popleft(self):
+		self.data.pop(0)
 
 	def getData(self):
 		return self.data
@@ -114,7 +117,7 @@ class RL(object):
 		self.lb = 0.95
 
 		self.buffer_size = 128*1024
-		self.batch_size = 16*512
+		self.batch_size = 32*512
 		# self.buffer_size = 2*1024
 		# self.batch_size = 128
 		self.num_action_types = 2
@@ -833,6 +836,11 @@ class RL(object):
 										self.tutorial_episodes[1][j][i].pop()
 
 								if followTutorial[j] is False:
+									while len(self.episodes[0][j][i].data)>12 :
+										self.episodes[0][j][i].popleft()
+									while len(self.episodes[1][j][i].data)>120 :
+										self.episodes[1][j][i].popleft()
+
 									self.num_tuple[0][self.indexToNetDic[i]] += len(self.episodes[0][j][i].data)
 									self.num_tuple[1][self.indexToNetDic[i]] += len(self.episodes[1][j][i].data)
 									local_step +=  len(self.episodes[1][j][i].data)
