@@ -41,7 +41,7 @@ Environment(int control_Hz, int simulation_Hz, int numChars, std::string bvh_pat
 :mControlHz(control_Hz), mSimulationHz(simulation_Hz), mNumChars(numChars), mWorld(std::make_shared<dart::simulation::World>()),
 mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0), endTime(15),
 criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), violatedFrames(0),curTrajectoryFrame(0),
-randomPointTrajectoryStart(false), resetDuration(10), goBackFrame(10), savedFrame(0)
+randomPointTrajectoryStart(false), resetDuration(10), goBackFrame(10), savedFrame(0), foulResetCount(0)
 {
 	std::cout<<"Envionment Generation --- ";
 	srand((unsigned int)time(0));
@@ -680,6 +680,10 @@ stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContact
 	curFrame++;
 	curTrajectoryFrame++;
 
+	foulResetCount--;
+	if(foulResetCount<=0)
+		foulResetCount = 0;
+
 	if(curTrajectoryFrame > mTutorialControlVectors[0].size()-1)
 		curTrajectoryFrame = mTutorialControlVectors[0].size()-1;
 }
@@ -1111,7 +1115,7 @@ getReward(int index, bool verbose)
 		// if(mCharacters[index]->inputActionType != 0)
 		// {
 		// 	mCharacters[index]->inputActionType = 0;
-		// 	reward -= 0.1;
+		// 	reward -= 0.01;
 		// }
 
 		if(mCharacters[index]->blocked)
@@ -1610,13 +1614,17 @@ setActionType(int index, int actionType, bool isNew)
 	{
 		curActionType = mPrevActionTypes[index];
 	}
+
+	if(foulResetCount>0)
+		curActionType = 0;
+
 	// else
 	// {
 	// 	std::cout<<"##########"<<curActionType<<std::endl;
 	// }
 
-	// if(isNew)
-	// 	mCharacters[index]->inputActionType = actionType;
+	if(isNew)
+		mCharacters[index]->inputActionType = actionType;
 
 	if(actionType != 3)
 	 	curActionType = 0;
@@ -1625,6 +1633,7 @@ setActionType(int index, int actionType, bool isNew)
 	{
 		curActionType =0;
 	}
+	// curActionType =0;
 
 	// if(!mCharacters[index]->blocked)
 	// 	curActionType = 0;
@@ -1763,6 +1772,8 @@ Environment::
 slaveReset()
 {
 	resetCount = resetDuration;
+	foulResetCount = 0;
+
 	mIsTerminalState = false;
 	mIsFoulState = false;
 	mTimeElapsed = 0;
@@ -1824,6 +1835,7 @@ foulReset()
 	mIsTerminalState = false;
 	mIsFoulState = false;
 	goBackEnvironment();
+	foulResetCount = 10;
 	// slaveReset();
 }
 

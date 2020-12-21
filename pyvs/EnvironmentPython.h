@@ -54,6 +54,7 @@ public:
 	void initMotionGenerator(std::string dataPath);
 
 	bool isOnResetProcess(int id);
+	bool isOnFoulReset(int id);
 
 	void setResetCount(int resetCount, int id);
 

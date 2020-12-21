@@ -257,6 +257,7 @@ public:
 	void foulReset();
 
 	int savedFrame = 0;
+	int foulResetCount;
 
 public:
 	dart::simulation::WorldPtr mWorld;

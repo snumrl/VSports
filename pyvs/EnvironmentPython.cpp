@@ -508,6 +508,13 @@ setResetCount(int resetCount, int id)
 	mSlaves[id]->curFrame = mSlaves[id]->resetDuration - resetCount;
 }
 
+bool 
+EnvironmentPython::
+isOnFoulReset(int id)
+{
+	return mSlaves[id]->foulResetCount>0;
+}
+
 
 // bool
 // EnvironmentPython::

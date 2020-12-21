@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 73
+nnCount = 76
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -60,6 +60,9 @@ class RNNEpisodeBuffer(object):
 
 	def push(self, *args):
 		self.data.append(RNNEpisode(*args))
+
+	def pop(self):
+		self.data.pop()
 
 	def getData(self):
 		return self.data
@@ -110,7 +113,7 @@ class RL(object):
 		self.gamma = 0.999
 		self.lb = 0.95
 
-		self.buffer_size = 8*1024
+		self.buffer_size = 64*1024
 		self.batch_size = 512
 		# self.buffer_size = 2*1024
 		# self.batch_size = 128
@@ -377,7 +380,8 @@ class RL(object):
 		values_h = np.array([[None for _ in range(self.num_agents)] for _ in range(self.num_h)])
 		is_exploitation = np.array([None for _ in range(self.num_agents)])
 		
-		followTutorial = [False]*self.num_slaves;
+		followTutorial = [False]*self.num_slaves
+
 
 		# states_1 = [None]*self.num_slaves*self.num_agents
 		# actions_1 = [None]*self.num_slaves*self.num_agents
@@ -761,6 +765,7 @@ class RL(object):
 									self.tutorial_episodes[h][j][i] = RNNEpisodeBuffer()
 								if followTutorial[j] is False:
 									self.num_episode += 1
+								local_step += 1
 						self.env.slaveReset(j)
 						followTutorial[j] = random.random()<tutorialRatio
 						self.env.setResetCount(self.resetDuration-counter%10, j);
@@ -791,12 +796,31 @@ class RL(object):
 											self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
 
 								for h in range(self.num_h):
-									self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
-									self.episodes[h][j][i] = RNNEpisodeBuffer()
-									self.total_episodes[h][self.indexToNetDic[i]].append(self.tutorial_episodes[h][j][i])
-									self.tutorial_episodes[h][j][i] = RNNEpisodeBuffer()
+									if followTutorial[j] is False:
+										self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
+									# self.episodes[h][j][i] = RNNEpisodeBuffer()
+									else:
+										self.total_episodes[h][self.indexToNetDic[i]].append(self.tutorial_episodes[h][j][i])
+									# self.tutorial_episodes[h][j][i] = RNNEpisodeBuffer()
+								if followTutorial[j] is False:
+									self.episodes[0][j][i].pop()
+								else:
+									self.tutorial_episodes[0][j][i].pop()
+
+								for rc in range(10):
+									if followTutorial[j] is False:
+										self.episodes[1][j][i].pop()
+									else:
+										self.tutorial_episodes[1][j][i].pop()
+
+								if followTutorial[j] is False:
+									self.num_tuple[0][self.indexToNetDic[i]] += len(self.episodes[0][j][i].data)
+									self.num_tuple[1][self.indexToNetDic[i]] += len(self.episodes[1][j][i].data)
+									local_step +=  len(self.episodes[1][j][i].data)
+
 								if followTutorial[j] is False:
 									self.num_episode += 1
+								local_step += 1
 
 						# print("Foul reset : {}".format(j))
 						self.env.foulReset(j)
