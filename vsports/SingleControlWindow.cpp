@@ -415,9 +415,18 @@ keyboard(unsigned char key, int x, int y)
 			if(mPlay)
 				step();
 			else
-				recorder->loadFrame(mEnv, windowFrame++);
-			if(windowFrame > recorder->getNumFrames())
-				windowFrame = recorder->getNumFrames();
+			{
+				if(windowFrame >= recorder->getNumFrames())
+				{
+					step();
+					recorder->recordCurrentFrame(mEnv);
+				}
+				else
+					recorder->loadFrame(mEnv, windowFrame++);
+			}
+
+
+				// windowFrame = recorder->getNumFrames();
 			break;
 		case '[':
 			mFrame -= 100;
@@ -1108,6 +1117,38 @@ display()
 
 	// std::cout<<mEnv->mCurActionTypes[0]<<std::endl;
 	GUI::drawBoxOnScreen(0.2+0.6*((double)mEnv->mCurActionTypes[0] / (numActions)), 0.2, Eigen::Vector2d(6.0, 4.0),Eigen::Vector3d(1.0, 1.0, 1.0));
+
+
+	double values[2];
+
+	for(int i=0;i<2;i++)
+	{
+		Eigen::VectorXd state = mEnv->mStates[0];
+		p::object get_value_0;
+		if(i==0) 
+			get_value_0 = nn_module_0[0].attr("get_value");
+		else
+			get_value_0 = nn_module_1[0].attr("get_value");
+
+		p::tuple shape = p::make_tuple(state.size());
+		np::dtype dtype = np::dtype::get_builtin<float>();
+		np::ndarray state_np = np::empty(shape, dtype);
+
+		float* dest = reinterpret_cast<float*>(state_np.get_data());
+		for(int j=0;j<state.size();j++)
+		{
+			dest[j] = state[j];
+		}
+
+		p::object temp = get_value_0(state_np);
+		np::ndarray value = np::from_object(temp);
+		float* srcs = reinterpret_cast<float*>(value.get_data());
+
+		values[i] = srcs[0];
+
+	}
+    GUI::drawStringOnScreen(0.8, 0.45, std::to_string(values[0]), true, Eigen::Vector3d(1,1,1));
+    GUI::drawStringOnScreen(0.8, 0.55, std::to_string(values[1]), true, Eigen::Vector3d(1,1,1));
 
 
 	glutSwapBuffers();

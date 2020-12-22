@@ -774,7 +774,11 @@ getState(int index)
 
 	// rootState.segment(3,3) = rootT.linear().inverse() * rootState.segment(3,3);
 
+	Eigen::VectorXd reducedSkelPosition(6);
+	reducedSkelPosition = skelPosition.segment(0,6);
 
+	Eigen::VectorXd reducedSkelVelocity(6);
+	reducedSkelVelocity = skelVelocity.segment(0,6);
 
 
 
@@ -953,27 +957,56 @@ getState(int index)
 	// std::cout<<"goalpostPositions.transpose(): "<<goalpostPositions.transpose()<<std::endl;
 	// std::cout<<"contacts.transpose(): "<<contacts.transpose()<<std::endl;
 
-	state.resize(rootTransform.rows() + skelPosition.rows() + skelVelocity.rows() + relCurBallPosition.rows() 
+	bool simplePosition = true;
+
+	if(simplePosition)
+	{
+		state.resize(rootTransform.rows() + reducedSkelPosition.rows() + reducedSkelVelocity.rows() + relCurBallPosition.rows() 
+			+ relTargetPosition.rows() + relBallToTargetPosition.rows() + goalpostPositions.rows() 
+			+ contacts.rows() + 1 + 1 + 3 +curActionType.rows()+curSMState.rows() + relObstacles.size()*3 + 10 +availableActions.rows());
+	}
+	else
+	{
+		state.resize(rootTransform.rows() + skelPosition.rows() + skelVelocity.rows() + relCurBallPosition.rows() 
 		+ relTargetPosition.rows() + relBallToTargetPosition.rows() + goalpostPositions.rows() 
 		+ contacts.rows() + 1 + 1 + 3 +curActionType.rows()+curSMState.rows() + relObstacles.size()*3 + 10 +availableActions.rows());
-	 //+ ballVelocity.rows()+2+curActionType.rows());
-	
+
+	}
+
+
 	int curIndex = 0;
 	for(int i=0;i<rootTransform.rows();i++)
 	{
 		state[curIndex] = rootTransform[i];
 		curIndex++;
 	}
-	for(int i=0;i<skelPosition.rows();i++)
+	if(simplePosition)
 	{
-		state[curIndex] = skelPosition[i];
-		curIndex++;
+		for(int i=0;i<reducedSkelPosition.rows();i++)
+		{
+			state[curIndex] = reducedSkelPosition[i];
+			curIndex++;
+		}
+		for(int i=0;i<reducedSkelVelocity.rows();i++)
+		{
+			state[curIndex] = reducedSkelVelocity[i];
+			curIndex++;
+		}
 	}
-	for(int i=0;i<skelVelocity.rows();i++)
+	else
 	{
-		state[curIndex] = skelVelocity[i];
-		curIndex++;
+		for(int i=0;i<skelPosition.rows();i++)
+		{
+			state[curIndex] = skelPosition[i];
+			curIndex++;
+		}
+		for(int i=0;i<skelVelocity.rows();i++)
+		{
+			state[curIndex] = skelVelocity[i];
+			curIndex++;
+		}
 	}
+
 	for(int i=0;i<relCurBallPosition.rows();i++)
 	{
 		state[curIndex] = relCurBallPosition[i];
@@ -1112,11 +1145,11 @@ getReward(int index, bool verbose)
 
 		Eigen::Vector3d curRootVelocity = mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM() - mPrevCOMs[index];
 
-		// if(mCharacters[index]->inputActionType != 0)
-		// {
-		// 	mCharacters[index]->inputActionType = 0;
-		// 	reward -= 0.01;
-		// }
+		if(mCharacters[index]->inputActionType != 0)
+		{
+			mCharacters[index]->inputActionType = 0;
+			reward -= 0.01* pow(targetPlaneNormal.norm(),2);;
+		}
 
 		if(mCharacters[index]->blocked)
 		{
@@ -1186,8 +1219,11 @@ getReward(int index, bool verbose)
 			if(mCurActionTypes[index] == 3)
 			{
 				mIsFoulState = true;
-				// return -0.0625* pow(targetPlaneNormal.norm(),2);
-				return 0;
+				// mIsTerminalState = true;
+				return -0.01* pow(targetPlaneNormal.norm(),2);
+				// return -0.1;
+
+
 				// return - 0.1*targetPlaneNormal.norm();
 				// return 0.1*exp(-(targetPlaneNormal.norm()));
 				// return -0.1;
@@ -1636,7 +1672,7 @@ setActionType(int index, int actionType, bool isNew)
 	{
 		curActionType =0;
 	}
-	// curActionType =0;
+	curActionType =0;
 
 	// if(!mCharacters[index]->blocked)
 	// 	curActionType = 0;

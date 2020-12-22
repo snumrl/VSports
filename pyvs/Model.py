@@ -252,6 +252,7 @@ class ActorCriticNN(nn.Module):
 		return p.loc.cpu().detach().numpy().astype(np.float32)
 
 	def get_value(self, s):
+		s[0:len(self.rms.mean)] = self.rms.applyOnly(s[0:len(self.rms.mean)])
 		ts = torch.tensor(s)
 
 		_p, v= self.forward(ts.unsqueeze(0))
@@ -259,6 +260,7 @@ class ActorCriticNN(nn.Module):
 		# self.cur_hidden = new_hidden
 
 		# return p.sample().cpu().detach().numpy()
+		# print(v.cpu().detach().numpy()[0])
 		return v.cpu().detach().numpy()[0]
 
 	def get_actionNoise(self,s):

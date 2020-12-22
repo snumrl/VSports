@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 79
+nnCount = 83
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -105,7 +105,7 @@ class RL(object):
 		self.num_policy = 1
 
 
-		self.num_epochs = 1
+		self.num_epochs = 2
 		self.num_evaluation = 0
 
 
@@ -116,8 +116,8 @@ class RL(object):
 		self.gamma = 0.999
 		self.lb = 0.95
 
-		self.buffer_size = 128*1024
-		self.batch_size = 32*512
+		self.buffer_size = 16*1024
+		self.batch_size = 2*512
 		# self.buffer_size = 2*1024
 		# self.batch_size = 128
 		self.num_action_types = 2
@@ -777,7 +777,7 @@ class RL(object):
 											self.num_tuple[h][self.indexToNetDic[i]] += 1
 										else:
 											self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 											self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
 
 								for h in range(self.num_h):
@@ -814,7 +814,7 @@ class RL(object):
 											self.num_tuple[h][self.indexToNetDic[i]] += 1
 										else:
 											self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 											self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
 
 								for h in range(self.num_h):
@@ -875,7 +875,7 @@ class RL(object):
 											self.num_tuple[h][self.indexToNetDic[i]] += 1
 										else:
 											self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 											self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
 								# print(len(self.episodes[0][j][i].data))
 								# print(len(self.episodes[1][j][i].data))
