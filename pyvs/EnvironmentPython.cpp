@@ -579,6 +579,13 @@ getResetDuration()
 	return mSlaves[0]->resetDuration;
 }
 
+void
+EnvironmentPython::
+setToFoulState(int id)
+{
+	mSlaves[id]->mIsFoulState = true;
+}
+
 
 using namespace boost::python;
 
@@ -602,6 +609,7 @@ BOOST_PYTHON_MODULE(pyvs)
 		.def("getState",&EnvironmentPython::getState)
 		.def("getCorrectActionType",&EnvironmentPython::getCorrectActionType)
 		.def("getCorrectActionDetail",&EnvironmentPython::getCorrectActionDetail)
+
 		// .def("getLocalState",&EnvironmentPython::getLocalState)
 		// .def("getSchedulerState",&EnvironmentPython::getSchedulerState)
 		// .def("getLinearActorState",&EnvironmentPython::getLinearActorState)
@@ -613,6 +621,7 @@ BOOST_PYTHON_MODULE(pyvs)
 		.def("stepsAtOnce",&EnvironmentPython::stepsAtOnce)
 		.def("isOnResetProcess",&EnvironmentPython::isOnResetProcess)
 		.def("isOnFoulReset",&EnvironmentPython::isOnFoulReset)
+		.def("setToFoulState",&EnvironmentPython::setToFoulState)
 		// .def("stepAtOnce",&EnvironmentPython::stepAtOnce)
 		// .def("step",&EnvironmentPython::step)
 		.def("slaveResets",&EnvironmentPython::slaveResets)

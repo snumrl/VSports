@@ -1145,11 +1145,11 @@ getReward(int index, bool verbose)
 
 		Eigen::Vector3d curRootVelocity = mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM() - mPrevCOMs[index];
 
-		if(mCharacters[index]->inputActionType != 0)
-		{
-			mCharacters[index]->inputActionType = 0;
-			reward -= 0.01* pow(targetPlaneNormal.norm(),2);;
-		}
+		// if(mCharacters[index]->inputActionType != 0)
+		// {
+		// 	mCharacters[index]->inputActionType = 0;
+		// 	reward -= 0.01* pow(targetPlaneNormal.norm(),2);;
+		// }
 
 		if(mCharacters[index]->blocked)
 		{
@@ -1672,7 +1672,7 @@ setActionType(int index, int actionType, bool isNew)
 	{
 		curActionType =0;
 	}
-	curActionType =0;
+	// curActionType =0;
 
 	// if(!mCharacters[index]->blocked)
 	// 	curActionType = 0;
