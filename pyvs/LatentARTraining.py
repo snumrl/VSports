@@ -119,8 +119,8 @@ class RL(object):
 		self.gamma = 0.999
 		self.lb = 0.95
 
-		self.buffer_size = 64*1024
-		self.batch_size = 8*512
+		self.buffer_size = 128*1024
+		self.batch_size = 16*512
 		# self.buffer_size = 2*1024
 		# self.batch_size = 128
 		self.num_action_types = 2
@@ -783,11 +783,10 @@ class RL(object):
 					# 						self.num_td_reset += 1
 					# 						if self.env.isTerminalState(j) : 
 					# 							self.num_td_reset_at_goal += 1
-					# 						if j== 0:
-					# 							print("############")
+
 					# 						break
 					# 			else:
-					# 				TDError = self.episodes[h][j][i].getLastData().value -\
+					# 			 	TDError = self.episodes[h][j][i].getLastData().value -\
 					# 				 (rewards[i][j] + self.gamma*values_h[h][i][j])
 					# 				TDError = TDError*TDError
 					# 				TDError = min(TDError, 0.8)
@@ -796,8 +795,7 @@ class RL(object):
 					# 					self.num_td_reset += 1
 					# 					if self.env.isTerminalState(j) : 
 					# 						self.num_td_reset_at_goal += 1
-					# 					if j== 0:
-					# 						print("############")
+
 					# 					break
 
 					if self.env.isFoulState(j) is True:
@@ -844,7 +842,7 @@ class RL(object):
 								if popCount == 1:
 									popCount = 10
 
-								# if popCount==10:
+								# if popCount!=10:
 								# 	embed()
 								# 	exit(0)
 
@@ -881,7 +879,7 @@ class RL(object):
 								if followTutorial[j] is False:
 									while len(self.episodes[0][j][i].data)>12 :
 										self.episodes[0][j][i].popleft()
-									while len(self.episodes[1][j][i].data)>120 :
+									while len(self.episodes[1][j][i].data)>121 :
 										self.episodes[1][j][i].popleft()
 
 									self.num_tuple[0][self.indexToNetDic[i]] += len(self.episodes[0][j][i].data)
