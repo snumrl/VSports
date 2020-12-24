@@ -1220,7 +1220,8 @@ getReward(int index, bool verbose)
 			{
 				mIsFoulState = true;
 				// mIsTerminalState = true;
-				return -0.01* pow(targetPlaneNormal.norm(),2);
+				// return -0.01* pow(targetPlaneNormal.norm(),2);
+				return exp(-targetPlaneNormal.norm());
 				// return -0.1;
 
 
