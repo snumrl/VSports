@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 85
+nnCount = 90
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -119,8 +119,8 @@ class RL(object):
 		self.gamma = 0.999
 		self.lb = 0.95
 
-		self.buffer_size = 128*1024
-		self.batch_size = 16*512
+		self.buffer_size = 8*1024
+		self.batch_size = 1*512
 		# self.buffer_size = 2*1024
 		# self.batch_size = 128
 		self.num_action_types = 2
@@ -798,7 +798,105 @@ class RL(object):
 
 					# 					break
 
-					if self.env.isFoulState(j) is True:
+					# if self.env.isFoulState(j) is True:
+					# 	for i in range(self.num_agents):
+					# 		if teamDic[i] == learningTeam:
+					# 			for h in range(self.num_h):
+					# 				if h == 0:
+					# 					if followTutorial[j] is False:
+					# 						self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+					# 						accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+					# 						self.num_tuple[h][self.indexToNetDic[i]] += 1
+					# 						if accRewards[i][j] >= 0.1:
+					# 							self.num_correct_throwing += 1
+					# 					else:
+					# 						self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+					# 						accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+					# 						self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
+					# 				else :
+					# 					if followTutorial[j] is False:
+					# 						self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+					# 							rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+					# 						self.num_tuple[h][self.indexToNetDic[i]] += 1
+					# 					else:
+					# 						self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+					# 						rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+					# 						self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
+
+					# 			for h in range(self.num_h):
+					# 				if followTutorial[j] is False:
+					# 					self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
+					# 				# self.episodes[h][j][i] = RNNEpisodeBuffer()
+					# 				else:
+					# 					self.total_episodes[h][self.indexToNetDic[i]].append(self.tutorial_episodes[h][j][i])
+					# 				# self.tutorial_episodes[h][j][i] = RNNEpisodeBuffer()
+
+					# 			prev_num_0 = len(self.episodes[0][j][i].data) 
+					# 			prev_num_1 = len(self.episodes[1][j][i].data)
+
+					# 			# if j == 0:
+					# 			# 	print("prev_num_0 : {}".format(prev_num_0))
+					# 			# 	print("prev_num_1 : {}".format(prev_num_1))
+
+					# 			popCount = (len(self.episodes[1][j][i].data))%10
+					# 			if popCount == 1:
+					# 				popCount = 10
+
+					# 			# if popCount!=10:
+					# 			# 	embed()
+					# 			# 	exit(0)
+
+
+					# 			if followTutorial[j] is False:
+					# 				self.episodes[0][j][i].pop()
+					# 				if popCount==10:
+					# 					if len(self.episodes[0][j][i].data) == 0 :
+					# 						embed()
+					# 						exit(0)
+					# 					self.episodes[0][j][i].pop()
+					# 			else:
+					# 				self.tutorial_episodes[0][j][i].pop()
+					# 				if popCount==10:
+					# 					self.episodes[0][j][i].pop()
+					# 			# embed()
+					# 			# exit(0)
+					# 			# if j == 0:
+					# 			# 	print("counter : {}".format(counter))
+					# 			# 	print("popCount : {}".format(popCount))
+
+					# 			for rc in range(popCount):
+					# 				if followTutorial[j] is False:
+					# 					self.episodes[1][j][i].pop()
+					# 				else:
+					# 					self.tutorial_episodes[1][j][i].pop()
+					# 			# if len(self.episodes[0][j][i].data)*10 != len(self.episodes[1][j][i].data):
+					# 			# embed()
+					# 			# exit(0)
+					# 			# if j == 0:
+					# 			# 	print("after prev_num_0 : {}".format(len(self.episodes[0][j][i].data)))
+					# 			# 	print("after prev_num_1 : {}".format(len(self.episodes[1][j][i].data)))
+
+					# 			if followTutorial[j] is False:
+					# 				while len(self.episodes[0][j][i].data)>12 :
+					# 					self.episodes[0][j][i].popleft()
+					# 				while len(self.episodes[1][j][i].data)>121 :
+					# 					self.episodes[1][j][i].popleft()
+
+					# 				self.num_tuple[0][self.indexToNetDic[i]] += len(self.episodes[0][j][i].data)
+					# 				self.num_tuple[1][self.indexToNetDic[i]] += len(self.episodes[1][j][i].data)
+					# 				local_step +=  len(self.episodes[1][j][i].data)
+
+					# 			if followTutorial[j] is False:
+					# 				self.num_episode += 1
+					# 			local_step += 1
+
+					# 	# print("Foul reset : {}".format(j))
+					# 	self.env.foulReset(j)
+					# 	followTutorial[j] = random.random()<tutorialRatio
+
+
+
+					if self.env.isTerminalState(j) is True:
 						for i in range(self.num_agents):
 							if teamDic[i] == learningTeam:
 								for h in range(self.num_h):
@@ -807,106 +905,7 @@ class RL(object):
 											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
 											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 											self.num_tuple[h][self.indexToNetDic[i]] += 1
-											if accRewards[i][j] >= 0.1:
-												self.num_correct_throwing += 1
-										else:
-											self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
-											self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
-									else :
-										if followTutorial[j] is False:
-											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-												rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
-											self.num_tuple[h][self.indexToNetDic[i]] += 1
-										else:
-											self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
-											self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
-
-								for h in range(self.num_h):
-									if followTutorial[j] is False:
-										self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
-									# self.episodes[h][j][i] = RNNEpisodeBuffer()
-									else:
-										self.total_episodes[h][self.indexToNetDic[i]].append(self.tutorial_episodes[h][j][i])
-									# self.tutorial_episodes[h][j][i] = RNNEpisodeBuffer()
-
-								prev_num_0 = len(self.episodes[0][j][i].data) 
-								prev_num_1 = len(self.episodes[1][j][i].data)
-
-								# if j == 0:
-								# 	print("prev_num_0 : {}".format(prev_num_0))
-								# 	print("prev_num_1 : {}".format(prev_num_1))
-
-								popCount = (len(self.episodes[1][j][i].data))%10
-								if popCount == 1:
-									popCount = 10
-
-								# if popCount!=10:
-								# 	embed()
-								# 	exit(0)
-
-
-								if followTutorial[j] is False:
-									self.episodes[0][j][i].pop()
-									if popCount==10:
-										if len(self.episodes[0][j][i].data) == 0 :
-											embed()
-											exit(0)
-										self.episodes[0][j][i].pop()
-								else:
-									self.tutorial_episodes[0][j][i].pop()
-									if popCount==10:
-										self.episodes[0][j][i].pop()
-								# embed()
-								# exit(0)
-								# if j == 0:
-								# 	print("counter : {}".format(counter))
-								# 	print("popCount : {}".format(popCount))
-
-								for rc in range(popCount):
-									if followTutorial[j] is False:
-										self.episodes[1][j][i].pop()
-									else:
-										self.tutorial_episodes[1][j][i].pop()
-								# if len(self.episodes[0][j][i].data)*10 != len(self.episodes[1][j][i].data):
-								# embed()
-								# exit(0)
-								# if j == 0:
-								# 	print("after prev_num_0 : {}".format(len(self.episodes[0][j][i].data)))
-								# 	print("after prev_num_1 : {}".format(len(self.episodes[1][j][i].data)))
-
-								if followTutorial[j] is False:
-									while len(self.episodes[0][j][i].data)>12 :
-										self.episodes[0][j][i].popleft()
-									while len(self.episodes[1][j][i].data)>121 :
-										self.episodes[1][j][i].popleft()
-
-									self.num_tuple[0][self.indexToNetDic[i]] += len(self.episodes[0][j][i].data)
-									self.num_tuple[1][self.indexToNetDic[i]] += len(self.episodes[1][j][i].data)
-									local_step +=  len(self.episodes[1][j][i].data)
-
-								if followTutorial[j] is False:
-									self.num_episode += 1
-								local_step += 1
-
-						# print("Foul reset : {}".format(j))
-						self.env.foulReset(j)
-						followTutorial[j] = random.random()<tutorialRatio
-
-						# self.env.setResetCount(self.resetDuration-counter%10, j);
-
-
-					elif self.env.isTerminalState(j) is True:
-						for i in range(self.num_agents):
-							if teamDic[i] == learningTeam:
-								for h in range(self.num_h):
-									if h == 0:
-										if followTutorial[j] is False:
-											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
-											self.num_tuple[h][self.indexToNetDic[i]] += 1
-											if accRewards[i][j] >= 0.1:
+											if accRewards[i][j] >= 1.0:
 												self.num_correct_throwing += 1
 										else:
 											self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
@@ -925,8 +924,8 @@ class RL(object):
 								for h in range(self.num_h):
 									self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
 									self.episodes[h][j][i] = RNNEpisodeBuffer()
-									self.total_episodes[h][self.indexToNetDic[i]].append(self.tutorial_episodes[h][j][i])
-									self.tutorial_episodes[h][j][i] = RNNEpisodeBuffer()
+									# self.total_episodes[h][self.indexToNetDic[i]].append(self.tutorial_episodes[h][j][i])
+									# self.tutorial_episodes[h][j][i] = RNNEpisodeBuffer()
 								if followTutorial[j] is False:
 									self.num_episode += 1
 								local_step += 1
@@ -979,8 +978,8 @@ class RL(object):
 								self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
 								self.episodes[h][j][i] = RNNEpisodeBuffer()
 
-								self.total_episodes[h][self.indexToNetDic[i]].append(self.tutorial_episodes[h][j][i])
-								self.tutorial_episodes[h][j][i] = RNNEpisodeBuffer()
+								# self.total_episodes[h][self.indexToNetDic[i]].append(self.tutorial_episodes[h][j][i])
+								# self.tutorial_episodes[h][j][i] = RNNEpisodeBuffer()
 							if followTutorial[j] is False:
 								self.num_episode += 1
 
@@ -1325,7 +1324,7 @@ class RL(object):
 		self.generateTransitions()
 		self.computeTDandGAE()
 		# self.tutorial_computeTDandGAE()
-		# self.optimizeNN_h(1)
+		# self.optimizeNN_h(0)
 		self.optimizeModel()
 
 

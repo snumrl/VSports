@@ -1151,6 +1151,16 @@ getReward(int index, bool verbose)
 		// 	reward -= 0.01* pow(targetPlaneNormal.norm(),2);;
 		// }
 
+		// if(mCurActionTypes[index] == 3)
+		// {
+		// 	mIsTerminalState = true;
+		// 	return -0.1;
+		// }
+		// else
+		// {
+		// 	return 0.0;
+		// }
+
 		if(mCharacters[index]->blocked)
 		{
 			mIsTerminalState = true;
@@ -1218,9 +1228,10 @@ getReward(int index, bool verbose)
 		{
 			if(mCurActionTypes[index] == 3)
 			{
-				mIsFoulState = true;
-				// mIsTerminalState = true;
-				return -0.01* pow(targetPlaneNormal.norm(),2);
+				// mIsFoulState = true;
+				mIsTerminalState = true;
+				// return exp(-targetPlaneNormal.norm());
+				return 0.0;
 				// return -0.1;
 
 
