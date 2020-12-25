@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 89
+nnCount = 94
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -777,7 +777,7 @@ class RL(object):
 										if counter%10 == 0:
 											TDError = self.episodes[h][j][i].getLastData().value -\
 											 (self.episodes[h][j][i].getLastData().r + self.gamma*values_h[h][i][j])
-											TDError = TDError*TDError
+											TDError = 4.0* TDError*TDError
 											TDError = min(TDError, 0.8)
 
 											if random.random()<TDError : 
@@ -823,7 +823,7 @@ class RL(object):
 									else:
 										TDError = self.episodes[h][j][i].getLastData().value -\
 										 (self.episodes[h][j][i].getLastData().r + self.gamma*values_h[h][i][j])
-										TDError = TDError*TDError
+										TDError = 4.0* TDError*TDError
 										TDError = min(TDError, 0.8)
 										if random.random()<TDError :
 											self.env.setToFoulState(j)

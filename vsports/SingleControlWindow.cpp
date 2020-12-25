@@ -116,6 +116,11 @@ SingleControlWindow()
     fingerAngle = 0;
     fingerBallAngle =0;
 
+    for(int i=0;i<2;i++)
+    {
+    	prevValues.push_back(0);
+    	prevRewards.push_back(0);
+    }
 
 }
 
@@ -360,6 +365,11 @@ keyboard(unsigned char key, int x, int y)
 		case 'r':
         {
             mEnv->slaveReset();
+            for(int i=0;i<2;i++)
+            {
+            	prevValues[i] = 0.0;
+            	prevRewards[i] = 0.0;
+            }
             break;
         }
 		case 'h':
@@ -1151,6 +1161,21 @@ display()
     GUI::drawStringOnScreen(0.8, 0.55, std::to_string(values[1]), true, Eigen::Vector3d(1,1,1));
 
 
+    double tdError[2];
+
+    for(int i=0;i<2;i++)
+    {
+ 		tdError[i] = prevValues[i] - (prevRewards[i] + 0.999 * values[i]);
+    }
+    GUI::drawStringOnScreen(0.90, 0.45, std::to_string(tdError[0]), true, Eigen::Vector3d(1,1,1));
+    GUI::drawStringOnScreen(0.90, 0.55, std::to_string(tdError[1]), true, Eigen::Vector3d(1,1,1));
+
+
+    for(int i=0;i<2;i++)
+    {
+    	prevValues[i] = values[i];
+    	prevRewards[i] = mEnv->curReward;
+    }
 	glutSwapBuffers();
 	if(mTakeScreenShot)
 	{

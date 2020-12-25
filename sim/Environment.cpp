@@ -41,7 +41,7 @@ Environment(int control_Hz, int simulation_Hz, int numChars, std::string bvh_pat
 :mControlHz(control_Hz), mSimulationHz(simulation_Hz), mNumChars(numChars), mWorld(std::make_shared<dart::simulation::World>()),
 mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0), endTime(15),
 criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), violatedFrames(0),curTrajectoryFrame(0),
-randomPointTrajectoryStart(false), resetDuration(10), goBackFrame(10), savedFrame(0), foulResetCount(0)
+randomPointTrajectoryStart(false), resetDuration(10), goBackFrame(10), savedFrame(0), foulResetCount(0), curReward(0)
 {
 	std::cout<<"Envionment Generation --- ";
 	srand((unsigned int)time(0));
@@ -1154,6 +1154,7 @@ getReward(int index, bool verbose)
 		if(mCharacters[index]->blocked)
 		{
 			mIsTerminalState = true;
+			curReward = 1.0;
 			return 1.0;
 
 			// if(mCurActionTypes[index] == 3)
@@ -1221,7 +1222,8 @@ getReward(int index, bool verbose)
 				mIsFoulState = true;
 				// mIsTerminalState = true;
 				// return -0.01* pow(targetPlaneNormal.norm(),2);
-				return exp(-targetPlaneNormal.norm());
+				curReward = 0;
+				return 0;
 				// return -0.1;
 
 
