@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 105
+nnCount = 106
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -733,6 +733,10 @@ class RL(object):
 							if np.any(np.isnan(states[i][j])) or np.any(np.isnan(envActions[i][j])):
 								nan_occur[j] = True
 
+							if accRewards[i][j]>1.0 or accRewards[i][j] < 0.0:
+								if not onFoulResetProcess[j]:
+									embed()
+									exit(0)
 							if followTutorial[j] is False:
 								if not onFoulResetProcess[j]:
 									self.sum_return += rewards[i][j]
@@ -930,6 +934,7 @@ class RL(object):
 
 								if onFoulResetProcess[j] is True:
 									onFoulResetProcess[j] = False
+									accRewards[i][j] = 0.0
 
 								prev_num_0 = len(self.episodes[0][j][i].data) 
 								prev_num_1 = len(self.episodes[1][j][i].data)

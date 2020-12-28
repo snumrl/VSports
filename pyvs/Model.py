@@ -261,6 +261,7 @@ class ActorCriticNN(nn.Module):
 
 		# return p.sample().cpu().detach().numpy()
 		# print(v.cpu().detach().numpy()[0])
+		# print(v.cpu().detach().numpy()[0])
 		return v.cpu().detach().numpy()[0]
 
 	def get_actionNoise(self,s):

@@ -1157,8 +1157,8 @@ display()
 		values[i] = srcs[0];
 
 	}
-    GUI::drawStringOnScreen(0.8, 0.45, std::to_string(values[0]), true, Eigen::Vector3d(1,1,1));
-    GUI::drawStringOnScreen(0.8, 0.55, std::to_string(values[1]), true, Eigen::Vector3d(1,1,1));
+    GUI::drawStringOnScreen(0.8, 0.55, std::to_string(values[0]), true, Eigen::Vector3d(1,1,1));
+    GUI::drawStringOnScreen(0.8, 0.45, std::to_string(values[1]), true, Eigen::Vector3d(1,1,1));
 
 
     double tdError[2];
@@ -1167,8 +1167,8 @@ display()
     {
  		tdError[i] = prevValues[i] - (prevRewards[i] + 0.999 * values[i]);
     }
-    GUI::drawStringOnScreen(0.90, 0.45, std::to_string(tdError[0]), true, Eigen::Vector3d(1,1,1));
-    GUI::drawStringOnScreen(0.90, 0.55, std::to_string(tdError[1]), true, Eigen::Vector3d(1,1,1));
+    GUI::drawStringOnScreen(0.90, 0.55, std::to_string(tdError[0]), true, Eigen::Vector3d(1,1,1));
+    GUI::drawStringOnScreen(0.90, 0.45, std::to_string(tdError[1]), true, Eigen::Vector3d(1,1,1));
 
 
     for(int i=0;i<2;i++)
