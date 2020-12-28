@@ -1654,11 +1654,11 @@ setActionType(int index, int actionType, bool isNew)
 		curActionType = mPrevActionTypes[index];
 	}
 
-	// if(foulResetCount>0)
-	// {
-	// 	if(rand()%2==0)
-	// 		curActionType = 0;
-	// }
+	if(foulResetCount>0)
+	{
+		// if(rand()%2==0)
+			curActionType = 0;
+	}
 
 	// else
 	// {

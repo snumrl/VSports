@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 103
+nnCount = 105
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -776,7 +776,7 @@ class RL(object):
 								for h in range(self.num_h):
 									if h == 0:
 										if counter%10 == 0:
-											if self.env.isTerminalState(j) or self.env.isFoulState(j):
+											if self.env.isTerminalState(j):
 
 												# TDError = values_h[h][i][j] - accRewards[i][j]
 												# TDError = 10.0* TDError*TDError
@@ -793,6 +793,8 @@ class RL(object):
 															if followTutorial[j] is False:
 																self.episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
 																accRewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
+																self.total_episodes[h_][self.indexToNetDic[i]].append(self.episodes[h_][j][i])
+
 																self.num_tuple[h_][self.indexToNetDic[i]] += 1
 																if accRewards[i][j] >= 1.0:
 																	self.num_correct_throwing += 1
@@ -802,6 +804,10 @@ class RL(object):
 																self.num_tutorial_tuple[h_][self.indexToNetDic[i]] += 1
 														else:
 															if followTutorial[j] is False:
+																self.episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
+																	rewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
+																self.total_episodes[h_][self.indexToNetDic[i]].append(self.episodes[h_][j][i])
+
 																while len(self.episodes[h_][j][i].data)%10 != 0:
 																	self.episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
 																		rewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
@@ -811,11 +817,11 @@ class RL(object):
 																rewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
 																self.num_tutorial_tuple[h_][self.indexToNetDic[i]] += 1
 
-													for h_ in range(self.num_h):
-														if followTutorial[j] is False:
-															self.total_episodes[h_][self.indexToNetDic[i]].append(self.episodes[h_][j][i])
-														else:
-															self.total_episodes[h_][self.indexToNetDic[i]].append(self.tutorial_episodes[h_][j][i])
+													# for h_ in range(self.num_h):
+													# 	if followTutorial[j] is False:
+													# 		self.total_episodes[h_][self.indexToNetDic[i]].append(self.episodes[h_][j][i])
+													# 	else:
+													# 		self.total_episodes[h_][self.indexToNetDic[i]].append(self.tutorial_episodes[h_][j][i])
 
 													self.num_td_reset += 1
 													if self.env.isTerminalState(j) : 
@@ -826,7 +832,7 @@ class RL(object):
 
 													break
 									else:
-										if self.env.isTerminalState(j) or self.env.isFoulState(j):
+										if self.env.isTerminalState(j):
 											# TDError = values_h[h][i][j] - rewards[i][j]
 											# TDError = 10.0* TDError*TDError
 											# # TDError = 2.0* abs(TDError)
@@ -844,9 +850,9 @@ class RL(object):
 														if followTutorial[j] is False:
 															self.episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
 															accRewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
-															self.num_tuple[h_][self.indexToNetDic[i]] += 1
 															self.total_episodes[h_][self.indexToNetDic[i]].append(self.episodes[h_][j][i])
 
+															self.num_tuple[h_][self.indexToNetDic[i]] += 1
 															if accRewards[i][j] >= 0.1:
 																self.num_correct_throwing += 1
 														else:
@@ -857,8 +863,8 @@ class RL(object):
 														if followTutorial[j] is False:
 															self.episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
 																	rewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
+															self.total_episodes[h_][self.indexToNetDic[i]].append(self.episodes[h_][j][i])
 
-															self.total_episodes[h_][self.indexToNetDic[i]].append(self.tutorial_episodes[h_][j][i])
 															while len(self.episodes[h_][j][i].data)%10 != 0:
 																self.episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
 																	rewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
