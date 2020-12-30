@@ -69,6 +69,7 @@ public:
 	np::ndarray getCorrectActionDetail(int id, int index);
 
 	int getResetDuration();
+	int getTypeFreq();
 	void setToFoulState(int id);
 	// Normalizer* mNormalizer;
 private:

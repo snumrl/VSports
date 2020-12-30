@@ -585,6 +585,12 @@ setToFoulState(int id)
 {
 	mSlaves[id]->mIsFoulState = true;
 }
+int 
+EnvironmentPython::
+getTypeFreq()
+{
+	return mSlaves[0]->goBackFrame;
+}
 
 
 using namespace boost::python;
@@ -632,6 +638,7 @@ BOOST_PYTHON_MODULE(pyvs)
 		.def("endOfIteration",&EnvironmentPython::endOfIteration)
 		.def("setResetCount",&EnvironmentPython::setResetCount)
 		.def("getResetDuration",&EnvironmentPython::getResetDuration)
+		.def("getTypeFreq",&EnvironmentPython::getTypeFreq)
 		// .def("isActionTypeChangingFrame",&EnvironmentPython::isActionTypeChangingFrame)
 		// .def("getNumBallTouch",&EnvironmentPython::getNumBallTouch);
 		// .def("setHindsightGoal",&EnvironmentPython::setHindsightGoal)

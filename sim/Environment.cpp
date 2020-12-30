@@ -1649,16 +1649,28 @@ setActionType(int index, int actionType, bool isNew)
 	actionType *= 3;
 
 	int curActionType = actionType;
-	if(curFrame%10 != 0)
+
+	if(curFrame%goBackFrame == 0)
+	{
+		// std::cout<<"Saved frame : "<<savedFrame<<std::endl;
+		// std::cout<<"curFrame frame : "<<curFrame<<std::endl;
+		// std::cout<<"-------"<<std::endl;
+		if(!isNew)
+		{
+			exit(0);
+		}
+	}
+
+	if(curFrame%goBackFrame != 0)
 	{
 		curActionType = mPrevActionTypes[index];
 	}
 
-	// if(foulResetCount>0)
-	// {
-	// 	// if(rand()%2==0)
-	// 		curActionType = 0;
-	// }
+	if(foulResetCount>0)
+	{
+		// if(rand()%2==0)
+			// curActionType = 0;
+	}
 
 	// else
 	// {
@@ -1671,11 +1683,11 @@ setActionType(int index, int actionType, bool isNew)
 	if(actionType != 3)
 	 	curActionType = 0;
 
-	if(curFrame <=19)
+	if(curFrame <=resetDuration+goBackFrame-1)
 	{
 		curActionType =0;
 	}
-	// curActionType =0;
+	curActionType =0;
 
 	// if(!mCharacters[index]->blocked)
 	// 	curActionType = 0;
@@ -1877,7 +1889,7 @@ foulReset()
 	mIsTerminalState = false;
 	mIsFoulState = false;
 	goBackEnvironment();
-	foulResetCount = 10;
+	foulResetCount = goBackFrame;
 	// slaveReset();
 }
 
@@ -2876,7 +2888,7 @@ saveEnvironment()
 		// std::cout<<"BatchIndex : "<<mBatchIndex<<" Should not be saved"<<std::endl;
 		return;
 	}
-	if(curFrame == 11)
+	if(curFrame == goBackFrame+1)
 	{
 		// std::cout<<"BatchIndex : "<<mBatchIndex<<" Saved"<<std::endl;
 		mPrevEnvSituation->saveEnvironment(this);
