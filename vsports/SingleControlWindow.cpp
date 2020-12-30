@@ -120,6 +120,7 @@ SingleControlWindow()
     {
     	prevValues.push_back(0);
     	prevRewards.push_back(0);
+    	curValues.push_back(0);
     }
 
 }
@@ -772,7 +773,38 @@ step()
 	// std::cout<<"mEnv->mTutorialTrajectories[0].size (): "<<mEnv->mTutorialTrajectories[1].size()<<std::endl;
 	// mEnv->getCharacter(0)->getSkeleton()->setPositions(mEnv->mTutorialTrajectories[1][mFrame]);
 
+    for(int i=0;i<2;i++)
+    {
+    	prevValues[i] = curValues[i];
+    	prevRewards[i] = mEnv->curReward;
+    }
 
+	for(int i=0;i<2;i++)
+	{
+		Eigen::VectorXd state = mEnv->mStates[0];
+		p::object get_value_0;
+		if(i==0) 
+			get_value_0 = nn_module_0[0].attr("get_value");
+		else
+			get_value_0 = nn_module_1[0].attr("get_value");
+
+		p::tuple shape = p::make_tuple(state.size());
+		np::dtype dtype = np::dtype::get_builtin<float>();
+		np::ndarray state_np = np::empty(shape, dtype);
+
+		float* dest = reinterpret_cast<float*>(state_np.get_data());
+		for(int j=0;j<state.size();j++)
+		{
+			dest[j] = state[j];
+		}
+
+		p::object temp = get_value_0(state_np);
+		np::ndarray value = np::from_object(temp);
+		float* srcs = reinterpret_cast<float*>(value.get_data());
+
+		curValues[i] = srcs[0];
+
+	}
 
 	// mEnv->stepAtOnce();
     // time_check_end();
@@ -782,6 +814,7 @@ step()
 	mFrame++;
 	// if(mFrame>mEnv->mTutorialTrajectories[1].size()-1)
 	// 	mFrame = mEnv->mTutorialTrajectories[1].size()-1;
+
 
 
 
@@ -1129,53 +1162,20 @@ display()
 	GUI::drawBoxOnScreen(0.2+0.6*((double)mEnv->mCurActionTypes[0] / (numActions)), 0.2, Eigen::Vector2d(6.0, 4.0),Eigen::Vector3d(1.0, 1.0, 1.0));
 
 
-	double values[2];
-
-	for(int i=0;i<2;i++)
-	{
-		Eigen::VectorXd state = mEnv->mStates[0];
-		p::object get_value_0;
-		if(i==0) 
-			get_value_0 = nn_module_0[0].attr("get_value");
-		else
-			get_value_0 = nn_module_1[0].attr("get_value");
-
-		p::tuple shape = p::make_tuple(state.size());
-		np::dtype dtype = np::dtype::get_builtin<float>();
-		np::ndarray state_np = np::empty(shape, dtype);
-
-		float* dest = reinterpret_cast<float*>(state_np.get_data());
-		for(int j=0;j<state.size();j++)
-		{
-			dest[j] = state[j];
-		}
-
-		p::object temp = get_value_0(state_np);
-		np::ndarray value = np::from_object(temp);
-		float* srcs = reinterpret_cast<float*>(value.get_data());
-
-		values[i] = srcs[0];
-
-	}
-    GUI::drawStringOnScreen(0.8, 0.55, std::to_string(values[0]), true, Eigen::Vector3d(1,1,1));
-    GUI::drawStringOnScreen(0.8, 0.45, std::to_string(values[1]), true, Eigen::Vector3d(1,1,1));
+    GUI::drawStringOnScreen(0.8, 0.55, std::to_string(curValues[0]), true, Eigen::Vector3d(1,1,1));
+    GUI::drawStringOnScreen(0.8, 0.45, std::to_string(curValues[1]), true, Eigen::Vector3d(1,1,1));
 
 
     double tdError[2];
 
     for(int i=0;i<2;i++)
     {
- 		tdError[i] = prevValues[i] - (prevRewards[i] + 0.999 * values[i]);
+ 		tdError[i] = prevValues[i] - (prevRewards[i] + 0.999 * curValues[i]);
     }
     GUI::drawStringOnScreen(0.90, 0.55, std::to_string(tdError[0]), true, Eigen::Vector3d(1,1,1));
     GUI::drawStringOnScreen(0.90, 0.45, std::to_string(tdError[1]), true, Eigen::Vector3d(1,1,1));
 
 
-    for(int i=0;i<2;i++)
-    {
-    	prevValues[i] = values[i];
-    	prevRewards[i] = mEnv->curReward;
-    }
 	glutSwapBuffers();
 	if(mTakeScreenShot)
 	{

@@ -172,6 +172,10 @@ public:
 	std::vector<double> prevValues;
 	std::vector<double> prevRewards;
 
+	std::vector<double> curValues;
+	// std::vector<double> prevRewards;
+
+
     // Eigen::Vector3d curBallPosition;
     // Eigen::Vector3d prevBallPosition;
     // Eigen::Vector3d pprevBallPosition;

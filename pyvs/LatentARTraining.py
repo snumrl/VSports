@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 106
+nnCount = 107
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -119,8 +119,8 @@ class RL(object):
 		self.gamma = 0.997
 		self.lb = 0.95
 
-		self.buffer_size = 128*1024
-		self.batch_size = 16*512
+		self.buffer_size = 64*1024
+		self.batch_size = 8*512
 		# self.buffer_size = 2*1024
 		# self.batch_size = 128
 		self.num_action_types = 2
@@ -774,128 +774,134 @@ class RL(object):
 
 					# here not considered followtutorial
 
-					if not onFoulResetProcess[j]:
-						for i in range(self.num_agents):
-							if len(self.episodes[0][j][i].data) > 0:
-								for h in range(self.num_h):
-									if h == 0:
-										if counter%10 == 0:
-											if self.env.isTerminalState(j):
+					# if not onFoulResetProcess[j]:
+					# 	for i in range(self.num_agents):
+					# 		if len(self.episodes[0][j][i].data) > 0:
+					# 			for h in range(self.num_h):
+					# 				if h == 0:
+					# 					# if counter%10 == 0:
+					# 					if self.env.isTerminalState(j):
 
-												# TDError = values_h[h][i][j] - accRewards[i][j]
-												# TDError = 10.0* TDError*TDError
-												# TDError = min(TDError, 0.9)
-												TDError = self.episodes[h][j][i].getLastData().value -\
-												 (self.episodes[h][j][i].getLastData().r + self.gamma*accRewards[i][j])
-												TDError = 20.0 * TDError*TDError
-												TDError = min(TDError, 0.8)
-												if random.random()<TDError : 
-													self.env.setToFoulState(j)
-													onFoulResetProcess[j] = True;
-													for h_ in range(self.num_h):
-														if h_ == 0:
-															if followTutorial[j] is False:
-																self.episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
-																accRewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
-																self.total_episodes[h_][self.indexToNetDic[i]].append(self.episodes[h_][j][i])
+					# 						# TDError = values_h[h][i][j] - accRewards[i][j]
+					# 						# TDError = 10.0* TDError*TDError
+					# 						# TDError = min(TDError, 0.9)
+					# 						TDError = self.episodes[h][j][i].getLastData().value -\
+					# 						 (self.episodes[h][j][i].getLastData().r + self.gamma*accRewards[i][j])
+					# 						TDError = 10.0 * TDError*TDError
+					# 						# print("h = 0 : {}".format(TDError))
+					# 						TDError = min(TDError, 0.8)
+					# 						if random.random()<TDError : 
+					# 							self.env.setToFoulState(j)
+					# 							onFoulResetProcess[j] = True;
+					# 							for h_ in range(self.num_h):
+					# 								if h_ == 0:
+					# 									if followTutorial[j] is False:
+					# 										self.episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
+					# 										accRewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
+					# 										self.total_episodes[h_][self.indexToNetDic[i]].append(self.episodes[h_][j][i])
 
-																self.num_tuple[h_][self.indexToNetDic[i]] += 1
-																if accRewards[i][j] >= 1.0:
-																	self.num_correct_throwing += 1
-															else:
-																self.tutorial_episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
-																accRewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
-																self.num_tutorial_tuple[h_][self.indexToNetDic[i]] += 1
-														else:
-															if followTutorial[j] is False:
-																self.episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
-																	rewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
-																self.total_episodes[h_][self.indexToNetDic[i]].append(self.episodes[h_][j][i])
+					# 										# if j==0:
+					# 										# print("0){}".format(accRewards[i][j]))
+					# 										self.num_tuple[h_][self.indexToNetDic[i]] += 1
+					# 										if accRewards[i][j] >= 1.0:
+					# 											self.num_correct_throwing += 1
+					# 									else:
+					# 										self.tutorial_episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
+					# 										accRewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
+					# 										self.num_tutorial_tuple[h_][self.indexToNetDic[i]] += 1
+					# 								else:
+					# 									if followTutorial[j] is False:
+					# 										self.episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
+					# 											rewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
+					# 										self.total_episodes[h_][self.indexToNetDic[i]].append(self.episodes[h_][j][i])
 
-																while len(self.episodes[h_][j][i].data)%10 != 0:
-																	self.episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
-																		rewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
-																self.num_tuple[h_][self.indexToNetDic[i]] += 1
-															else:
-																self.tutorial_episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
-																rewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
-																self.num_tutorial_tuple[h_][self.indexToNetDic[i]] += 1
+					# 										while len(self.episodes[h_][j][i].data)%10 != 0:
+					# 											self.episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
+					# 												rewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
+					# 										self.num_tuple[h_][self.indexToNetDic[i]] += 1
+					# 									else:
+					# 										self.tutorial_episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
+					# 										rewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
+					# 										self.num_tutorial_tuple[h_][self.indexToNetDic[i]] += 1
 
-													# for h_ in range(self.num_h):
-													# 	if followTutorial[j] is False:
-													# 		self.total_episodes[h_][self.indexToNetDic[i]].append(self.episodes[h_][j][i])
-													# 	else:
-													# 		self.total_episodes[h_][self.indexToNetDic[i]].append(self.tutorial_episodes[h_][j][i])
+					# 							# for h_ in range(self.num_h):
+					# 							# 	if followTutorial[j] is False:
+					# 							# 		self.total_episodes[h_][self.indexToNetDic[i]].append(self.episodes[h_][j][i])
+					# 							# 	else:
+					# 							# 		self.total_episodes[h_][self.indexToNetDic[i]].append(self.tutorial_episodes[h_][j][i])
 
-													self.num_td_reset += 1
-													if self.env.isTerminalState(j) : 
-														self.num_td_reset_at_goal += 1
+					# 							self.num_td_reset += 1
+					# 							if self.env.isTerminalState(j) : 
+					# 								self.num_td_reset_at_goal += 1
 
-													if followTutorial[j] is False:
-														self.num_episode += 1
+					# 							if followTutorial[j] is False:
+					# 								self.num_episode += 1
 
-													break
-									else:
-										if self.env.isTerminalState(j):
-											# TDError = values_h[h][i][j] - rewards[i][j]
-											# TDError = 10.0* TDError*TDError
-											# # TDError = 2.0* abs(TDError)
-											# TDError = min(TDError, 0.9)
-											TDError = self.episodes[h][j][i].getLastData().value -\
-											 (self.episodes[h][j][i].getLastData().r + self.gamma*rewards[i][j])
-											TDError = 20.0 * TDError*TDError
-											TDError = min(TDError, 0.8)
-											if random.random()<TDError :
-												self.env.setToFoulState(j)
+					# 							break
+					# 				else:
+					# 					if self.env.isTerminalState(j):
+					# 						# TDError = values_h[h][i][j] - rewards[i][j]
+					# 						# TDError = 10.0* TDError*TDError
+					# 						# # TDError = 2.0* abs(TDError)
+					# 						# TDError = min(TDError, 0.9)
+					# 						TDError = self.episodes[h][j][i].getLastData().value -\
+					# 						 (self.episodes[h][j][i].getLastData().r + self.gamma*rewards[i][j])
+					# 						TDError = 10.0 * TDError*TDError
+					# 						# print("h = 1 : {}".format(TDError))
+					# 						TDError = min(TDError, 0.8)
+					# 						if random.random()<TDError :
+					# 							self.env.setToFoulState(j)
 
-												onFoulResetProcess[j] = True;
-												for h_ in range(self.num_h):
-													if h_ == 0:
-														if followTutorial[j] is False:
-															self.episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
-															accRewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
-															self.total_episodes[h_][self.indexToNetDic[i]].append(self.episodes[h_][j][i])
+					# 							onFoulResetProcess[j] = True;
+					# 							for h_ in range(self.num_h):
+					# 								if h_ == 0:
+					# 									if followTutorial[j] is False:
+					# 										self.episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
+					# 										accRewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
+					# 										self.total_episodes[h_][self.indexToNetDic[i]].append(self.episodes[h_][j][i])
+					# 										# if j==0:
+					# 										# print("1){}".format(accRewards[i][j]))
 
-															self.num_tuple[h_][self.indexToNetDic[i]] += 1
-															if accRewards[i][j] >= 0.1:
-																self.num_correct_throwing += 1
-														else:
-															self.tutorial_episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
-															accRewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
-															self.num_tutorial_tuple[h_][self.indexToNetDic[i]] += 1
-													else :
-														if followTutorial[j] is False:
-															self.episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
-																	rewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
-															self.total_episodes[h_][self.indexToNetDic[i]].append(self.episodes[h_][j][i])
+					# 										self.num_tuple[h_][self.indexToNetDic[i]] += 1
+					# 										if accRewards[i][j] >= 0.1:
+					# 											self.num_correct_throwing += 1
+					# 									else:
+					# 										self.tutorial_episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
+					# 										accRewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
+					# 										self.num_tutorial_tuple[h_][self.indexToNetDic[i]] += 1
+					# 								else :
+					# 									if followTutorial[j] is False:
+					# 										self.episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
+					# 												rewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
+					# 										self.total_episodes[h_][self.indexToNetDic[i]].append(self.episodes[h_][j][i])
 
-															while len(self.episodes[h_][j][i].data)%10 != 0:
-																self.episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
-																	rewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
-															self.num_tuple[h_][self.indexToNetDic[i]] += 1
-														else:
-															self.tutorial_episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
-															rewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
-															# self.num_tutorial_tuple[h_][self.indexToNetDic[i]] += 1
+					# 										while len(self.episodes[h_][j][i].data)%10 != 0:
+					# 											self.episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
+					# 												rewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
+					# 										self.num_tuple[h_][self.indexToNetDic[i]] += 1
+					# 									else:
+					# 										self.tutorial_episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
+					# 										rewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
+					# 										# self.num_tutorial_tuple[h_][self.indexToNetDic[i]] += 1
 
-												# for h_ in range(self.num_h):
-												# 	if followTutorial[j] is False:
-												# 		self.total_episodes[h_][self.indexToNetDic[i]].append(self.episodes[h_][j][i])
-												# 	else:
-												# 		self.total_episodes[h_][self.indexToNetDic[i]].append(self.tutorial_episodes[h_][j][i])
+					# 							# for h_ in range(self.num_h):
+					# 							# 	if followTutorial[j] is False:
+					# 							# 		self.total_episodes[h_][self.indexToNetDic[i]].append(self.episodes[h_][j][i])
+					# 							# 	else:
+					# 							# 		self.total_episodes[h_][self.indexToNetDic[i]].append(self.tutorial_episodes[h_][j][i])
 
 
-												self.num_td_reset += 1
+					# 							self.num_td_reset += 1
 
-												if followTutorial[j] is False:
-													self.num_episode += 1
+					# 							if followTutorial[j] is False:
+					# 								self.num_episode += 1
 
-												if self.env.isTerminalState(j) : 
-													self.num_td_reset_at_goal += 1
+					# 							if self.env.isTerminalState(j) : 
+					# 								self.num_td_reset_at_goal += 1
 
-					if onFoulResetProcess[j] is True:
-						if counter%10 != 1:
-							continue
+					# if onFoulResetProcess[j] is True:
+					# 	if counter%10 != 1:
+					# 		continue
 
 					if self.env.isFoulState(j) is True:
 						for i in range(self.num_agents):
@@ -903,6 +909,8 @@ class RL(object):
 								for h in range(self.num_h):
 									if h == 0:
 										if followTutorial[j] is False:
+											# if j==0:
+											# 	print("3){}".format(accRewards[i][j]))
 											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
 											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 											self.num_tuple[h][self.indexToNetDic[i]] += 1
@@ -959,7 +967,7 @@ class RL(object):
 								else:
 									self.tutorial_episodes[0][j][i].pop()
 									if popCount==10:
-										self.episodes[0][j][i].pop()
+										self.tutorial_episodes[0][j][i].pop()
 								# embed()
 								# exit(0)
 								# if j == 0:
@@ -1005,6 +1013,8 @@ class RL(object):
 								for h in range(self.num_h):
 									if h == 0:
 										if followTutorial[j] is False:
+											# if j==0:
+											# 	print("4){}".format(accRewards[i][j]))
 											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
 											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 											self.num_tuple[h][self.indexToNetDic[i]] += 1
@@ -1043,6 +1053,8 @@ class RL(object):
 									if h == 0:
 										if counter%10 == 0:
 											if followTutorial[j] is False:
+												# if j==0:
+												# 	print("5){}".format(accRewards[i][j]))
 												self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
 												accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 												self.num_tuple[h][self.indexToNetDic[i]] += 1
@@ -1118,6 +1130,12 @@ class RL(object):
 					ad_t = 0
 
 					epi_return = 0.0
+					if h==0:
+						for i in range(len(data)-1):
+							print((states[i+1][0:10]-states[i][0:10]).mean(), end=" ")
+						print("")
+						print("-------------------------------------------------")
+					print("")
 					for i in reversed(range(len(data))):
 						epi_return += rewards[i]
 						delta = rewards[i] + values[i+1] * self.gamma - values[i]
@@ -1335,7 +1353,6 @@ class RL(object):
 					loss_critic = loss_critic.detach()
 					loss= loss.detach()
 
-
 				print('Optimizing actor-critic nn_{} : {}/{}'.format(h, j+1,self.num_epochs),end='\r')
 			print('')
 		# print('')
@@ -1427,8 +1444,8 @@ class RL(object):
 		self.generateTransitions()
 		self.computeTDandGAE()
 		# self.tutorial_computeTDandGAE()
-		# self.optimizeNN_h(1)
-		self.optimizeModel()
+		self.optimizeNN_h(0)
+		# self.optimizeModel()
 
 
 	def optimizeModel(self):
