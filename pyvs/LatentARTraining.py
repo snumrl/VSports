@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 117
+nnCount = 119
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -119,8 +119,8 @@ class RL(object):
 		self.gamma = 0.999
 		self.lb = 0.95
 
-		self.buffer_size = 8*1024
-		self.batch_size = 1*512
+		self.buffer_size = 64*1024
+		self.batch_size = 8*512
 		# self.buffer_size = 2*1024
 		# self.batch_size = 128
 		self.num_action_types = 2
@@ -545,8 +545,8 @@ class RL(object):
 						actions_h[0][i] = a_dist_slave[i].sample().cpu().detach().numpy().squeeze().squeeze();
 						for j in range(self.num_slaves):
 							if followTutorial[j] is True:
-								embed()
-								exit(0)
+								# embed()
+								# exit(0)
 								actions_h[0][i][j][0:2] = self.env.getCorrectActionType(j,i)
 
 				for i in range(self.num_agents):
@@ -558,8 +558,8 @@ class RL(object):
 				for i in range(self.num_agents):
 					for j in range(self.num_slaves):
 						if self.env.isOnFoulReset(j):
-							embed()
-							exit(0)
+							# embed()
+							# exit(0)
 							# print("h = 0 / onFoulReset")
 							temp_a_dist,_ = self.target_model[0][self.indexToNetDic[i]].forward(\
 								Tensor([states_h[0][i][j]]),self.stdScale)
@@ -606,10 +606,10 @@ class RL(object):
 					# embed()
 					# exit(0)
 					# print("???")
-					embededState = states#+action_embeding_ones
+					# embededState = states#+action_embeding_ones
 
 					# states_h[h] = np.concatenate((embededState, h_slave), axis=2)
-					states_h[h] =embededState
+					states_h[h] =np.copy(states)
 				# else:
 				# 	# print("value h : {}".format(h))
 				# 	states_h[h] = np.concatenate((states, np.array(list(actions_h[h-1]))), axis=2)
@@ -644,8 +644,8 @@ class RL(object):
 				for i in range(self.num_agents):
 					for j in range(self.num_slaves):
 						if self.env.isOnFoulReset(j):
-							embed()
-							exit(0)
+							# embed()
+							# exit(0)
 							temp_a_dist,_ = self.target_model[h][self.indexToNetDic[i]].forward(\
 								Tensor([states_h[h][i][j]]),self.stdScale)
 							actions_h[h][i][j] = temp_a_dist.sample().cpu().detach().numpy()
@@ -922,8 +922,8 @@ class RL(object):
 					# 		continue
 
 					if self.env.isFoulState(j) is True:
-						embed()
-						exit(0)
+						# embed()
+						# exit(0)
 						for i in range(self.num_agents):
 							if teamDic[i] == learningTeam:
 								for h in range(self.num_h):
@@ -1046,8 +1046,8 @@ class RL(object):
 											# if j==0:
 											# 	print("4){}".format(accRewards[i][j]))
 											if self.env.isOnFoulReset(j):
-												embed()
-												exit(0)
+												# embed()
+												# exit(0)
 												# print("111")
 												temp_s = self.episodes[h][j][i].getLastData().s
 												temp_a = self.episodes[h][j][i].getLastData().a

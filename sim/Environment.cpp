@@ -1688,7 +1688,7 @@ setActionType(int index, int actionType, bool isNew)
 	{
 		curActionType =0;
 	}
-	curActionType =0;
+	// curActionType =0;
 
 	// if(!mCharacters[index]->blocked)
 	// 	curActionType = 0;
