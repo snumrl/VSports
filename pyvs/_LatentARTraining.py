@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 117
+nnCount = 118
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -61,17 +61,8 @@ class RNNEpisodeBuffer(object):
 	def push(self, *args):
 		self.data.append(RNNEpisode(*args))
 
-	def pop(self):
-		self.data.pop()
-
-	def popleft(self):
-		self.data.pop(0)
-
 	def getData(self):
 		return self.data
-
-	def getLastData(self):
-		return self.data[len(self.data)-1]
 
 RNNTransition = namedtuple('RNNTransition',('s','a','logprob','TD','GAE'))
 
@@ -120,14 +111,13 @@ class RL(object):
 		self.lb = 0.95
 
 		self.buffer_size = 8*1024
-		self.batch_size = 1*512
+		self.batch_size = 512
 		# self.buffer_size = 2*1024
 		# self.batch_size = 128
 		self.num_action_types = 2
 		self.latent_size = 4
 
 		self.resetDuration = self.env.getResetDuration()
-		self.typeFreq = self.env.getTypeFreq()
 
 		#contact, finger, finger-ball
 		self.num_action = [self.num_action_types, self.latent_size]
@@ -166,8 +156,6 @@ class RL(object):
 		self.rms = RunningMeanStd(self.num_state-2)
 
 		self.num_c = 4
-
-		self.stdScale = 2.0
 
 
 		# self.buffer_0 = [ [None] for i in range(self.num_policy)]
@@ -305,18 +293,11 @@ class RL(object):
 
 		self.filecount = 0
 
-		self.num_td_reset = [0, 0]
-		# self.num_td_reset_at_goal = 0
-		# self.num_td_reset_at_goal = 0
-		self.num_td_reset_at_goal = [0, 0]
-
 		self.env.slaveResets()
 
 
 	def loadTargetModels(self,path,index):
 		for h in range(self.num_h):
-			# if h== 0:
-			# 	continue;
 			self.target_model[h][self.indexToNetDic[index]].load(nndir+'/'+path+'_'+str(self.indexToNetDic[index%self.num_agents])+'_'+str(h)+'.pt')
 		# self.target_model_0[self.indexToNetDic[index]].load(nndir+'/'+path+'_'+str(self.indexToNetDic[index%self.num_agents])+'_0.pt')
 		# self.target_model_1[self.indexToNetDic[index]].load(nndir+'/'+path+'_'+str(self.indexToNetDic[index%self.num_agents])+'_1.pt')
@@ -377,8 +358,6 @@ class RL(object):
 		self.sum_return = 0;
 		self.num_episode = 0;
 		self.num_correct_throwing = 0;
-		self.num_td_reset = [0, 0]
-		self.num_td_reset_at_goal = [0, 0]
 		for h in range(self.num_h):
 			for index in range(self.num_policy):
 				self.num_tuple[h][index] = 0
@@ -398,10 +377,7 @@ class RL(object):
 		values_h = np.array([[None for _ in range(self.num_agents)] for _ in range(self.num_h)])
 		is_exploitation = np.array([None for _ in range(self.num_agents)])
 		
-		followTutorial = [False]*self.num_slaves
-
-		onFoulResetProcess = [False]*self.num_slaves
-
+		followTutorial = [False]*self.num_slaves;
 
 		# states_1 = [None]*self.num_slaves*self.num_agents
 		# actions_1 = [None]*self.num_slaves*self.num_agents
@@ -531,10 +507,8 @@ class RL(object):
 			a_dist_slave = [None]*self.num_agents
 			v_slave = [None]*self.num_agents
 
-			if counter%self.typeFreq == 1:
-				# print("--------------------")
-				states_h[0] = np.copy(states)
-
+			if counter%10 == 1:
+				states_h[0] = states
 				for i in range(self.num_agents):
 					if teamDic[i] == learningTeam:
 						a_dist_slave_agent,v_slave_agent = \
@@ -545,8 +519,8 @@ class RL(object):
 						actions_h[0][i] = a_dist_slave[i].sample().cpu().detach().numpy().squeeze().squeeze();
 						for j in range(self.num_slaves):
 							if followTutorial[j] is True:
-								embed()
-								exit(0)
+								# embed()
+								# exit(0)
 								actions_h[0][i][j][0:2] = self.env.getCorrectActionType(j,i)
 
 				for i in range(self.num_agents):
@@ -555,19 +529,8 @@ class RL(object):
 							.cpu().detach().numpy().reshape(-1);
 						values_h[0][i] = v_slave[i].cpu().detach().numpy().reshape(-1);
 
-				for i in range(self.num_agents):
-					for j in range(self.num_slaves):
-						if self.env.isOnFoulReset(j):
-							embed()
-							exit(0)
-							# print("h = 0 / onFoulReset")
-							temp_a_dist,_ = self.target_model[0][self.indexToNetDic[i]].forward(\
-								Tensor([states_h[0][i][j]]),self.stdScale)
-							actions_h[0][i][j] = temp_a_dist.sample().cpu().detach().numpy()
-							logprobs_h[0][i][j] = temp_a_dist.log_prob(Tensor(actions_h[0][i][j])).cpu().detach().numpy().reshape(-1)[0]
-	
 
-			# print(values_h[0][0][0])
+
 
 			# actions_0_oneHot = arrayToOneHotVectorWithConstraint(actions_h[0])
 
@@ -585,8 +548,7 @@ class RL(object):
 			actions_0_scalar = None
 			actions_0_oneHot = None
 
-			if counter%self.typeFreq == 1:
-				# print("counter : {}".format(counter))
+			if counter%10 == 1:
 				actions_0_scalar, actions_0_oneHot = arrayToScalarVectorWithConstraint(actions_h[0], True)
 			else:
 				actions_0_scalar, actions_0_oneHot = arrayToScalarVectorWithConstraint(actions_h[0], False)
@@ -594,7 +556,6 @@ class RL(object):
 			action_embeding_ones = np.ones(np.shape(states_h[0]),dtype=np.float32)
 
 			if useEmbeding:
-				# if actions_0_scalar == 0
 				actions_0_oneHot = actions_0_oneHot*0
 				action_embeding_ones = 0.5 * action_embeding_ones*actions_0_scalar
 			else:
@@ -606,7 +567,7 @@ class RL(object):
 					# embed()
 					# exit(0)
 					# print("???")
-					embededState = states#+action_embeding_ones
+					embededState = states+action_embeding_ones
 
 					# states_h[h] = np.concatenate((embededState, h_slave), axis=2)
 					states_h[h] =embededState
@@ -621,12 +582,9 @@ class RL(object):
 							Tensor([states_h[h][i]]))
 						a_dist_slave[i] = a_dist_slave_agent
 						v_slave[i] = v_slave_agent
-						actions_h[h][i] = a_dist_slave[i].sample().cpu().detach().numpy().squeeze().squeeze();
 
-						for j in range(self.num_slaves):
-							if followTutorial[j] is True:
-								print("line628")
-								exit(0)
+						actions_h[h][i] = a_dist_slave[i].sample().cpu().detach().numpy().squeeze().squeeze();
+						if followTutorial[j] is True:
 								decodedActionDetail = self.env.getCorrectActionDetail(j,i)
 								encodedActionDetail, _ = self.actionEncoder.encode(Tensor(decodedActionDetail))
 								encodedActionDetail= encodedActionDetail.cpu().detach().numpy()
@@ -641,17 +599,7 @@ class RL(object):
 						# embed()
 						# exit(0)
 
-				for i in range(self.num_agents):
-					for j in range(self.num_slaves):
-						if self.env.isOnFoulReset(j):
-							embed()
-							exit(0)
-							temp_a_dist,_ = self.target_model[h][self.indexToNetDic[i]].forward(\
-								Tensor([states_h[h][i][j]]),self.stdScale)
-							actions_h[h][i][j] = temp_a_dist.sample().cpu().detach().numpy()
-							logprobs_h[h][i][j] = temp_a_dist.log_prob(Tensor(actions_h[h][i][j])).cpu().detach().numpy().reshape(-1)[0]
-							# embed()
-							# exit(0)
+
 
 
 			# # actions_h = np.array(list(actions_h))
@@ -670,8 +618,7 @@ class RL(object):
 			# embed()
 			# exit(0)
 			# action : torch.Size([1, 16, 6])
-			# print("-------------")
-			# print(actions_h[1][0][0])
+
 			# actionTypePart = actions[:,:,0:self.num_action_types]
 			actionsDecodePart = np.array(list(actions_h[h]))
 
@@ -731,7 +678,6 @@ class RL(object):
 
 			# print("time :", time.time() - start)
 
-			# print(actions_h[1][0][0])
 			nan_occur = [False]*self.num_slaves
 			# for i in range(self.num_agents):
 				# terminated_state = True
@@ -740,7 +686,7 @@ class RL(object):
 					for i in range(self.num_agents):
 						if teamDic[i] == learningTeam:
 							rewards[i][j] = self.env.getReward(j, i, True)
-							if counter%self.typeFreq == 1:
+							if counter%10 == 1:
 								accRewards[i][j] = rewards[i][j]
 							else:
 								accRewards[i][j] += rewards[i][j]
@@ -750,20 +696,11 @@ class RL(object):
 							if np.any(np.isnan(states[i][j])) or np.any(np.isnan(envActions[i][j])):
 								nan_occur[j] = True
 
-							if accRewards[i][j]>1.0 or accRewards[i][j] < 0.0:
-								if not onFoulResetProcess[j]:
-									embed()
-									exit(0)
 							if followTutorial[j] is False:
-								if not onFoulResetProcess[j]:
-									self.sum_return += rewards[i][j]
+								self.sum_return += rewards[i][j]
 
 			for j in range(self.num_slaves):
 				if not self.env.isOnResetProcess(j):
-					# if counter > 42:
-					# 	exit(0)
-					# print("on resetprocess counter : {}".format(counter))
-
 					if nan_occur[j] is True:
 						for i in range(self.num_agents):
 							if teamDic[i] == learningTeam:
@@ -784,287 +721,21 @@ class RL(object):
 								# self.episodes_2[i][k] = RNNEpisodeBuffer()
 						print("nan", file=sys.stderr)
 						self.env.slaveReset(j)
-						self.env.setResetCount(self.resetDuration-counter%self.typeFreq, j);
+						self.env.setResetCount(self.resetDuration-counter%10, j);
 						followTutorial[j] = random.random()<tutorialRatio
 
-
-
-					# here not considered followtutorial
-
-					# if not onFoulResetProcess[j]:
-					# 	for i in range(self.num_agents):
-					# 		if len(self.episodes[0][j][i].data) > 0:
-					# 			for h in range(self.num_h):
-					# 				if h == 0:
-					# 					if (self.env.isTerminalState(j) and not self.env.isTimeOut(j)) or counter%self.typeFreq == 0:
-					# 					# if counter%self.typeFreq == 0:
-
-					# 						# TDError = values_h[h][i][j] - accRewards[i][j]
-					# 						# TDError = 10.0* TDError*TDError
-					# 						# TDError = min(TDError, 0.9)
-					# 						TDError = self.episodes[h][j][i].getLastData().value -\
-					# 						 (self.episodes[h][j][i].getLastData().r + self.gamma*values_h[h][i][j])
-					# 						TDError = 10.0 * TDError*TDError
-					# 						# print("h = 0 : {}".format(TDError))
-					# 						TDError = min(TDError, 0.95)
-					# 						if random.random()<TDError : 
-					# 							self.env.setToFoulState(j)
-					# 							onFoulResetProcess[j] = True;
-					# 							for h_ in range(self.num_h):
-					# 								if h_ == 0:
-					# 									if followTutorial[j] is False:
-					# 										self.episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
-					# 										accRewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
-					# 										self.total_episodes[h_][self.indexToNetDic[i]].append(self.episodes[h_][j][i])
-
-					# 										# if j==0:
-					# 										# print("0){}".format(accRewards[i][j]))
-					# 										self.num_tuple[h_][self.indexToNetDic[i]] += 1
-					# 										if accRewards[i][j] >= 1.0:
-					# 											self.num_correct_throwing += 1
-					# 									else:
-					# 										self.tutorial_episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
-					# 										accRewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
-					# 										self.num_tutorial_tuple[h_][self.indexToNetDic[i]] += 1
-					# 								else:
-					# 									if followTutorial[j] is False:
-					# 										self.episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
-					# 											rewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
-					# 										self.total_episodes[h_][self.indexToNetDic[i]].append(self.episodes[h_][j][i])
-
-					# 										while len(self.episodes[h_][j][i].data)%self.typeFreq != 0:
-					# 											self.episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
-					# 												rewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
-					# 										self.num_tuple[h_][self.indexToNetDic[i]] += 1
-					# 									else:
-					# 										self.tutorial_episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
-					# 										rewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
-					# 										self.num_tutorial_tuple[h_][self.indexToNetDic[i]] += 1
-
-					# 							# for h_ in range(self.num_h):
-					# 							# 	if followTutorial[j] is False:
-					# 							# 		self.total_episodes[h_][self.indexToNetDic[i]].append(self.episodes[h_][j][i])
-					# 							# 	else:
-					# 							# 		self.total_episodes[h_][self.indexToNetDic[i]].append(self.tutorial_episodes[h_][j][i])
-
-					# 							self.num_td_reset[h] += 1
-					# 							if self.env.isTerminalState(j) : 
-					# 								self.num_td_reset_at_goal[h] += 1
-
-					# 							if followTutorial[j] is False:
-					# 								self.num_episode += 1
-
-					# 							break
-					# 				else:
-					# 					if (self.env.isTerminalState(j) and not self.env.isTimeOut(j)) or True:
-					# 					# if counter%self.typeFreq == 0:
-					# 						# TDError = values_h[h][i][j] - rewards[i][j]
-					# 						# TDError = 10.0* TDError*TDError
-					# 						# # TDError = 2.0* abs(TDError)
-					# 						# TDError = min(TDError, 0.9)
-					# 						TDError = self.episodes[h][j][i].getLastData().value -\
-					# 						 (self.episodes[h][j][i].getLastData().r + self.gamma*values_h[h][i][j])
-					# 						TDError = 10.0 * TDError*TDError
-					# 						# print("h = 1 : {}".format(TDError))
-					# 						TDError = min(TDError, 0.95)
-					# 						if random.random()<TDError :
-					# 							self.env.setToFoulState(j)
-
-					# 							onFoulResetProcess[j] = True;
-					# 							for h_ in range(self.num_h):
-					# 								if h_ == 0:
-					# 									if followTutorial[j] is False:
-					# 										self.episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
-					# 										accRewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
-					# 										self.total_episodes[h_][self.indexToNetDic[i]].append(self.episodes[h_][j][i])
-					# 										# if j==0:
-					# 										# print("1){}".format(accRewards[i][j]))
-
-					# 										self.num_tuple[h_][self.indexToNetDic[i]] += 1
-					# 										if accRewards[i][j] >= 0.1:
-					# 											self.num_correct_throwing += 1
-					# 									else:
-					# 										self.tutorial_episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
-					# 										accRewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
-					# 										self.num_tutorial_tuple[h_][self.indexToNetDic[i]] += 1
-					# 								else :
-					# 									if followTutorial[j] is False:
-					# 										self.episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
-					# 												rewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
-					# 										self.total_episodes[h_][self.indexToNetDic[i]].append(self.episodes[h_][j][i])
-
-					# 										while len(self.episodes[h_][j][i].data)%self.typeFreq != 0:
-					# 											self.episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
-					# 												rewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
-					# 										self.num_tuple[h_][self.indexToNetDic[i]] += 1
-					# 									else:
-					# 										self.tutorial_episodes[h_][j][i].push(states_h[h_][i][j], actions_h[h_][i][j],\
-					# 										rewards[i][j], values_h[h_][i][j], logprobs_h[h_][i][j])
-					# 										# self.num_tutorial_tuple[h_][self.indexToNetDic[i]] += 1
-
-					# 							# for h_ in range(self.num_h):
-					# 							# 	if followTutorial[j] is False:
-					# 							# 		self.total_episodes[h_][self.indexToNetDic[i]].append(self.episodes[h_][j][i])
-					# 							# 	else:
-					# 							# 		self.total_episodes[h_][self.indexToNetDic[i]].append(self.tutorial_episodes[h_][j][i])
-
-
-					# 							self.num_td_reset[h] += 1
-
-					# 							if followTutorial[j] is False:
-					# 								self.num_episode += 1
-
-					# 							if self.env.isTerminalState(j) : 
-					# 								self.num_td_reset_at_goal[h] += 1
-
-					# if onFoulResetProcess[j] is True:
-					# 	if counter%self.typeFreq != 1:
-					# 		continue
-
-					if self.env.isFoulState(j) is True:
-						embed()
-						exit(0)
+					if self.env.isTerminalState(j) is True:
 						for i in range(self.num_agents):
 							if teamDic[i] == learningTeam:
 								for h in range(self.num_h):
 									if h == 0:
 										if followTutorial[j] is False:
-											# if accRewards[i][j] >= 1.0:
-											# 	embed()
-											# 	exit(0)
-											# if j==0:
-											# 	print("3){}".format(accRewards[i][j]))
 											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
 											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 											self.num_tuple[h][self.indexToNetDic[i]] += 1
-											if accRewards[i][j] >= 1.0 and not onFoulResetProcess[j]:
-												self.num_correct_throwing += 1
-										else:
-											exit(0)
-											self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
-											self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
-									else :
-										if followTutorial[j] is False:
-											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-												rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
-											self.num_tuple[h][self.indexToNetDic[i]] += 1
-										else:
-											exit(0)
-											self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
-											self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
-
-								for h in range(self.num_h):
-									if followTutorial[j] is False:
-										if not onFoulResetProcess[j]:
-											self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
-										# self.episodes[h][j][i] = RNNEpisodeBuffer()
-									else:
-										exit(0)
-										if not onFoulResetProcess[j]:
-											self.total_episodes[h][self.indexToNetDic[i]].append(self.tutorial_episodes[h][j][i])
-									# self.tutorial_episodes[h][j][i] = RNNEpisodeBuffer()
-
-								if onFoulResetProcess[j] is True:
-									onFoulResetProcess[j] = False
-									accRewards[i][j] = 0.0
-
-								prev_num_0 = len(self.episodes[0][j][i].data) 
-								prev_num_1 = len(self.episodes[1][j][i].data)
-
-								# if j == 0:
-								# 	print("prev_num_0 : {}".format(prev_num_0))
-								# 	print("prev_num_1 : {}".format(prev_num_1))
-
-								popCount = (len(self.episodes[1][j][i].data))%self.typeFreq
-								if popCount == 1:
-									popCount = self.typeFreq
-
-								if popCount!=self.typeFreq:
-									embed()
-									exit(0)
-
-
-								if followTutorial[j] is False:
-									self.episodes[0][j][i].pop()
-									# if popCount==self.typeFreq:
-										# self.episodes[0][j][i].pop()
-								else:
-									exit(0)
-									self.tutorial_episodes[0][j][i].pop()
-									# if popCount==self.typeFreq:
-									# 	self.tutorial_episodes[0][j][i].pop()
-								# embed()
-								# exit(0)
-								# if j == 0:
-								# 	print("counter : {}".format(counter))
-								# 	print("popCount : {}".format(popCount))
-
-								for rc in range(popCount):
-									if followTutorial[j] is False:
-										self.episodes[1][j][i].pop()
-									else:
-										exit(0)
-										self.tutorial_episodes[1][j][i].pop()
-								# if len(self.episodes[0][j][i].data)*10 != len(self.episodes[1][j][i].data):
-								# embed()
-								# exit(0)
-								# if j == 0:
-								# 	print("after prev_num_0 : {}".format(len(self.episodes[0][j][i].data)))
-								# 	print("after prev_num_1 : {}".format(len(self.episodes[1][j][i].data)))
-
-								if followTutorial[j] is False:
-									while len(self.episodes[0][j][i].data)>120/self.typeFreq+1 :
-										self.episodes[0][j][i].popleft()
-									while len(self.episodes[1][j][i].data)>121 :
-										self.episodes[1][j][i].popleft()
-
-									self.num_tuple[0][self.indexToNetDic[i]] += len(self.episodes[0][j][i].data)
-									self.num_tuple[1][self.indexToNetDic[i]] += len(self.episodes[1][j][i].data)
-									local_step +=  len(self.episodes[1][j][i].data)
-
-								if followTutorial[j] is False:
-									self.num_episode += 1
-								local_step += 1
-
-						# print("Foul reset : {}".format(j))
-						self.env.foulReset(j)
-						followTutorial[j] = random.random()<tutorialRatio
-
-						# self.env.setResetCount(self.resetDuration-counter%self.typeFreq, j);
-
-
-					elif self.env.isTerminalState(j) is True:
-						for i in range(self.num_agents):
-							if teamDic[i] == learningTeam:
-								for h in range(self.num_h):
-									if h == 0:
-										if followTutorial[j] is False:
-											# if accRewards[i][j] >= 1.0:
-											# 	print("#")
-											# if j==0:
-											# 	print("4){}".format(accRewards[i][j]))
-											if self.env.isOnFoulReset(j):
-												embed()
-												exit(0)
-												# print("111")
-												temp_s = self.episodes[h][j][i].getLastData().s
-												temp_a = self.episodes[h][j][i].getLastData().a
-												temp_r = accRewards[i][j]
-												temp_value = self.episodes[h][j][i].getLastData().value
-												temp_logprob = self.episodes[h][j][i].getLastData().logprob
-												self.episodes[h][j][i].pop()
-												self.episodes[h][j][i].push(temp_s, temp_a, temp_r, temp_value, temp_logprob)
-											else:
-												# print("#################{}".format(len(self.episodes[h][j][i].data)))
-												self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-												accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
-												self.num_tuple[h][self.indexToNetDic[i]] += 1
 											if accRewards[i][j] >= 0.1:
 												self.num_correct_throwing += 1
 										else:
-											exit(0)
 											self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
 											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 											self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
@@ -1074,9 +745,8 @@ class RL(object):
 												rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 											self.num_tuple[h][self.indexToNetDic[i]] += 1
 										else:
-											exit(0)
 											self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 											self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
 
 								for h in range(self.num_h):
@@ -1086,38 +756,58 @@ class RL(object):
 									# self.tutorial_episodes[h][j][i] = RNNEpisodeBuffer()
 								if followTutorial[j] is False:
 									self.num_episode += 1
-								local_step += 1
 						self.env.slaveReset(j)
 						followTutorial[j] = random.random()<tutorialRatio
-						self.env.setResetCount(self.resetDuration-counter%self.typeFreq, j);
+						self.env.setResetCount(self.resetDuration-counter%10, j);
+
+					elif self.env.isFoulState(j) is True:
+						for i in range(self.num_agents):
+							if teamDic[i] == learningTeam:
+								for h in range(self.num_h):
+									if h == 0:
+										if followTutorial[j] is False:
+											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											self.num_tuple[h][self.indexToNetDic[i]] += 1
+											if accRewards[i][j] >= 0.1:
+												self.num_correct_throwing += 1
+										else:
+											self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
+									else :
+										if followTutorial[j] is False:
+											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+												rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											self.num_tuple[h][self.indexToNetDic[i]] += 1
+										else:
+											self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
+
+								for h in range(self.num_h):
+									self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
+									self.episodes[h][j][i] = RNNEpisodeBuffer()
+									# self.total_episodes[h][self.indexToNetDic[i]].append(self.tutorial_episodes[h][j][i])
+									# self.tutorial_episodes[h][j][i] = RNNEpisodeBuffer()
+								if followTutorial[j] is False:
+									self.num_episode += 1
+
+						self.env.foulReset(j)
+						followTutorial[j] = random.random()<tutorialRatio
+						# self.env.setResetCount(self.resetDuration-counter%10, j);
 
 					else:
 						for i in range(self.num_agents):
 							if teamDic[i] == learningTeam:
 								for h in range(self.num_h):
 									if h == 0:
-										if counter%self.typeFreq == 0:
+										if counter%10 == 0:
 											if followTutorial[j] is False:
-												# if j==0:
-												# 	print("5){}".format(accRewards[i][j]))
-												if self.env.isOnFoulReset(j):
-													temp_s = self.episodes[h][j][i].getLastData().s
-													temp_a = self.episodes[h][j][i].getLastData().a
-													temp_r = accRewards[i][j]
-													temp_value = self.episodes[h][j][i].getLastData().value
-													temp_logprob = self.episodes[h][j][i].getLastData().logprob
-													self.episodes[h][j][i].pop()
-													self.episodes[h][j][i].push(temp_s, temp_a, temp_r, temp_value, temp_logprob)
-												else:
-													self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-													accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
-													self.num_tuple[h][self.indexToNetDic[i]] += 1
-												# self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-												# accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
-												# self.num_tuple[h][self.indexToNetDic[i]] += 1
-												
+												self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
+												accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+												self.num_tuple[h][self.indexToNetDic[i]] += 1
 											else:
-												exit(0)
 												self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
 												accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 												self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
@@ -1126,13 +816,9 @@ class RL(object):
 											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
 												rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 											self.num_tuple[h][self.indexToNetDic[i]] += 1
-											# if j== 0:
-											# 	print("counter {}, num episode 0: {}".format(counter, len(self.episodes[0][j][i].data)))
-											# 	print("counter {}, num episode 1: {}".format(counter, len(self.episodes[1][j][i].data)))
 										else:
-											exit(0)
 											self.tutorial_episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
-											rewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
+											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 											self.num_tutorial_tuple[h][self.indexToNetDic[i]] += 1
 								# print(len(self.episodes[0][j][i].data))
 								# print(len(self.episodes[1][j][i].data))
@@ -1171,7 +857,7 @@ class RL(object):
 
 
 	def computeTDandGAE(self):
-		# exit(0)
+
 		for h in range(self.num_h):
 			for index in range(self.num_policy):
 				self.buffer[h][index].clear()
@@ -1180,6 +866,7 @@ class RL(object):
 				for epi in self.total_episodes[h][index]:
 					data = epi.getData()
 					size = len(data)
+					# print(size)
 					if size == 0:
 						continue
 					states, actions, rewards, values, logprobs = zip(*data)
@@ -1188,12 +875,6 @@ class RL(object):
 					ad_t = 0
 
 					epi_return = 0.0
-					# if h==1:
-					# 	for i in range(len(data)):
-					# 		print(rewards[i], end=" ")
-					# 	print("")
-					# 	print("-------------------------------------------------")
-					# print("")
 					for i in reversed(range(len(data))):
 						epi_return += rewards[i]
 						delta = rewards[i] + values[i+1] * self.gamma - values[i]
@@ -1411,6 +1092,7 @@ class RL(object):
 					loss_critic = loss_critic.detach()
 					loss= loss.detach()
 
+
 				print('Optimizing actor-critic nn_{} : {}/{}'.format(h, j+1,self.num_epochs),end='\r')
 			print('')
 		# print('')
@@ -1566,10 +1248,6 @@ class RL(object):
 		print('||Avg Num Correct Throwings per episode   : {:.3f}'.format(self.num_correct_throwing/self.num_episode))
 		print('||Max Return per episode   : {:.3f}'.format(self.max_return))
 		print('||Avg Return per episode   : {:.3f}'.format(self.sum_return/self.num_episode))
-
-		for h in range(self.num_h):
-			print('||Num TD Reset             : {} {}'.format(h, self.num_td_reset[h]))
-			print('||Num TD Reset at goal     : {} {}'.format(h, self.num_td_reset_at_goal[h]))
 		# print('||Max Win Rate So far      : {:.3f} at #{}'.format(self.max_winRate,self.max_winRate_epoch))
 		# print('||Current Win Rate         : {:.3f}'.format(self.winRate[-1]))
 

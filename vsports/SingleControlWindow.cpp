@@ -1171,6 +1171,7 @@ display()
     for(int i=0;i<2;i++)
     {
  		tdError[i] = prevValues[i] - (prevRewards[i] + 0.999 * curValues[i]);
+ 		// std::cout<<prevValues[i]<<" "<<prevRewards[i]<<" "<<curValues[i]<<std::endl;
     }
     GUI::drawStringOnScreen(0.90, 0.55, std::to_string(tdError[0]), true, Eigen::Vector3d(1,1,1));
     GUI::drawStringOnScreen(0.90, 0.45, std::to_string(tdError[1]), true, Eigen::Vector3d(1,1,1));

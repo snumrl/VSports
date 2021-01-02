@@ -464,7 +464,7 @@ public:
 	int goBackFrame;
 
 	double curReward;
-
+	bool isTimeOut();
 };
 double getFacingAngleFromLocalState(Eigen::VectorXd curState);
 Eigen::VectorXd localStateToOriginState(Eigen::VectorXd localState, int mNumChars=6);

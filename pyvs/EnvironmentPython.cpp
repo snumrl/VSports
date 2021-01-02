@@ -593,6 +593,14 @@ getTypeFreq()
 }
 
 
+bool 
+EnvironmentPython::
+isTimeOut(int id)
+{
+	return mSlaves[id]->isTimeOut();
+}
+
+
 using namespace boost::python;
 
 BOOST_PYTHON_MODULE(pyvs)
@@ -639,6 +647,7 @@ BOOST_PYTHON_MODULE(pyvs)
 		.def("setResetCount",&EnvironmentPython::setResetCount)
 		.def("getResetDuration",&EnvironmentPython::getResetDuration)
 		.def("getTypeFreq",&EnvironmentPython::getTypeFreq)
+		.def("isTimeOut",&EnvironmentPython::isTimeOut)
 		// .def("isActionTypeChangingFrame",&EnvironmentPython::isActionTypeChangingFrame)
 		// .def("getNumBallTouch",&EnvironmentPython::getNumBallTouch);
 		// .def("setHindsightGoal",&EnvironmentPython::setHindsightGoal)

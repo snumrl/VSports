@@ -1217,6 +1217,7 @@ getReward(int index, bool verbose)
 		}
 		else
 		{
+			curReward = 0;
 			if(mCurActionTypes[index] == 3)
 			{
 				mIsFoulState = true;
@@ -1687,7 +1688,7 @@ setActionType(int index, int actionType, bool isNew)
 	{
 		curActionType =0;
 	}
-	// curActionType =0;
+	curActionType =0;
 
 	// if(!mCharacters[index]->blocked)
 	// 	curActionType = 0;
@@ -1775,6 +1776,14 @@ isTerminalState()
 	return mIsTerminalState;
 	// return false;
 }
+bool
+Environment::
+isTimeOut()
+{
+	return mTimeElapsed > endTime;
+}
+
+
 bool
 Environment::
 isFoulState()

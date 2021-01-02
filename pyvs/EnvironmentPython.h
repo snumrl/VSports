@@ -71,6 +71,7 @@ public:
 	int getResetDuration();
 	int getTypeFreq();
 	void setToFoulState(int id);
+	bool isTimeOut(int id);
 	// Normalizer* mNormalizer;
 private:
 	std::vector<Environment*> mSlaves;
