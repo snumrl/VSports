@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 119
+nnCount = 120
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -167,7 +167,7 @@ class RL(object):
 
 		self.num_c = 4
 
-		self.stdScale = 2.0
+		self.stdScale = 1.5
 
 
 		# self.buffer_0 = [ [None] for i in range(self.num_policy)]
@@ -959,12 +959,16 @@ class RL(object):
 									if followTutorial[j] is False:
 										if not onFoulResetProcess[j]:
 											self.total_episodes[h][self.indexToNetDic[i]].append(self.episodes[h][j][i])
+
 										# self.episodes[h][j][i] = RNNEpisodeBuffer()
 									else:
 										exit(0)
 										if not onFoulResetProcess[j]:
 											self.total_episodes[h][self.indexToNetDic[i]].append(self.tutorial_episodes[h][j][i])
 									# self.tutorial_episodes[h][j][i] = RNNEpisodeBuffer()
+								if followTutorial[j] is False:
+									if not onFoulResetProcess[j]:
+										self.num_episode += 1
 
 								if onFoulResetProcess[j] is True:
 									onFoulResetProcess[j] = False
@@ -1024,8 +1028,6 @@ class RL(object):
 									self.num_tuple[1][self.indexToNetDic[i]] += len(self.episodes[1][j][i].data)
 									local_step +=  len(self.episodes[1][j][i].data)
 
-								if followTutorial[j] is False:
-									self.num_episode += 1
 								local_step += 1
 
 						# print("Foul reset : {}".format(j))
