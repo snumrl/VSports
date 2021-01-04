@@ -371,6 +371,7 @@ keyboard(unsigned char key, int x, int y)
             	prevValues[i] = 0.0;
             	prevRewards[i] = 0.0;
             }
+            recorder->recordCurrentFrame(mEnv);
             break;
         }
 		case 'h':
@@ -1388,7 +1389,7 @@ getActionFromNN(int index)
 	// 	mComunication[j] = srcs[j+numActions];
 	// }
 
-	std::cout<<"#########mActionType : "<<mActionType.transpose()<<std::endl;
+	std::cout<<"**ActionType : "<<mActionType.transpose()<<std::endl;
 	std::cout<<"mEnv->curFrame : "<<mEnv->curFrame<<std::endl;
 	std::cout<<"mEnv->resetCount : "<<mEnv->resetCount<<std::endl;
 	// std::cout<<"mActionType.transpose() : "<<mActionType.transpose()<<std::endl;

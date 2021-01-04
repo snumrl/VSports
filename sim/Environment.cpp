@@ -942,7 +942,49 @@ getState(int index)
 	// 	}
 	// }
 
+	state.resize(rootTransform.rows() + reducedSkelVelocity.segment(3,3).rows() + relObstacles.size()*3+ 5 +availableActions.rows());
 
+	int curIndex = 0;
+	for(int i=0;i<rootTransform.rows();i++)
+	{
+		state[curIndex] = rootTransform[i];
+		curIndex++;
+	}
+	for(int i=0;i<reducedSkelVelocity.segment(3,3).rows();i++)
+	{
+		state[curIndex] = reducedSkelVelocity.segment(3,3)[i];
+		curIndex++;
+	}
+	for(int i=0;i<relObstacles.size();i++)
+	{
+		state[curIndex] = relObstacles[i][0];
+		curIndex++;
+		state[curIndex] = relObstacles[i][1];
+		curIndex++;
+		state[curIndex] = relObstacles[i][2];
+		curIndex++;
+	}
+	for(int i=0;i<5;i++)
+	{
+		state[curIndex] = mCharacters[index]->blocked;
+		curIndex++;
+	}
+	for(int i=0;i<availableActions.rows();i++)
+	{
+		state[curIndex] = availableActions[i];
+		curIndex++;
+	}
+
+
+
+
+
+
+
+
+	mStates[index] = state;
+	// cout<<"getState end"<<endl;
+	return state;
 
 
 
@@ -957,7 +999,7 @@ getState(int index)
 	// std::cout<<"goalpostPositions.transpose(): "<<goalpostPositions.transpose()<<std::endl;
 	// std::cout<<"contacts.transpose(): "<<contacts.transpose()<<std::endl;
 
-	bool simplePosition = true;
+/*	bool simplePosition = true;
 
 	if(simplePosition)
 	{
@@ -1095,7 +1137,7 @@ getState(int index)
 
 	mStates[index] = state;
 	// cout<<"getState end"<<endl;
-	return state;
+	return state;*/
 }
 
 // Eigen::VectorXd
@@ -1145,22 +1187,22 @@ getReward(int index, bool verbose)
 
 		Eigen::Vector3d curRootVelocity = mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM() - mPrevCOMs[index];
 
-		if(mCharacters[index]->inputActionType == 3)
-		{
-			mCharacters[index]->inputActionType = 0;
-			reward -= 0.01* pow(targetPlaneNormal.norm(),2);;
-		}
+		// if(mCharacters[index]->inputActionType == 3)
+		// {
+		// 	mCharacters[index]->inputActionType = 0;
+		// 	reward -= 0.01* pow(targetPlaneNormal.norm(),2);;
+		// }
 
-		if(mCurActionTypes[index] == 3)
-		{
-			reward = exp(-0.3*pow(targetPlaneNormal.norm(),2));
-			mIsTerminalState = true;
-			return reward;
-		}
-		else
-		{
-			return 0;
-		}
+		// if(mCurActionTypes[index] == 3)
+		// {
+		// 	reward = exp(-0.3*pow(targetPlaneNormal.norm(),2));
+		// 	mIsTerminalState = true;
+		// 	return reward;
+		// }
+		// else
+		// {
+		// 	return 0;
+		// }
 
 		if(mCharacters[index]->blocked)
 		{
@@ -1231,8 +1273,8 @@ getReward(int index, bool verbose)
 			curReward = 0;
 			if(mCurActionTypes[index] == 3)
 			{
-				mIsFoulState = true;
-				// mIsTerminalState = true;
+				// mIsFoulState = true;
+				mIsTerminalState = true;
 				// return -0.01* pow(targetPlaneNormal.norm(),2);
 				curReward = 0;
 				return 0;
@@ -1776,13 +1818,23 @@ isTerminalState()
 	goalPostDistance = (projectedGoalpost-projectedCOM).norm();
 
 
-	if(abs(rootT.translation()[2])>15.0*0.5*1.1 || 
-		rootT.translation()[0]>28.0*0.5*1.1 || 
-		rootT.translation()[0] < -4.0)
+	// if(abs(rootT.translation()[2])>15.0*0.5*1.1 || 
+	// 	rootT.translation()[0]>28.0*0.5*1.1 || 
+	// 	rootT.translation()[0] < -4.0)
+	// {
+	// 	mIsTerminalState = true;
+
+	// }
+
+	Eigen::Vector3d targetPlaneNormal = mObstacles[0] - mCharacters[0]->getSkeleton()->getRootBodyNode()->getCOM();
+	targetPlaneNormal[1] = 0.0;
+
+	if(targetPlaneNormal.norm() > 14.0)
 	{
 		mIsTerminalState = true;
 
 	}
+
 
 	return mIsTerminalState;
 	// return false;
@@ -3163,7 +3215,28 @@ Environment::genObstacleNearGoalpost(double angle)
 	obstaclePosition += distance * Eigen::Vector3d(cos(M_PI/2.0 + angle), 0.0, sin(M_PI/2.0 + angle));
 	obstaclePosition[1] = 0.0;
 
+	Eigen::Vector3d targetPlaneNormal = obstaclePosition - mCharacters[0]->getSkeleton()->getRootBodyNode()->getCOM();
+	targetPlaneNormal[1] = 0.0;
 
+	while(targetPlaneNormal.norm()>12.0)
+	{
+		if(angle == -1)
+			angle = (double) rand()/RAND_MAX * M_PI/1.0;// - M_PI/4.0;
+
+
+
+		// std::cout<<angle<<std::endl;
+		distance = (double) rand()/RAND_MAX * 4.0 + 2.0;
+
+		obstaclePosition = mTargetBallPosition;
+		obstaclePosition += distance * Eigen::Vector3d(cos(M_PI/2.0 + angle), 0.0, sin(M_PI/2.0 + angle));
+		obstaclePosition[1] = 0.0;
+
+		targetPlaneNormal = obstaclePosition - mCharacters[0]->getSkeleton()->getRootBodyNode()->getCOM();
+		targetPlaneNormal[1] = 0.0;
+	}
+
+	// std::cout<<"#######################################"<<std::endl;
 	if(randomPointTrajectoryStart)
 	{
 		obstaclePosition[0] = 7.2;

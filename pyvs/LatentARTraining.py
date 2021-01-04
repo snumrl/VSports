@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 120
+nnCount = 122
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -119,8 +119,8 @@ class RL(object):
 		self.gamma = 0.999
 		self.lb = 0.95
 
-		self.buffer_size = 64*1024
-		self.batch_size = 8*512
+		self.buffer_size = 8*1024
+		self.batch_size = 1*512
 		# self.buffer_size = 2*1024
 		# self.batch_size = 128
 		self.num_action_types = 2
@@ -531,6 +531,11 @@ class RL(object):
 			a_dist_slave = [None]*self.num_agents
 			v_slave = [None]*self.num_agents
 
+
+			for j in range(self.num_slaves):
+				if self.env.isOnFoulReset(j):
+					exit(0)
+
 			if counter%self.typeFreq == 1:
 				# print("--------------------")
 				states_h[0] = np.copy(states)
@@ -922,8 +927,8 @@ class RL(object):
 					# 		continue
 
 					if self.env.isFoulState(j) is True:
-						# embed()
-						# exit(0)
+						embed()
+						exit(0)
 						for i in range(self.num_agents):
 							if teamDic[i] == learningTeam:
 								for h in range(self.num_h):
