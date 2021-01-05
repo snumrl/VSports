@@ -942,7 +942,13 @@ getState(int index)
 	// 	}
 	// }
 
-	state.resize(rootTransform.rows() + reducedSkelVelocity.segment(3,3).rows() + relObstacles.size()*3+ 5 +availableActions.rows());
+
+	// state.resize(3);
+
+/*
+	state.resize(rootTransform.rows() + reducedSkelPosition.rows() + reducedSkelVelocity.rows() + relCurBallPosition.rows() + relObstacles.size()*3
+		+ 5 +availableActions.rows() + relTargetPosition.rows() + relBallToTargetPosition.rows() + goalpostPositions.rows() + 1 + 1 + curActionType.rows()
+		+ curSMState.rows());
 
 	int curIndex = 0;
 	for(int i=0;i<rootTransform.rows();i++)
@@ -950,9 +956,19 @@ getState(int index)
 		state[curIndex] = rootTransform[i];
 		curIndex++;
 	}
-	for(int i=0;i<reducedSkelVelocity.segment(3,3).rows();i++)
+	for(int i=0;i<reducedSkelPosition.rows();i++)
 	{
-		state[curIndex] = reducedSkelVelocity.segment(3,3)[i];
+		state[curIndex] = reducedSkelPosition[i];
+		curIndex++;
+	}
+	for(int i=0;i<reducedSkelVelocity.rows();i++)
+	{
+		state[curIndex] = reducedSkelVelocity[i];
+		curIndex++;
+	}
+	for(int i=0;i<relCurBallPosition.rows();i++)
+	{
+		state[curIndex] = relCurBallPosition[i];
 		curIndex++;
 	}
 	for(int i=0;i<relObstacles.size();i++)
@@ -969,6 +985,52 @@ getState(int index)
 		state[curIndex] = mCharacters[index]->blocked;
 		curIndex++;
 	}
+
+	for(int i=0;i<relTargetPosition.rows();i++)
+	{
+		state[curIndex] = relTargetPosition[i];
+		curIndex++;
+	}
+	for(int i=0;i<relBallToTargetPosition.rows();i++)
+	{
+		state[curIndex] = relBallToTargetPosition[i];
+		curIndex++;
+	}
+	for(int i=0;i<goalpostPositions.rows();i++)
+	{
+		state[curIndex] = goalpostPositions[i];
+		curIndex++;
+	}
+	for(int i=0;i<contacts.rows();i++)
+	{
+		state[curIndex] = contacts[i];
+		curIndex++;
+	}
+
+	state[curIndex] = mCurBallPossessions[index];
+	curIndex++;
+
+	state[curIndex]=mCurCriticalActionTimes[index]/30.0;
+	curIndex++;
+
+	for(int i=0;i<curActionType.rows();i++)
+	{
+		state[curIndex] = curActionType[i];
+		curIndex++;
+	}
+	for(int i=0;i<curSMState.rows();i++)
+	{
+		state[curIndex] = curSMState[i];
+		curIndex++;
+	}
+	// for(int i=0;i<contacts.rows();i++)
+	// {
+	// 	state[curIndex] = contacts[i];
+	// 	curIndex++;
+	// }
+
+
+
 	for(int i=0;i<availableActions.rows();i++)
 	{
 		state[curIndex] = availableActions[i];
@@ -982,10 +1044,11 @@ getState(int index)
 
 
 
+
 	mStates[index] = state;
 	// cout<<"getState end"<<endl;
 	return state;
-
+*/
 
 
 	// std::cout<<" Cur state is "<<bsm[index]->curState<<std::endl;
@@ -999,19 +1062,19 @@ getState(int index)
 	// std::cout<<"goalpostPositions.transpose(): "<<goalpostPositions.transpose()<<std::endl;
 	// std::cout<<"contacts.transpose(): "<<contacts.transpose()<<std::endl;
 
-/*	bool simplePosition = true;
+	bool simplePosition = true;
 
 	if(simplePosition)
 	{
 		state.resize(rootTransform.rows() + reducedSkelPosition.rows() + reducedSkelVelocity.rows() + relCurBallPosition.rows() 
 			+ relTargetPosition.rows() + relBallToTargetPosition.rows() + goalpostPositions.rows() 
-			+ contacts.rows() + 1 + 1 + 3 +curActionType.rows()+curSMState.rows() + relObstacles.size()*3 + 10 +availableActions.rows());
+			+ contacts.rows() + 1 + 1 + 3 +curActionType.rows()+curSMState.rows() + relObstacles.size()*3 + 5 +availableActions.rows());
 	}
 	else
 	{
 		state.resize(rootTransform.rows() + skelPosition.rows() + skelVelocity.rows() + relCurBallPosition.rows() 
 		+ relTargetPosition.rows() + relBallToTargetPosition.rows() + goalpostPositions.rows() 
-		+ contacts.rows() + 1 + 1 + 3 +curActionType.rows()+curSMState.rows() + relObstacles.size()*3 + 10 +availableActions.rows());
+		+ contacts.rows() + 1 + 1 + 3 +curActionType.rows()+curSMState.rows() + relObstacles.size()*3 + 5 +availableActions.rows());
 
 	}
 
@@ -1116,7 +1179,7 @@ getState(int index)
 		curIndex++;
 	}
 
-	for(int i=0;i<10;i++)
+	for(int i=0;i<5;i++)
 	{
 		state[curIndex] = mCharacters[index]->blocked;
 		curIndex++;
@@ -1137,7 +1200,7 @@ getState(int index)
 
 	mStates[index] = state;
 	// cout<<"getState end"<<endl;
-	return state;*/
+	return state;
 }
 
 // Eigen::VectorXd
@@ -1206,17 +1269,17 @@ getReward(int index, bool verbose)
 
 		if(mCharacters[index]->blocked)
 		{
-			mIsTerminalState = true;
-			curReward = 1.0;
-			return 1.0;
+			// mIsTerminalState = true;
+			// curReward = 1.0;
+			// return 1.0;
 
-			// if(mCurActionTypes[index] == 3)
-			// {
-			// 	mIsTerminalState = true;
-			// 	return 1.0;
-			// }
-			// else
-			// 	return 0;
+			if(mCurActionTypes[index] == 3)
+			{
+				mIsTerminalState = true;
+				return 1.0;
+			}
+			else
+				return 0;
 
 
 			if(gotReward)
@@ -1818,22 +1881,22 @@ isTerminalState()
 	goalPostDistance = (projectedGoalpost-projectedCOM).norm();
 
 
-	// if(abs(rootT.translation()[2])>15.0*0.5*1.1 || 
-	// 	rootT.translation()[0]>28.0*0.5*1.1 || 
-	// 	rootT.translation()[0] < -4.0)
-	// {
-	// 	mIsTerminalState = true;
-
-	// }
-
-	Eigen::Vector3d targetPlaneNormal = mObstacles[0] - mCharacters[0]->getSkeleton()->getRootBodyNode()->getCOM();
-	targetPlaneNormal[1] = 0.0;
-
-	if(targetPlaneNormal.norm() > 14.0)
+	if(abs(rootT.translation()[2])>15.0*0.5*1.1 || 
+		rootT.translation()[0]>28.0*0.5*1.1 || 
+		rootT.translation()[0] < -4.0)
 	{
 		mIsTerminalState = true;
 
 	}
+
+	// Eigen::Vector3d targetPlaneNormal = mObstacles[0] - mCharacters[0]->getSkeleton()->getRootBodyNode()->getCOM();
+	// targetPlaneNormal[1] = 0.0;
+
+	// if(targetPlaneNormal.norm() > 14.0)
+	// {
+	// 	mIsTerminalState = true;
+
+	// }
 
 
 	return mIsTerminalState;
@@ -3215,26 +3278,26 @@ Environment::genObstacleNearGoalpost(double angle)
 	obstaclePosition += distance * Eigen::Vector3d(cos(M_PI/2.0 + angle), 0.0, sin(M_PI/2.0 + angle));
 	obstaclePosition[1] = 0.0;
 
-	Eigen::Vector3d targetPlaneNormal = obstaclePosition - mCharacters[0]->getSkeleton()->getRootBodyNode()->getCOM();
-	targetPlaneNormal[1] = 0.0;
+	// Eigen::Vector3d targetPlaneNormal = obstaclePosition - mCharacters[0]->getSkeleton()->getRootBodyNode()->getCOM();
+	// targetPlaneNormal[1] = 0.0;
 
-	while(targetPlaneNormal.norm()>12.0)
-	{
-		if(angle == -1)
-			angle = (double) rand()/RAND_MAX * M_PI/1.0;// - M_PI/4.0;
+	// while(targetPlaneNormal.norm()>12.0)
+	// {
+	// 	if(angle == -1)
+	// 		angle = (double) rand()/RAND_MAX * M_PI/1.0;// - M_PI/4.0;
 
 
 
-		// std::cout<<angle<<std::endl;
-		distance = (double) rand()/RAND_MAX * 4.0 + 2.0;
+	// 	// std::cout<<angle<<std::endl;
+	// 	distance = (double) rand()/RAND_MAX * 4.0 + 2.0;
 
-		obstaclePosition = mTargetBallPosition;
-		obstaclePosition += distance * Eigen::Vector3d(cos(M_PI/2.0 + angle), 0.0, sin(M_PI/2.0 + angle));
-		obstaclePosition[1] = 0.0;
+	// 	obstaclePosition = mTargetBallPosition;
+	// 	obstaclePosition += distance * Eigen::Vector3d(cos(M_PI/2.0 + angle), 0.0, sin(M_PI/2.0 + angle));
+	// 	obstaclePosition[1] = 0.0;
 
-		targetPlaneNormal = obstaclePosition - mCharacters[0]->getSkeleton()->getRootBodyNode()->getCOM();
-		targetPlaneNormal[1] = 0.0;
-	}
+	// 	targetPlaneNormal = obstaclePosition - mCharacters[0]->getSkeleton()->getRootBodyNode()->getCOM();
+	// 	targetPlaneNormal[1] = 0.0;
+	// }
 
 	// std::cout<<"#######################################"<<std::endl;
 	if(randomPointTrajectoryStart)
