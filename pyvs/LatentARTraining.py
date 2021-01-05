@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 5
+nnCount = 6
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -611,10 +611,10 @@ class RL(object):
 					# embed()
 					# exit(0)
 					# print("???")
-					# embededState = states#+action_embeding_ones
+					embededState = states+action_embeding_ones
 
 					# states_h[h] = np.concatenate((embededState, h_slave), axis=2)
-					states_h[h] =np.copy(states)
+					states_h[h] = embededState
 				# else:
 				# 	# print("value h : {}".format(h))
 				# 	states_h[h] = np.concatenate((states, np.array(list(actions_h[h-1]))), axis=2)
