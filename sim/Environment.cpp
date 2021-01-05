@@ -1236,7 +1236,7 @@ getReward(int index, bool verbose)
 
 	bool fastTermination = true;
 	// activates when fastTermination is on
-	bool fastViewTermination = false;
+	bool fastViewTermination = true;
 
 	bool isDribble = false;
 	bool isDribbleAndShoot = true;
@@ -1273,13 +1273,13 @@ getReward(int index, bool verbose)
 			// curReward = 1.0;
 			// return 1.0;
 
-			if(mCurActionTypes[index] == 3)
-			{
-				mIsTerminalState = true;
-				return 1.0;
-			}
-			else
-				return 0;
+			// if(mCurActionTypes[index] == 3)
+			// {
+			// 	mIsTerminalState = true;
+			// 	return 1.0;
+			// }
+			// else
+			// 	return 0;
 
 
 			if(gotReward)
@@ -1336,13 +1336,16 @@ getReward(int index, bool verbose)
 			curReward = 0;
 			if(mCurActionTypes[index] == 3)
 			{
-				// mIsFoulState = true;
-				mIsTerminalState = true;
-				// return -0.01* pow(targetPlaneNormal.norm(),2);
-				curReward = 0;
-				return 0;
-				// return -0.1;
-
+				if(!mCurBallPossessions[index])
+				{
+				
+					// mIsFoulState = true;
+					mIsTerminalState = true;
+					// return -0.01* pow(targetPlaneNormal.norm(),2);
+					curReward = 0;
+					return 0;
+					// return -0.1;
+				}
 
 				// return - 0.1*targetPlaneNormal.norm();
 				// return 0.1*exp(-(targetPlaneNormal.norm()));

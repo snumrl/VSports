@@ -755,13 +755,17 @@ class RL(object):
 							if np.any(np.isnan(states[i][j])) or np.any(np.isnan(envActions[i][j])):
 								nan_occur[j] = True
 
-							if accRewards[i][j]>1.0 or accRewards[i][j] < 0.0:
-								if not onFoulResetProcess[j]:
-									embed()
-									exit(0)
+							# if accRewards[i][j]>1.0 or accRewards[i][j] < 0.0:
+							# 	if not onFoulResetProcess[j]:
+							# 		embed()
+							# 		exit(0)
 							if followTutorial[j] is False:
 								if not onFoulResetProcess[j]:
 									self.sum_return += rewards[i][j]
+
+							if accRewards[i][j] > 0.0 and not self.env.isTerminalState(j):
+								embed()
+								exit(0)
 
 			for j in range(self.num_slaves):
 				if not self.env.isOnResetProcess(j):
@@ -942,7 +946,7 @@ class RL(object):
 											self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
 											accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 											self.num_tuple[h][self.indexToNetDic[i]] += 1
-											if accRewards[i][j] >= 1.0 and not onFoulResetProcess[j]:
+											if accRewards[i][j] > 0.0 and not onFoulResetProcess[j]:
 												self.num_correct_throwing += 1
 										else:
 											exit(0)
@@ -1068,7 +1072,7 @@ class RL(object):
 												self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
 												accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 												self.num_tuple[h][self.indexToNetDic[i]] += 1
-											if accRewards[i][j] >= 0.1:
+											if accRewards[i][j] > 0.0:
 												self.num_correct_throwing += 1
 										else:
 											exit(0)
