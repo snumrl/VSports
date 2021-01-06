@@ -1,103 +1,0 @@
-Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
-readNormal/ dataLen:14
-readNormal/ dataLen:117
-Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
-readNormal/ dataLen:14
-readNormal/ dataLen:117
-Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
-readNormal/ dataLen:14
-readNormal/ dataLen:117
-Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
-readNormal/ dataLen:14
-readNormal/ dataLen:117
-Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
-readNormal/ dataLen:14
-readNormal/ dataLen:117
-Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
-readNormal/ dataLen:14
-readNormal/ dataLen:117
-Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
-readNormal/ dataLen:14
-readNormal/ dataLen:117
-Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
-readNormal/ dataLen:14
-readNormal/ dataLen:117
-Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
-readNormal/ dataLen:14
-readNormal/ dataLen:117
-Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
-readNormal/ dataLen:14
-readNormal/ dataLen:117
-Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
-readNormal/ dataLen:14
-readNormal/ dataLen:117
-Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
-readNormal/ dataLen:14
-readNormal/ dataLen:117
-Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
-readNormal/ dataLen:14
-readNormal/ dataLen:117
-Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
-readNormal/ dataLen:14
-readNormal/ dataLen:117
-Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
-readNormal/ dataLen:14
-readNormal/ dataLen:117
-Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
-readNormal/ dataLen:14
-readNormal/ dataLen:117
-Writing LinkLength
-BVH Manager Initialize SUCCESS
-MotionRepresentation initialize SUCCESS
-start? 
-start of rnn2/ RTMG
-import ok
-MotionGeneratorBatch / done
-Uploaded xData, yData:
-/home/minseok/Project/VSports/extern/ICA/motions/basket_18/data/0_xData.dat
- /home/minseok/Project/VSports/extern/ICA/motions/basket_18/data/0_yData.dat
-Start generating guiding trajectory
-/home/minseok/Project/VSports/extern/ICA/Utils/Functions.cpp: readMetaData start!
-/home/minseok/Project/VSports/extern/ICA/Utils/Functions.cpp: readMetaData start!
-dataSize: 314340
-dataLen: 117
-* readData done
-314340
-relThrowedBallPosition.transpose() :  -4.79293 -0.241635
-goalPostToThrowedPosition.transpose() :  4.79293 0.241635
-projectedGoalpostPosition.transpose() : 12.55     0
-identityT.translation() :  17.3429 0.241635
-relThrowedBallPosition.transpose() : -3.90521 -1.32724
-goalPostToThrowedPosition.transpose() : 3.90521 1.32724
-projectedGoalpostPosition.transpose() : 12.55     0
-identityT.translation() : 16.4552 1.32724
-RNNConfig instance is created
-/home/minseok/Project/VSports/extern/ICA/rnn2/rnn/../../motions/basket_18/data/xNormal.dat
-is valid End : 1
-/home/minseok/Project/VSports/extern/ICA/rnn2/rnn/../../motions/basket_18/data/yNormal.dat
-is valid End : 1
-rnn2.rnn.motiongenerator
-policy/rnn/RNNManager.py/randomTarget: use default target generation
-policy/rnn/RNNManager.py/randomTarget: use default target generation
-policy/rnn/RNNManager.py/randomTarget: use default target generation
-policy/rnn/RNNManager.py/randomTarget: use default target generation
-policy/rnn/RNNManager.py/randomTarget: use default target generation
-policy/rnn/RNNManager.py/randomTarget: use default target generation
-policy/rnn/RNNManager.py/randomTarget: use default target generation
-policy/rnn/RNNManager.py/randomTarget: use default target generation
-policy/rnn/RNNManager.py/randomTarget: use default target generation
-policy/rnn/RNNManager.py/randomTarget: use default target generation
-policy/rnn/RNNManager.py/randomTarget: use default target generation
-policy/rnn/RNNManager.py/randomTarget: use default target generation
-policy/rnn/RNNManager.py/randomTarget: use default target generation
-policy/rnn/RNNManager.py/randomTarget: use default target generation
-policy/rnn/RNNManager.py/randomTarget: use default target generation
-policy/rnn/RNNManager.py/randomTarget: use default target generation
-Loading rnn network from /home/minseok/Project/VSports/extern/ICA/rnn2/rnn/../../motions/basket_18/train/network
-load nn vae_nn/vae_action_decoder_0.pt
-load nn vae_nn/vae_action_decoder_3.pt
-load nn vae_nn/vae_action_encoder.pt
-load nn ../nn_lar_h/nn107/current_0_0.pt
-load nn ../nn_lar_h/nn107/current_0_1.pt
-num states: 62, num actions: 13
-SIM : 0SIM : 144SIM : 315SIM : 500SIM : 737SIM : 1056SIM : 1373SIM : 1690SIM : 2026SIM : 2616SIM : 3018SIM : 3738SIM : 4121SIM : 4628SIM : 5284SIM : 5972SIM : 6618SIM : 7417SIM : 8286SIM : 8923SIM : 10106SIM : 10914SIM : 11843SIM : 12978SIM : 14006SIM : 15176SIM : 16277SIM : 17417SIM : 18670SIM : 19379SIM : 20124SIM : 20950SIM : 22090SIM : 22877SIM : 24087SIM : 25287SIM : 26205SIM : 27365SIM : 28254SIM : 29139SIM : 29914SIM : 31003SIM : 31981SIM : 32794SIM : 33591SIM : 34692SIM : 35431SIM : 36106SIM : 36774SIM : 37211SIM : 37757SIM : 38386SIM : 38963SIM : 39892SIM : 40520SIM : 41542SIM : 42310SIM : 42987SIM : 43756SIM : 44387SIM : 44899SIM : 45538SIM : 46238SIM : 46961SIM : 47558SIM : 48105SIM : 48722SIM : 49521SIM : 50231SIM : 50868SIM : 51696SIM : 52272SIM : 53121SIM : 53701SIM : 54457SIM : 55044SIM : 55869SIM : 56366SIM : 57093SIM : 57884SIM : 58754SIM : 59686SIM : 60214SIM : 60610SIM : 61440SIM : 62108SIM : 62507SIM : 63458SIM : 64279SIM : 65181SIM : 65721
