@@ -1336,16 +1336,21 @@ getReward(int index, bool verbose)
 			curReward = 0;
 			if(mCurActionTypes[index] == 3)
 			{
-				if(!mCurBallPossessions[index])
-				{
+
+				mIsTerminalState = true;
+				curReward = 0;
+				return 0;
+
+				// if(!mCurBallPossessions[index])
+				// {
 				
-					// mIsFoulState = true;
-					mIsTerminalState = true;
-					// return -0.01* pow(targetPlaneNormal.norm(),2);
-					curReward = 0;
-					return 0;
-					// return -0.1;
-				}
+				// 	// mIsFoulState = true;
+				// 	mIsTerminalState = true;
+				// 	// return -0.01* pow(targetPlaneNormal.norm(),2);
+				// 	curReward = 0;
+				// 	return 0;
+				// 	// return -0.1;
+				// }
 
 				// return - 0.1*targetPlaneNormal.norm();
 				// return 0.1*exp(-(targetPlaneNormal.norm()));
@@ -2456,6 +2461,10 @@ computeCriticalActionTimes()
 	    {
 	    	if(isCriticalAction(mCurActionTypes[index]))
 	    	{
+	    		if(mCurCriticalActionTimes[index] > 20)
+	    		{
+	    			interp = 0.5;
+	    		}
 	    		mCurCriticalActionTimes[index]--;
 	    		double curActionGlobalBallPosition = mActions[index][4+NUM_ACTION_TYPE+3]/100.0;
 	    		Eigen::Vector3d curActionGlobalBallVelocity = rootT.linear() * ( mActions[index].segment(4+NUM_ACTION_TYPE,3)/100.0);
@@ -3281,26 +3290,26 @@ Environment::genObstacleNearGoalpost(double angle)
 	obstaclePosition += distance * Eigen::Vector3d(cos(M_PI/2.0 + angle), 0.0, sin(M_PI/2.0 + angle));
 	obstaclePosition[1] = 0.0;
 
-	// Eigen::Vector3d targetPlaneNormal = obstaclePosition - mCharacters[0]->getSkeleton()->getRootBodyNode()->getCOM();
-	// targetPlaneNormal[1] = 0.0;
+	Eigen::Vector3d targetPlaneNormal = obstaclePosition - mCharacters[0]->getSkeleton()->getRootBodyNode()->getCOM();
+	targetPlaneNormal[1] = 0.0;
 
-	// while(targetPlaneNormal.norm()>12.0)
-	// {
-	// 	if(angle == -1)
-	// 		angle = (double) rand()/RAND_MAX * M_PI/1.0;// - M_PI/4.0;
+	while(targetPlaneNormal.norm()>10.0)
+	{
+		if(angle == -1)
+			angle = (double) rand()/RAND_MAX * M_PI/1.0;// - M_PI/4.0;
 
 
 
-	// 	// std::cout<<angle<<std::endl;
-	// 	distance = (double) rand()/RAND_MAX * 4.0 + 2.0;
+		// std::cout<<angle<<std::endl;
+		distance = (double) rand()/RAND_MAX * 4.0 + 2.0;
 
-	// 	obstaclePosition = mTargetBallPosition;
-	// 	obstaclePosition += distance * Eigen::Vector3d(cos(M_PI/2.0 + angle), 0.0, sin(M_PI/2.0 + angle));
-	// 	obstaclePosition[1] = 0.0;
+		obstaclePosition = mTargetBallPosition;
+		obstaclePosition += distance * Eigen::Vector3d(cos(M_PI/2.0 + angle), 0.0, sin(M_PI/2.0 + angle));
+		obstaclePosition[1] = 0.0;
 
-	// 	targetPlaneNormal = obstaclePosition - mCharacters[0]->getSkeleton()->getRootBodyNode()->getCOM();
-	// 	targetPlaneNormal[1] = 0.0;
-	// }
+		targetPlaneNormal = obstaclePosition - mCharacters[0]->getSkeleton()->getRootBodyNode()->getCOM();
+		targetPlaneNormal[1] = 0.0;
+	}
 
 	// std::cout<<"#######################################"<<std::endl;
 	if(randomPointTrajectoryStart)
