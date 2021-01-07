@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 7
+nnCount = 13
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -321,7 +321,8 @@ class RL(object):
 		# self.target_model_0[self.indexToNetDic[index]].load(nndir+'/'+path+'_'+str(self.indexToNetDic[index%self.num_agents])+'_0.pt')
 		# self.target_model_1[self.indexToNetDic[index]].load(nndir+'/'+path+'_'+str(self.indexToNetDic[index%self.num_agents])+'_1.pt')
 		# self.target_model_2[self.indexToNetDic[index]].load(nndir+'/'+path+'_'+str(self.indexToNetDic[index%self.num_agents])+'_2.pt')
-		self.rms.load(nndir+'/rms.ms')
+		if os.path.isfile(nndir+'/rms.ms'):
+			self.rms.load(nndir+'/rms.ms')
 
 	def saveModels(self):
 		for i in range(self.num_policy):
@@ -688,39 +689,25 @@ class RL(object):
 			decodeShape[2] = 9
 			actionsDecoded =np.empty(decodeShape,dtype=np.float32)
 
-			# for i in range(len(actionsDecodePart)):
-			# 	for j in range(len(actionsDecodePart[i])):
-			# 		# curActionType = getActionTypeFromVector(actionTypePart[i][j])
-			# 		# embed()
-			# 		# exit(0)
-			# 		curActionType = int(actions_0_scalar[i][j][0])
-			# 		# if curActionType != actions_0_scalar[i][j]:
-			# 		# 	embed()
-			# 		# 	exit(0)
-			# 		if not useEmbeding:
-			# 			actionsDecoded[i][j] = self.actionDecoders[curActionType].decode(Tensor(actionsDecodePart[i][j])).cpu().detach().numpy()
+			for i in range(len(actionsDecodePart)):
+				for j in range(len(actionsDecodePart[i])):
+					# curActionType = getActionTypeFromVector(actionTypePart[i][j])
+					# embed()
+					# exit(0)
+					curActionType = int(actions_0_scalar[i][j][0])
+					# if curActionType != actions_0_scalar[i][j]:
+					# 	embed()
+					# 	exit(0)
+					actionsDecoded[i][j] = self.actionDecoders[curActionType].decode(Tensor(actionsDecodePart[i][j])).cpu().detach().numpy()
 
-			# embed()
-			# exit(0)
-			# if useEmbeding:
-			
-			actionsDecoded = self.actionDecoders[0].decode(Tensor(actionsDecodePart)).cpu().detach().numpy()
+			# actionsDecoded = self.actionDecoders[0].decode(Tensor(actionsDecodePart)).cpu().detach().numpy()
 
-			# print("time :", time.time() - start)
 
 			envActions = actionsDecoded
-			# envActions = np.concatenate((actionsDecoded, actionsRemainPart), axis=2)
 
 			for i in range(self.num_agents):
 				for j in range(self.num_slaves):
-					# if np.any(np.isnan(actions[i*self.num_agents+j])):
-						# print(states_1[i*self.num_agents+j])
-						# print(actions_1[i*self.num_agents+j])
-						# print(actions_2[i*self.num_agents+j])
-						# print(actions[i*self.num_agents+j])
-						# print("ShootArTraining nan action")
-					# print("In python : ", end="")
-					# print(actions[i][j])
+
 					self.env.setAction(envActions[i][j], j, i);
 
 			# exit(0)

@@ -8,9 +8,13 @@ from utils.dataLoader import loadData
 from IPython import embed
 
 import os
+from os.path import join, exists
+from os import mkdir
+
 import sys
 import random
 import numpy as np
+from pathlib import Path
 
 from VAE import VAE, VAEEncoder, VAEDecoder, loss_function
 
@@ -24,8 +28,11 @@ device = torch.device("cuda" if use_cuda else "cpu")
 model = VAE().to(device)
 optimizer = optim.Adam(model.parameters(), lr=5e-3)
 # print("asdf")
+nnCount = 5
+vaeDir = "vae_nn_sep"
 
-
+if not exists(vaeDir):
+    mkdir(vaeDir)
 
 def getActionTypeFromVector(actionTypeVector):
 	maxValue = -100
@@ -158,8 +165,8 @@ class ComprehensiveControlVectorTraining():
 		                loss.item() / len(data)))
 			print('===> Epoch: {} Arverage loss: {:.4f}'.format(1, train_loss / 12800))
 		# self.VAEDecoders[0].save("vae_nn/vae_action_decoder_"+str(actionType)+".pt")	
-		self.VAEDecoders[actionType].save("vae_nn1/vae_action_decoder_"+str(actionType)+".pt")	
-		self.VAEEncoder.save("vae_nn1/vae_action_encoder.pt")	
+		self.VAEDecoders[actionType].save(vaeDir + "/vae_action_decoder_"+str(actionType)+".pt")	
+		self.VAEEncoder.save(vaeDir + "/vae_action_encoder.pt")	
 
 	# def trainTargetCV(self,actionType1, actionType2):
 	# 	print('Train control vector of actiontype {}, Size : {}'.format(actionType1, len(self.controlVectorListSplited[actionType1])))
@@ -243,7 +250,7 @@ def trainControlVector(path, actionType):
 	                loss.item() / len(data)))
 
 		print('===> Epoch: {} Arverage loss: {:.4f}'.format(1, train_loss / len(control_vector_list)))
-	model.save("vae_nn/vae_0.pt")	
+	model.save(vaeDir + "/vae_0.pt")	
 
 # def test(path):
 # 	model.eval()

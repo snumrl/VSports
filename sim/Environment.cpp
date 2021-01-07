@@ -1291,7 +1291,7 @@ getReward(int index, bool verbose)
 
 			if(!mCurBallPossessions[index])
 			{
-				reward += 0.1;
+				reward += 1.0;
 				if(fastViewTermination)
 					mIsTerminalState = true;
 				gotReward = true;
@@ -1307,6 +1307,8 @@ getReward(int index, bool verbose)
 				// std::cout<<"v*v+2*g*h "<<v*v+2*g*h<<std::endl;
 				if(v*v+2*g*h<0)
 				{
+					reward = 1.0;
+					curReward = reward;
 					return reward;
 					// return reward;
 				}
@@ -1323,6 +1325,8 @@ getReward(int index, bool verbose)
 				// else
 				// 	reward = 0.0 * exp(0.3 * -pow((targetPositionOnThePlane - ballPositionOnThePlane).norm(),2));
 
+				reward = 1.0;
+				curReward = reward;
 				return reward;
 			}
 			else
@@ -1337,20 +1341,20 @@ getReward(int index, bool verbose)
 			if(mCurActionTypes[index] == 3)
 			{
 
-				mIsTerminalState = true;
-				curReward = 0;
-				return 0;
+				// mIsTerminalState = true;
+				// curReward = 0;
+				// return 0;
 
-				// if(!mCurBallPossessions[index])
-				// {
+				if(!mCurBallPossessions[index])
+				{
 				
-				// 	// mIsFoulState = true;
-				// 	mIsTerminalState = true;
-				// 	// return -0.01* pow(targetPlaneNormal.norm(),2);
-				// 	curReward = 0;
-				// 	return 0;
-				// 	// return -0.1;
-				// }
+					// mIsFoulState = true;
+					mIsTerminalState = true;
+					// return -0.01* pow(targetPlaneNormal.norm(),2);
+					curReward = 0;
+					return 0;
+					// return -0.1;
+				}
 
 				// return - 0.1*targetPlaneNormal.norm();
 				// return 0.1*exp(-(targetPlaneNormal.norm()));
