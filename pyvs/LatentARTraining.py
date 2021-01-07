@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 13
+nnCount = 14
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -227,7 +227,7 @@ class RL(object):
 
 
 
-		self.default_learning_rate = 1E-4
+		self.default_learning_rate = 2E-4
 		self.default_clip_ratio = 0.2
 		self.learning_rate = self.default_learning_rate
 		self.clip_ratio = self.default_clip_ratio
@@ -1488,6 +1488,8 @@ class RL(object):
 			for h in range(self.num_h):
 				for param_group in self.optimizer[h][i].param_groups:
 					param_group['lr'] = self.learning_rate
+					# embed()
+					# exit(0)
 					# if h == 0:
 					# 	param_group['lr'] =  0.1*self.learning_rate
 

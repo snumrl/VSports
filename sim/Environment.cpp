@@ -1307,7 +1307,6 @@ getReward(int index, bool verbose)
 				// std::cout<<"v*v+2*g*h "<<v*v+2*g*h<<std::endl;
 				if(v*v+2*g*h<0)
 				{
-					reward = 1.0;
 					curReward = reward;
 					return reward;
 					// return reward;
@@ -1321,11 +1320,10 @@ getReward(int index, bool verbose)
 				targetPositionOnThePlane[1] = 0.0;
 
 				// if(!mCharacters[index]->blocked)
-					reward += exp(0.3 * -pow((targetPositionOnThePlane - ballPositionOnThePlane).norm(),2));
+					reward += 2.0*exp(0.3 * -pow((targetPositionOnThePlane - ballPositionOnThePlane).norm(),2));
 				// else
 				// 	reward = 0.0 * exp(0.3 * -pow((targetPositionOnThePlane - ballPositionOnThePlane).norm(),2));
 
-				reward = 1.0;
 				curReward = reward;
 				return reward;
 			}
