@@ -72,6 +72,8 @@ public:
 	int getTypeFreq();
 	void setToFoulState(int id);
 	bool isTimeOut(int id);
+	int getSavedFrameDiff(int id);
+
 	// Normalizer* mNormalizer;
 private:
 	std::vector<Environment*> mSlaves;

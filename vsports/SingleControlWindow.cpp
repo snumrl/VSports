@@ -1401,7 +1401,7 @@ getActionFromNN(int index)
 	// mActionType[_curActionType] = 1.0;
 
 
-	if(mEnv->curFrame%mEnv->goBackFrame == 0)
+	if(mEnv->curFrame%mEnv->typeFreq == 0)
 		mActionType = toOneHotVectorWithConstraint(index, mActionType);
 	else
 	{

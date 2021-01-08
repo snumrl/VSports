@@ -589,7 +589,7 @@ int
 EnvironmentPython::
 getTypeFreq()
 {
-	return mSlaves[0]->goBackFrame;
+	return mSlaves[0]->typeFreq;
 }
 
 
@@ -598,6 +598,13 @@ EnvironmentPython::
 isTimeOut(int id)
 {
 	return mSlaves[id]->isTimeOut();
+}
+
+int
+EnvironmentPython::
+getSavedFrameDiff(int id)
+{
+	return mSlaves[id]->curFrame - mSlaves[id]->savedFrame;
 }
 
 
@@ -648,6 +655,7 @@ BOOST_PYTHON_MODULE(pyvs)
 		.def("getResetDuration",&EnvironmentPython::getResetDuration)
 		.def("getTypeFreq",&EnvironmentPython::getTypeFreq)
 		.def("isTimeOut",&EnvironmentPython::isTimeOut)
+		.def("getSavedFrameDiff",&EnvironmentPython::getSavedFrameDiff)
 		// .def("isActionTypeChangingFrame",&EnvironmentPython::isActionTypeChangingFrame)
 		// .def("getNumBallTouch",&EnvironmentPython::getNumBallTouch);
 		// .def("setHindsightGoal",&EnvironmentPython::setHindsightGoal)

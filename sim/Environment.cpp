@@ -41,7 +41,7 @@ Environment(int control_Hz, int simulation_Hz, int numChars, std::string bvh_pat
 :mControlHz(control_Hz), mSimulationHz(simulation_Hz), mNumChars(numChars), mWorld(std::make_shared<dart::simulation::World>()),
 mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0), endTime(15),
 criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), violatedFrames(0),curTrajectoryFrame(0),
-randomPointTrajectoryStart(false), resetDuration(10), goBackFrame(10), savedFrame(0), foulResetCount(0), curReward(0)
+randomPointTrajectoryStart(false), resetDuration(10), typeFreq(10), savedFrame(0), foulResetCount(0), curReward(0)
 {
 	std::cout<<"Envionment Generation --- ";
 	srand((unsigned int)time(0));
@@ -1777,7 +1777,7 @@ setActionType(int index, int actionType, bool isNew)
 
 	int curActionType = actionType;
 
-	if(curFrame%goBackFrame == 0)
+	if(curFrame%typeFreq == 0)
 	{
 		// std::cout<<"Saved frame : "<<savedFrame<<std::endl;
 		// std::cout<<"curFrame frame : "<<curFrame<<std::endl;
@@ -1788,7 +1788,7 @@ setActionType(int index, int actionType, bool isNew)
 		}
 	}
 
-	if(curFrame%goBackFrame != 0)
+	if(curFrame%typeFreq != 0)
 	{
 		curActionType = mPrevActionTypes[index];
 	}
@@ -1810,7 +1810,7 @@ setActionType(int index, int actionType, bool isNew)
 	if(actionType != 3)
 	 	curActionType = 0;
 
-	if(curFrame <=resetDuration+goBackFrame-1)
+	if(curFrame <=resetDuration+typeFreq-1)
 	{
 		curActionType =0;
 	}
@@ -2034,7 +2034,7 @@ foulReset()
 	mIsTerminalState = false;
 	mIsFoulState = false;
 	goBackEnvironment();
-	foulResetCount = goBackFrame;
+	foulResetCount = typeFreq;
 	// slaveReset();
 }
 
@@ -3030,25 +3030,21 @@ void
 Environment::
 saveEnvironment()
 {
-	// return;
 	//Initial save
 	if(curFrame == savedFrame)
 	{
 		// std::cout<<"BatchIndex : "<<mBatchIndex<<" Should not be saved"<<std::endl;
 		return;
 	}
-	if(curFrame == goBackFrame+1)
-	{
-		// std::cout<<"BatchIndex : "<<mBatchIndex<<" Saved"<<std::endl;
-		mPrevEnvSituation->saveEnvironment(this);
-		savedFrame = curFrame;
-	}
 
-	else if(curFrame>1 && curFrame%goBackFrame == 1)
+	if(curFrame>1 && curFrame%typeFreq == 1)
 	{
-		// std::cout<<"BatchIndex : "<<mBatchIndex<<" Saved"<<std::endl;
-		mPrevEnvSituation->saveEnvironment(this);
-		savedFrame = curFrame;
+		if(mCurActionTypes[0] == 0)
+		{
+			mPrevEnvSituation->saveEnvironment(this);
+			savedFrame = curFrame;
+		}
+
 	}
 }
 

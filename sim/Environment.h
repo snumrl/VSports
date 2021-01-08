@@ -461,7 +461,7 @@ public:
 	int curTrajectoryFrame;
 	int resetDuration;
 
-	int goBackFrame;
+	int typeFreq;
 
 	double curReward;
 	bool isTimeOut();
