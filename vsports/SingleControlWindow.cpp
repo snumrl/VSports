@@ -611,6 +611,8 @@ step()
 	// time_check_start();
 
 	mEnv->getState(0);
+	mEnv->saveEnvironment();
+
 	// std::cout<<"Root transform : "<<mEnv->mStates[0].segment(0,4).transpose()<<std::endl;
 
 	if(mEnv->resetCount<=0)

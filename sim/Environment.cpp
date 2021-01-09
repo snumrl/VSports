@@ -438,7 +438,6 @@ stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContact
 		// std::cout<<mBatchIndex<<": "<<curFrame<<", "<<resetCount<<std::endl;
 
 
-	saveEnvironment();
 	mCharacters[0]->prevSkelPositions = mCharacters[0]->getSkeleton()->getPositions();
 	mCharacters[0]->prevKeyJointPositions = mStates[0].segment(mCharacters[0]->getSkeleton()->getNumDofs(),6*3);
 	mCharacters[0]->prevRootT = getRootT(0);
@@ -701,6 +700,7 @@ getState(int index)
 
 	std::vector<double> _ICAPosition;
 	Motion::MotionSegment* ms = mMgb->motionGenerators[0]->mMotionSegments[mBatchIndex];
+	// std::cout<<__func__<<std::endl;
     MotionRepresentation::getData(ms, _ICAPosition, ms->mPoses.size()-1);
 	Eigen::VectorXd ICAPosition = Utils::toEigenVec(_ICAPosition);
 
@@ -716,8 +716,8 @@ getState(int index)
 		contacts[3] = 1.0;
 	}
 
-	Eigen::Vector4d rootTransform = ICAPosition.segment(4,4);
-
+	Eigen::Vector4d rootTransform = ICAPosition.segment(8,4);
+ 
 	// Motion::Root root = ms->getLastPose()->getRoot();
 
 	// Eigen::Isometry3d baseToRoot = ICA::dart::getBaseToRootMatrix(root);

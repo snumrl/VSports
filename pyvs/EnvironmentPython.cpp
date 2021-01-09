@@ -78,7 +78,7 @@ EnvironmentPython::
 slaveReset(int id)
 {
 	mSlaves[id]->slaveReset();
-	mMotionGeneratorBatch->setCurrentDartPosition(mSlaves[id]->mCharacters[0]->getSkeleton()->getPositions(), id);
+	// mMotionGeneratorBatch->setCurrentDartPosition(mSlaves[id]->mCharacters[0]->getSkeleton()->getPositions(), id);
 }
 
 void
@@ -86,7 +86,7 @@ EnvironmentPython::
 foulReset(int id)
 {
 	mSlaves[id]->foulReset();
-	mMotionGeneratorBatch->setCurrentDartPosition(mSlaves[id]->mCharacters[0]->getSkeleton()->getPositions(), id);
+	// mMotionGeneratorBatch->setCurrentDartPosition(mSlaves[id]->mCharacters[0]->getSkeleton()->getPositions(), id);
 }
 int
 EnvironmentPython::
@@ -391,6 +391,7 @@ stepsAtOnce()
 
 	int resetDuration = mSlaves[0]->resetDuration;
 
+
 	// std::cout<<"steps at once"<<std::endl;
 	// time_check_start();
 	for(int id=0;id<mNumSlaves;++id)
@@ -449,6 +450,8 @@ stepsAtOnce()
 	}
 	// std::cout<<"2222"<<std::endl;
 
+	for(int id=0;id<mNumSlaves;++id)
+		mSlaves[id]->saveEnvironment();
 	std::vector<std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool>>
 	nextPoseAndContactsWithBatch = mMotionGeneratorBatch->generateNextPoseAndContactsWithBatch(concatControlVector);
 	// time_check_end();
