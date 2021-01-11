@@ -41,7 +41,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 15
+nnCount = 19
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -158,10 +158,10 @@ class RL(object):
 		self.actionEncoder = VAEEncoder().to(device)
 		# for i in range(self.num_action_types):
 
-		self.actionDecoders[0].load("vae_nn/vae_action_decoder_"+str(0)+".pt")
-		self.actionDecoders[1].load("vae_nn/vae_action_decoder_"+str(3)+".pt")
+		self.actionDecoders[0].load("vae_nn_sep/vae_action_decoder_"+str(0)+".pt")
+		self.actionDecoders[1].load("vae_nn_sep/vae_action_decoder_"+str(3)+".pt")
 
-		self.actionEncoder.load("vae_nn/vae_action_encoder.pt")
+		self.actionEncoder.load("vae_nn_sep/vae_action_encoder.pt")
 
 		self.rms = RunningMeanStd(self.num_state-2)
 
@@ -689,18 +689,18 @@ class RL(object):
 			decodeShape[2] = 9
 			actionsDecoded =np.empty(decodeShape,dtype=np.float32)
 
-			# for i in range(len(actionsDecodePart)):
-			# 	for j in range(len(actionsDecodePart[i])):
-			# 		# curActionType = getActionTypeFromVector(actionTypePart[i][j])
-			# 		# embed()
-			# 		# exit(0)
-			# 		curActionType = int(actions_0_scalar[i][j][0])
-			# 		# if curActionType != actions_0_scalar[i][j]:
-			# 		# 	embed()
-			# 		# 	exit(0)
-			# 		actionsDecoded[i][j] = self.actionDecoders[curActionType].decode(Tensor(actionsDecodePart[i][j])).cpu().detach().numpy()
+			for i in range(len(actionsDecodePart)):
+				for j in range(len(actionsDecodePart[i])):
+					# curActionType = getActionTypeFromVector(actionTypePart[i][j])
+					# embed()
+					# exit(0)
+					curActionType = int(actions_0_scalar[i][j][0])
+					# if curActionType != actions_0_scalar[i][j]:
+					# 	embed()
+					# 	exit(0)
+					actionsDecoded[i][j] = self.actionDecoders[curActionType].decode(Tensor(actionsDecodePart[i][j])).cpu().detach().numpy()
 
-			actionsDecoded = self.actionDecoders[0].decode(Tensor(actionsDecodePart)).cpu().detach().numpy()
+			# actionsDecoded = self.actionDecoders[0].decode(Tensor(actionsDecodePart)).cpu().detach().numpy()
 
 
 			envActions = actionsDecoded
@@ -801,8 +801,8 @@ class RL(object):
 												TDError = self.episodes[h][j][i].getLastData().value -\
 												 (self.episodes[h][j][i].getLastData().r + self.gamma*accRewards[i][j])
 											TDError = abs(TDError)
-											TDError = pow(TDError, 2.0)
-											TDError = min(TDError, 0.1)
+											TDError = 10.0*pow(TDError, 2.0)
+											TDError = min(TDError, 0.8)
 											if random.random()<TDError : 
 												self.env.setToFoulState(j)
 												onFoulResetProcess[j] = True;
@@ -884,8 +884,8 @@ class RL(object):
 												TDError = self.episodes[h][j][i].getLastData().value -\
 												 (self.episodes[h][j][i].getLastData().r + self.gamma*rewards[i][j])
 											TDError = abs(TDError)
-											TDError = pow(TDError, 2.0)
-											TDError = min(TDError, 0.1)
+											TDError = 10.0*pow(TDError, 2.0)
+											TDError = min(TDError, 0.8)
 											if random.random()<TDError :
 												self.env.setToFoulState(j)
 												onFoulResetProcess[j] = True;

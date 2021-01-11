@@ -41,7 +41,7 @@ Environment(int control_Hz, int simulation_Hz, int numChars, std::string bvh_pat
 :mControlHz(control_Hz), mSimulationHz(simulation_Hz), mNumChars(numChars), mWorld(std::make_shared<dart::simulation::World>()),
 mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0), endTime(15),
 criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), violatedFrames(0),curTrajectoryFrame(0),
-randomPointTrajectoryStart(false), resetDuration(10), typeFreq(10), savedFrame(0), foulResetCount(0), curReward(0)
+randomPointTrajectoryStart(false), resetDuration(30), typeFreq(10), savedFrame(0), foulResetCount(0), curReward(0)
 {
 	std::cout<<"Envionment Generation --- ";
 	srand((unsigned int)time(0));
@@ -464,10 +464,10 @@ stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContact
 		mCurBallPossessions[index] = std::get<2>(nextPoseAndContacts);
 		if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
 		{
-			// if(mCurCriticalActionTimes[index] >=0)
-			// {
-			// 	mCurBallPossessions[index] = true;
-			// }
+			if(mCurCriticalActionTimes[index] >=15)
+			{
+				mCurBallPossessions[index] = true;
+			}
 
 			if(mCurCriticalActionTimes[index] < 0)
 			{
@@ -716,7 +716,7 @@ getState(int index)
 		contacts[3] = 1.0;
 	}
 
-	Eigen::Vector4d rootTransform = ICAPosition.segment(8,4);
+	Eigen::Vector4d rootTransform = ICAPosition.segment(4,4);
  
 	// Motion::Root root = ms->getLastPose()->getRoot();
 

@@ -228,8 +228,8 @@ SingleControlWindow(const char* nn_path,
 		load_decoders[i] = nn_module_decoders[i].attr("load");
 	}
 
-	load_decoders[0]("../pyvs/vae_nn/vae_action_decoder_"+to_string(0)+".pt");
-	load_decoders[1]("../pyvs/vae_nn/vae_action_decoder_"+to_string(3)+".pt");
+	load_decoders[0]("../pyvs/vae_nn_sep/vae_action_decoder_"+to_string(0)+".pt");
+	load_decoders[1]("../pyvs/vae_nn_sep/vae_action_decoder_"+to_string(3)+".pt");
 	std::cout<<"Loaded VAE decoder"<<std::endl;
 
 
