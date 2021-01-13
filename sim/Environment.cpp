@@ -945,9 +945,9 @@ getState(int index)
 
 	// state.resize(3);
 
-/*
+
 	state.resize(rootTransform.rows() + reducedSkelPosition.rows() + reducedSkelVelocity.rows() + relCurBallPosition.rows() + relObstacles.size()*3
-		+ 5 +availableActions.rows() + relTargetPosition.rows() + relBallToTargetPosition.rows() + goalpostPositions.rows() + 1 + 1 + curActionType.rows()
+		+ 5 +availableActions.rows() + relTargetPosition.rows() + relBallToTargetPosition.rows() + goalpostPositions.rows() +  contacts.rows() + 1 + 1 + curActionType.rows()
 		+ curSMState.rows());
 
 	int curIndex = 0;
@@ -1036,7 +1036,7 @@ getState(int index)
 		state[curIndex] = availableActions[i];
 		curIndex++;
 	}
-
+	// std::cout<<curIndex<<std::endl;
 
 
 
@@ -1048,7 +1048,7 @@ getState(int index)
 	mStates[index] = state;
 	// cout<<"getState end"<<endl;
 	return state;
-*/
+
 
 
 	// std::cout<<" Cur state is "<<bsm[index]->curState<<std::endl;
@@ -1062,7 +1062,7 @@ getState(int index)
 	// std::cout<<"goalpostPositions.transpose(): "<<goalpostPositions.transpose()<<std::endl;
 	// std::cout<<"contacts.transpose(): "<<contacts.transpose()<<std::endl;
 
-	bool simplePosition = true;
+/*	bool simplePosition = true;
 
 	if(simplePosition)
 	{
@@ -1189,7 +1189,7 @@ getState(int index)
 	{
 		state[curIndex] = availableActions[i];
 		curIndex++;
-	}
+	}*/
 
 	// std::cout<<std::setprecision(3);
 	// std::cout<<state.segment(skelPosition.size(), 20).transpose()<<std::endl;
@@ -1198,9 +1198,9 @@ getState(int index)
 	// std::cout<<state.segment(skelPosition.size() +40, state.size()-40).transpose()<<std::endl;
 	// std::cout<<std::endl;
 
-	mStates[index] = state;
-	// cout<<"getState end"<<endl;
-	return state;
+	// mStates[index] = state;
+	// // cout<<"getState end"<<endl;
+	// return state;
 }
 
 // Eigen::VectorXd

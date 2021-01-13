@@ -30,6 +30,8 @@ from IPython import embed
 import json
 from Model import *
 from pathlib import Path
+from tensorboardX import SummaryWriter
+summary = SummaryWriter()
 
 
 use_cuda = torch.cuda.is_available()
@@ -41,7 +43,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 19
+nnCount = 23
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -120,7 +122,7 @@ class RL(object):
 		self.lb = 0.95
 
 		self.buffer_size = 32*1024
-		self.batch_size = 4*512
+		self.batch_size = 2*512
 		# self.buffer_size = 2*1024
 		# self.batch_size = 128
 		self.num_action_types = 2
@@ -801,8 +803,8 @@ class RL(object):
 												TDError = self.episodes[h][j][i].getLastData().value -\
 												 (self.episodes[h][j][i].getLastData().r + self.gamma*accRewards[i][j])
 											TDError = abs(TDError)
-											TDError = 10.0*pow(TDError, 2.0)
-											TDError = min(TDError, 0.8)
+											TDError = 4.0*pow(TDError, 1.0)
+											TDError = min(TDError, 0.9)
 											if random.random()<TDError : 
 												self.env.setToFoulState(j)
 												onFoulResetProcess[j] = True;
@@ -884,8 +886,8 @@ class RL(object):
 												TDError = self.episodes[h][j][i].getLastData().value -\
 												 (self.episodes[h][j][i].getLastData().r + self.gamma*rewards[i][j])
 											TDError = abs(TDError)
-											TDError = 10.0*pow(TDError, 2.0)
-											TDError = min(TDError, 0.8)
+											TDError = 4.0*pow(TDError, 1.0)
+											TDError = min(TDError, 0.9)
 											if random.random()<TDError :
 												self.env.setToFoulState(j)
 												onFoulResetProcess[j] = True;
@@ -1600,6 +1602,18 @@ class RL(object):
 		self.num_correct_throwings.append(self.num_correct_throwing/self.num_episode)
 		self.saveModels()
 		
+		# summary.add_scalar('rewards',self.sum_return/self.num_episode, self.num_evaluation)
+		# embed()
+		# exit(0)
+		summary.add_scalars('rewards and num_correct_throwings',{'rewards' : self.sum_return/self.num_episode, 'num_ct' : self.num_correct_throwing/self.num_episode}, self.num_evaluation)
+		# summary.add_scalar('num_correct_throwings',self.num_correct_throwing/self.num_episode, self.num_evaluation)
+		summary.add_scalar('numSteps',self.num_tuple[1][0]/self.num_episode, self.num_evaluation)
+
+		for name, param in self.target_model[0][0].named_parameters():
+			summary.add_histogram(name, param.clone().cpu().data.numpy(), self.num_evaluation)
+		for name, param in self.target_model[1][0].named_parameters():
+			summary.add_histogram(name, param.clone().cpu().data.numpy(), self.num_evaluation)
+		
 		print('=============================================')
 		return np.array(self.rewards), np.array(self.numSteps), np.array(self.num_correct_throwings)
 
@@ -1722,8 +1736,8 @@ if __name__=="__main__":
 	for i in range(5000000):
 		rl.train()
 		rewards, numSteps, numCTs = rl.evaluate()
-		plot(rewards, graph_name + 'Reward',0,False, path=result_figure)
-		plot(numSteps, graph_name + 'Avg number of steps per episode',1,False, path=result_figure_numSteps)
-		plot(numCTs, graph_name + 'Avg number of correct throwings per episode',2,False, path=result_figure_numCTs)
+		# plot(rewards, graph_name + 'Reward',0,False, path=result_figure)
+		# plot(numSteps, graph_name + 'Avg number of steps per episode',1,False, path=result_figure_numSteps)
+		# plot(numCTs, graph_name + 'Avg number of correct throwings per episode',2,False, path=result_figure_numCTs)
 		# plot_winrate(winRate, graph_name + 'vs Hardcoded Winrate',1,False)
 
