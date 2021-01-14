@@ -43,7 +43,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 26
+nnCount = 27
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -121,7 +121,7 @@ class RL(object):
 		self.gamma = 0.999
 		self.lb = 0.95
 
-		self.buffer_size = 32*1024
+		self.buffer_size = 8*1024
 		self.batch_size = 2*512
 		# self.buffer_size = 2*1024
 		# self.batch_size = 128
@@ -1355,9 +1355,15 @@ class RL(object):
 					for i in range(rnn_replay_buffer_size):
 						all_segmented_transitions.append(rnn_replay_buffer.buffer[i])
 
+				# print("HI")
+				# embed()
+				# exit(0)
+				batch_size_h = self.batch_size
+				if h == 0:
+					 batch_size_h = self.batch_size//8
 				np.random.shuffle(all_segmented_transitions)
-				for i in range(len(all_segmented_transitions)//self.batch_size):
-					batch_segmented_transitions = all_segmented_transitions[i*self.batch_size:(i+1)*self.batch_size]
+				for i in range(len(all_segmented_transitions)//batch_size_h):
+					batch_segmented_transitions = all_segmented_transitions[i*batch_size_h:(i+1)*batch_size_h]
 
 					# loss = Tensor(torch.zeros(1).cuda())
 
@@ -1391,7 +1397,7 @@ class RL(object):
 
 					# loss_actor = - torch.min(surrogate1, surrogate2).mean()
 					loss_actor = - surrogate2.mean()
-					# if h == 1:
+					# if h == 0:
 					# 	embed()
 					# 	exit(0)
 					'''Entropy Loss'''
@@ -1419,8 +1425,8 @@ class RL(object):
 
 					if not detectNan:
 						self.optimizer[h][buff_index].step()
-					self.sum_loss_actor[h][buff_index] += loss_actor.detach()*self.batch_size/self.num_epochs
-					self.sum_loss_critic[h][buff_index] += loss_critic.detach()*self.batch_size/self.num_epochs
+					self.sum_loss_actor[h][buff_index] += loss_actor.detach()*batch_size_h/self.num_epochs
+					self.sum_loss_critic[h][buff_index] += loss_critic.detach()*batch_size_h/self.num_epochs
 
 					loss_entropy = loss_entropy.detach()
 					loss_actor = loss_actor.detach()

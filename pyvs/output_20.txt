@@ -1,0 +1,73 @@
+Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
+readNormal/ dataLen:14
+readNormal/ dataLen:117
+Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
+readNormal/ dataLen:14
+readNormal/ dataLen:117
+Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
+readNormal/ dataLen:14
+readNormal/ dataLen:117
+Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
+readNormal/ dataLen:14
+readNormal/ dataLen:117
+Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
+readNormal/ dataLen:14
+readNormal/ dataLen:117
+Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
+readNormal/ dataLen:14
+readNormal/ dataLen:117
+Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
+readNormal/ dataLen:14
+readNormal/ dataLen:117
+Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
+readNormal/ dataLen:14
+readNormal/ dataLen:117
+Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
+readNormal/ dataLen:14
+readNormal/ dataLen:117
+Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
+readNormal/ dataLen:14
+readNormal/ dataLen:117
+Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
+readNormal/ dataLen:14
+readNormal/ dataLen:117
+Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
+readNormal/ dataLen:14
+readNormal/ dataLen:117
+Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
+readNormal/ dataLen:14
+readNormal/ dataLen:117
+Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
+readNormal/ dataLen:14
+readNormal/ dataLen:117
+Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
+readNormal/ dataLen:14
+readNormal/ dataLen:117
+Envionment Generation --- Generating skel file is completed ! : ../data/skels/s_004_1_1.skel
+readNormal/ dataLen:14
+readNormal/ dataLen:117
+Writing LinkLength
+BVH Manager Initialize SUCCESS
+MotionRepresentation initialize SUCCESS
+start? 
+start of rnn2/ RTMG
+rtmg/ constructor error
+MotionGeneratorBatch / done
+Uploaded xData, yData:
+/home/minseok/Project/VSports/extern/ICA/motions/basket_18/data/0_xData.dat
+ /home/minseok/Project/VSports/extern/ICA/motions/basket_18/data/0_yData.dat
+Start generating guiding trajectory
+/home/minseok/Project/VSports/extern/ICA/Utils/Functions.cpp: readMetaData start!
+/home/minseok/Project/VSports/extern/ICA/Utils/Functions.cpp: readMetaData start!
+dataSize: 314340
+dataLen: 117
+* readData done
+314340
+relThrowedBallPosition.transpose() :  -4.79293 -0.241635
+goalPostToThrowedPosition.transpose() :  4.79293 0.241635
+projectedGoalpostPosition.transpose() : 12.55     0
+identityT.translation() :  17.3429 0.241635
+relThrowedBallPosition.transpose() : -3.90521 -1.32724
+goalPostToThrowedPosition.transpose() : 3.90521 1.32724
+projectedGoalpostPosition.transpose() : 12.55     0
+identityT.translation() : 16.4552 1.32724
