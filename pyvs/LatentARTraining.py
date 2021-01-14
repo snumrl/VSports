@@ -43,7 +43,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 23
+nnCount = 26
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -209,7 +209,7 @@ class RL(object):
 					self.target_model[h][j] = ActorCriticNN(self.num_state, self.num_action[h], 
 						log_std = 0.0, softmax = True, actionMask = True)
 				else:
-					self.target_model[h][j] = ActorCriticNN(self.num_state + self.num_hidden, self.num_action[h], 
+					self.target_model[h][j] = ActorCriticNN(self.num_state + self.num_action[0], self.num_action[h], 
 						log_std = 0.0)
 
 				acc_num_action += self.num_action[h]
@@ -592,6 +592,7 @@ class RL(object):
 
 			actions_0_scalar = None
 			actions_0_oneHot = None
+			useEmbeding = False
 
 			if counter%self.typeFreq == 1:
 				# print("counter : {}".format(counter))
@@ -616,8 +617,8 @@ class RL(object):
 					# print("???")
 					embededState = states+action_embeding_ones
 
-					# states_h[h] = np.concatenate((embededState, h_slave), axis=2)
-					states_h[h] = embededState
+					states_h[h] = np.concatenate((embededState, actions_0_oneHot), axis=2)
+					# states_h[h] = embededState
 				# else:
 				# 	# print("value h : {}".format(h))
 				# 	states_h[h] = np.concatenate((states, np.array(list(actions_h[h-1]))), axis=2)

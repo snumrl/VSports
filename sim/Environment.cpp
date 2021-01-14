@@ -1815,6 +1815,8 @@ setActionType(int index, int actionType, bool isNew)
 		curActionType =0;
 	}
 	// curActionType =0;
+	// if(curFrame > resetDuration)
+	// curActionType =3;
 
 	// if(!mCharacters[index]->blocked)
 	// 	curActionType = 0;
@@ -2134,6 +2136,7 @@ slaveResetCharacterPositions()
 		}
 
 		double randomDirection = rand()/(double)RAND_MAX * 2.0 * M_PI;
+		// randomDirection = 0;
 
 		bool directionToGoal = true;
 		if(directionToGoal)

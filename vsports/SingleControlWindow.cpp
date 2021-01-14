@@ -175,7 +175,7 @@ SingleControlWindow(const char* nn_path,
 	}
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module_1[i] = p::eval(("ActorCriticNN(num_state, "+to_string(latentSize)+").cuda()").data(), mns);
+		nn_module_1[i] = p::eval(("ActorCriticNN(num_state + 2, "+to_string(latentSize)+").cuda()").data(), mns);
 		load_1[i] = nn_module_1[i].attr("load");
 		load_rms_1[i] = nn_module_1[i].attr("loadRMS");
 	}
@@ -610,14 +610,19 @@ step()
 
 	// time_check_start();
 
+	// exit(0);
+	// std::cout<<"0000"<<std::endl;
 	mEnv->getState(0);
+	// std::cout<<"1111"<<std::endl;
 	mEnv->saveEnvironment();
 
 	// std::cout<<"Root transform : "<<mEnv->mStates[0].segment(0,4).transpose()<<std::endl;
 
+	// std::cout<<"2222"<<std::endl;
 	if(mEnv->resetCount<=0)
 		getActionFromNN(0);
 
+	// std::cout<<"3333"<<std::endl;
 
 	// time_check_end();
 
@@ -782,32 +787,32 @@ step()
     	prevRewards[i] = mEnv->curReward;
     }
 
-	for(int i=0;i<2;i++)
-	{
-		Eigen::VectorXd state = mEnv->mStates[0];
-		p::object get_value_0;
-		if(i==0) 
-			get_value_0 = nn_module_0[0].attr("get_value");
-		else
-			get_value_0 = nn_module_1[0].attr("get_value");
+	// for(int i=0;i<2;i++)
+	// {
+	// 	Eigen::VectorXd state = mEnv->mStates[0];
+	// 	p::object get_value_0;
+	// 	if(i==0) 
+	// 		get_value_0 = nn_module_0[0].attr("get_value");
+	// 	else
+	// 		get_value_0 = nn_module_1[0].attr("get_value");
 
-		p::tuple shape = p::make_tuple(state.size());
-		np::dtype dtype = np::dtype::get_builtin<float>();
-		np::ndarray state_np = np::empty(shape, dtype);
+	// 	p::tuple shape = p::make_tuple(state.size());
+	// 	np::dtype dtype = np::dtype::get_builtin<float>();
+	// 	np::ndarray state_np = np::empty(shape, dtype);
 
-		float* dest = reinterpret_cast<float*>(state_np.get_data());
-		for(int j=0;j<state.size();j++)
-		{
-			dest[j] = state[j];
-		}
+	// 	float* dest = reinterpret_cast<float*>(state_np.get_data());
+	// 	for(int j=0;j<state.size();j++)
+	// 	{
+	// 		dest[j] = state[j];
+	// 	}
 
-		p::object temp = get_value_0(state_np);
-		np::ndarray value = np::from_object(temp);
-		float* srcs = reinterpret_cast<float*>(value.get_data());
+	// 	p::object temp = get_value_0(state_np);
+	// 	np::ndarray value = np::from_object(temp);
+	// 	float* srcs = reinterpret_cast<float*>(value.get_data());
 
-		curValues[i] = srcs[0];
+	// 	curValues[i] = srcs[0];
 
-	}
+	// }
 
 	// mEnv->stepAtOnce();
     // time_check_end();
@@ -1428,9 +1433,9 @@ getActionFromNN(int index)
 	state_1.segment(0,state.size()) = state;
 	state_1.segment(state.size(),numActions) = mActionType;
 */
-	Eigen::VectorXd state_1(state.size());
+	Eigen::VectorXd state_1(state.size()+mActionType.rows());
 	state_1.segment(0,state.size()) = state;
-	// state_1.segment(state.size(),cSize) = mComunication;
+	state_1.segment(state.size(),mActionType.rows()) = mActionType;
 
 	p::object get_action_1;
 
