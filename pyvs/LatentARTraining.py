@@ -43,7 +43,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 30
+nnCount = 31
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -169,7 +169,7 @@ class RL(object):
 
 		self.num_c = 4
 
-		self.stdScale = 2.0
+		self.stdScale = 1.0
 
 
 		# self.buffer_0 = [ [None] for i in range(self.num_policy)]
