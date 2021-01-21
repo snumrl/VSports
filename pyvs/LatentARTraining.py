@@ -43,7 +43,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 31
+nnCount = 32
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -1332,8 +1332,8 @@ class RL(object):
 					surrogate1 = ratio * stack_gae
 					surrogate2 = torch.clamp(ratio, min=1.0-self.clip_ratio, max=1.0+self.clip_ratio) * stack_gae
 
-					# loss_actor = - torch.min(surrogate1, surrogate2).mean()
-					loss_actor = - surrogate2.mean()
+					loss_actor = - torch.min(surrogate1, surrogate2).mean()
+					# loss_actor = - surrogate2.mean()
 					# if h == 0:
 					# 	embed()
 					# 	exit(0)
