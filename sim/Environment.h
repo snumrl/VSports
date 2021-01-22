@@ -81,7 +81,7 @@ class EnvironmentPackage
 {
 public:
 	EnvironmentPackage(Environment* env, int numAgents);
-	void saveEnvironment(Environment* env);
+	void saveEnvironment(Environment* env, bool init = false);
 	void copyEnvironmentPackage(EnvironmentPackage* envPack);
 	void restoreEnvironment(Environment* env);
 	std::vector<Eigen::VectorXd> mActions;
@@ -399,7 +399,7 @@ public:
 
 	std::vector<float> getHeightMapState(int index);
 
-	EnvironmentPackage* mPrevEnvSituation;
+	std::vector<EnvironmentPackage*> mPrevEnvSituations;
 
 	void saveEnvironment();
 	void goBackEnvironment();
@@ -465,6 +465,8 @@ public:
 
 	double curReward;
 	bool isTimeOut();
+
+	int numGobackStack;
 };
 double getFacingAngleFromLocalState(Eigen::VectorXd curState);
 Eigen::VectorXd localStateToOriginState(Eigen::VectorXd localState, int mNumChars=6);

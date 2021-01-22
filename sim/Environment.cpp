@@ -41,7 +41,8 @@ Environment(int control_Hz, int simulation_Hz, int numChars, std::string bvh_pat
 :mControlHz(control_Hz), mSimulationHz(simulation_Hz), mNumChars(numChars), mWorld(std::make_shared<dart::simulation::World>()),
 mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0), endTime(15),
 criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), violatedFrames(0),curTrajectoryFrame(0),
-randomPointTrajectoryStart(false), resetDuration(30), typeFreq(10), savedFrame(0), foulResetCount(0), curReward(0)
+randomPointTrajectoryStart(false), resetDuration(30), typeFreq(10), savedFrame(0), foulResetCount(0), curReward(0),
+numGobackStack(2)
 {
 	std::cout<<"Envionment Generation --- ";
 	srand((unsigned int)time(0));
@@ -95,15 +96,12 @@ Environment::initialize(ICA::dart::MotionGeneratorBatch* mgb, int batchIndex, bo
 	// else
 
 	this->slaveReset();
+	mPrevEnvSituations.resize(numGobackStack);
 
-	mPrevEnvSituation = new EnvironmentPackage(this, mNumChars);
-	// mPrevEnvSituations.resize(mNumChars);
-	// for(int i=0;i<2;i++)
-	// {
-	// 	mPrevEnvSituations[i] = new EnvironmentPackage();
-	// 	mPrevEnvSituations[i]->saveEnvironment(this);
-	// 	// exit(0);
-	// }
+	for(int i=0;i<numGobackStack;i++)
+	{
+		mPrevEnvSituations[i] = new EnvironmentPackage(this, mNumChars);
+	}
 
 	mPrevPlayer= -1;
 	// std::cout<<"Success"<<std::endl;
@@ -1293,7 +1291,10 @@ getReward(int index, bool verbose)
 			{
 				reward += 1.0;
 				if(fastViewTermination)
-					mIsTerminalState = true;
+				{
+					mIsFoulState = true;
+					// mIsTerminalState = true;
+				}
 				gotReward = true;
 
 				Eigen::Vector3d relTargetPosition = mTargetBallPosition - criticalPoint_targetBallPosition;
@@ -2852,7 +2853,7 @@ EnvironmentPackage::EnvironmentPackage(Environment* env, int numChars)
 
 void
 EnvironmentPackage::
-saveEnvironment(Environment* env)
+saveEnvironment(Environment* env, bool init)
 {
 	this->mActions = env-> mActions;
 	this->mPrevBallPossessions = env-> mPrevBallPossessions;
@@ -2896,7 +2897,7 @@ saveEnvironment(Environment* env)
 		this->bsm[i]->copy(env->bsm[i]);
 		this->mCharacters[i]->copy(env->mCharacters[i]);
 	}
-	env->mMgb->motionGenerators[0]->saveHiddenState(env->mBatchIndex);
+	env->mMgb->motionGenerators[0]->saveHiddenState(env->mBatchIndex, init);
 
 }
 
@@ -2941,6 +2942,7 @@ restoreEnvironment(Environment* env)
 	env->gotReward = this->gotReward;
 
 
+	std::cout<<"Ball skel position : "<<this->ballSkelPosition.transpose()<<std::endl;
 	env->ballSkel->setPositions(this->ballSkelPosition);
 	for(int i=0;i<numChars;i++)
 	{
@@ -2952,6 +2954,55 @@ restoreEnvironment(Environment* env)
 	env->mMgb->motionGenerators[0]->restoreHiddenState(env->mBatchIndex);
 }
 
+
+void
+EnvironmentPackage::
+copyEnvironmentPackage(EnvironmentPackage* envPack)
+{
+	this->mActions = envPack-> mActions;
+	this->mPrevBallPossessions = envPack-> mPrevBallPossessions;
+	this->mCurBallPossessions = envPack-> mCurBallPossessions;
+	this->prevBallPositions = envPack-> prevBallPositions;
+	this->curBallPosition = envPack-> curBallPosition;
+	this->criticalPoint_targetBallPosition = envPack-> criticalPoint_targetBallPosition;
+	this->criticalPoint_targetBallVelocity = envPack-> criticalPoint_targetBallVelocity;
+	this->prevContact = envPack-> prevContact;
+	this->curContact = envPack-> curContact;
+	this->criticalPointFrame = envPack-> criticalPointFrame;
+	this->curFrame = envPack-> curFrame;
+	this->mTargetBallPosition = envPack-> mTargetBallPosition;
+	this->mPrevActions = envPack-> mPrevActions;
+	this->mCurActionTypes = envPack-> mCurActionTypes;
+	this->mPrevCOMs = envPack-> mPrevCOMs;
+	this->mPrevBallPosition = envPack-> mPrevBallPosition;
+	this->mCurCriticalActionTimes = envPack-> mCurCriticalActionTimes;
+	this->mLFootDetached = envPack->mLFootDetached;
+	this->mRFootDetached = envPack->mRFootDetached;
+	this->mObstacles = envPack->mObstacles;
+
+	this->mLFootContacting = envPack->mLFootContacting;
+	this->mRFootContacting = envPack->mRFootContacting;
+	this->mLLastFootPosition = envPack->mLLastFootPosition;
+	this->mRLastFootPosition = envPack->mRLastFootPosition;
+
+	this->mIsTerminalState = envPack->mIsTerminalState;
+	this->mIsFoulState = envPack->mIsFoulState;
+	this->mTimeElapsed = envPack->mTimeElapsed;
+	this->mAccScore = envPack->mAccScore;
+	this->mPrevActionTypes = envPack->mPrevActionTypes;
+	this->prevFreeBallPositions = envPack->prevFreeBallPositions;
+	this->gotReward = envPack->gotReward;
+
+
+	this->ballSkelPosition = envPack->ballSkelPosition;
+
+	for(int i=0;i<numChars;i++)
+	{
+		this->bsm[i]->copy(envPack->bsm[i]);
+		this->mCharacters[i]->copy(envPack->mCharacters[i]);
+	}
+
+}
 void 
 Environment::
 updateHeightMap(int index)
@@ -3026,7 +3077,12 @@ void
 Environment::
 goBackEnvironment()
 {
-	mPrevEnvSituation->restoreEnvironment(this);
+	mPrevEnvSituations[numGobackStack-1]->restoreEnvironment(this);
+	savedFrame = curFrame;
+	for(int i=0;i<numGobackStack-1;i++)
+	{
+		mPrevEnvSituations[i]->copyEnvironmentPackage(mPrevEnvSituations[numGobackStack-1]);
+	}
 }
 
 void
@@ -3040,12 +3096,34 @@ saveEnvironment()
 		return;
 	}
 
-	if(curFrame>1 && curFrame%typeFreq == 1)
+	if(curFrame == typeFreq+1)
+	{
+		// for(int i=numGobackStack-1;i>0;i--)
+		// {
+		// 	mPrevEnvSituations[-]->copyEnvironmentPackage(mPrevEnvSituations[i-1]);
+		// }
+		// for(int i=numGobackStack-1;i>0;i--)
+		// {
+		// 	mPrevEnvSituations[i]->copyEnvironmentPackage(mPrevEnvSituations[i-1]);
+		// }
+		mPrevEnvSituations[0]->saveEnvironment(this,true);
+		for(int i=1;i<numGobackStack;i++)
+		{
+			mPrevEnvSituations[i]->copyEnvironmentPackage(mPrevEnvSituations[0]);
+		}
+		// std::cout<<"@@ Saved position : "<<mPrevEnvSituations[1]->ballSkelPosition.transpose()<<std::endl;
+		savedFrame = curFrame;
+	}
+	else if(curFrame>1 && curFrame%typeFreq == 1)
 	{
 		if(mCurActionTypes[0] == 0)
 		{
-			mPrevEnvSituation->saveEnvironment(this);
-			savedFrame = curFrame;
+			for(int i=numGobackStack-1;i>0;i--)
+			{
+				mPrevEnvSituations[i]->copyEnvironmentPackage(mPrevEnvSituations[i-1]);
+			}
+			mPrevEnvSituations[0]->saveEnvironment(this);
+			savedFrame = curFrame-10;
 		}
 
 	}

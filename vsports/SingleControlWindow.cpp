@@ -759,6 +759,7 @@ step()
 	// time_check_start();
 	std::vector<std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool>>
 	nextPoseAndContactsWithBatch = mMotionGeneratorBatch->generateNextPoseAndContactsWithBatch(concatControlVector);
+	std::cout<<"#### : "<<std::get<0>(nextPoseAndContactsWithBatch[0]).transpose()<<std::endl;
 	// time_check_end();
 
 	// std::cout<<"3333"<<std::endl;
