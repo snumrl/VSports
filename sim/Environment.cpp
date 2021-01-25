@@ -1044,16 +1044,8 @@ getRewards()
 	std::vector<double> rewards;
 	for(int i=0;i<mNumChars;i++)
 	{
-		// // getLinearActorReward(i);
-		// if (i==0)
-		// {
-		// 	// rewards.push_back();
-		// 	mAccScore[i] += getReward(i);
-		// }
 		if(resetCount<0)
 			mAccScore[i] += getReward(i);
-		// std::cout<<"Reward : "<<mAccScore[i]<<std::endl;
-
 	}
 
 	return rewards;
