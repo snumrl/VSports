@@ -24,7 +24,6 @@ public:
 	// For each slave
 	void step(int id);
 	void stepAtOnce(int id);
-	// void steps(int id);
 	void reset(int id);
 	void resets();
 	void slaveReset(int id);
@@ -33,7 +32,6 @@ public:
 	bool isTerminalState(int id);
 	bool isFoulState(int id);
 	np::ndarray getState(int id, int index);
-	// np::ndarray getLocalState(int id, int index);
 	void setAction(np::ndarray np_array, int id, int index);
 	void setActions(np::ndarray np_array);
 	double getReward(int id, int index, int verbose);
@@ -41,13 +39,8 @@ public:
 	int setActionType(int actionType, int id, int index, bool isNew = true);
 
 	int isActionTypeChangingFrame(int id);
-	// int getNumBallTouch(int id);
 
 	void endOfIteration();
-
-	// np::ndarray getHardcodedAction(int id, int index);
-
-	// void reconEnvFromState(int id, int index, np::ndarray curLocalState);
 
 	// For all slaves
 	void stepsAtOnce();
@@ -74,7 +67,6 @@ public:
 	bool isTimeOut(int id);
 	int getSavedFrameDiff(int id);
 
-	// Normalizer* mNormalizer;
 private:
 	std::vector<Environment*> mSlaves;
 	int mNumSlaves;

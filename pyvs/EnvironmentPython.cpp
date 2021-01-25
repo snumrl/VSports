@@ -12,13 +12,10 @@ EnvironmentPython(int numAgent, std::string motion_nn_path, int numSlaves)
 {
 	dart::math::seedRand();
 	omp_set_num_threads(mNumSlaves);
-	// std::cout<<""
 	for(int i=0;i<mNumSlaves;i++)
 	{
 		mSlaves.push_back(new Environment(30, 180, numAgent, "../data/motions/basketData/motion/s_004_1_1.bvh", motion_nn_path));
-		// exit(0);
 	}
-	// exit(0);
 	initMotionGenerator(motion_nn_path);
 
 	for(int i=0;i<mNumSlaves;i++)
@@ -35,11 +32,8 @@ EnvironmentPython(int numAgent, std::string motion_nn_path, int numSlaves)
 	mNumAction = mSlaves[0]->getNumAction();
 	slaveResets();
 
-	// std::cout<<mNumState<<std::endl;
-	// exit()
 }
 // For general properties
-
 
 void
 EnvironmentPython::
@@ -78,7 +72,6 @@ EnvironmentPython::
 slaveReset(int id)
 {
 	mSlaves[id]->slaveReset();
-	// mMotionGeneratorBatch->setCurrentDartPosition(mSlaves[id]->mCharacters[0]->getSkeleton()->getPositions(), id);
 }
 
 void
@@ -86,7 +79,6 @@ EnvironmentPython::
 foulReset(int id)
 {
 	mSlaves[id]->foulReset();
-	// mMotionGeneratorBatch->setCurrentDartPosition(mSlaves[id]->mCharacters[0]->getSkeleton()->getPositions(), id);
 }
 int
 EnvironmentPython::
@@ -106,7 +98,6 @@ void
 EnvironmentPython::
 step(int id)
 {
-	// std::cout<<"Step in "<<id<<"'th slave"<<std::endl;
 	mSlaves[id]->step();
 }
 
@@ -130,24 +121,6 @@ np::ndarray
 EnvironmentPython::
 getState(int id, int index)
 {
-	// std::cout<<"getState in wrapper"<<std::endl;
-	// mSlaves[id]->getState(index);
-	// std::cout<<"I got state"<<std::endl;
-	// std::cout<< toNumPyArray(mSlaves[id]->getState(index)).shape(0)<<std::endl;
-	// exit(0);
-	// Eigen::VectorXd curState= mSlaves[id]->getState(index);
-	// Eigen::VectorXd normalizedState = mNormalizer->normalizeState(curState);
-
-	// std::cout<<"Original State : "<<std::endl;
-	// std::cout<<curState.transpose()<<std::endl;
-	// std::cout<<"Mean value :"<<std::endl;
-	// std::cout<<mNormalizer->yMean.transpose()<<std::endl;
-
-	// std::cout<<"std value :"<<std::endl;
-	// std::cout<<mNormalizer->yStd.transpose()<<std::endl;
-	// std::cout<<"Normalized State : "<<std::endl;
-	// std::cout<<normalizedState.transpose()<<std::endl;
-
 	return Wrapper::toNumPyArray(mSlaves[id]->getState(index));
 }
 
@@ -157,13 +130,10 @@ getCorrectActionType(int id, int index)
 {
 	Eigen::VectorXd denormalizedAction = mSlaves[id]->mTutorialControlVectors[0][mSlaves[id]->curTrajectoryFrame];
 
-	// Eigen::VectorXd normalizedAction = denormalizedAction;
 
 	Eigen::VectorXd simpleActionType(2);
 
 	int actionType = getActionTypeFromVec(denormalizedAction.segment(4,5));
-	// std::cout<<denormalizedAction.segment(4,5).transpose()<<std::endl;
-	// std::cout<<"###### : "<<mSlaves[id]->curTrajectoryFrame<<"/"<< mSlaves[id]->mTutorialControlVectors[0].size()<<" "<<actionType<<std::endl;
 	if(actionType == 2)
 	{
 		std::cout<<"Cur Action type is 2??"<<std::endl;
@@ -192,41 +162,6 @@ getCorrectActionDetail(int id, int index)
 	return Wrapper::toNumPyArray(normalizedAction);
 }
 
-// np::ndarray
-// EnvironmentPython::
-// getLocalState(int id, int index)
-// {
-// 	// std::cout<<"getState in wrapper"<<std::endl;
-// 	// mSlaves[id]->getState(index);
-// 	// std::cout<<"I got state"<<std::endl;
-// 	// std::cout<< toNumPyArray(mSlaves[id]->getState(index)).shape(0)<<std::endl;
-// 	// exit(0);
-// 	return Wrapper::toNumPyArray(mSlaves[id]->getLocalState(index));
-// }
-
-
-// np::ndarray
-// EnvironmentPython::
-// getSchedulerState(int id, int index)
-// {
-// 	// std::cout<<"getState in wrapper"<<std::endl;
-// 	// mSlaves[id]->getState(index);
-// 	// std::cout<<"I got state"<<std::endl;
-// 	// std::cout<< toNumPyArray(mSlaves[id]->getState(index)).shape(0)<<std::endl;
-// 	// exit(0);
-// 	return toNumPyArray(mSlaves[id]->getSchedulerState(index));
-// }
-// np::ndarray
-// EnvironmentPython::
-// getLinearActorState(int id, int index)
-// {
-// 	// std::cout<<"getState in wrapper"<<std::endl;
-// 	// mSlaves[id]->getState(index);
-// 	// std::cout<<"I got state"<<std::endl;
-// 	// std::cout<< toNumPyArray(mSlaves[id]->getState(index)).shape(0)<<std::endl;
-// 	// exit(0);
-// 	return toNumPyArray(mSlaves[id]->getLinearActorState(index));
-// }
 
 void
 EnvironmentPython::
@@ -236,37 +171,12 @@ setAction(np::ndarray np_array, int id, int index)
 	bool reducedDim = false;
 
 	Eigen::VectorXd action = Wrapper::toEigenVector(np_array);
-	// std::cout<<"Env python : "<<action.transpose()<<std::endl;
 	Eigen::VectorXd denormalizedAction;
 	Eigen::VectorXd ex_action(action.rows());
-	// if(reducedDim)
-	// {
-	// 	ex_action.setZero();
-	// 	ex_action.segment(0,4) = action;
-	// 	denormalizedAction = mSlaves[id]->mNormalizer->denormalizeAction(ex_action);
-	// }
-	// else
-	// {
+
 	//** we change the dimension of action in denormalizeAction
-
-
 	// ===Now we don't need to normalize action
 	denormalizedAction = mSlaves[id]->mNormalizer->denormalizeAction(action);
-
-
-	// }
-
-// 
-	// Eigen::VectorXd denormalizedAction = mSlaves[id]->mNormalizer->denormalizeAction(ex_action);
-
-	// std::cout<<"Output Action :"<<std::endl;
-	// std::cout<<action.transpose()<<std::endl;
-	// std::cout<<"-----------------------------"<<std::endl;
-
-
-	// std::cout<<"Denormalized Action :"<<std::endl;
-	// std::cout<<denormalizedAction.transpose()<<std::endl;
-	// std::cout<<"========================="<<std::endl;
 
 	mSlaves[id]->setAction(index, denormalizedAction);
 }
@@ -301,47 +211,23 @@ setActionType(int actionType, int id, int index, bool isNew)
 		constrainedActionType = mSlaves[id]->setActionType(index, actionType, isNew);
 	else
 	{
-		// if(mSlaves[id]->resetCount>resetDuration)
-		// {
-		// 	Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector.segment(4,5);
-		// 	constrainedActionType = mSlaves[id]->setActionType(index, getActionTypeFromVec(actionTypeVector)/3);
-		// }
-		// else
-		// {
-			if(mSlaves[id]->randomPointTrajectoryStart)
-			{
-				Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetTrajectory[resetDuration-mSlaves[id]->resetCount].segment(4,5);
-				constrainedActionType = mSlaves[id]->setActionType(index, getActionTypeFromVec(actionTypeVector)/3, isNew);
-			}
-			else
-			{
-				Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector.segment(4,5);
-				constrainedActionType = mSlaves[id]->setActionType(index, getActionTypeFromVec(actionTypeVector)/3, isNew);
-			}
+		if(mSlaves[id]->randomPointTrajectoryStart)
+		{
+			Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetTrajectory[resetDuration-mSlaves[id]->resetCount].segment(4,5);
+			constrainedActionType = mSlaves[id]->setActionType(index, getActionTypeFromVec(actionTypeVector)/3, isNew);
+		}
+		else
+		{
+			Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector.segment(4,5);
+			constrainedActionType = mSlaves[id]->setActionType(index, getActionTypeFromVec(actionTypeVector)/3, isNew);
+		}
 
-
-			// std::cout<<"actionTypeVector : "<<actionTypeVector<<std::endl;
-		// }
-		// Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector
 	}
 
 
 	return constrainedActionType;
 }
 
-
-
-// void
-// EnvironmentPython::
-// setActions(np::ndarray np_array)
-// {
-// 	Eigen::MatrixXd action = toEigenMatrix(np_array);
-
-// 	for(int id=0;id<mNumSlaves;++id)
-// 	{
-// 		mSlaves[id]->setAction(action.row(id).transpose());
-// 	}
-// }
 
 double
 EnvironmentPython::
@@ -350,34 +236,6 @@ getReward(int id, int index, int verbose)
 	return mSlaves[id]->getReward(index, verbose);
 }
 
-// np::ndarray
-// EnvironmentPython::
-// getHardcodedAction(int id, int index)
-// {
-// 	return Wrapper::toNumPyArray(mSlaves[id]->getActionFromBTree(index));
-// }
-
-// double
-// EnvironmentPython::
-// getSchedulerReward(int id, int index)
-// {
-// 	return mSlaves[id]->getSchedulerReward(index);
-// }
-
-
-// double
-// EnvironmentPython::
-// getLinearActorReward(int id, int index)
-// {
-// 	return mSlaves[id]->getLinearActorReward(index);
-// }
-
-// void
-// EnvironmentPython::
-// setLinearActorState(int id, int index, np::ndarray np_array)
-// {
-// 	return mSlaves[id]->setLinearActorState(index, toEigenVector(np_array));
-// }
 
 void
 EnvironmentPython::
@@ -386,14 +244,10 @@ stepsAtOnce()
 	int num = getSimulationHz()/getControlHz();
 // #pragma omp parallel for
 
-	// std::cout<<"0000"<<std::endl;
 	std::vector<std::vector<double>> concatControlVector;
 
 	int resetDuration = mSlaves[0]->resetDuration;
 
-
-	// std::cout<<"steps at once"<<std::endl;
-	// time_check_start();
 	for(int id=0;id<mNumSlaves;++id)
 	{
 		if(mSlaves[id]->resetCount>resetDuration/2)
@@ -410,13 +264,7 @@ stepsAtOnce()
 			}
 
 		}
-		// else if(mSlaves[id]->resetCount>0)
-		// {
-		// 	mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, mSlaves[id]->slaveResetPositionVector);
-		// }
 	}
-	// std::cout<<"1111"<<std::endl;
-
 
 	for(int id=0;id<mNumSlaves;++id)
 	{
@@ -424,66 +272,32 @@ stepsAtOnce()
 			concatControlVector.push_back(eigenToStdVec(mSlaves[id]->getMGAction(0)));
 		else
 		{
-			// if(mSlaves[id]->resetCount>resetDuration)
-			// {
-			// 	concatControlVector.push_back(eigenToStdVec(mSlaves[id]->slaveResetTargetVector));
-			// 	Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector.segment(4,5);
-			// }
-			// else
-			// {
-				// std::cout<<"slave reset target vector"<<std::endl;
-				if(mSlaves[id]->randomPointTrajectoryStart)
-				{
-					concatControlVector.push_back(eigenToStdVec(mSlaves[id]->slaveResetTargetTrajectory[resetDuration-mSlaves[id]->resetCount]));
-					Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetTrajectory[resetDuration-mSlaves[id]->resetCount].segment(4,5);
-				}
-				else
-				{
-					concatControlVector.push_back(eigenToStdVec(mSlaves[id]->slaveResetTargetVector));
-					Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector.segment(4,5);
-				}
-				// std::cout<<"actionTypeVector : "<<actionTypeVector<<std::endl;
-			// }
-			// concatControlVector.push_back(eigenToStdVec(mSlaves[id]->slaveResetTargetVector));
-			// Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector
+			if(mSlaves[id]->randomPointTrajectoryStart)
+			{
+				concatControlVector.push_back(eigenToStdVec(mSlaves[id]->slaveResetTargetTrajectory[resetDuration-mSlaves[id]->resetCount]));
+				Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetTrajectory[resetDuration-mSlaves[id]->resetCount].segment(4,5);
+			}
+			else
+			{
+				concatControlVector.push_back(eigenToStdVec(mSlaves[id]->slaveResetTargetVector));
+				Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector.segment(4,5);
+			}
 		}
 	}
-	// std::cout<<"2222"<<std::endl;
 
 	for(int id=0;id<mNumSlaves;++id)
 		mSlaves[id]->saveEnvironment();
 	std::vector<std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool>>
 	nextPoseAndContactsWithBatch = mMotionGeneratorBatch->generateNextPoseAndContactsWithBatch(concatControlVector);
-	// time_check_end();
-
-	// std::cout<<"3333"<<std::endl;
-
-
-	// time_check_start();
 
 
 	for(int id=0;id<mNumSlaves;++id)
 	{
 		mSlaves[id]->stepAtOnce(nextPoseAndContactsWithBatch[id]);
-		// for(int j=0;j<num;j++)
-		// 	this->step(id);
-		// this->step
-		// this->stepAtOnce(id);
 	}
-	// time_check_end();
 }
 
-// void
-// EnvironmentPython::
-// steps(int num)
-// {
-// #pragma omp parallel for
-// 	for(int id=0;id<mNumSlaves;++id)
-// 	{
-// 		for(int j=0;j<num;j++)
-// 			this->step(id);
-// 	}
-// }
+
 
 void
 EnvironmentPython::
@@ -492,7 +306,6 @@ endOfIteration()
 	for(int i=0;i<mNumSlaves;i++)
 	{
 		mSlaves[i]->mNumIterations++;
-	// std::cout<<mSlaves[i]->mNumIterations<<std::endl;
 	}
 }
 
@@ -518,57 +331,6 @@ isOnFoulReset(int id)
 	return mSlaves[id]->foulResetCount>0;
 }
 
-
-// bool
-// EnvironmentPython::
-// isActionTypeChangingFrame(int id)
-// {
-// 	return mSlaves[id]->curFrame%10 == 0;
-// }
-
-// void 
-// EnvironmentPython::
-// reconEnvFromState(int id, int index, np::ndarray curLocalState)
-// {
-// 	mSlaves[id]->reconEnvFromState(index, Wrapper::toEigenVector(curLocalState));
-// }
-
-// int
-// EnvironmentPython::
-// getNumBallTouch(int id)
-// {
-// 	return mSlaves[id]->getNumBallTouch();
-// }
-
-// void 
-// EnvironmentPython::
-// setHindsightGoal(np::ndarray randomSchedulerState)
-// {
-// 	mSlaves[0]->setHindsightGoal(toEigenVector(randomSchedulerState));
-// }
-// np::ndarray
-// EnvironmentPython::
-// getHindsightState(np::ndarray curState)
-// {
-// 	return toNumPyArray(mSlaves[0]->getHindsightState(toEigenVector(curState)));
-// }
-
-// double 
-// EnvironmentPython::
-// getHindsightReward(np::ndarray curHindsightState)
-// {
-// 	mSlaves[0]->getHindsightReward(toEigenVector(curHindsightState));
-// }
-
-// class GlutInitClass
-// {
-// public:
-// 	GlutInitClass(){
-// 		int argc = 1;
-// 		char *argv[1] = {(char*)"Something"};
-// 		glutInit(&argc, argv);
-// 	}
-// };
 bool 
 EnvironmentPython::
 isOnResetProcess(int id)
@@ -627,42 +389,29 @@ BOOST_PYTHON_MODULE(pyvs)
 		.def("resets",&EnvironmentPython::resets)
 		.def("slaveReset",&EnvironmentPython::slaveReset)
 		.def("foulReset",&EnvironmentPython::foulReset)
-		// .def("slaveResets",&EnvironmentPython::slaveResets)
 		.def("isTerminalState",&EnvironmentPython::isTerminalState)
 		.def("isFoulState",&EnvironmentPython::isFoulState)
 		.def("getState",&EnvironmentPython::getState)
 		.def("getCorrectActionType",&EnvironmentPython::getCorrectActionType)
 		.def("getCorrectActionDetail",&EnvironmentPython::getCorrectActionDetail)
 
-		// .def("getLocalState",&EnvironmentPython::getLocalState)
-		// .def("getSchedulerState",&EnvironmentPython::getSchedulerState)
-		// .def("getLinearActorState",&EnvironmentPython::getLinearActorState)
 		.def("setAction",&EnvironmentPython::setAction)
 		.def("setActionType",&EnvironmentPython::setActionType)
 		.def("getReward",&EnvironmentPython::getReward)
-		// .def("getSchedulerReward",&EnvironmentPython::getSchedulerReward)
-		// .def("getLinearActorReward",&EnvironmentPython::getLinearActorReward)
+
 		.def("stepsAtOnce",&EnvironmentPython::stepsAtOnce)
 		.def("isOnResetProcess",&EnvironmentPython::isOnResetProcess)
 		.def("isOnFoulReset",&EnvironmentPython::isOnFoulReset)
 		.def("setToFoulState",&EnvironmentPython::setToFoulState)
-		// .def("stepAtOnce",&EnvironmentPython::stepAtOnce)
-		// .def("step",&EnvironmentPython::step)
+
 		.def("slaveResets",&EnvironmentPython::slaveResets)
 		.def("getNumIterations",&EnvironmentPython::getNumIterations)
-		// .def("getHardcodedAction",&EnvironmentPython::getHardcodedAction)
-		// .def("reconEnvFromState",&EnvironmentPython::reconEnvFromState)
-		// .def("setLinearActorState",&EnvironmentPython::setLinearActorState)
+
 		.def("endOfIteration",&EnvironmentPython::endOfIteration)
 		.def("setResetCount",&EnvironmentPython::setResetCount)
 		.def("getResetDuration",&EnvironmentPython::getResetDuration)
 		.def("getTypeFreq",&EnvironmentPython::getTypeFreq)
 		.def("isTimeOut",&EnvironmentPython::isTimeOut)
 		.def("getSavedFrameDiff",&EnvironmentPython::getSavedFrameDiff)
-		// .def("isActionTypeChangingFrame",&EnvironmentPython::isActionTypeChangingFrame)
-		// .def("getNumBallTouch",&EnvironmentPython::getNumBallTouch);
-		// .def("setHindsightGoal",&EnvironmentPython::setHindsightGoal)
-		// .def("getHindsightState",&EnvironmentPython::getHindsightState)
-		// .def("getHindsightReward",&EnvironmentPython::getHindsightReward)
 		;
 }

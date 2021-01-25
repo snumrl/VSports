@@ -64,11 +64,6 @@ public:
 
 	void applyMouseEvent();
 
-    // void setBallPosition(bool leftContact);
-    // void setBallVelocity(bool leftContact);
-
-    // void updateHandTransform();
-
 	dart::dynamics::SkeletonPtr floorSkel;
 	dart::dynamics::SkeletonPtr ballSkel;
 
@@ -97,10 +92,8 @@ public:
 
 	boost::python::object *nn_module_decoders;
 
-	// boost::python::object mm,mns,sys_module;
 	boost::python::object target_rnd_nn_module;
 	boost::python::object predictor_rnd_nn_module;
-	// boost::python::object *reset_hidden;
 	bool mIsNNLoaded;
 
 	std::map<std::string, int> dartNameIdMap;
@@ -131,7 +124,6 @@ public:
 	int actionDelay;
 
     Eigen::VectorXd goal;
-    // ICA::dart::MotionGenerator* mMotionGenerator;
 	ICA::dart::MotionGeneratorBatch* mMotionGeneratorBatch;
 	Eigen::VectorXd targetLocal;
 
@@ -173,14 +165,6 @@ public:
 	std::vector<double> prevRewards;
 
 	std::vector<double> curValues;
-	// std::vector<double> prevRewards;
-
-
-    // Eigen::Vector3d curBallPosition;
-    // Eigen::Vector3d prevBallPosition;
-    // Eigen::Vector3d pprevBallPosition;
-    // Eigen::Vector3d ppprevBallPosition;
-
 
 };
 

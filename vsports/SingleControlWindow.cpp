@@ -41,7 +41,6 @@ initWindow(int _w, int _h, char* _name)
 	glutInitWindowPosition(100, 100);
 	glutInitWindowSize(_w, _h);
 	mWinIDs.push_back(glutCreateWindow(_name));
-	// glutHideWindow();
 	glutDisplayFunc(displayEvent);
 	glutReshapeFunc(reshapeEvent);
 	glutKeyboardFunc(keyboardEvent);
@@ -60,16 +59,12 @@ SingleControlWindow::
 SingleControlWindow()
 :SimWindow(), mIsNNLoaded(false), mFrame(0), windowFrame(0)
 {
-
- 	// srand (time(NULL));	
  	initCustomView();
 	initGoalpost();
 
-	// cout<<"1111"<<endl;
 	mm = p::import("__main__");
 	mns = mm.attr("__dict__");
 	sys_module = p::import("sys");
-	// cout<<"222222"<<endl;
 
 	boost::python::str module_dir = "../pyvs";
 	sys_module.attr("path").attr("insert")(1, module_dir);
@@ -77,7 +72,6 @@ SingleControlWindow()
 	p::exec("import sys",mns);
 	p::exec("import math",mns);
 	p::exec("import sys",mns);
-	// cout<<"3333333"<<endl;
 	p::exec("import torch",mns);
 	p::exec("import torch.nn as nn",mns);
 	p::exec("import torch.optim as optim",mns);
@@ -86,19 +80,13 @@ SingleControlWindow()
 	p::exec("import numpy as np",mns);
 	p::exec("from Model import *",mns);
 	p::exec("from VAE import VAEDecoder",mns);
-	// p::exec("from Utils import RunningMeanStd",mns);
-	// cout<<"444444"<<endl;
+
 	controlOn = false;
 
 	this->vsHardcoded = false;
 
 	this->showCourtMesh = true;
-// GLenum err = glewInit();
-// if (err != GLEW_OK)
-//   cout<<"Not ok with glew"<<endl; // or handle the error in a nicer way
-// if (!GLEW_VERSION_2_1)  // check that the machine supports the 2.1 API.
-//   cout<<"Not ok with glew version"<<endl; // or handle the error in a nicer way
-//   cout<< glewGetString(err) <<endl; // or handle the error in a nicer way
+
 	this->targetLocal.resize(10);
 	this->targetLocal.setZero();
 	this->goal.resize(2);
@@ -142,9 +130,6 @@ SingleControlWindow(const char* nn_path,
 
 	recorder = new Recorder();
 
-
-	// mMotionGeneratorBatch->setCurrentDartPosition(mEnv->mCharacters[0]->getSkeleton()->getPositions(), 0);
-
 	p::str str = ("num_state = "+std::to_string(mEnv->getNumState())).c_str();
 	p::exec(str,mns);
 
@@ -165,8 +150,6 @@ SingleControlWindow(const char* nn_path,
 	p::object *load_rms_0 = new p::object[mEnv->mNumChars];
 	p::object *load_rms_1 = new p::object[mEnv->mNumChars];
 
-	// reset_hidden = new boost::python::object[mEnv->mNumChars];
-
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
 		nn_module_0[i] = p::eval(("ActorCriticNN(num_state, "+to_string(numActionTypes)+", 0.0, True, True).cuda()").data(), mns);
@@ -179,25 +162,6 @@ SingleControlWindow(const char* nn_path,
 		load_1[i] = nn_module_1[i].attr("load");
 		load_rms_1[i] = nn_module_1[i].attr("loadRMS");
 	}
-	// for(int i=0;i<mEnv->mNumChars;i++)
-	// {
-	// 	nn_module_2[i] = p::eval("ActorCriticNN(num_state+5+5, 6 ).cuda()", mns);
-	// 	load_2[i] = nn_module_2[i].attr("load");
-	// }
-
-
-
-	// for(int i=0;i<mEnv->mNumChars;i++)
-	// {
-	// 	nn_module_0[i] = p::eval("ActorCriticNN(num_state, 4).cuda()", mns);
-	// 	load_0[i] = nn_module_0[i].attr("load");
-	// }
-	// for(int i=0;i<mEnv->mNumChars;i++)
-	// {
-	// 	nn_module_1[i] = p::eval("ActorCriticNN(num_state+4, 2).cuda()", mns);
-	// 	load_1[i] = nn_module_1[i].attr("load");
-	// }
-
 
 	load_0[0](string(control_nn_path) + "_0.pt");
 	load_1[0](string(control_nn_path) + "_1.pt");
@@ -215,7 +179,6 @@ SingleControlWindow(const char* nn_path,
 	load_rms_1[0]((subdir + "rms.ms").data());
 
 
-	// load_2[0](string(control_nn_path) + "_2.pt");
 	std::cout<<"Loaded control nn : "<<control_nn_path<<std::endl;
 
 
@@ -244,26 +207,6 @@ SingleControlWindow(const char* nn_path,
 
 	targetActionType = 0;
 	actionDelay = 0;
-	// bvhParser = new BVHparser(bvh_path, BVHType::BASKET);
-	// bvhParser->writeSkelFile();
-
-	// cout<<bvhParser->skelFilePath<<endl;
-
-	// SkeletonPtr bvhSkel = dart::utils::SkelParser::readSkeleton(bvhParser->skelFilePath);
-	// charNames.push_back(getFileName_(bvh_path));
-	// cout<<charNames[0]<<endl;	
-	// BVHmanager::setPositionFromBVH(bvhSkel, bvhParser, 0);
-	// mEnv->mWorld->addSkeleton(bvhSkel);
-
-
-	// cout<<"Before MotionGenerator"<<endl;
-	// exit(0);
-	// cout<<"BVH skeleton dofs : "<<bvhSkel->getNumDofs()<<endl;
-	// cout<<"BVH skeleton numBodies : "<<bvhSkel->getNumBodyNodes()<<endl;
-	// initDartNameIdMapping();
-	// mMotionGenerator = new ICA::dart::MotionGenerator(nn_path, this->dartNameIdMap);
-
-	// cout<<bvhSkel->getPositions().transpose()<<endl;
 
 
 	/// Read training X data
@@ -273,40 +216,14 @@ SingleControlWindow(const char* nn_path,
 
     std::cout<<"xDataPath:"<<xDataPath<<std::endl;
     
-    // if(! boost::filesystem::is_regular_file (xDataPath)) break;
     this->xData.push_back(MotionRepresentation::readXData(xNormalPath, xDataPath, sub_dir));
 
 }
-
-
-
-// void
-// SingleControlWindow::
-// initDartNameIdMapping()
-// {    
-// 	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
-// 	int curIndex = 0;
-// 	// cout<<bvhSkel->getNumBodyNodes()<<endl;
-// 	for(int i=0;i<bvhSkel->getNumBodyNodes();i++)
-// 	{
-// 		this->dartNameIdMap[bvhSkel->getBodyNode(i)->getName()] = curIndex;
-// 		curIndex += bvhSkel->getBodyNode(i)->getParentJoint()->getNumDofs(r);
-// 	}
-
-// 	// cout<<this->dartNameIdMap.size()<<endl;
-// 	// for(auto& nameMap : this->dartNameIdMap)
-// 	// {
-// 	// 	cout<<nameMap.first<<" "<<nameMap.second<<endl;
-// 	// }
-// }
 
 void
 SingleControlWindow::
 initCustomView()
 {
-	// mCamera->eye = Eigen::Vector3d(3.60468, -4.29576, 1.87037);
-	// mCamera->lookAt = Eigen::Vector3d(-0.0936473, 0.158113, 0.293854);
-	// mCamera->up = Eigen::Vector3d(-0.132372, 0.231252, 0.963847);
 	mCamera->eye = Eigen::Vector3d(5.0, 8.0, 18.0);
 	mCamera->lookAt = Eigen::Vector3d(5.0, 0.0, 0.0);
 	mCamera->up = Eigen::Vector3d(0.0, 1.0, 0.0);
@@ -376,25 +293,11 @@ keyboard(unsigned char key, int x, int y)
         }
 		case 'h':
 			mEnv->reset();
-			// mEnv->getCharacter(1)->getSkeleton()->setPositions(Eigen::Vector2d(0.0, 0.0));
-			// for(int i=0;i<4;i++){	
-			// 	reset_hidden[i]();
-			// }
 
-
-			// reset_hidden[2]();
-			// reset_hidden[3]();
 			break;
 		case 'g':
 			mEnv->goBackEnvironment();
-			// mEnv->getCharacter(1)->getSkeleton()->setPositions(Eigen::Vector2d(0.0, 0.0));
-			// for(int i=0;i<4;i++){	
-			// 	reset_hidden[i]();
-			// }
 
-
-			// reset_hidden[2]();
-			// reset_hidden[3]();
 			break;
 		case 'l':
 			controlOn = !controlOn;
@@ -403,7 +306,6 @@ keyboard(unsigned char key, int x, int y)
 			showCourtMesh = !showCourtMesh;
 			break;
 		case 'p':
-			// int numActions =6;
 			int curAction;
 		    for(int i=4;i<4+6;i++)
 		    {
@@ -436,9 +338,6 @@ keyboard(unsigned char key, int x, int y)
 				else
 					recorder->loadFrame(mEnv, windowFrame++);
 			}
-
-
-				// windowFrame = recorder->getNumFrames();
 			break;
 		case '[':
 			mFrame -= 100;
@@ -498,15 +397,11 @@ SingleControlWindow::
 timer(int value)
 {
 	// time_check_start();
-
 	if(mPlay)
 	{
 		value = step();
 		recorder->recordCurrentFrame(mEnv);
 	}
-
-	// display();
-	// glutSwapBuffers();
 	glutPostRedisplay();
 	// time_check_end();
 	SimWindow::timer(value);
@@ -551,7 +446,6 @@ applyMouseEvent()
     this->targetLocal[2] = facing[0];
     this->targetLocal[3] = facing[2];
     this->targetLocal.segment(2,2).normalize();
-    // std::cout<<targetLocal.segment(2,2).transpose()<<std::endl;
 }
 
 int
@@ -581,91 +475,24 @@ step()
 		
 		mEnv->slaveReset();
 	}
-	// std::cout<<"mFrame : "<<mFrame<<std::endl;
-    // std::cout<<"RNN Time : "<<std::endl;
-    // time_check_start();
+
 	this->targetLocal.setZero();
 
 
-
-	// std::cout<<mStates[0].transpose()<<std::endl;
-
-	// mEnv->bsm[0]->curState = BasketballState::BALL_CATCH_1;
-	// mActions[0] = Utils::toEigenVec(this->xData[0][mFrame]);
-
-	
-	// Eigen::VectorXd fullAction = Utils::toEigenVec(this->xData[0][mFrame]);
-
-
-
-	// std::cout<<
-	// mEnv->setActionType(0, getActionTypeFromVec(fullAction.segment(4,5))/3);
-
-	// Eigen::VectorXd remainedAction(fullAction.rows()-5);
-	// remainedAction.segment(0,4) = fullAction.segment(0,4);
-	// remainedAction.segment(4,5) = fullAction.segment(4+5,5);
-
-	// std::cout<<mEnv->mActions[0]<<std::endl;
-	// std::cout<<Utils::toEigenVec(this->xData[0][mFrame]).transpose()<<std::endl;
-
-	// time_check_start();
-
-	// exit(0);
-	// std::cout<<"0000"<<std::endl;
 	mEnv->getState(0);
-	// std::cout<<"1111"<<std::endl;
 	mEnv->saveEnvironment();
-
-	// std::cout<<"Root transform : "<<mEnv->mStates[0].segment(0,4).transpose()<<std::endl;
-
-	// std::cout<<"2222"<<std::endl;
 	if(mEnv->resetCount<=0)
 		getActionFromNN(0);
 
-	// std::cout<<"3333"<<std::endl;
-
-	// time_check_end();
-
-
-	// time_check_start();
-
-	// mEnv->setAction(0, remainedAction);
-	
-
-	// time_check_end();
 
 	std::cout<<mEnv->mActions[0].segment(0,9).transpose()<<std::endl;
 	std::cout<<mEnv->mActions[0].segment(9,5).transpose()<<std::endl;
-	// std::cout<<mEnv->mActions[0].segment(16,4).transpose()<<std::endl;
 	std::cout<<std::endl;
-
-
-	// mEnv->getState(0);
-
-    // update prevHandTransform
-    // updateHandTransform();
-
-	// cout<<nextPosition.transpose()<<endl;
-    // time_check_end();
-
-    // std::cout<<"Simulator Time : "<<std::endl;
-    // time_check_start();
-
-
-
-
 
 
 
 
 	std::vector<std::vector<double>> concatControlVector;
-	// std::cout<<"In SingleControlWindow :"<<std::endl;
-	// for(int i=0;i<mEnv->slaveResetStateVector.size();i++)
-	// {
-	// 	std::cout<<mEnv->slaveResetStateVector[i]<<" ";
-	// }
-	// std::cout<<endl;
-	// std::cout<<mEnv->slaveResetStateVector.transpose()<<std::endl;
 
 	int resetDuration = mEnv->resetDuration;
 
@@ -673,8 +500,6 @@ step()
 	{
 		if(mEnv->resetCount>resetDuration/2)
 		{
-			// std::cout<<"slave reset state vector"<<std::endl;
-
 			if(mEnv->randomPointTrajectoryStart)
 			{
 				mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, 
@@ -685,12 +510,8 @@ step()
 			{
 				mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, mEnv->slaveResetPositionVector, mEnv->slaveResetBallPosition);
 			}
-
-			// mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, mEnv->slaveResetPositionVector);
-			// mEnv->getCharacter(0)->getSkeleton()->setPositions(mEnv->slaveResetPositionVector);
 		}
 	}
-	// std::cout<<"1111"<<std::endl;
 
 
 	for(int id=0;id<1;++id)
@@ -715,8 +536,6 @@ step()
 			}
 			else
 			{
-				// std::cout<<"slave reset target vector"<<std::endl;
-
 				if(mEnv->randomPointTrajectoryStart)
 				{
 					concatControlVector.push_back(eigenToStdVec(mEnv->slaveResetTargetTrajectory[resetDuration-mEnv->resetCount]));
@@ -726,16 +545,6 @@ step()
 					actionDetailVector.segment(4,5) = mEnv->slaveResetTargetTrajectory[resetDuration-mEnv->resetCount].segment(9,5);
 					mEnv->setActionType(0,getActionTypeFromVec(actionTypeVector)/3);
 					mEnv->setAction(0, actionDetailVector);
-
-
-					// concatControlVector.push_back(eigenToStdVec(mEnv->mTutorialControlVectors[0][mEnv->curTrajectoryFrame]));
-					// Eigen::VectorXd actionTypeVector = mEnv->mTutorialControlVectors[0][mEnv->curTrajectoryFrame].segment(4,5);
-					// Eigen::VectorXd actionDetailVector(9);
-					// actionDetailVector.segment(0,4) = mEnv->mTutorialControlVectors[0][mEnv->curTrajectoryFrame].segment(0,4);
-					// actionDetailVector.segment(4,5) = mEnv->mTutorialControlVectors[0][mEnv->curTrajectoryFrame].segment(9,5);
-					// mEnv->setActionType(0,getActionTypeFromVec(actionTypeVector)/3);
-					// mEnv->setAction(0, actionDetailVector);
-
 				}
 				else
 				{
@@ -747,40 +556,19 @@ step()
 					mEnv->setActionType(0,getActionTypeFromVec(actionTypeVector)/3);
 					mEnv->setAction(0, actionDetailVector);
 				}
-				// std::cout<<"actionTypeVector : "<<actionTypeVector<<std::endl;
 			}
 
 		}
 	}
 
-	// std::cout<<"mEnv->slaveResetTargetVector : "<<mEnv->slaveResetTargetVector.transpose()<<std::endl;
-	// std::cout<<"2222"<<std::endl;
-
-	// time_check_start();
 	std::vector<std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool>>
 	nextPoseAndContactsWithBatch = mMotionGeneratorBatch->generateNextPoseAndContactsWithBatch(concatControlVector);
-	std::cout<<"#### : "<<std::get<0>(nextPoseAndContactsWithBatch[0]).transpose()<<std::endl;
-	// time_check_end();
-
-	// std::cout<<"3333"<<std::endl;
-
-
-	// time_check_start();
-
 
 	for(int id=0;id<1;++id)
 	{
 		mEnv->stepAtOnce(nextPoseAndContactsWithBatch[id]);
-		// std::cout<<"mEnv->mCurActionTypes[0] : "<<mEnv->mCurActionTypes[0]<<std::endl;
-		// for(int j=0;j<num;j++)
-		// 	this->step(id);
-		// this->step
-		// this->stepAtOnce(id);
 	}
 
-	// std::cout<<"mFrame : "<<mFrame<<std::endl;
-	// std::cout<<"mEnv->mTutorialTrajectories[0].size (): "<<mEnv->mTutorialTrajectories[1].size()<<std::endl;
-	// mEnv->getCharacter(0)->getSkeleton()->setPositions(mEnv->mTutorialTrajectories[1][mFrame]);
 
     for(int i=0;i<2;i++)
     {
@@ -788,134 +576,23 @@ step()
     	prevRewards[i] = mEnv->curReward;
     }
 
-	// for(int i=0;i<2;i++)
-	// {
-	// 	Eigen::VectorXd state = mEnv->mStates[0];
-	// 	p::object get_value_0;
-	// 	if(i==0) 
-	// 		get_value_0 = nn_module_0[0].attr("get_value");
-	// 	else
-	// 		get_value_0 = nn_module_1[0].attr("get_value");
-
-	// 	p::tuple shape = p::make_tuple(state.size());
-	// 	np::dtype dtype = np::dtype::get_builtin<float>();
-	// 	np::ndarray state_np = np::empty(shape, dtype);
-
-	// 	float* dest = reinterpret_cast<float*>(state_np.get_data());
-	// 	for(int j=0;j<state.size();j++)
-	// 	{
-	// 		dest[j] = state[j];
-	// 	}
-
-	// 	p::object temp = get_value_0(state_np);
-	// 	np::ndarray value = np::from_object(temp);
-	// 	float* srcs = reinterpret_cast<float*>(value.get_data());
-
-	// 	curValues[i] = srcs[0];
-
-	// }
-
-	// mEnv->stepAtOnce();
-    // time_check_end();
-    // std::cout<<std::endl;
 	mEnv->getRewards();
 	windowFrame++;
 	mFrame++;
-	// if(mFrame>mEnv->mTutorialTrajectories[1].size()-1)
-	// 	mFrame = mEnv->mTutorialTrajectories[1].size()-1;
 
-
-
-
-	// glutPostRedisplay();
     std::chrono::duration<double> elapsed_seconds;
 	elapsed_seconds = std::chrono::system_clock::now()-m_time_check_s;
     int calTime = std::min((int)(1000*elapsed_seconds.count()), 33);
 	return calTime;
 }
 
-// void 
-// SingleControlWindow::
-// setBallPosition(bool leftContact)
-// {
-// 	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
-//     Eigen::Isometry3d handTransform;
- 
-//     Eigen::VectorXd prevBallPosition = mEnv->ballSkel->getPositions();
- 
-//     if(leftContact)
-//     {
-//         handTransform = bvhSkel->getBodyNode("LeftHand")->getTransform();
-//     }
-//     else
-//     {
-//         handTransform = bvhSkel->getBodyNode("RightHand")->getTransform();
-//     }
-
-
-
-//     Eigen::VectorXd curBallPosition = mEnv->ballSkel->getPositions();
-//     curBallPosition.segment(3,3) = handTransform * Eigen::Vector3d(0.10, 0.12, 0.0);
-//     mEnv->ballSkel->setPositions(curBallPosition);
-// }
-
-
-// void 
-// SingleControlWindow::
-// setBallVelocity(bool leftContact)
-// {
-// 	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
-//     Eigen::Isometry3d handTransform;
- 
-//     Eigen::VectorXd prevBallPosition = mEnv->ballSkel->getPositions();
- 
-//     if(leftContact)
-//     {
-//         handTransform = bvhSkel->getBodyNode("LeftHand")->getTransform();
-//         prevBallPosition.segment(3,3) = prevHandTransforms[2][0] * Eigen::Vector3d(0.10, 0.12, 0.0);
-//     }
-//     else
-//     {
-//         handTransform = bvhSkel->getBodyNode("RightHand")->getTransform();
-//         prevBallPosition.segment(3,3) = prevHandTransforms[2][1] * Eigen::Vector3d(0.10, 0.12, 0.0);
-//         // handIndex = bvhSkel->getIndexOf(bvhSkel->getBodyNode("RightHand")->getParentJoint()->getDof(0));
-//     }
-
-
-
-//     Eigen::VectorXd curBallPosition = mEnv->ballSkel->getPositions();
-
-//     if(mEnv->mTimeElapsed != 0)
-//     {
-//         mEnv->ballSkel->setVelocities((curBallPosition - prevBallPosition)*15.0);
-//     }
-// }
-
-// void
-// SingleControlWindow::
-// updateHandTransform()
-// {
-// 	SkeletonPtr bvhSkel = mEnv->mWorld->getSkeleton(charNames[0]);
-//     for(int i=2;i>0;i--)
-//     {
-//         this->prevHandTransforms[i] = this->prevHandTransforms[i-1];
-//     }
-//     std::vector<Eigen::Isometry3d> prevHandTransform;
-//     prevHandTransform.push_back(bvhSkel->getBodyNode("LeftHand")->getTransform());
-//     prevHandTransform.push_back(bvhSkel->getBodyNode("RightHand")->getTransform());
-
-//     this->prevHandTransforms[0] = prevHandTransform;
-// }
 
 void
 SingleControlWindow::
 display()
 {
 
-    // time_check_end();
-    // time_check_start();
 	glClearColor(0.85, 0.85, 1.0, 1.0);
-	// glClearColor(1.0, 1.0, 1.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
 	initLights();
@@ -931,39 +608,6 @@ display()
 
 	GUI::drawCoordinate(Eigen::Vector3d(0.0, 0.015, 0.0), 1.0);
 
-
-	// for(int i=0;i<chars.size()-1;i++)
-	// {
-	// 	// if (i!=0)
-	// 	// 	continue;
-	// 	if(chars[i]->getTeamName() == "A")
-	// 	{
-	// 		// if(i==0)
-	// 		// 	continue;
-	// 		// cout<<mActions[i].transpose()<<endl;
-	// 		if(mActions[i][2]>0)
-	// 			GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.8, 0.8));
-	// 		else
-	// 			GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(1.0, 0.0, 0.0));
-	// 	}
-	// 	else
-	// 	{
-	// 		if(mActions[i][2]>0)
-	// 			GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(0.8, 0.8, 1.0));
-	// 		else
-	// 			GUI::drawSkeleton(chars[i]->getSkeleton(), Eigen::Vector3d(0.0, 0.0, 1.0));
-	// 	}
-
-	// }
-
-	// cout<<mEnv->getLocalState(1)[_ID_SLOWED]<<endl;
-	// cout<<mEnv->getLocalState(0).segment(_ID_GOALPOST_P+6, 2).transpose()<<endl;
-	// cout<<endl;
-
-	// mEnv->getCharacter(0)->getSkeleton()->getBodyNode("LeftFinger")->getParentJoint()->setPosition(0, fingerAngle);
-	// mEnv->getCharacter(0)->getSkeleton()->getBodyNode("LeftFingerBall")->getParentJoint()->setPosition(0, fingerBallAngle);
-
-
 	GUI::drawSkeleton(mEnv->floorSkel, Eigen::Vector3d(0.5, 1.0, 0.5), showCourtMesh, false);
 
 	GUI::drawSkeleton(mEnv->ballSkel, Eigen::Vector3d(0.9, 0.6, 0.0));
@@ -973,8 +617,6 @@ display()
 		skelColor = Eigen::Vector3d(0.5, 0.5, 0.5);
 	GUI::drawSkeleton(chars[0]->getSkeleton(), skelColor);
 
-	// Eigen::Isometry3d rootIsometry = ICA::dart::getBaseToRootMatrix(mEnv->mMotionGenerator->motionGenerators[0]->mMotionSegment->getLastPose()->getRoot());
-	// Eigen::Isometry3d rootIsometry = mEnv->mCharacters[0]->getSkeleton()->getRootBodyNode()->getWorldTransform();
 	Eigen::Isometry3d rootIsometry = mEnv->getRootT(0);
 
 	glPushMatrix();
@@ -982,12 +624,10 @@ display()
 	glTranslated(rootPosition[0], rootPosition[1], rootPosition[2]);
 	Eigen::AngleAxisd rootAA(rootIsometry.linear());
 	glRotated(180/M_PI*rootAA.angle(), rootAA.axis()[0], rootAA.axis()[1], rootAA.axis()[2]);
-	// std::cout<<rootAA.angle()<<", "<<rootAA.axis().transpose()<<std::endl;
 	GUI::drawCoordinate(Eigen::Vector3d::Zero(), 0.2);
 
 	glPopMatrix();
 
-	// GUI::drawSphere(0.3, mEnv->mTargetBallPosition, Eigen::Vector3d(0.0, 0.0, 1.0));
 
 	glPushMatrix();
 	glTranslated(mEnv->mTargetBallPosition[0], 0, mEnv->mTargetBallPosition[2]);
@@ -1003,33 +643,16 @@ display()
 	GUI::drawSphere(0.05, targetBall2DPosition, Eigen::Vector3d(0.0, 0.0, 0.0));
 
 
-	// std::cout<<"mEnv->mObstacles.size() : "<<mEnv->mObstacles.size()<<std::endl;
 	for(int i=0;i<mEnv->mObstacles.size();i++)
 	{
 		glPushMatrix();
 		glTranslated(mEnv->mObstacles[i][0], 1.0, mEnv->mObstacles[i][2]);
 		GUI::drawCylinder(0.5, 2.0, Eigen::Vector3d(0.3, 0.3, 0.3));
-		// GUI::drawCylinder(0.5, 2.0, Eigen::Vector3d(0.3, 0.3, 0.3));
 		// glColor3f(0.0,0.0,1.0);
 		// GUI::draw2dCircle(Eigen::Vector3d(0.0, 0.02, 0.0), Eigen::Vector3d::UnitX(), Eigen::Vector3d::UnitZ(),0.75, true);
 
 		glPopMatrix();
 	}
-
-	// cout<<"3333"<<endl;
-
-	// std::string scoreString
-	// = "Red : "+to_string((int)(mEnv->mAccScore[0] + mEnv->mAccScore[1]))+" |Blue : "+to_string((int)(mEnv->mAccScore[2]+mEnv->mAccScore[3]));
-
-	// std::string scoreString
-	// = "Red : "+to_string((mEnv->mAccScore[0]));
-
-	//+" |Blue : "+to_string((int)(mEnv->mAccScore[1]));
-	// = "Red : "+to_string((getRNDFeatureDiff(0)));//+" |Blue : "+to_string((int)(mEnv->mAccScore[1]));
-	// cout<<"444444"<<endl;
-
-	// cout<<mEnv->getCharacters()[0]->getSkeleton()->getVelocities().transpose()<<endl;
-	// cout<<mActions[1][3]<<endl;
 
 	GUI::drawStringOnScreen(0.2, 0.6, to_string((int)mEnv->mCharacters[0]->blocked), true, Eigen::Vector3d::Zero());
 
@@ -1044,9 +667,7 @@ display()
 		glTranslated(handPosition[0], handPosition[1], handPosition[2]);
 		Eigen::AngleAxisd handAA(handIsometry.linear());
 		glRotated(180/M_PI*handAA.angle(), handAA.axis()[0], handAA.axis()[1], handAA.axis()[2]);
-		// glTranslated(0.035, 0.0, 0.0);
 
-		// GUI::drawSphere(0.1, mEnv->mCharacters[0]->getSkeleton()->getBodyNode("LeftHand")->getWorldTransform().translation(), Eigen::Vector3d::Zero());
 		glColor3f(0.0, 0.0, 0.0);
 		GUI::drawCube(Eigen::Vector3d(0.072, 0.035, 0.055));
 
@@ -1061,9 +682,7 @@ display()
 		glTranslated(handPosition[0], handPosition[1], handPosition[2]);
 		Eigen::AngleAxisd handAA(handIsometry.linear());
 		glRotated(180/M_PI*handAA.angle(), handAA.axis()[0], handAA.axis()[1], handAA.axis()[2]);
-		// glTranslated(0.035, 0.0, 0.0);
 
-		// GUI::drawSphere(0.1, mEnv->mCharacters[0]->getSkeleton()->getBodyNode("LeftHand")->getWorldTransform().translation(), Eigen::Vector3d::Zero());
 		glColor3f(0.0, 0.0, 0.0);
 		GUI::drawCube(Eigen::Vector3d(0.072, 0.035, 0.055));
 
@@ -1082,7 +701,6 @@ display()
 		glRotated(180/M_PI*handAA.angle(), handAA.axis()[0], handAA.axis()[1], handAA.axis()[2]);
 		glTranslated(0.05, 0.0, 0.0);
 
-		// GUI::drawSphere(0.1, mEnv->mCharacters[0]->getSkeleton()->getBodyNode("LeftHand")->getWorldTransform().translation(), Eigen::Vector3d::Zero());
 		glColor3f(0.3, 0.3, 0.3);
 		GUI::drawCube(Eigen::Vector3d(0.10, 0.06, 0.06));
 
@@ -1100,7 +718,6 @@ display()
 		glRotated(180/M_PI*handAA.angle(), handAA.axis()[0], handAA.axis()[1], handAA.axis()[2]);
 		glTranslated(0.05, 0.0, 0.0);
 
-		// GUI::drawSphere(0.1, mEnv->mCharacters[0]->getSkeleton()->getBodyNode("LeftHand")->getWorldTransform().translation(), Eigen::Vector3d::Zero());
 		glColor3f(0.3, 0.3, 0.3);
 		GUI::drawCube(Eigen::Vector3d(0.10, 0.06, 0.06));
 
@@ -1147,9 +764,6 @@ display()
 		ballTargetPosition = rootIsometry * ballTargetPosition;
 		ballTargetVelocity = rootIsometry.linear() * ballTargetVelocity;
 
-		// std::cout<<ballTargetPosition.transpose()<<std::endl;
-		// std::cout<<ballTargetVelocity.transpose()<<std::endl;
-		// std::cout<<std::endl;
 		GUI::drawArrow3D(ballTargetPosition, ballTargetVelocity, ballTargetVelocity.norm()/8.0, 0.05, Eigen::Vector3d(1.0, 0.0, 0.0), 0.08);
 	}
 
@@ -1168,7 +782,6 @@ display()
 
 	showAvailableActions();
 
-	// std::cout<<mEnv->mCurActionTypes[0]<<std::endl;
 	GUI::drawBoxOnScreen(0.2+0.6*((double)mEnv->mCurActionTypes[0] / (numActions)), 0.2, Eigen::Vector2d(6.0, 4.0),Eigen::Vector3d(1.0, 1.0, 1.0));
 
 
@@ -1181,7 +794,6 @@ display()
     for(int i=0;i<2;i++)
     {
  		tdError[i] = prevValues[i] - (prevRewards[i] + 0.999 * curValues[i]);
- 		// std::cout<<prevValues[i]<<" "<<prevRewards[i]<<" "<<curValues[i]<<std::endl;
     }
     GUI::drawStringOnScreen(0.90, 0.55, std::to_string(tdError[0]), true, Eigen::Vector3d(1,1,1));
     GUI::drawStringOnScreen(0.90, 0.45, std::to_string(tdError[1]), true, Eigen::Vector3d(1,1,1));
@@ -1192,7 +804,6 @@ display()
 	{
 		screenshot();
 	}
-	// glutPostRedisplay();
 }
 
 std::string
@@ -1265,15 +876,6 @@ mouse(int button, int state, int x, int y)
 
         this->goal[0] = objx1 + (objx2 - objx1)*(objy1)/(objy1-objy2);
         this->goal[1] = objz1 + (objz2 - objz1)*(objy1)/(objy1-objy2);
-
-        // this->goal.segment(2,24).setZero();
-        // // this->goal[25] = -1;
-        // // this->goal[3] = 1;
-
-        // mMotionGenerator->mGoal = this->goal;
-        // mMotionGenerator->mGoal.segment(0,2) *= 100.0;
-
-       	// std::cout<<"new goal: "<<this->targetLocal..transpose()<<std::endl;
 	}
 	else
 	{
@@ -1314,7 +916,6 @@ Eigen::VectorXd
 SingleControlWindow::
 toOneHotVectorWithConstraint(int index, Eigen::VectorXd action)
 {
-	// std::cout<<"acition type "<<action.transpose()<<std::endl;
     int maxIndex = 0;
     double maxValue = -100;
     for(int i=0;i<action.size();i++)
@@ -1360,12 +961,7 @@ getActionFromNN(int index)
 	p::object get_action_0;
 
 	Eigen::VectorXd state = mEnv->getState(index);
-	// std::cout<<"action mask : "<<state.segment(state.size()-2, 2).transpose()<<std::endl;
-
 	int numActions = 2;
-	// int latentSize = 4;
-	// std::cout<<state.segment(155,6).transpose()<<std::endl;
-	// std::cout<<state.segment(mEnv->mCharacters[0]->getSkeleton()->getNumDofs(),12).transpose()<<std::endl;
 
 	Eigen::VectorXd mActionType(numActions);
 	mActionType.setZero();
@@ -1391,24 +987,9 @@ getActionFromNN(int index)
 		mActionType[j] = srcs[j];
 	}
 
-	// Eigen::VectorXd mComunication(cSize);
-	// // Comunication Vector
-	// for(int j=0;j<cSize;j++)
-	// {
-	// 	mComunication[j] = srcs[j+numActions];
-	// }
-
 	std::cout<<"**ActionType : "<<mActionType.transpose()<<std::endl;
 	std::cout<<"mEnv->curFrame : "<<mEnv->curFrame<<std::endl;
 	std::cout<<"mEnv->resetCount : "<<mEnv->resetCount<<std::endl;
-	// std::cout<<"mActionType.transpose() : "<<mActionType.transpose()<<std::endl;
-	
-	// Eigen::VectorXd denormalizedAction = mEnv->mTutorialControlVectors[0][mEnv->curTrajectoryFrame];
-	// int _curActionType = getActionTypeFromVec(denormalizedAction)/3;
-
-	// mActionType.setZero();
-	// mActionType[_curActionType] = 1.0;
-
 
 	if(mEnv->curFrame%mEnv->typeFreq == 0)
 		mActionType = toOneHotVectorWithConstraint(index, mActionType);
@@ -1422,19 +1003,8 @@ getActionFromNN(int index)
 
 	int actionType = getActionTypeFromVec(mActionType);
 
-	// mEnv->setActionType(index, actionType);
-
-
-	///////////////
 	Eigen::VectorXd mAction(mEnv->getNumAction() - numActions);
 
-
-
-	//No Comunication
-	/*Eigen::VectorXd state_1(state.size()+numActions);
-	state_1.segment(0,state.size()) = state;
-	state_1.segment(state.size(),numActions) = mActionType;
-*/
 	Eigen::VectorXd state_1(state.size()+mActionType.rows());
 	state_1.segment(0,state.size()) = state;
 	state_1.segment(state.size(),mActionType.rows()) = mActionType;
@@ -1461,19 +1031,9 @@ getActionFromNN(int index)
 		mAction[j] = srcs_1[j];
 	}
 
-	///////////////
-	// exit(0);
-	// mAction.segment(9,2) = mAction.segment(4,2);
-
-
 	Eigen::VectorXd encodedAction(latentSize);
 	encodedAction = mAction.segment(0,encodedAction.size());
 	Eigen::VectorXd decodedAction(9);
-
-	// encodedAction.setOnes();
-	// encodedAction *= -5.0;
-
-	// encodedAction << 0.3710, -0.2950,  0.3723, -0.0413, -1.4446, -0.7784;
 
 	p::object decode;
 
@@ -1498,283 +1058,9 @@ getActionFromNN(int index)
 	}
 
 	std::cout<<"Cur Action Type : "<<actionType<<std::endl;
-	// std::cout<<"Encoded Action : "<<encodedAction.transpose()<<std::endl;
-	// std::cout<<"Decoded Action : "<<decodedAction.transpose()<<std::endl;
 
-
-
-/*	Eigen::VectorXd mActionHandContact(6);
-	Eigen::VectorXd state_2(state_1.size()+encodedAction.rows());
-	state_2.segment(0,state_1.size()) = state_1;
-	state_2.segment(state_1.size(),encodedAction.rows()) = encodedAction;
-
-	p::object get_action_2;
-
-	get_action_2 = nn_module_2[index].attr("get_action");
-
-	p::tuple shape_2 = p::make_tuple(state_2.size());
-	np::ndarray state_np_2 = np::empty(shape_2, dtype);
-
-	float* dest_2 = reinterpret_cast<float*>(state_np_2.get_data());
-	for(int j=0;j<state_2.size();j++)
-	{
-		dest_2[j] = state_2[j];
-	}
-
-	temp = get_action_2(state_np_2);
-	np::ndarray action_np_2 = np::from_object(temp);
-	float* srcs_2 = reinterpret_cast<float*>(action_np_2.get_data());
-
-	for(int j=0;j<mActionHandContact.size();j++)
-	{
-		mActionHandContact[j] = srcs_2[j];
-	}
-*/
-	// mAction.segment(0, decodedAction.size()) = decodedAction;
-	// mAction.segment(decodedAction.size(),mActionHandContact.size()) = mActionHandContact;
-
-
-
-
-
-
-
-	// std::cout<<"Decoded Action :"<<std::endl;
-	// std::cout<<mAction.transpose()<<std::endl;
-
-
-	// mAction = mEnv->mNormalizer->denormalizeAction(mAction);
-	// std::cout<<mAction.segment(0,4).transpose()<<std::endl;
-	// std::cout<<mAction.segment(4,8).transpose()<<std::endl;
-	// std::cout<<mAction.segment(12,7).transpose()<<std::endl;
-	// std::cout<<std::endl;
-	// std::cout<<"-------------"<<std::endl;	
 	mActions[index] = mEnv->mNormalizer->denormalizeAction(decodedAction);
-	// mActions[index] = mAction;
-
-	// return mActions[index];
 }
-
-
-
-/*
-void
-SingleControlWindow::
-getActionFromNN(int index)
-{
-	p::object get_action_0;
-
-	Eigen::VectorXd state = mEnv->getState(index);
-
-	int numActions = 5;
-	// std::cout<<state.segment(155,6).transpose()<<std::endl;
-	// std::cout<<state.segment(mEnv->mCharacters[0]->getSkeleton()->getNumDofs(),12).transpose()<<std::endl;
-
-	Eigen::VectorXd mAction(mEnv->getNumAction()-1);
-	mAction.setZero();
-
-	get_action_0 = nn_module_0[index].attr("get_action");
-
-	p::tuple shape = p::make_tuple(state.size());
-	np::dtype dtype = np::dtype::get_builtin<float>();
-	np::ndarray state_np = np::empty(shape, dtype);
-
-	float* dest = reinterpret_cast<float*>(state_np.get_data());
-	for(int j=0;j<state.size();j++)
-	{
-		dest[j] = state[j];
-	}
-
-	p::object temp = get_action_0(state_np);
-	np::ndarray action_np = np::from_object(temp);
-	float* srcs = reinterpret_cast<float*>(action_np.get_data());
-
-	for(int j=0;j<numActions;j++)
-	{
-		mAction[j] = srcs[j];
-	}
-
-	mAction.segment(0,numActions) = toOneHotVector(mAction.segment(0,numActions));
-
-	///////////////
-
-	Eigen::VectorXd state_1(state.size()+numActions);
-	state_1.segment(0,state.size()) = state;
-	state_1.segment(state.size(),numActions) = mAction.segment(0,numActions);
-
-	p::object get_action_1;
-
-	get_action_1 = nn_module_1[index].attr("get_action");
-
-	p::tuple shape_1 = p::make_tuple(state_1.size());
-	np::ndarray state_np_1 = np::empty(shape_1, dtype);
-
-	float* dest_1 = reinterpret_cast<float*>(state_np_1.get_data());
-	for(int j=0;j<state_1.size();j++)
-	{
-		dest_1[j] = state_1[j];
-	}
-
-	temp = get_action_1(state_np_1);
-	np::ndarray action_np_1 = np::from_object(temp);
-	float* srcs_1 = reinterpret_cast<float*>(action_np_1.get_data());
-
-	for(int j=numActions;j<numActions+4;j++)
-	{
-		mAction[j] = srcs_1[j-numActions];
-	}
-
-	///////////////
-
-	Eigen::VectorXd state_2(state.size()+numActions+4);
-	state_2.segment(0,state_1.size()) = state_1;
-	state_2.segment(state_1.size(),4) = mAction.segment(numActions,4);
-
-	p::object get_action_2;
-
-	get_action_2 = nn_module_2[index].attr("get_action");
-
-	p::tuple shape_2 = p::make_tuple(state_2.size());
-	np::ndarray state_np_2 = np::empty(shape_2, dtype);
-
-	float* dest_2 = reinterpret_cast<float*>(state_np_2.get_data());
-	for(int j=0;j<state_2.size();j++)
-	{
-		dest_2[j] = state_2[j];
-	}
-
-	temp = get_action_2(state_np_2);
-	np::ndarray action_np_2 = np::from_object(temp);
-	float* srcs_2 = reinterpret_cast<float*>(action_np_2.get_data());
-
-	for(int j=numActions+4;j<mAction.size();j++)
-	{
-		mAction[j] = srcs_2[j-4-numActions];
-	}
-
-
-
-	// mAction = mEnv->mNormalizer->denormalizeAction(mAction);
-	// std::cout<<mAction.segment(0,4).transpose()<<std::endl;
-	// std::cout<<mAction.segment(4,8).transpose()<<std::endl;
-	// std::cout<<mAction.segment(12,7).transpose()<<std::endl;
-	// std::cout<<std::endl;
-	// std::cout<<"-------------"<<std::endl;	
-	mActions[index] = mEnv->mNormalizer->denormalizeAction(mAction);
-}
-
-*/
-/*void
-SingleControlWindow::
-getActionFromNN(int index)
-{
-	p::object get_action_0;
-
-	Eigen::VectorXd state = mEnv->getState(index);
-
-	int numActions = 4;
-	// std::cout<<state.segment(155,6).transpose()<<std::endl;
-	// std::cout<<state.segment(mEnv->mCharacters[0]->getSkeleton()->getNumDofs(),12).transpose()<<std::endl;
-
-	Eigen::VectorXd mAction(mEnv->getNumAction());
-	mAction.setZero();
-
-	get_action_0 = nn_module_0[index].attr("get_action");
-
-	p::tuple shape = p::make_tuple(state.size());
-	np::dtype dtype = np::dtype::get_builtin<float>();
-	np::ndarray state_np = np::empty(shape, dtype);
-
-	float* dest = reinterpret_cast<float*>(state_np.get_data());
-	for(int j=0;j<state.size();j++)
-	{
-		dest[j] = state[j];
-	}
-
-	p::object temp = get_action_0(state_np);
-	np::ndarray action_np = np::from_object(temp);
-	float* srcs = reinterpret_cast<float*>(action_np.get_data());
-
-	for(int j=0;j<numActions;j++)
-	{
-		mAction[j] = srcs[j];
-	}
-
-
-
-	// mAction.segment(0,numActions) = toOneHotVector(mAction.segment(0,numActions));
-
-	///////////////
-
-	Eigen::VectorXd state_1(state.size()+numActions);
-	state_1.segment(0,state.size()) = state;
-	state_1.segment(state.size(),numActions) = mAction.segment(0,numActions);
-
-	p::object get_action_1;
-
-	get_action_1 = nn_module_1[index].attr("get_action");
-
-	p::tuple shape_1 = p::make_tuple(state_1.size());
-	np::ndarray state_np_1 = np::empty(shape_1, dtype);
-
-	float* dest_1 = reinterpret_cast<float*>(state_np_1.get_data());
-	for(int j=0;j<state_1.size();j++)
-	{
-		dest_1[j] = state_1[j];
-	}
-
-	temp = get_action_1(state_np_1);
-	np::ndarray action_np_1 = np::from_object(temp);
-	float* srcs_1 = reinterpret_cast<float*>(action_np_1.get_data());
-
-	for(int j=numActions;j<numActions+4;j++)
-	{
-		mAction[j] = srcs_1[j-numActions];
-	}
-
-	///////////////
-	// exit(0);
-	mAction.segment(14,2) = mAction.segment(4,2);
-
-
-	Eigen::VectorXd encodedAction(4);
-	encodedAction = mAction.segment(0,encodedAction.size());
-
-	p::object decode;
-
-	decode = nn_module_decoder.attr("decodeAction");
-
-	p::tuple shape_d = p::make_tuple(encodedAction.size());
-	np::ndarray state_np_d = np::empty(shape_d, dtype);
-
-	float* dest_d = reinterpret_cast<float*>(state_np_d.get_data());
-	for(int j=0;j<encodedAction.size();j++)
-	{
-		dest_d[j] = encodedAction[j];
-	}
-
-	temp = decode(state_np_d);
-	np::ndarray action_np_d = np::from_object(temp);
-	float* src_d = reinterpret_cast<float*>(action_np_d.get_data());
-
-	for(int j=0;j<14;j++)
-	{
-		mAction[j] = src_d[j];
-	}
-	// std::cout<<"Decoded Action :"<<std::endl;
-	// std::cout<<mAction.transpose()<<std::endl;
-
-
-	// mAction = mEnv->mNormalizer->denormalizeAction(mAction);
-	// std::cout<<mAction.segment(0,4).transpose()<<std::endl;
-	// std::cout<<mAction.segment(4,8).transpose()<<std::endl;
-	// std::cout<<mAction.segment(12,7).transpose()<<std::endl;
-	// std::cout<<std::endl;
-	// std::cout<<"-------------"<<std::endl;	
-	mActions[index] = mEnv->mNormalizer->denormalizeAction(mAction);
-}
-
-*/
 
 void
 SingleControlWindow::
@@ -1784,9 +1070,6 @@ showAvailableActions()
 	int numActionTypes = 5;
 	for(int i=0;i<numActionTypes;i++)
 	{
-		// if( i == mEnv->mCurActionTypes[0])
-		// 	GUI::drawStringOnScreen_Big(-0.01 + 0.2+0.6*(((double) i)/numActionTypes), 0.2, mEnv->actionNameMap[i], Eigen::Vector3d::UnitZ());
-		// else 
 		if(std::find(aa.begin(), aa.end(), i) != aa.end())
 			GUI::drawStringOnScreen_Big(-0.01 + 0.2+0.6*(((double) i)/numActionTypes), 0.2, mEnv->actionNameMap[i], Eigen::Vector3d::Ones());
 		else
@@ -1794,114 +1077,3 @@ showAvailableActions()
 
 	}
 }
-
-
-// void
-// SingleControlWindow::
-// getActionFromNN(int index)
-// {
-// 	p::object get_action;
-
-// 	Eigen::VectorXd state = mEnv->getNormalizedState(index);
-// 	// Eigen::VectorXd normalizedState = mNormalizer->normalizeState(state);
-// 	// std::cout<<normalizedState.transpose()<<std::endl;
-// 	// std::cout<<mEnv->mStates[0].segment(8,3).transpose()<<" // "<<mEnv->mStates[0].segment(146,3).transpose()<<std::endl;
-
-// 	Eigen::VectorXd mAction(mEnv->getNumAction());
-// 	mAction.setZero();
-
-// 	get_action = nn_module[index].attr("get_action");
-
-// 	p::tuple shape = p::make_tuple(state.size());
-// 	np::dtype dtype = np::dtype::get_builtin<float>();
-// 	np::ndarray state_np = np::empty(shape, dtype);
-
-// 	float* dest = reinterpret_cast<float*>(state_np.get_data());
-// 	for(int j=0;j<state.size();j++)
-// 	{
-// 		dest[j] = state[j];
-// 	}
-
-// 	p::object temp = get_action(state_np);
-// 	np::ndarray action_np = np::from_object(temp);
-// 	float* srcs = reinterpret_cast<float*>(action_np.get_data());
-
-
-
-// 	if(reducedDim)
-// 	{
-// 		for(int j=0;j<4;j++)
-// 		{
-// 			mAction[j] = srcs[j];
-// 		}
-// 	}
-// 	else
-// 	{
-// 		for(int j=0;j<mAction.rows();j++)
-// 		{
-// 			mAction[j] = srcs[j];
-// 		}
-// 	}
-
-// 	mAction = mNormalizer->denormalizeAction(mAction);
-// 	// std::cout<<mAction.transpose()<<std::endl;
-
-
-// 	// mAction = mNormalizer->denormalizeAction(mAction);
-// 	// std::
-
-
-// 	// cout<<"Here?"<<endl;
-// 	mActions[index] = mAction;
-// 	// cout<<"NO"
-// }
-// void
-// SingleControlWindow::
-// getControlMeanStdByActionType(int actionType)
-// {
-// 	// std::cout<<this->xData[0].size()<<std::endl;
-// 	std::vector<std::vector<double>> total;
-// 	for(int i=0;i<this->xData[0].size();i++)
-// 	{
-// 		int curActionType = getActionTypeFromVec(this->xData[0][i]);
-
-// 		if(curActionType == actionType)
-// 		{
-// 			total.push_back(this->xData[0][i]);
-// 		}
-// 	}
-
-// 	std::vector<std::vector<double>> totalTranspose;
-
-// 	// std::cout<<total[0].size()<<std::endl;
-// 	for(int j=0;j<total[0].size();j++)
-// 	{
-// 		std::vector<double> row;
-// 		for(int i=0;i<total.size();i++)
-// 		{
-// 			// std::cout<<i<<" "<<j<<std::endl;
-// 			row.push_back(total[i][j]);
-// 		}
-// 		totalTranspose.push_back(row);
-// 	}
-
-// 	for(int i=0;i<totalTranspose.size();i++)
-// 	{
-// 		std::cout<<i<<" th :";
-// 		double sum = std::accumulate(totalTranspose[i].begin(), totalTranspose[i].end(), 0.0);
-// 		double mean = sum/totalTranspose[i].size();
-
-// 		std::vector<double> diff(totalTranspose[i].size());
-// 		std::transform(totalTranspose[i].begin(), totalTranspose[i].end(), diff.begin(),
-// 		               std::bind2nd(std::minus<double>(), mean));
-
-// 		double sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
-// 		double stdev = std::sqrt(sq_sum/(diff.size()-1));
-// 		std::cout<<mean<<", "<<stdev<<" / "<<mean+2*stdev<<", "<<mean-2*stdev<<std::endl;
-// 	}
-// 	// exit(0);
-
-
-// 	// double sum = std::accumulate(total.begin(), _InputIterator __last, _Tp __init)
-
-// }
