@@ -124,7 +124,6 @@ public:
 	std::vector<bool> mRFootDetached;
 	std::vector<Eigen::Vector3d> mObstacles;
 	std::vector<double> mCurHeadingAngle;
-	// std::vector<double**> mHeightMaps;
 
 	std::vector<bool> mLFootContacting;
 	std::vector<bool> mRFootContacting;
@@ -165,7 +164,6 @@ public:
 	void initialize(ICA::dart::MotionGeneratorBatch* mgb, int batchIndex = 0, bool initTutorialTrajectory = true);
 	void step();
 
-	// void stepAtOnce();
 	void stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContacts);
 
 	void reset();
@@ -189,7 +187,6 @@ public:
 	void applyAction(int index);
 
 	int getNumState(int index = 0){return getState(index).size();}
-	// int getNumAction(int index = 0){return getAction(index).rows();}
 	int getNumAction(int index = 0){return getAction(index).rows();}
 // 
 	const dart::simulation::WorldPtr& getWorld(){return mWorld;}
@@ -211,9 +208,6 @@ public:
 
 	void boundBallVelocitiy(double maxVel);
 	void dampBallVelocitiy(double dampPower);
-
-	// Eigen::VectorXd normalizeNNState(Eigen::VectorXd state);
-	// Eigen::VectorXd unNormalizeNNState(Eigen::VectorXd normalizedState);
 
 	void setVState(int index, Eigen::VectorXd latentState);
 
@@ -373,9 +367,6 @@ public:
 
 	void addFingerSegmentToSkel(dart::dynamics::SkeletonPtr skel);
 
-	// std::vector<bool> mLFootDetached;
-	// std::vector<bool> mRFootDetached;
-
 	std::vector<BStateMachine*> bsm;
 
 	void genObstacleNearCharacter(); 
@@ -421,11 +412,6 @@ public:
 
 	std::vector<bool> mChangeContactIsActive;
 
-
-	// std::vector<Eigen::Isometry3d> mPrevLHandTranform;
-	// std::vector<Eigen::Isometry3d> mPrevRHandTranform;
-	// int mCurPlayer;
-
 	Eigen::VectorXd dribbleDefaultVec;
 
 	Eigen::Isometry3d getRootT(int index);
@@ -433,7 +419,6 @@ public:
 	bool gotReward;
 
 	int violatedFrames;
-	// AgentEnvWindow* mWindow;
 
 	int setActionType(int index, int actionType, bool isNew = true);
 

@@ -28,8 +28,8 @@ device = torch.device("cuda" if use_cuda else "cpu")
 model = VAE().to(device)
 optimizer = optim.Adam(model.parameters(), lr=5e-3)
 # print("asdf")
-nnCount = 5
-vaeDir = "vae_nn_sep"
+nnCount = 0
+vaeDir = "vae_nn_sep_"+str(nnCount)
 
 if not exists(vaeDir):
     mkdir(vaeDir)
@@ -276,4 +276,7 @@ def trainControlVector(path, actionType):
 ccvt = ComprehensiveControlVectorTraining("basket_18", 5)
 for i in range(100):
 	ccvt.trainTargetCV(0)
+	ccvt.trainTargetCV(1)
+	ccvt.trainTargetCV(2)
 	ccvt.trainTargetCV(3)
+	ccvt.trainTargetCV(4)
