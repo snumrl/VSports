@@ -1003,14 +1003,15 @@ display()
 	GUI::drawSphere(0.05, targetBall2DPosition, Eigen::Vector3d(0.0, 0.0, 0.0));
 
 
+	// std::cout<<"mEnv->mObstacles.size() : "<<mEnv->mObstacles.size()<<std::endl;
 	for(int i=0;i<mEnv->mObstacles.size();i++)
 	{
 		glPushMatrix();
-		glTranslated(mEnv->mObstacles[i][0], 0.0, mEnv->mObstacles[i][2]);
+		glTranslated(mEnv->mObstacles[i][0], 1.0, mEnv->mObstacles[i][2]);
+		GUI::drawCylinder(0.5, 2.0, Eigen::Vector3d(0.3, 0.3, 0.3));
 		// GUI::drawCylinder(0.5, 2.0, Eigen::Vector3d(0.3, 0.3, 0.3));
-		// GUI::drawCylinder(0.5, 2.0, Eigen::Vector3d(0.3, 0.3, 0.3));
-		glColor3f(0.0,0.0,1.0);
-		GUI::draw2dCircle(Eigen::Vector3d(0.0, 0.02, 0.0), Eigen::Vector3d::UnitX(), Eigen::Vector3d::UnitZ(),0.75, true);
+		// glColor3f(0.0,0.0,1.0);
+		// GUI::draw2dCircle(Eigen::Vector3d(0.0, 0.02, 0.0), Eigen::Vector3d::UnitX(), Eigen::Vector3d::UnitZ(),0.75, true);
 
 		glPopMatrix();
 	}

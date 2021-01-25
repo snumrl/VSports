@@ -43,7 +43,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 32
+nnCount = 35
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -825,7 +825,9 @@ class RL(object):
 															# print("when h = 0")
 															# embed()
 															# exit(0)
-
+															# if int(savedFrameDiff/self.typeFreq) >= len(self.episodes[h_][j][i].data):
+															# 	embed()
+															# 	exit(0)
 															lastTuple = self.episodes[h_][j][i].data[-(1+int(savedFrameDiff/self.typeFreq))]
 
 															self.episodes[h_][j][i] = RNNEpisodeBuffer()
