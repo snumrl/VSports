@@ -1253,7 +1253,7 @@ getReward(int index, bool verbose)
 
 	bool fastTermination = true;
 	// activates when fastTermination is on
-	bool fastViewTermination = false;
+	bool fastViewTermination = true;
 
 	bool isDribble = false;
 	bool isDribbleAndShoot = true;
