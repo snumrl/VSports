@@ -282,8 +282,8 @@ initCharacters(std::string bvhPath)
 	
 	dribbleDefaultVec.resize(CONTROL_VECTOR_SIZE);
 	dribbleDefaultVec.setZero();
-	dribbleDefaultVec.segment(2,2) = Eigen::Vector2d(50.0, -50.0);
-	dribbleDefaultVec[4] = 1.0;
+	// dribbleDefaultVec.segment(2,2) = Eigen::Vector2d(50.0, -50.0);
+	dribbleDefaultVec[4+4] = 1.0;
 }
 
 
@@ -729,7 +729,7 @@ getState(int index)
 	goalpostPositions.segment(0,3) = rootT.inverse() * ((Eigen::Vector3d) goalpostPositions.segment(0,3));
 	goalpostPositions.segment(3,3) = rootT.inverse() * ((Eigen::Vector3d) goalpostPositions.segment(3,3));
 
-	Eigen::VectorXd curActionType(5);
+	Eigen::VectorXd curActionType(NUM_ACTION_TYPE);
 	curActionType.setZero();
 
 	curActionType[mCurActionTypes[index]] = 1;
@@ -752,14 +752,14 @@ getState(int index)
 	curSMState.setZero();
 	curSMState[bsm[index]->getStateWithInt()] = 1.0;
 
-	Eigen::VectorXd availableActions(2);
+	Eigen::VectorXd availableActions(NUM_ACTION_TYPE);
 	availableActions.setZero();
 	std::vector<int> availableActionList = bsm[index]->getAvailableActions();
 
-	if((mCurActionTypes[index] == 3)
+	if((mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3 )
 		&&mCurCriticalActionTimes[index] >-40)
 	{
-		availableActions[mCurActionTypes[index]/3] = 1;
+		availableActions[mCurActionTypes[index]] = 1;
 	}
 	else
 	{
@@ -941,15 +941,18 @@ getReward(int index, bool verbose)
 	double reward = 0;
 	double g= -9.81;
 
-	bool fastTermination = true;
-	// activates when fastTermination is on
-	bool fastViewTermination = true;
+	bool isDribbleAndShoot = false;
+	bool isPassReceive = true;
 
-	bool isDribble = false;
-	bool isDribbleAndShoot = true;
+	if(isPassReceive)
+	{
+		return 0;
+	}
 
 	if(isDribbleAndShoot)
 	{
+		bool fastViewTermination = true;
+
 		Eigen::Vector3d targetPlaneNormal = mObstacles[0] - mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM();
 		targetPlaneNormal[1] = 0.0;
 
@@ -1198,7 +1201,7 @@ int
 Environment::
 setActionType(int index, int actionType, bool isNew)
 {
-	actionType *= 3;
+	// actionType *= 3;
 
 	int curActionType = actionType;
 
@@ -1257,7 +1260,8 @@ setActionType(int index, int actionType, bool isNew)
     		curActionType = bsm[index]->transition(curActionType);
     }
     mCurActionTypes[index] = curActionType;
-    return curActionType/3;
+    // return curActionType/3;
+    return curActionType;
 }
 
 bool
@@ -1367,9 +1371,9 @@ slaveReset()
 
 	mObstacles.clear();
 
-	genObstacleNearGoalpost(-1);
-	genObstacleNearGoalpost(-1);
-	genObstacleNearGoalpost(-1);
+	// genObstacleNearGoalpost(-1);
+	// genObstacleNearGoalpost(-1);
+	// genObstacleNearGoalpost(-1);
 
 	for(int i=0;i<mNumChars;i++)
 	{
@@ -1465,6 +1469,10 @@ slaveResetCharacterPositions()
 
 			standPosition[3] = xRange - r * sin(theta);
 			standPosition[5] = 0 + r * cos(theta);
+
+			//Fixed position
+			standPosition[3] = xRange*0.7;
+			standPosition[5] = 0;
 		}
 		else
 		{
@@ -1496,7 +1504,8 @@ slaveResetCharacterPositions()
 		bool directionToGoal = true;
 		if(directionToGoal)
 		{
-			aa = Eigen::AngleAxisd(atan2(goalDirection[0], goalDirection[2])+M_PI/2.0 + randomDirection, Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(M_PI/2.0, Eigen::Vector3d::UnitZ());
+			// aa = Eigen::AngleAxisd(atan2(goalDirection[0], goalDirection[2])+M_PI/2.0 + randomDirection, Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(M_PI/2.0, Eigen::Vector3d::UnitZ());
+			aa = Eigen::AngleAxisd(atan2(goalDirection[0], goalDirection[2])+M_PI/2.0 + M_PI, Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(M_PI/2.0, Eigen::Vector3d::UnitZ());
 		}
 
 		Eigen::Vector3d newRootOrientation = aa.angle() * aa.axis();
@@ -1562,8 +1571,8 @@ slaveResetCharacterPositions()
 		mLFootDetached[i] = false;
 		mRFootDetached[i] = false;
 
-		bsm[i]->curState = BasketballState::DRIBBLING;
-		bsm[i]->prevAction = 0;
+		bsm[i]->curState = BasketballState::POSITIONING;
+		bsm[i]->prevAction = 4;
 
 		mLFootContacting[i] = false;
 		mRFootContacting[i] = false;
@@ -2350,8 +2359,8 @@ saveEnvironment()
 
 BStateMachine::BStateMachine()
 {
-	curState = BasketballState::DRIBBLING;
-	prevAction = 0;
+	curState = BasketballState::POSITIONING;
+	prevAction = 4;
 }
 
 void

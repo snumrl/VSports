@@ -118,7 +118,7 @@ SingleControlWindow(const char* nn_path,
 					const char* control_nn_path)
 :SingleControlWindow()
 {
-	int numActionTypes = 2;
+	int numActionTypes = 5;
 	latentSize = 4;
 	cSize = 4;
 
@@ -158,7 +158,7 @@ SingleControlWindow(const char* nn_path,
 	}
 	for(int i=0;i<mEnv->mNumChars;i++)
 	{
-		nn_module_1[i] = p::eval(("ActorCriticNN(num_state + 2, "+to_string(latentSize)+").cuda()").data(), mns);
+		nn_module_1[i] = p::eval(("ActorCriticNN(num_state + "+to_string(numActionTypes)+", "+to_string(latentSize)+").cuda()").data(), mns);
 		load_1[i] = nn_module_1[i].attr("load");
 		load_rms_1[i] = nn_module_1[i].attr("loadRMS");
 	}
@@ -191,8 +191,12 @@ SingleControlWindow(const char* nn_path,
 		load_decoders[i] = nn_module_decoders[i].attr("load");
 	}
 
-	load_decoders[0]("../pyvs/vae_nn_sep/vae_action_decoder_"+to_string(0)+".pt");
-	load_decoders[1]("../pyvs/vae_nn_sep/vae_action_decoder_"+to_string(3)+".pt");
+	for(int i=0;i<numActionTypes;i++)
+	{
+		load_decoders[i]("../pyvs/vae_nn_sep_0/vae_action_decoder_"+to_string(i)+".pt");
+	}
+	// load_decoders[0]("../pyvs/vae_nn_sep/vae_action_decoder_"+to_string(0)+".pt");
+	// load_decoders[1]("../pyvs/vae_nn_sep/vae_action_decoder_"+to_string(3)+".pt");
 	std::cout<<"Loaded VAE decoder"<<std::endl;
 
 
@@ -961,7 +965,7 @@ getActionFromNN(int index)
 	p::object get_action_0;
 
 	Eigen::VectorXd state = mEnv->getState(index);
-	int numActions = 2;
+	int numActions = 5;
 
 	Eigen::VectorXd mActionType(numActions);
 	mActionType.setZero();

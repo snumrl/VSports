@@ -5,9 +5,12 @@ class Recorder
 {
 public:
 	Recorder();
-	std::vector<Eigen::Vector3d> obstaclePositions;
-	std::vector<Eigen::VectorXd> skelPositions;
+	// std::vector<Eigen::Vector3d> obstaclePositions;
+	// std::vector<Eigen::VectorXd> skelPositions;
 	std::vector<Eigen::Vector6d> ballPositions;
+
+	std::vector<std::vector<Eigen::Vector3d>> obstaclePositions;
+	std::vector<std::vector<Eigen::VectorXd>> skelPositions;
 
 	void recordCurrentFrame(Environment* env);
 	void loadFrame(Environment* env, int frame);

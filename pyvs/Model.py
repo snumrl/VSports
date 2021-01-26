@@ -133,7 +133,7 @@ class ActorCriticNN(nn.Module):
 		# self.rnn.apply(weights_init)
 		self.policy.apply(weights_init)
 
-		self.rms = RunningMeanStd(shape=(num_states-2))
+		self.rms = RunningMeanStd(shape=(num_states-5))
 
 	def loadRMS(self, path):
 		print('load RMS : {}'.format(path))
@@ -151,11 +151,9 @@ class ActorCriticNN(nn.Module):
 		action = self.policy2(h)
 	
 		if self.actionMask:
-			mask = x[:,-2:]
+			mask = x[:,-5:]
 			action = torch.mul(action, mask)
-			# embed()
-			# exit(0)
-
+			action = action -100.0*(1-mask)
 
 		# embed()
 		# exit(0)
@@ -164,6 +162,11 @@ class ActorCriticNN(nn.Module):
 			# exit(0)
 			sm =  nn.Softmax(dim = 1)
 			action = sm(action)
+
+		if self.actionMask:
+			mask = x[:,-5:]
+			action = torch.mul(action, mask)
+
 		return MultiVariateNormal(action.unsqueeze(0),scale_std*self.log_std.exp()), self.value(x)
 
 
@@ -181,7 +184,7 @@ class ActorCriticNN(nn.Module):
 	
 	
 		if self.actionMask:
-			mask = x[:,-2:]
+			mask = x[:,-5:]
 			action = torch.mul(action, mask)
 			# embed()
 			# exit(0)

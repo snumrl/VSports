@@ -43,7 +43,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 36
+nnCount = 37
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -124,7 +124,7 @@ class RL(object):
 		self.buffer_size = 16*1024
 		self.batch_size = 2*512
 
-		self.num_action_types = 2
+		self.num_action_types = 5
 		self.latent_size = 4
 
 		self.resetDuration = self.env.getResetDuration()
@@ -157,12 +157,12 @@ class RL(object):
 		self.actionDecoders = [ VAEDecoder().to(device) for _ in range(self.num_action_types)]
 		self.actionEncoder = VAEEncoder().to(device)
 
-		self.actionDecoders[0].load("vae_nn_sep/vae_action_decoder_"+str(0)+".pt")
-		self.actionDecoders[1].load("vae_nn_sep/vae_action_decoder_"+str(3)+".pt")
+		for i in range(self.num_action_types):
+			self.actionDecoders[i].load("vae_nn_sep_0/vae_action_decoder_"+str(i)+".pt")
 
-		self.actionEncoder.load("vae_nn_sep/vae_action_encoder.pt")
+		self.actionEncoder.load("vae_nn_sep_0/vae_action_encoder.pt")
 
-		self.rms = RunningMeanStd(self.num_state-2)
+		self.rms = RunningMeanStd(self.num_state-5)
 
 		self.num_c = 4
 
@@ -313,8 +313,8 @@ class RL(object):
 				states[i][j] = self.env.getState(j,i).astype(np.float32)
 
 		states = np.array(states)
-		states[:,:,:-2] = self.rms.apply(states[:,:,:-2])
-		mask = states[:,:,-2:]
+		states[:,:,:-5] = self.rms.apply(states[:,:,:-5])
+		mask = states[:,:,-5:]
 
 		learningTeam = 0
 		teamDic = {0: 0, 1: 0}
@@ -781,7 +781,7 @@ class RL(object):
 				for j in range(self.num_slaves):
 					states[i][j] = self.env.getState(j,i).astype(np.float32)
 			states = np.array(states)
-			states[:,:,:-2] = self.rms.apply(states[:,:,:-2])
+			states[:,:,:-5] = self.rms.apply(states[:,:,:-5])
 
 		print('SIM : {}'.format(local_step))
 
