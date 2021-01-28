@@ -452,6 +452,15 @@ public:
 	bool isTimeOut();
 
 	int numGobackStack;
+
+	void judgeBallPossession();
+
+	int getBallCloseHand(int index);
+
+	double grabDistance;
+
+	int throwingTime;
+	Eigen::Vector3d throwingVelocity;
 };
 double getFacingAngleFromLocalState(Eigen::VectorXd curState);
 Eigen::VectorXd localStateToOriginState(Eigen::VectorXd localState, int mNumChars=6);

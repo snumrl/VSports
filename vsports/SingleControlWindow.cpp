@@ -534,7 +534,7 @@ step()
 				Eigen::VectorXd actionDetailVector(9);
 				actionDetailVector.segment(0,4) = mEnv->slaveResetTargetVector.segment(0,4);
 				actionDetailVector.segment(4,5) = mEnv->slaveResetTargetVector.segment(9,5);
-				mEnv->setActionType(0,getActionTypeFromVec(actionTypeVector)/3);
+				mEnv->setActionType(0,getActionTypeFromVec(actionTypeVector));
 				mEnv->setAction(0, actionDetailVector);
 
 			}
@@ -547,7 +547,7 @@ step()
 					Eigen::VectorXd actionDetailVector(9);
 					actionDetailVector.segment(0,4) = mEnv->slaveResetTargetTrajectory[resetDuration-mEnv->resetCount].segment(0,4);
 					actionDetailVector.segment(4,5) = mEnv->slaveResetTargetTrajectory[resetDuration-mEnv->resetCount].segment(9,5);
-					mEnv->setActionType(0,getActionTypeFromVec(actionTypeVector)/3);
+					mEnv->setActionType(0,getActionTypeFromVec(actionTypeVector));
 					mEnv->setAction(0, actionDetailVector);
 				}
 				else
@@ -557,7 +557,7 @@ step()
 					Eigen::VectorXd actionDetailVector(9);
 					actionDetailVector.segment(0,4) = mEnv->slaveResetTargetVector.segment(0,4);
 					actionDetailVector.segment(4,5) = mEnv->slaveResetTargetVector.segment(9,5);
-					mEnv->setActionType(0,getActionTypeFromVec(actionTypeVector)/3);
+					mEnv->setActionType(0,getActionTypeFromVec(actionTypeVector));
 					mEnv->setAction(0, actionDetailVector);
 				}
 			}
@@ -614,7 +614,10 @@ display()
 
 	GUI::drawSkeleton(mEnv->floorSkel, Eigen::Vector3d(0.5, 1.0, 0.5), showCourtMesh, false);
 
-	GUI::drawSkeleton(mEnv->ballSkel, Eigen::Vector3d(0.9, 0.6, 0.0));
+	Eigen::Vector3d ballColor = Eigen::Vector3d(0.9, 0.8, 0.4);
+	if(mEnv->curFrame < mEnv->throwingTime)
+		ballColor = Eigen::Vector3d(0.9, 0.6, 0.0);
+	GUI::drawSkeleton(mEnv->ballSkel, ballColor);
 
 	Eigen::Vector3d skelColor(1.0, 1.0, 1.0);
 	if(mEnv->resetCount >= 0)
@@ -772,6 +775,16 @@ display()
 	}
 
 
+    //Draw root to ball vector
+    Eigen::Vector3d rootToBall;
+    rootToBall[0] = 0.01*mEnv->mActions[0][2];
+    rootToBall[2] = 0.01*mEnv->mActions[0][3];
+    rootToBall[1] = 0.1;
+
+    // std::cout<<"root to ball : "<<rootToBall.transpose()<<std::endl;
+    glLineWidth(2.0);
+   	GUI::drawLine(rootIsometry.translation(), rootIsometry*rootToBall, Eigen::Vector3d(1.0, 0.2, 0.2));
+   	// GUI::drawLine(rootIsometry.translation(), rootIsometry*Eigen::Vector3d::UnitX(), Eigen::Vector3d(1.0, 0.0, 0.0));
 
 
     GUI::drawStringOnScreen(0.2, 0.25, std::to_string(mEnv->mActions[0][4+numActions+4]/30.0), true, Eigen::Vector3d(1,1,1));
@@ -1000,7 +1013,7 @@ getActionFromNN(int index)
 	else
 	{
 		mActionType.setZero();
-		int prevActionType = mEnv->mCurActionTypes[index]/3;
+		int prevActionType = mEnv->mCurActionTypes[index];
 		mActionType[prevActionType] = 1.0;
 
 	}
@@ -1070,7 +1083,7 @@ void
 SingleControlWindow::
 showAvailableActions()
 {
-	std::vector<int> aa = mEnv->bsm[0]->getAvailableActions();
+	std::vector<int> aa = mEnv->mCharacters[0]->availableActionTypes;
 	int numActionTypes = 5;
 	for(int i=0;i<numActionTypes;i++)
 	{

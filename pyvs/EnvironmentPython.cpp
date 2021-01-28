@@ -214,12 +214,12 @@ setActionType(int actionType, int id, int index, bool isNew)
 		if(mSlaves[id]->randomPointTrajectoryStart)
 		{
 			Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetTrajectory[resetDuration-mSlaves[id]->resetCount].segment(4,5);
-			constrainedActionType = mSlaves[id]->setActionType(index, getActionTypeFromVec(actionTypeVector)/3, isNew);
+			constrainedActionType = mSlaves[id]->setActionType(index, getActionTypeFromVec(actionTypeVector), isNew);
 		}
 		else
 		{
 			Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector.segment(4,5);
-			constrainedActionType = mSlaves[id]->setActionType(index, getActionTypeFromVec(actionTypeVector)/3, isNew);
+			constrainedActionType = mSlaves[id]->setActionType(index, getActionTypeFromVec(actionTypeVector), isNew);
 		}
 
 	}
@@ -260,7 +260,7 @@ stepsAtOnce()
 			}
 			else
 			{
-				mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, mSlaves[id]->slaveResetPositionVector);
+				mMotionGeneratorBatch->setBatchStateAndMotionGeneratorState(id, mSlaves[id]->slaveResetPositionVector, mSlaves[id]->slaveResetBallPosition);
 			}
 
 		}

@@ -254,6 +254,7 @@ class ActorCriticNN(nn.Module):
 
 		p, _v= self.forward(ts.unsqueeze(0))
 
+		# return p.sample().cpu().detach().numpy().astype(np.float32)
 		return p.loc.cpu().detach().numpy().astype(np.float32)
 
 	def get_value(self, s):
