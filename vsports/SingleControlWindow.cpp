@@ -119,8 +119,7 @@ SingleControlWindow(const char* nn_path,
 :SingleControlWindow()
 {
 	int numActionTypes = 5;
-	latentSize = 4;
-	cSize = 4;
+	latentSize = 6;
 
 	mEnv = new Environment(30, 180, 1, "../data/motions/basketData/motion/s_004_1_1.bvh", nn_path);
 	reducedDim = false;
@@ -193,7 +192,7 @@ SingleControlWindow(const char* nn_path,
 
 	for(int i=0;i<numActionTypes;i++)
 	{
-		load_decoders[i]("../pyvs/vae_nn_sep_0/vae_action_decoder_"+to_string(i)+".pt");
+		load_decoders[i]("../pyvs/vae_nn_sep_2/vae_action_decoder_"+to_string(i)+".pt");
 	}
 	// load_decoders[0]("../pyvs/vae_nn_sep/vae_action_decoder_"+to_string(0)+".pt");
 	// load_decoders[1]("../pyvs/vae_nn_sep/vae_action_decoder_"+to_string(3)+".pt");
@@ -530,10 +529,9 @@ step()
 			if(mEnv->resetCount>resetDuration)
 			{
 				concatControlVector.push_back(eigenToStdVec(mEnv->slaveResetTargetVector));
-				Eigen::VectorXd actionTypeVector = mEnv->slaveResetTargetVector.segment(4,5);
-				Eigen::VectorXd actionDetailVector(9);
-				actionDetailVector.segment(0,4) = mEnv->slaveResetTargetVector.segment(0,4);
-				actionDetailVector.segment(4,5) = mEnv->slaveResetTargetVector.segment(9,5);
+				Eigen::VectorXd actionTypeVector = mEnv->slaveResetTargetVector.segment(0,5);
+				Eigen::VectorXd actionDetailVector(16);
+				actionDetailVector = mEnv->slaveResetTargetVector.segment(5,16);
 				mEnv->setActionType(0,getActionTypeFromVec(actionTypeVector));
 				mEnv->setAction(0, actionDetailVector);
 
@@ -543,20 +541,20 @@ step()
 				if(mEnv->randomPointTrajectoryStart)
 				{
 					concatControlVector.push_back(eigenToStdVec(mEnv->slaveResetTargetTrajectory[resetDuration-mEnv->resetCount]));
-					Eigen::VectorXd actionTypeVector = mEnv->slaveResetTargetTrajectory[resetDuration-mEnv->resetCount].segment(4,5);
-					Eigen::VectorXd actionDetailVector(9);
-					actionDetailVector.segment(0,4) = mEnv->slaveResetTargetTrajectory[resetDuration-mEnv->resetCount].segment(0,4);
-					actionDetailVector.segment(4,5) = mEnv->slaveResetTargetTrajectory[resetDuration-mEnv->resetCount].segment(9,5);
+					Eigen::VectorXd actionTypeVector = mEnv->slaveResetTargetTrajectory[resetDuration-mEnv->resetCount].segment(0,5);
+					Eigen::VectorXd actionDetailVector(16);
+					actionDetailVector = mEnv->slaveResetTargetTrajectory[resetDuration-mEnv->resetCount].segment(5,16);
+					// actionDetailVector.segment(4,5) = mEnv->slaveResetTargetTrajectory[resetDuration-mEnv->resetCount].segment(9,5);
 					mEnv->setActionType(0,getActionTypeFromVec(actionTypeVector));
 					mEnv->setAction(0, actionDetailVector);
 				}
 				else
 				{
 					concatControlVector.push_back(eigenToStdVec(mEnv->slaveResetTargetVector));
-					Eigen::VectorXd actionTypeVector = mEnv->slaveResetTargetVector.segment(4,5);
-					Eigen::VectorXd actionDetailVector(9);
-					actionDetailVector.segment(0,4) = mEnv->slaveResetTargetVector.segment(0,4);
-					actionDetailVector.segment(4,5) = mEnv->slaveResetTargetVector.segment(9,5);
+					Eigen::VectorXd actionTypeVector = mEnv->slaveResetTargetVector.segment(0,5);
+					Eigen::VectorXd actionDetailVector(16);
+					actionDetailVector = mEnv->slaveResetTargetVector.segment(5,16);
+					// actionDetailVector.segment(4,5) = mEnv->slaveResetTargetVector.segment(9,5);
 					mEnv->setActionType(0,getActionTypeFromVec(actionTypeVector));
 					mEnv->setAction(0, actionDetailVector);
 				}
@@ -741,19 +739,19 @@ display()
     bool useXData = false;
     if(useXData)
     {
-	    for(int i=4;i<4+numActions;i++)
+	    for(int i=0;i<numActions;i++)
 	    {
 	        if(xData[0][mFrame][i] >= 0.5)
-	            curAction = std::to_string(i-4);
+	            curAction = std::to_string(i);
 	    }
-	    curAction = curAction+"     "+std::to_string(xData[0][mFrame][4+numActions+4]/30.0);
+	    curAction = curAction+"     "+std::to_string(xData[0][mFrame][CRITICAL_OFFSET]/30.0);
     }
     else
     {
 
 	    int maxIndex = 0;
 	    double maxValue = -100;
-	    for(int i=4;i<4+numActions;i++)
+	    for(int i=0;i<numActions;i++)
 	    {
 	        if(mEnv->mActions[0][i]> maxValue)
 	        {
@@ -761,13 +759,14 @@ display()
 	        	maxIndex = i;
 	        }
 	    }
-	    curAction = std::to_string(maxIndex-4);
-	    curAction = curAction+"     "+std::to_string(mEnv->mActions[0][4+numActions+4]/30.0);
+	    curAction = std::to_string(maxIndex);
+	    curAction = curAction+"     "+std::to_string(mEnv->mActions[0][CRITICAL_OFFSET]/30.0);
     }
 	if(mEnv->mCurActionTypes[0] == 1 || mEnv->mCurActionTypes[0] == 3 )
 	{
-		Eigen::Vector3d ballTargetPosition = Eigen::Vector3d(0.0, mEnv->mActions[0][4+numActions+3]/100.0, 0.0);
-		Eigen::Vector3d ballTargetVelocity = mEnv->mActions[0].segment(4+numActions,3)/100.0;
+		// Eigen::Vector3d ballTargetPosition = Eigen::Vector3d(0.0, mEnv->mActions[0][4+numActions+3]/100.0, 0.0);
+		Eigen::Vector3d ballTargetPosition =mEnv->mActions[0].segment(BALLTP_OFFSET,3)/100.0;
+		Eigen::Vector3d ballTargetVelocity = mEnv->mActions[0].segment(BALLTV_OFFSET,3)/100.0;
 		ballTargetPosition = rootIsometry * ballTargetPosition;
 		ballTargetVelocity = rootIsometry.linear() * ballTargetVelocity;
 
@@ -783,11 +782,11 @@ display()
 
     // std::cout<<"root to ball : "<<rootToBall.transpose()<<std::endl;
     glLineWidth(2.0);
-   	GUI::drawLine(rootIsometry.translation(), rootIsometry*rootToBall, Eigen::Vector3d(1.0, 0.2, 0.2));
+   	GUI::drawLine(rootIsometry.translation(), rootIsometry*rootToBall, Eigen::Vector3d(1.0, 1.0, 1.0));
    	// GUI::drawLine(rootIsometry.translation(), rootIsometry*Eigen::Vector3d::UnitX(), Eigen::Vector3d(1.0, 0.0, 0.0));
 
 
-    GUI::drawStringOnScreen(0.2, 0.25, std::to_string(mEnv->mActions[0][4+numActions+4]/30.0), true, Eigen::Vector3d(1,1,1));
+    GUI::drawStringOnScreen(0.2, 0.25, std::to_string(mEnv->mActions[0][CRITICAL_OFFSET]/30.0), true, Eigen::Vector3d(1,1,1));
 
     std::string score = "Score : "+to_string(mEnv->mAccScore[0]);
    
@@ -1050,7 +1049,7 @@ getActionFromNN(int index)
 
 	Eigen::VectorXd encodedAction(latentSize);
 	encodedAction = mAction.segment(0,encodedAction.size());
-	Eigen::VectorXd decodedAction(9);
+	Eigen::VectorXd decodedAction(16);
 
 	p::object decode;
 

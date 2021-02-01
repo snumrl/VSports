@@ -34,7 +34,8 @@ import numpy as np
 # test_loader = torch.utils.data.DataLoader(
 #     datasets.MNIST('../data', train=False, transform=transforms.ToTensor()),
 #     batch_size=args.batch_size, shuffle=True, **kwargs)
-
+cvSize = 16
+latentSize = 6
 
 class VAE(nn.Module):
     def __init__(self):
@@ -42,7 +43,6 @@ class VAE(nn.Module):
 
         self.cvSize = 14
         scale = 256
-        latentSize = 5
         self.fc1 = nn.Linear( self.cvSize , scale*2)
         self.fc1b = nn.Linear(scale*2, scale)
         self.fc21 = nn.Linear(scale, latentSize)
@@ -140,10 +140,8 @@ class VAEEncoder(nn.Module):
     def __init__(self):
         super(VAEEncoder, self).__init__()
 
-        self.cvSize = 9
-        scale = 64
-        latentSize = 4
-        self.fc1 = nn.Linear(self.cvSize, scale*2)
+        scale = 128
+        self.fc1 = nn.Linear(cvSize, scale*2)
         self.fc1b = nn.Linear(scale*2, scale)
         self.fc21 = nn.Linear(scale, latentSize)
         self.fc22 = nn.Linear(scale, latentSize)
@@ -161,7 +159,7 @@ class VAEEncoder(nn.Module):
         return mu + eps*std
 
     def forward(self, x):
-        mu, logvar = self.encode(x.view(-1, self.cvSize))
+        mu, logvar = self.encode(x.view(-1, cvSize))
         # mu, logvar = self.encode(x.view(-1, 784))
         z = self.reparameterize(mu, logvar)
         return z, mu, logvar
@@ -179,12 +177,10 @@ class VAEDecoder(nn.Module):
     def __init__(self):
         super(VAEDecoder, self).__init__()
 
-        self.cvSize = 9
-        scale = 64
-        latentSize = 4
+        scale = 128
         self.fc3 = nn.Linear(latentSize, scale)
         self.fc3b = nn.Linear(scale, scale*2)
-        self.fc4 = nn.Linear(scale*2, self.cvSize)
+        self.fc4 = nn.Linear(scale*2, cvSize)
 
 
     def decode(self, z):
@@ -224,7 +220,7 @@ class VAEDecoder(nn.Module):
 
 # Reconstruction + KL divergence losses summed over all elements and batch
 def loss_function(recon_x, x, mu, logvar):
-    BCE = F.mse_loss(recon_x, x.view(-1, 9), reduction='sum')
+    BCE = F.mse_loss(recon_x, x.view(-1, cvSize), reduction='sum')
     # BCE = F.binary_cross_entropy(recon_x, x.view(-1, 784), reduction='sum')
 
     # see Appendix B from VAE paper:
@@ -234,11 +230,11 @@ def loss_function(recon_x, x, mu, logvar):
 
     KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
 
-    # print(BCE)
-    # print(KLD)
+    print(BCE.item(), end=", ")
+    print(KLD.item())
     # print("")
 
-    return BCE + KLD
+    return BCE + 2.0*KLD
 
 
 def train(epoch):

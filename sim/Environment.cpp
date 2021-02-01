@@ -29,8 +29,8 @@ using namespace dart::collision;
 using namespace dart::constraint;
 
 #define RESET_ADAPTING_FRAME 15
-#define ACTION_SIZE 14
-#define CONTROL_VECTOR_SIZE 14
+#define ACTION_SIZE 22
+#define CONTROL_VECTOR_SIZE 22
 #define NUM_ACTION_TYPE 5
 
 Environment::
@@ -282,8 +282,8 @@ initCharacters(std::string bvhPath)
 	
 	dribbleDefaultVec.resize(CONTROL_VECTOR_SIZE);
 	dribbleDefaultVec.setZero();
-	// dribbleDefaultVec.segment(2,2) = Eigen::Vector2d(50.0, -50.0);
-	dribbleDefaultVec[4+4] = 1.0;
+	dribbleDefaultVec.segment(NUM_ACTION_TYPE+2+6,2) = Eigen::Vector2d(50.0, -50.0);
+	dribbleDefaultVec[4] = 1.0;
 }
 
 
@@ -1200,64 +1200,66 @@ setAction(int index, const Eigen::VectorXd& a)
 	if(!isNanOccured)
 	{
 		mActions[index].setZero();
-		mActions[index].segment(0,4) = a.segment(0,4);
-		mActions[index].segment(4+NUM_ACTION_TYPE,5) = a.segment(4,5);
+		mActions[index].segment(NUM_ACTION_TYPE,a.size()) = a;
 	}
 	else
 	{
 		std::cout<<"Nan Action"<<std::endl;
 		mActions[index].setZero();
-		mActions[index][4+0] = 1.0;
+		mActions[index][4] = 1.0;
+		// mActions[index][4+0] = 1.0;
 		mIsTerminalState = true;
 		return;
 	}
 
-    mActions[index][4+mCurActionTypes[index]] = 1.0;
+    mActions[index][mCurActionTypes[index]] = 1.0;
 
     if(mCurActionTypes[index] == 4 || mCurActionTypes[index] == 5)
     {
-    	mActions[index].segment(2,2).setZero();
+    	mActions[index].segment(BALLP_OFFSET,2).setZero();
     }
     else
     {
 
     }
-    if(mActions[index].segment(2,2).norm() > 100.0)
+    if(mActions[index].segment(BALLP_OFFSET,2).norm() > 100.0)
     {
-    	mActions[index].segment(2,2) *= 100.0/mActions[index].segment(2,2).norm();
+    	mActions[index].segment(BALLP_OFFSET,2) *= 100.0/mActions[index].segment(2,2).norm();
     }
+
+    // mActions[index].segment(2,2) = 0.5*(mActions[index].segment(2,2) + mPrevActions[index].segment(2,2));
 
     if(mCurActionTypes[index] == 3)
     {
 
-	    if(mActions[index].segment(0,2).norm() > 150.0)
+	    if(mActions[index].segment(ROOT_OFFSET,2).norm() > 150.0)
 	    {
-	    	mActions[index].segment(0,2) *= 150.0/mActions[index].segment(0,2).norm();
+	    	mActions[index].segment(ROOT_OFFSET,2) *= 150.0/mActions[index].segment(0,2).norm();
 	    }
 
-	    if(mActions[index].segment(4+NUM_ACTION_TYPE,3).norm()>800.0)
+	    if(mActions[index].segment(BALLTV_OFFSET,3).norm()>800.0)
 	    {
-	    	mActions[index].segment(4+NUM_ACTION_TYPE,3) *= 800.0/mActions[index].segment(4+NUM_ACTION_TYPE,3).norm();
+	    	mActions[index].segment(BALLTV_OFFSET,3) *= 800.0/mActions[index].segment(BALLTV_OFFSET,3).norm();
 	    }
 
-	    if(mActions[index][4+NUM_ACTION_TYPE+3] > 300.0)
+	    if(mActions[index][BALLTP_OFFSET+1] > 300.0)
 	    {
-	    	mActions[index][4+NUM_ACTION_TYPE+3]  = 300.0;
+	    	mActions[index][BALLTP_OFFSET+1]  = 300.0;
 	    }
 
-	    else if(mActions[index][4+NUM_ACTION_TYPE+3] < 200.0)
+	    else if(mActions[index][BALLTP_OFFSET+1] < 200.0)
 	    {
-	    	mActions[index][4+NUM_ACTION_TYPE+3] = 200.0;
+	    	mActions[index][BALLTP_OFFSET+1] = 200.0;
 	    }
     }
     if(mCurActionTypes[index] == 2)
     {
-    	mActions[index].segment(4+NUM_ACTION_TYPE,4).setZero();
+    	mActions[index].segment(BALLTV_OFFSET,mActions[index].rows()-BALLTV_OFFSET).setZero();
     }
 
     if(!isCriticalAction(mCurActionTypes[index]))
     {
-    	mActions[index].segment(4+NUM_ACTION_TYPE, mActions[index].rows()-(4+NUM_ACTION_TYPE)).setZero();
+    	mActions[index].segment(BALLTP_OFFSET, mActions[index].rows()-BALLTP_OFFSET).setZero();
     }
 
 	computeCriticalActionTimes();
@@ -1868,31 +1870,35 @@ computeCriticalActionTimes()
 	    			interp = 0.5;
 	    		}
 	    		mCurCriticalActionTimes[index]--;
-	    		double curActionGlobalBallPosition = mActions[index][4+NUM_ACTION_TYPE+3]/100.0;
-	    		Eigen::Vector3d curActionGlobalBallVelocity = rootT.linear() * ( mActions[index].segment(4+NUM_ACTION_TYPE,3)/100.0);
+	    		Eigen::Vector3d temp = mActions[index].segment(BALLTP_OFFSET, 3);
+	    		Eigen::Vector3d curActionGlobalBallPosition = rootT * (temp/100.0);
+	    		Eigen::Vector3d curActionGlobalBallVelocity = rootT.linear() * ( mActions[index].segment(BALLTV_OFFSET,3)/100.0);
 
 	    		mActionGlobalBallPosition[index] = (1.0-interp) * mActionGlobalBallPosition[index] + interp * curActionGlobalBallPosition;
 	    		mActionGlobalBallVelocity[index] = (1.0-interp) * mActionGlobalBallVelocity[index] + interp * curActionGlobalBallVelocity;
-	    		mActions[index].segment(4+NUM_ACTION_TYPE,3) = rootT.linear().inverse() * mActionGlobalBallVelocity[index];
-	    		mActions[index].segment(4+NUM_ACTION_TYPE,3) *= 100.0;
+	    		mActions[index].segment(BALLTV_OFFSET,3) = rootT.linear().inverse() * mActionGlobalBallVelocity[index];
+	    		mActions[index].segment(BALLTV_OFFSET,3) *= 100.0;
 
-	    		mActions[index][4+NUM_ACTION_TYPE+3] = mActionGlobalBallPosition[index]*100.0;
+	    		mActions[index].segment(BALLTP_OFFSET,3) = rootT.inverse() * mActionGlobalBallVelocity[index];
+	    		mActions[index].segment(BALLTP_OFFSET,3) *= 100.0;
+
 	    	}
 	    }
 	    else
 	    {
-	    	mCurCriticalActionTimes[index] = (int) (mActions[index][4+NUM_ACTION_TYPE+4]+0.5);
+	    	mCurCriticalActionTimes[index] = (int) (mActions[index][CRITICAL_OFFSET]+0.5);
 
 	    	mCurCriticalActionTimes[index] = 30;
     		if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
     		{
-    			mActionGlobalBallPosition[index] = mActions[index][4+NUM_ACTION_TYPE+3]/100.0;
-    			mActionGlobalBallVelocity[index] = rootT.linear() * (mActions[index].segment(4+NUM_ACTION_TYPE,3)/100.0);
+	    		Eigen::Vector3d temp = mActions[index].segment(BALLTP_OFFSET, 3);
+    			mActionGlobalBallPosition[index] = rootT * (temp/100.0);
+    			mActionGlobalBallVelocity[index] = rootT.linear() * (mActions[index].segment(BALLTV_OFFSET,3)/100.0);
     		}
 	    }
 	    if(!isCriticalAction(mCurActionTypes[index]))
 	    	mCurCriticalActionTimes[index] = 0;
-		mActions[index][4+NUM_ACTION_TYPE+4] = mCurCriticalActionTimes[index];
+		mActions[index][CRITICAL_OFFSET] = mCurCriticalActionTimes[index];
 	}
 }
 

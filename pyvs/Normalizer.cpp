@@ -7,7 +7,7 @@
 Normalizer::Normalizer(std::string xNormalPath, std::string yNormalPath)
 {
 	std::ifstream in;
-	dimX = 14;
+	dimX = 21;
 	dimY = 147;
 
 	in.open(xNormalPath);
@@ -179,11 +179,17 @@ denormalizeAction(Eigen::VectorXd action)
 	// std::cout<<xMean.transpose()<<std::endl;
 	// std::cout<<xStd.transpose()<<std::endl;
 	// exit(0);
-	denormalizedAction.segment(0,4) = action.segment(0,4).cwiseProduct(xStd.segment(0,4));
-	denormalizedAction.segment(0,4) = denormalizedAction.segment(0,4)+ xMean.segment(0,4);
 
-	denormalizedAction.segment(4,5) = action.segment(4,5).cwiseProduct(xStd.segment(4+numActionTypes,5));
-	denormalizedAction.segment(4,5) = denormalizedAction.segment(4,5)+ xMean.segment(4+numActionTypes,5);
+	denormalizedAction = action.cwiseProduct(xStd.segment(5,16));
+	denormalizedAction = denormalizedAction + xMean.segment(5,16);
+
+
+
+	// denormalizedAction.segment(0,4) = action.segment(0,4).cwiseProduct(xStd.segment(0,4));
+	// denormalizedAction.segment(0,4) = denormalizedAction.segment(0,4)+ xMean.segment(0,4);
+
+	// denormalizedAction.segment(4,5) = action.segment(4,5).cwiseProduct(xStd.segment(4+numActionTypes,5));
+	// denormalizedAction.segment(4,5) = denormalizedAction.segment(4,5)+ xMean.segment(4+numActionTypes,5);
 
 	return denormalizedAction;
 }
@@ -219,11 +225,16 @@ normalizeAction(Eigen::VectorXd action)
 	// std::cout<<xMean.transpose()<<std::endl;
 	// std::cout<<xStd.transpose()<<std::endl;
 	// exit(0);
-	normalizedAction.segment(0,4) = normalizedAction.segment(0,4)- xMean.segment(0,4);
-	normalizedAction.segment(0,4) = normalizedAction.segment(0,4).cwiseProduct(xStd.segment(0,4).cwiseInverse());
 
-	normalizedAction.segment(4,5) = normalizedAction.segment(4,5) - xMean.segment(4+numActionTypes,5);
-	normalizedAction.segment(4,5) = normalizedAction.segment(4,5).cwiseProduct(xStd.segment(4+numActionTypes,5).cwiseInverse());
+	normalizedAction = normalizedAction- xMean.segment(5,16);
+	normalizedAction = normalizedAction.cwiseProduct(xStd.segment(5,16).cwiseInverse());
+
+
+	// normalizedAction.segment(0,4) = normalizedAction.segment(0,4)- xMean.segment(0,4);
+	// normalizedAction.segment(0,4) = normalizedAction.segment(0,4).cwiseProduct(xStd.segment(0,4).cwiseInverse());
+
+	// normalizedAction.segment(4,5) = normalizedAction.segment(4,5) - xMean.segment(4+numActionTypes,5);
+	// normalizedAction.segment(4,5) = normalizedAction.segment(4,5).cwiseProduct(xStd.segment(4+numActionTypes,5).cwiseInverse());
 
 	return normalizedAction;
 }

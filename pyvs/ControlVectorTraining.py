@@ -28,7 +28,7 @@ device = torch.device("cuda" if use_cuda else "cpu")
 model = VAE().to(device)
 optimizer = optim.Adam(model.parameters(), lr=5e-3)
 # print("asdf")
-nnCount = 0
+nnCount = 3
 vaeDir = "vae_nn_sep_"+str(nnCount)
 
 if not exists(vaeDir):
@@ -73,7 +73,7 @@ def getActionTypeFromVector(actionTypeVector):
 def splitControlVector(cv_list, numActionTypes):
 	# embed()
 	# exit(0)
-	actionTypeVector_list = cv_list[:,4:4+numActionTypes]
+	actionTypeVector_list = cv_list[:,0:numActionTypes]
 	controlVectorLists = [[] for _ in range(numActionTypes)]
 	# controlVectorLists = np.empty((numActionTypes, 1, 14), dtype=np.float32) 
 	# concated = []
@@ -100,11 +100,11 @@ def removeActionTypePart(splited_cv_list, numActionTypes):
 	for i in range(numActionTypes):
 		# embed()
 		# exit(0)
-		front_list = splited_cv_list[i][:,0:4]
-		end_list = splited_cv_list[i][:,4+numActionTypes:14]
+		# front_list = splited_cv_list[i][:,0:4]
+		removed_list = splited_cv_list[i][:,numActionTypes:21]
 		# embed()
 		# exit(0)
-		removed_list = np.concatenate((front_list,end_list), axis= 1)
+		# removed_list = np.concatenate((front_list,end_list), axis= 1)
 		removed_cv_list.append(removed_list)
 	return np.array(removed_cv_list)
 
@@ -273,7 +273,7 @@ def trainControlVector(path, actionType):
 # trainControlVector("basket_0")
 # test("basket_0")
 
-ccvt = ComprehensiveControlVectorTraining("basket_18", 5)
+ccvt = ComprehensiveControlVectorTraining("basket_20", 5)
 for i in range(100):
 	ccvt.trainTargetCV(0)
 	ccvt.trainTargetCV(1)

@@ -43,7 +43,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 39
+nnCount = 40
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -125,7 +125,7 @@ class RL(object):
 		self.batch_size = 2*512
 
 		self.num_action_types = 5
-		self.latent_size = 4
+		self.latent_size = 6
 
 		self.resetDuration = self.env.getResetDuration()
 		self.typeFreq = self.env.getTypeFreq()
@@ -158,9 +158,9 @@ class RL(object):
 		self.actionEncoder = VAEEncoder().to(device)
 
 		for i in range(self.num_action_types):
-			self.actionDecoders[i].load("vae_nn_sep_0/vae_action_decoder_"+str(i)+".pt")
+			self.actionDecoders[i].load("vae_nn_sep_2/vae_action_decoder_"+str(i)+".pt")
 
-		self.actionEncoder.load("vae_nn_sep_0/vae_action_encoder.pt")
+		self.actionEncoder.load("vae_nn_sep_2/vae_action_encoder.pt")
 
 		self.rms = RunningMeanStd(self.num_state-5)
 
@@ -488,7 +488,7 @@ class RL(object):
 			actionsDecodePart = np.array(list(actions_h[h]))
 
 			decodeShape = list(np.shape(actionsDecodePart))
-			decodeShape[2] = 9
+			decodeShape[2] = 16
 			actionsDecoded =np.empty(decodeShape,dtype=np.float32)
 
 			for i in range(len(actionsDecodePart)):

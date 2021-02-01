@@ -128,6 +128,7 @@ np::ndarray
 EnvironmentPython::
 getCorrectActionType(int id, int index)
 {
+	exit(0);
 	Eigen::VectorXd denormalizedAction = mSlaves[id]->mTutorialControlVectors[0][mSlaves[id]->curTrajectoryFrame];
 
 
@@ -152,6 +153,7 @@ np::ndarray
 EnvironmentPython::
 getCorrectActionDetail(int id, int index)
 {
+	exit(0);
 	Eigen::VectorXd denormalizedAction = mSlaves[id]->mTutorialControlVectors[0][mSlaves[id]->curTrajectoryFrame];
 
 	Eigen::VectorXd normalizedAction(denormalizedAction.size()-5);
@@ -172,7 +174,6 @@ setAction(np::ndarray np_array, int id, int index)
 
 	Eigen::VectorXd action = Wrapper::toEigenVector(np_array);
 	Eigen::VectorXd denormalizedAction;
-	Eigen::VectorXd ex_action(action.rows());
 
 	//** we change the dimension of action in denormalizeAction
 	// ===Now we don't need to normalize action
@@ -213,12 +214,12 @@ setActionType(int actionType, int id, int index, bool isNew)
 	{
 		if(mSlaves[id]->randomPointTrajectoryStart)
 		{
-			Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetTrajectory[resetDuration-mSlaves[id]->resetCount].segment(4,5);
+			Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetTrajectory[resetDuration-mSlaves[id]->resetCount].segment(0,5);
 			constrainedActionType = mSlaves[id]->setActionType(index, getActionTypeFromVec(actionTypeVector), isNew);
 		}
 		else
 		{
-			Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector.segment(4,5);
+			Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector.segment(0,5);
 			constrainedActionType = mSlaves[id]->setActionType(index, getActionTypeFromVec(actionTypeVector), isNew);
 		}
 
@@ -275,12 +276,12 @@ stepsAtOnce()
 			if(mSlaves[id]->randomPointTrajectoryStart)
 			{
 				concatControlVector.push_back(eigenToStdVec(mSlaves[id]->slaveResetTargetTrajectory[resetDuration-mSlaves[id]->resetCount]));
-				Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetTrajectory[resetDuration-mSlaves[id]->resetCount].segment(4,5);
+				Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetTrajectory[resetDuration-mSlaves[id]->resetCount].segment(0,5);
 			}
 			else
 			{
 				concatControlVector.push_back(eigenToStdVec(mSlaves[id]->slaveResetTargetVector));
-				Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector.segment(4,5);
+				Eigen::VectorXd actionTypeVector = mSlaves[id]->slaveResetTargetVector.segment(0,5);
 			}
 		}
 	}

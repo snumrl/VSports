@@ -56,6 +56,13 @@
 // #define _ID_FACING_V 21
 // #define _ID_SLOWED 22
 
+#define ROOT_OFFSET 5
+#define HAND_OFFSET 7
+#define BALLP_OFFSET 13
+#define BALLTP_OFFSET 15
+#define BALLTV_OFFSET 18
+#define CRITICAL_OFFSET 21
+
 enum BasketballState{
 	POSITIONING, DRIBBLING
 };
@@ -407,7 +414,7 @@ public:
 	bool ballGravityChecker(int index);
 	std::vector<double> prevFreeBallPositions;
 
-	std::vector<double> mActionGlobalBallPosition;
+	std::vector<Eigen::Vector3d> mActionGlobalBallPosition;
 	std::vector<Eigen::Vector3d> mActionGlobalBallVelocity;
 
 	std::vector<bool> mChangeContactIsActive;
