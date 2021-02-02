@@ -17,6 +17,8 @@ import numpy as np
 from pathlib import Path
 
 from VAE import VAE, VAEEncoder, VAEDecoder, loss_function
+from tensorboardX import SummaryWriter
+summary = SummaryWriter()
 
 use_cuda = torch.cuda.is_available()
 FloatTensor = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
@@ -28,7 +30,7 @@ device = torch.device("cuda" if use_cuda else "cpu")
 model = VAE().to(device)
 optimizer = optim.Adam(model.parameters(), lr=5e-3)
 # print("asdf")
-nnCount = 3
+nnCount = 4
 vaeDir = "vae_nn_sep_"+str(nnCount)
 
 if not exists(vaeDir):
@@ -126,19 +128,22 @@ class ComprehensiveControlVectorTraining():
 		# self.controlVectorListSplited = splitControlVector(self.controlVectorList , numActionTypes)
 		self.controlVectorListSplited = removeActionTypePart(self.controlVectorListSplited, numActionTypes)
 
-	def trainTargetCV(self,actionType):
-		print('Train control vector of actiontype {}, Size : {}'.format(actionType, len(self.controlVectorListSplited[actionType])))
-		for epoch in range(3):
+	def trainTargetCV(self,actionType,num_evaluation):
+		# print('Train control vector of actiontype {}, Size : {}'.format(actionType, len(self.controlVectorListSplited[actionType])))
+		action_train_loss_BCE = 0
+		action_train_loss_KLD = 0
+		for epoch in range(4):
 			self.VAEEncoder.train()
 			# self.VAEDecoders[0].train()
 			self.VAEDecoders[actionType].train()
-			train_loss = 0
+			train_loss_BCE = 0
+			train_loss_KLD = 0
 			action_controlVectorList = self.controlVectorListSplited[actionType]
 			np.random.shuffle(action_controlVectorList)
 
 			# for i in range(int(len(action_controlVectorList)/64)):
-			for i in range(200):
-				data = action_controlVectorList[i*64:(i+1)*64]
+			for i in range(25):
+				data = action_controlVectorList[i*128:(i+1)*128]
 				data = Tensor(data)
 				# self.optimizers[0].zero_grad()
 				self.optimizers[actionType].zero_grad()
@@ -153,18 +158,29 @@ class ComprehensiveControlVectorTraining():
 				# 	print(latent[0])
 				# 	print("")
 
-				loss = loss_function(recon_batch, data, mu, logvar)
+				loss, BCE, KLD = loss_function(recon_batch, data, mu, logvar)
 				loss.backward()
-				train_loss += loss.item()
+				train_loss_BCE += BCE.item() / 3200 / 4 / 25
+				train_loss_KLD += KLD.item() / 3200 / 4 / 25
+
+				action_train_loss_BCE += train_loss_BCE
+				action_train_loss_KLD += train_loss_KLD
+
+
 				# self.optimizers[0].step()
 				self.optimizers[actionType].step()
-				if i % 40 == 0:
-					print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-		                epoch, i * len(data), 12800,
-		                100. * i / (200),
-		                loss.item() / len(data)))
-			print('===> Epoch: {} Arverage loss: {:.4f}'.format(1, train_loss / 12800))
+				# if i % 10 == 0:
+				# 	print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+		  #               epoch, i * len(data), 3200,
+		  #               100. * i / (25),
+		  #               loss.item() / len(data)))
+
+		# 	print('Action type {} => Epoch: {} Arverage loss: {:.4f}'.format(actionType, epoch, train_loss_BCE, train_loss_KLD))
 		# self.VAEDecoders[0].save("vae_nn/vae_action_decoder_"+str(actionType)+".pt")	
+		# summary.add_scalar('actionType '+str(actionType),self.num_tuple[1][0]/self.num_episode, self.num_evaluation)
+		summary.add_scalars('actionType '+str(actionType),{'BCE' : action_train_loss_BCE, 'KLD' : action_train_loss_KLD}, num_evaluation)
+
+
 		self.VAEDecoders[actionType].save(vaeDir + "/vae_action_decoder_"+str(actionType)+".pt")	
 		self.VAEEncoder.save(vaeDir + "/vae_action_encoder.pt")	
 
@@ -273,10 +289,11 @@ def trainControlVector(path, actionType):
 # trainControlVector("basket_0")
 # test("basket_0")
 
-ccvt = ComprehensiveControlVectorTraining("basket_20", 5)
-for i in range(100):
-	ccvt.trainTargetCV(0)
-	ccvt.trainTargetCV(1)
-	ccvt.trainTargetCV(2)
-	ccvt.trainTargetCV(3)
-	ccvt.trainTargetCV(4)
+ccvt = ComprehensiveControlVectorTraining("basket_0", 5)
+for i in range(500):
+	ccvt.trainTargetCV(0, i)
+	ccvt.trainTargetCV(1, i)
+	ccvt.trainTargetCV(2, i)
+	ccvt.trainTargetCV(3, i)
+	ccvt.trainTargetCV(4, i)
+	# print("----------------------------------------------------")

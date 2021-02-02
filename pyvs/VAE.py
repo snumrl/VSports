@@ -169,8 +169,9 @@ class VAEEncoder(nn.Module):
         print('load nn {}'.format(path))
         self.load_state_dict(torch.load(path))
 
-    def save(self,path):
-        print('save nn {}'.format(path))
+    def save(self,path,verbose=False):
+        if verbose:
+            print('save nn {}'.format(path))
         torch.save(self.state_dict(),path)
 
 class VAEDecoder(nn.Module):
@@ -211,8 +212,9 @@ class VAEDecoder(nn.Module):
         print('load nn {}'.format(path))
         self.load_state_dict(torch.load(path))
 
-    def save(self,path):
-        print('save nn {}'.format(path))
+    def save(self,path,verbose=False):
+        if verbose:
+            print('save nn {}'.format(path))
         torch.save(self.state_dict(),path)
 # model = VAE().to(device)
 # optimizer = optim.Adam(model.parameters(), lr=1e-3)
@@ -230,11 +232,11 @@ def loss_function(recon_x, x, mu, logvar):
 
     KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
 
-    print(BCE.item(), end=", ")
-    print(KLD.item())
+    # print(BCE.item(), end=", ")
+    # print(KLD.item())
     # print("")
 
-    return BCE + 2.0*KLD
+    return BCE + 2.0*KLD, BCE, 2.0*KLD
 
 
 def train(epoch):
