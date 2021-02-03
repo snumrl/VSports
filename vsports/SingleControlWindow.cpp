@@ -192,7 +192,7 @@ SingleControlWindow(const char* nn_path,
 
 	for(int i=0;i<numActionTypes;i++)
 	{
-		load_decoders[i]("../pyvs/vae_nn_sep_2/vae_action_decoder_"+to_string(i)+".pt");
+		load_decoders[i]("../pyvs/vae_nn_sep_4/vae_action_decoder_"+to_string(i)+".pt");
 	}
 	// load_decoders[0]("../pyvs/vae_nn_sep/vae_action_decoder_"+to_string(0)+".pt");
 	// load_decoders[1]("../pyvs/vae_nn_sep/vae_action_decoder_"+to_string(3)+".pt");
@@ -488,8 +488,11 @@ step()
 		getActionFromNN(0);
 
 
-	std::cout<<mEnv->mActions[0].segment(0,9).transpose()<<std::endl;
-	std::cout<<mEnv->mActions[0].segment(9,5).transpose()<<std::endl;
+	std::cout<<"action : "<<std::endl;
+	std::cout<<mEnv->mActions[0].segment(0,5).transpose()<<std::endl;
+	std::cout<<mEnv->mActions[0].segment(5,4).transpose()<<std::endl;
+	std::cout<<mEnv->mActions[0].segment(9,6).transpose()<<std::endl;
+	std::cout<<mEnv->mActions[0].segment(15,7).transpose()<<std::endl;
 	std::cout<<std::endl;
 
 
@@ -634,18 +637,30 @@ display()
 	glPopMatrix();
 
 
+	// glPushMatrix();
+	// glTranslated(mEnv->mTargetBallPosition[0], 0, mEnv->mTargetBallPosition[2]);
+	// glBegin(GL_LINES);
+ //    glColor3f(0.0, 0.0, 0.0);
+ //    glVertex3f(0,0,0);
+ //    glVertex3f(0,mEnv->mTargetBallPosition[1],0);
+ //    glEnd();
+ //    glPopMatrix();
+
+
+	glLineWidth(1.0);
 	glPushMatrix();
-	glTranslated(mEnv->mTargetBallPosition[0], 0, mEnv->mTargetBallPosition[2]);
+	glTranslated(mEnv->curBallPosition[0], 0, mEnv->curBallPosition[2]);
 	glBegin(GL_LINES);
     glColor3f(0.0, 0.0, 0.0);
     glVertex3f(0,0,0);
-    glVertex3f(0,mEnv->mTargetBallPosition[1],0);
+    glVertex3f(0,mEnv->curBallPosition[1],0);
     glEnd();
+	GUI::drawSphere(0.05, Eigen::Vector3d::Zero(), Eigen::Vector3d(0.0, 0.0, 0.0));
     glPopMatrix();
 
-    Eigen::Vector3d targetBall2DPosition = mEnv->mTargetBallPosition;
-    targetBall2DPosition[1] = 0;
-	GUI::drawSphere(0.05, targetBall2DPosition, Eigen::Vector3d(0.0, 0.0, 0.0));
+
+    // Eigen::Vector3d targetBall2DPosition = mEnv->mTargetBallPosition;
+    // targetBall2DPosition[1] = 0;
 
 
 	for(int i=0;i<mEnv->mObstacles.size();i++)
@@ -1068,7 +1083,7 @@ getActionFromNN(int index)
 	np::ndarray action_np_d = np::from_object(temp);
 	float* src_d = reinterpret_cast<float*>(action_np_d.get_data());
 
-	for(int j=0;j<9;j++)
+	for(int j=0;j<decodedAction.size();j++)
 	{
 		decodedAction[j] = src_d[j];
 	}

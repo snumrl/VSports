@@ -7,7 +7,7 @@
 Normalizer::Normalizer(std::string xNormalPath, std::string yNormalPath)
 {
 	std::ifstream in;
-	dimX = 21;
+	dimX = 22;
 	dimY = 147;
 
 	in.open(xNormalPath);
@@ -156,7 +156,7 @@ denormalizeAction(Eigen::VectorXd action)
 	int numActionTypes = 5;
 	// std::cout<<action.rows()<<std::endl;
 
-	assert(action.rows() == dimX - numActionTypes);
+	assert(action.rows() == dimX - 1 - numActionTypes);
 
 	// std::cout<<"------------------"<<std::endl;
 	// std::cout<<action.transpose()<<std::endl;
@@ -202,7 +202,7 @@ normalizeAction(Eigen::VectorXd action)
 	int numActionTypes = 5;
 	// std::cout<<action.rows()<<std::endl;
 
-	assert(action.rows() == dimX - numActionTypes);
+	assert(action.rows() == dimX -1 - numActionTypes);
 
 	// std::cout<<"------------------"<<std::endl;
 	// std::cout<<action.transpose()<<std::endl;

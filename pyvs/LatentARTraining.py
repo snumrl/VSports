@@ -43,7 +43,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 40
+nnCount = 41
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -158,9 +158,9 @@ class RL(object):
 		self.actionEncoder = VAEEncoder().to(device)
 
 		for i in range(self.num_action_types):
-			self.actionDecoders[i].load("vae_nn_sep_2/vae_action_decoder_"+str(i)+".pt")
+			self.actionDecoders[i].load("vae_nn_sep_4/vae_action_decoder_"+str(i)+".pt")
 
-		self.actionEncoder.load("vae_nn_sep_2/vae_action_encoder.pt")
+		self.actionEncoder.load("vae_nn_sep_4/vae_action_encoder.pt")
 
 		self.rms = RunningMeanStd(self.num_state-5)
 
@@ -561,7 +561,7 @@ class RL(object):
 										# if (self.env.isTerminalState(j) and not self.env.isTimeOut(j)) or counter%self.typeFreq == 0:
 										if (self.env.isTerminalState(j) and not self.env.isTimeOut(j)):
 											savedFrameDiff = self.env.getSavedFrameDiff(j)
-											if savedFrameDiff <= 10:
+											if savedFrameDiff <= 6:
 												break;
 											TDError = self.episodes[h][j][i].getLastData().value -\
 											 (self.episodes[h][j][i].getLastData().r + self.gamma*values_h[h][i][j])
@@ -616,7 +616,7 @@ class RL(object):
 										# if (self.env.isTerminalState(j) and not self.env.isTimeOut(j)) or True:
 										if (self.env.isTerminalState(j) and not self.env.isTimeOut(j)):
 											savedFrameDiff = self.env.getSavedFrameDiff(j)
-											if savedFrameDiff <= 10:
+											if savedFrameDiff <= 6:
 												break;
 
 											TDError = self.episodes[h][j][i].getLastData().value -\
@@ -877,7 +877,7 @@ class RL(object):
 
 				batch_size_h = self.batch_size
 				if h == 0:
-					 batch_size_h = self.batch_size//8
+					 batch_size_h = self.batch_size//4
 				np.random.shuffle(all_segmented_transitions)
 				for i in range(len(all_segmented_transitions)//batch_size_h):
 					batch_segmented_transitions = all_segmented_transitions[i*batch_size_h:(i+1)*batch_size_h]

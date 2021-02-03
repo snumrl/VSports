@@ -38,8 +38,8 @@ Environment(int control_Hz, int simulation_Hz, int numChars, std::string bvh_pat
 :mControlHz(control_Hz), mSimulationHz(simulation_Hz), mNumChars(numChars), mWorld(std::make_shared<dart::simulation::World>()),
 mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0), endTime(15),
 criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), violatedFrames(0),curTrajectoryFrame(0),
-randomPointTrajectoryStart(false), resetDuration(30), typeFreq(10), savedFrame(0), foulResetCount(0), curReward(0),
-numGobackStack(2), grabDistance(0.5)
+randomPointTrajectoryStart(false), resetDuration(30), typeFreq(3), savedFrame(0), foulResetCount(0), curReward(0),
+numGobackStack(6), grabDistance(0.5)
 {
 	std::cout<<"Envionment Generation --- ";
 	srand((unsigned int)time(0));
@@ -880,7 +880,7 @@ getState(int index)
 
 	state.resize(rootTransform.rows() + reducedSkelPosition.rows() + reducedSkelVelocity.rows() + relCurBallPosition.rows() + relObstacles.size()*3
 		+ 5 +availableActions.rows() + relTargetPosition.rows() + relBallToTargetPosition.rows() + goalpostPositions.rows() +  contacts.rows() + 1 + 1 + curActionType.rows()
-		+ curSMState.rows() + hObstacleDistance.size() + 1);
+		+ curSMState.rows() + hObstacleDistance.size() + 2);
 
 	int curIndex = 0;
 	for(int i=0;i<rootTransform.rows();i++)
@@ -964,6 +964,12 @@ getState(int index)
 
 	state[curIndex] = curFrame>=throwingTime;
 	curIndex++;
+
+	state[curIndex] = 0;
+	if(curFrame>=throwingTime)
+		state[curIndex] = throwingTime+30 - curFrame;
+	curIndex++;
+	// std::cout<<"#### : "<<int(curFrame>=throwingTime)<<" "<<state[curIndex]<<std::endl;
 	for(int i=0;i<availableActions.rows();i++)
 	{
 		state[curIndex] = availableActions[i];
@@ -1001,12 +1007,21 @@ getReward(int index, bool verbose)
 
 	if(isPassReceive)
 	{
+		Eigen::Vector3d curCOM = mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM();
 		if(mCurBallPossessions[index])
 		{
 			// if(mCurActionTypes[index]!=2)
 			// 	std::cout<<"###############"<<std::endl;
 			mIsTerminalState = true;
+			// mIsFoulState = true;
 			return 1.0;
+		}
+
+		if(curBallPosition[0] > curCOM[0]+0.8)
+		{
+			// mIsFoulState = true;
+			mIsTerminalState = true;
+			return 0.0;
 		}
 		return 0;
 	}
@@ -1192,7 +1207,7 @@ setAction(int index, const Eigen::VectorXd& a)
 		if(std::isnan(a[i]))
 		{
 			isNanOccured = true;
-			// exit(0);
+			exit(0);
 		}
 	}
 	mPrevActions = mActions;
@@ -1471,7 +1486,7 @@ slaveReset()
 		prevFreeBallPositions.clear();
 	}
 	gotReward = false;
-	throwingTime = resetDuration+typeFreq + rand()%20;
+	throwingTime = resetDuration+typeFreq + rand()%30;
 	if(slaveResetBallPosition[1] > 1.5)
 		throwingVelocity = Eigen::Vector3d(5.0 + (double)rand()/RAND_MAX * 2.0,2.0 + (double)rand()/RAND_MAX * 2.0,(double)rand()/RAND_MAX * 4.0-2.0);	
 	else
@@ -1876,20 +1891,24 @@ computeCriticalActionTimes()
 
 	    		mActionGlobalBallPosition[index] = (1.0-interp) * mActionGlobalBallPosition[index] + interp * curActionGlobalBallPosition;
 	    		mActionGlobalBallVelocity[index] = (1.0-interp) * mActionGlobalBallVelocity[index] + interp * curActionGlobalBallVelocity;
+
+	    		mActions[index].segment(BALLTP_OFFSET,3) = rootT.inverse() * mActionGlobalBallPosition[index];
+	    		mActions[index].segment(BALLTP_OFFSET,3) *= 100.0;
+
 	    		mActions[index].segment(BALLTV_OFFSET,3) = rootT.linear().inverse() * mActionGlobalBallVelocity[index];
 	    		mActions[index].segment(BALLTV_OFFSET,3) *= 100.0;
 
-	    		mActions[index].segment(BALLTP_OFFSET,3) = rootT.inverse() * mActionGlobalBallVelocity[index];
-	    		mActions[index].segment(BALLTP_OFFSET,3) *= 100.0;
+	    		if(mCurActionTypes[index] == 2)
+	    			mActions[index].segment(BALLTV_OFFSET,3).setZero();
 
 	    	}
 	    }
 	    else
 	    {
-	    	mCurCriticalActionTimes[index] = (int) (mActions[index][CRITICAL_OFFSET]+0.5);
+	    	// mCurCriticalActionTimes[index] = (int) (mActions[index][CRITICAL_OFFSET]+0.5);
 
 	    	mCurCriticalActionTimes[index] = 30;
-    		if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
+    		if(isCriticalAction(mCurActionTypes[index]))
     		{
 	    		Eigen::Vector3d temp = mActions[index].segment(BALLTP_OFFSET, 3);
     			mActionGlobalBallPosition[index] = rootT * (temp/100.0);
@@ -2436,7 +2455,7 @@ saveEnvironment()
 	}
 	else if(curFrame>resetDuration+1 && curFrame%typeFreq == 1)
 	{
-		if(mCurActionTypes[0] == 0)
+		if(!isCriticalAction(mCurActionTypes[0]))
 		{
 			for(int i=numGobackStack-1;i>0;i--)
 			{
@@ -2704,7 +2723,7 @@ judgeBallPossession()
 	// {
 
 	// std::cout<<"rootT.inverse()*curBallPosition[0] : "<<(rootT.inverse()*curBallPosition)[0]<<std::endl;
-		if(mCurActionTypes[0] == 2 && (mCurCriticalActionTimes[0]>=-10 && mCurCriticalActionTimes[0]<20)
+		if(mCurActionTypes[0] == 2 && (mCurCriticalActionTimes[0]>=-10 && mCurCriticalActionTimes[0]<10)
 			&& (rootT.inverse()*curBallPosition)[0]>0.0)
 		{	
 			if((leftHandBallPosition - curBallPosition).norm() < grabDistance)
