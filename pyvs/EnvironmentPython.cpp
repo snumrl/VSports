@@ -24,7 +24,7 @@ EnvironmentPython(int numAgent, std::string motion_nn_path, int numSlaves)
 			mSlaves[i]->initialize(mMotionGeneratorBatch, i, true);
 		else
 		{
-			mSlaves[i]->copyTutorialTrajectory(mSlaves[0]);
+			// mSlaves[i]->copyTutorialTrajectory(mSlaves[0]);
 			mSlaves[i]->initialize(mMotionGeneratorBatch, i, false);
 		}
 	}

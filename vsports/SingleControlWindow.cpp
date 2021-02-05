@@ -777,15 +777,19 @@ display()
 	    curAction = std::to_string(maxIndex);
 	    curAction = curAction+"     "+std::to_string(mEnv->mActions[0][CRITICAL_OFFSET]/30.0);
     }
+
+	Eigen::Vector3d ballTargetPosition =mEnv->mActions[0].segment(BALLTP_OFFSET,3)/100.0;
+	Eigen::Vector3d ballTargetVelocity = mEnv->mActions[0].segment(BALLTV_OFFSET,3)/100.0;
+	ballTargetPosition = rootIsometry * ballTargetPosition;
+	ballTargetVelocity = rootIsometry.linear() * ballTargetVelocity;
+
 	if(mEnv->mCurActionTypes[0] == 1 || mEnv->mCurActionTypes[0] == 3 )
 	{
-		// Eigen::Vector3d ballTargetPosition = Eigen::Vector3d(0.0, mEnv->mActions[0][4+numActions+3]/100.0, 0.0);
-		Eigen::Vector3d ballTargetPosition =mEnv->mActions[0].segment(BALLTP_OFFSET,3)/100.0;
-		Eigen::Vector3d ballTargetVelocity = mEnv->mActions[0].segment(BALLTV_OFFSET,3)/100.0;
-		ballTargetPosition = rootIsometry * ballTargetPosition;
-		ballTargetVelocity = rootIsometry.linear() * ballTargetVelocity;
-
 		GUI::drawArrow3D(ballTargetPosition, ballTargetVelocity, ballTargetVelocity.norm()/8.0, 0.05, Eigen::Vector3d(1.0, 0.0, 0.0), 0.08);
+	}
+	if(mEnv->mCurActionTypes[0] == 2)
+	{
+		GUI::drawSphere(0.15, ballTargetPosition, Eigen::Vector3d(1.0, 0.0, 0.0));
 	}
 
 
