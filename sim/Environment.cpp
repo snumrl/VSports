@@ -2772,8 +2772,8 @@ judgeBallPossession()
 		if(mCurActionTypes[0] == 2 && (mCurCriticalActionTimes[0]>=-5 && mCurCriticalActionTimes[0]<15)
 			&& (rootT.inverse()*curBallPosition)[0]>0.0)
 		{	
-			if((targetReceivePosition - leftHandBallPosition).norm() < grabDistance ||
-				(targetReceivePosition - rightHandPosition).norm() < grabDistance)
+			if((curBallPosition - leftHandBallPosition).norm() < grabDistance ||
+				(curBallPosition - rightHandPosition).norm() < grabDistance)
 				mCurBallPossessions[0] = true;
 			// std::cout<<"@@@@@@@@"<<std::endl;
 		}
