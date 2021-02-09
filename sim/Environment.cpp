@@ -401,8 +401,9 @@ Environment::
 stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContacts)
 {
 	judgeBallPossession();
-	mCharacters[0]->prevSkelPositions = mCharacters[0]->getSkeleton()->getPositions();
-	mCharacters[0]->prevKeyJointPositions = mStates[0].segment(mCharacters[0]->getSkeleton()->getNumDofs(),6*3);
+	mCharacters[0]->prevSkelPositions = mCharacters[0]->getSkeleton()->getPositions();\
+	/// check the getState
+	mCharacters[0]->prevKeyJointPositions = mStates[0].segment(mCharacters[0]->getSkeleton()->getNumDofs(),8*3);
 	mCharacters[0]->prevRootT = getRootT(0);
 	for(int index=0;index<mCharacters.size();index++)
 	{
@@ -727,6 +728,9 @@ getState(int index)
 	EEJoints.push_back("LeftHand");
 	EEJoints.push_back("RightHand");
 
+	EEJoints.push_back("LeftArm");
+	EEJoints.push_back("RightArm");
+
 	EEJoints.push_back("LeftToe");
 	EEJoints.push_back("RightToe");
 
@@ -760,11 +764,11 @@ getState(int index)
 
 	skelVelocity.segment(3,3) = rootT.linear().inverse() * skelVelocity.segment(3,3);
 
-	Eigen::VectorXd reducedSkelPosition(6);
-	reducedSkelPosition = skelPosition.segment(0,6);
+	// Eigen::VectorXd reducedSkelPosition(6);
+	// reducedSkelPosition = skelPosition.segment(0,6);
 
-	Eigen::VectorXd reducedSkelVelocity(6);
-	reducedSkelVelocity = skelVelocity.segment(0,6);
+	// Eigen::VectorXd reducedSkelVelocity(6);
+	// reducedSkelVelocity = skelVelocity.segment(0,6);
 
 
 
@@ -889,31 +893,35 @@ getState(int index)
 		}
 	}
 
-	state.resize(rootTransform.rows() + reducedSkelPosition.rows() + reducedSkelVelocity.rows() + relCurBallPosition.rows() + relObstacles.size()*3
-		+ 5 +availableActions.rows() + relTargetPosition.rows() + relBallToTargetPosition.rows() + goalpostPositions.rows() +  contacts.rows() + 1 + 1 + curActionType.rows()
-		+ curSMState.rows() + hObstacleDistance.size() + 2);
+	Eigen::Vector3d relThrowingVelocity = rootT.linear().inverse()*throwingVelocity;
 
+	state.resize(rootTransform.rows() + skelPosition.rows() + skelVelocity.rows() + relCurBallPosition.rows() + relObstacles.size()*3
+		+ 5 +availableActions.rows() + relTargetPosition.rows() + relBallToTargetPosition.rows() + goalpostPositions.rows() +  contacts.rows() + 1 + 1 + curActionType.rows()
+		+ curSMState.rows() + hObstacleDistance.size() + 2 + relThrowingVelocity.rows());
+	// std::cout<<"State total : "<<state.size()<<std::endl;
 	int curIndex = 0;
 	for(int i=0;i<rootTransform.rows();i++)
 	{
 		state[curIndex] = rootTransform[i];
 		curIndex++;
 	}
-	for(int i=0;i<reducedSkelPosition.rows();i++)
+	for(int i=0;i<skelPosition.rows();i++)
 	{
-		state[curIndex] = reducedSkelPosition[i];
+		state[curIndex] = skelPosition[i];
 		curIndex++;
 	}
-	for(int i=0;i<reducedSkelVelocity.rows();i++)
+	for(int i=0;i<skelVelocity.rows();i++)
 	{
-		state[curIndex] = reducedSkelVelocity[i];
+		state[curIndex] = skelVelocity[i];
 		curIndex++;
 	}
+	// std::cout<<"Index after skel vel : "<<curIndex<<std::endl;
 	for(int i=0;i<relCurBallPosition.rows();i++)
 	{
 		state[curIndex] = relCurBallPosition[i];
 		curIndex++;
 	}
+	// std::cout<<"relCurBallPosition.transpose() : "<<relCurBallPosition.transpose()<<std::endl;
 	for(int i=0;i<relObstacles.size();i++)
 	{
 		state[curIndex] = relObstacles[i][0];
@@ -923,6 +931,8 @@ getState(int index)
 		state[curIndex] = relObstacles[i][2];
 		curIndex++;
 	}
+	// for(int i=0;i<relObstacles.size();i++)
+	// 	std::cout<<"relObstacles.transpose() : "<<relObstacles[0].transpose()<<std::endl;
 	for(int i=0;i<5;i++)
 	{
 		state[curIndex] = mCharacters[index]->blocked;
@@ -980,7 +990,16 @@ getState(int index)
 	if(curFrame>=throwingTime)
 		state[curIndex] = throwingTime+30 - curFrame;
 	curIndex++;
-	// std::cout<<"#### : "<<int(curFrame>=throwingTime)<<" "<<state[curIndex]<<std::endl;
+	// std::cout<<"#### : "<<int(curFrame>=throwingTime)<<" "<<state[curIndex-1]<<std::endl;
+
+	for(int i=0;i<relThrowingVelocity.rows();i++)
+	{
+		if(curFrame>=throwingTime)
+			state[curIndex] = relThrowingVelocity[i];
+		else
+			state[curIndex] = 0.0;
+		curIndex++;
+	}
 	for(int i=0;i<availableActions.rows();i++)
 	{
 		state[curIndex] = availableActions[i];

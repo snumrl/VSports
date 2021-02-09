@@ -35,7 +35,7 @@ import numpy as np
 #     datasets.MNIST('../data', train=False, transform=transforms.ToTensor()),
 #     batch_size=args.batch_size, shuffle=True, **kwargs)
 cvSize = 16
-latentSize = 6
+latentSize = 4
 
 class VAE(nn.Module):
     def __init__(self):
@@ -46,7 +46,7 @@ class VAE(nn.Module):
         self.fc1 = nn.Linear( self.cvSize , scale*2)
         self.fc1b = nn.Linear(scale*2, scale)
         self.fc21 = nn.Linear(scale, latentSize)
-        self.fc22 = nn.Linear(scale, latentSize)
+        self.fc2122 = nn.Linear(scale, latentSize)
         self.fc3 = nn.Linear(latentSize, scale)
         self.fc3b = nn.Linear(scale, scale*2)
         self.fc4 = nn.Linear(scale*2,  self.cvSize )
@@ -140,16 +140,18 @@ class VAEEncoder(nn.Module):
     def __init__(self):
         super(VAEEncoder, self).__init__()
 
-        scale = 128
-        self.fc1 = nn.Linear(cvSize, scale*2)
-        self.fc1b = nn.Linear(scale*2, scale)
+        scale = 256
+        self.fc1 = nn.Linear(cvSize+5, scale)
+        self.fc1a = nn.Linear(scale, scale)
+        self.fc1b = nn.Linear(scale, scale)
         self.fc21 = nn.Linear(scale, latentSize)
         self.fc22 = nn.Linear(scale, latentSize)
 
 
     def encode(self, x):
         h1 = F.relu(self.fc1(x))
-        h1b = F.relu(self.fc1b(h1))
+        h1a = F.relu(self.fc1a(h1))
+        h1b = F.relu(self.fc1b(h1a))
         return self.fc21(h1b), self.fc22(h1b)
 
 
@@ -159,7 +161,7 @@ class VAEEncoder(nn.Module):
         return mu + eps*std
 
     def forward(self, x):
-        mu, logvar = self.encode(x.view(-1, cvSize))
+        mu, logvar = self.encode(x.view(-1, cvSize+5))
         # mu, logvar = self.encode(x.view(-1, 784))
         z = self.reparameterize(mu, logvar)
         return z, mu, logvar
@@ -178,10 +180,11 @@ class VAEDecoder(nn.Module):
     def __init__(self):
         super(VAEDecoder, self).__init__()
 
-        scale = 128
+        scale = 256
         self.fc3 = nn.Linear(latentSize, scale)
-        self.fc3b = nn.Linear(scale, scale*2)
-        self.fc4 = nn.Linear(scale*2, cvSize)
+        self.fc3a = nn.Linear(scale, scale)
+        self.fc3b = nn.Linear(scale, scale)
+        self.fc4 = nn.Linear(scale, cvSize)
 
 
     def decode(self, z):
@@ -189,14 +192,16 @@ class VAEDecoder(nn.Module):
         # exit(0)
 
         h3 = F.relu(self.fc3(z))
-        h3b = F.relu(self.fc3b(h3))
+        h3a = F.relu(self.fc3a(h3))
+        h3b = F.relu(self.fc3b(h3a))
         return self.fc4(h3b)
 
     def decodeAction(self, z):
         z = torch.tensor(z)
         z = z.cuda()
         h3 = F.relu(self.fc3(z))
-        h3b = F.relu(self.fc3b(h3))
+        h3a = F.relu(self.fc3a(h3))
+        h3b = F.relu(self.fc3b(h3a))
         # embed()
         # exit(0)
         return self.fc4(h3b).cpu().detach().numpy().astype(np.float32)
@@ -236,7 +241,7 @@ def loss_function(recon_x, x, mu, logvar):
     # print(KLD.item())
     # print("")
 
-    return BCE + 2.0*KLD, BCE, 2.0*KLD
+    return BCE + 0.5*KLD, BCE, 0.5*KLD
 
 
 def train(epoch):

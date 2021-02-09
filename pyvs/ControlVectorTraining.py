@@ -30,7 +30,7 @@ device = torch.device("cuda" if use_cuda else "cpu")
 model = VAE().to(device)
 optimizer = optim.Adam(model.parameters(), lr=5e-3)
 # print("asdf")
-nnCount = 4
+nnCount = 10
 vaeDir = "vae_nn_sep_"+str(nnCount)
 
 if not exists(vaeDir):
@@ -107,7 +107,9 @@ def removeActionTypePart(splited_cv_list, numActionTypes):
 		# embed()
 		# exit(0)
 		# removed_list = np.concatenate((front_list,end_list), axis= 1)
-		removed_cv_list.append(removed_list)
+		removed_cv_list.append(np.array(removed_list))
+	# embed()
+	# exit(0)
 	return np.array(removed_cv_list)
 
 
@@ -142,12 +144,25 @@ class ComprehensiveControlVectorTraining():
 			np.random.shuffle(action_controlVectorList)
 
 			# for i in range(int(len(action_controlVectorList)/64)):
-			for i in range(25):
-				data = action_controlVectorList[i*128:(i+1)*128]
+			for i in range(16):
+				data = action_controlVectorList[i*256:(i+1)*256]
+				oneHot_shape = list(np.shape(data))
+				oneHot_shape[1] = self.numActionTypes
+				oneHot_vec = np.zeros(oneHot_shape)
+				oneHot_vec[:,actionType] = 1
+
+				combined_data = np.concatenate((data, oneHot_vec), axis= 1)
+				# embed()
+				# exit(0)
 				data = Tensor(data)
+				combined_data = Tensor(combined_data)
+				# embed()
+				# exit(0)
+
 				# self.optimizers[0].zero_grad()
 				self.optimizers[actionType].zero_grad()
-				latent, mu, logvar = self.VAEEncoder(data)
+
+				latent, mu, logvar = self.VAEEncoder(combined_data)
 
 				# recon_batch = self.VAEDecoders[0](latent)
 				recon_batch = self.VAEDecoders[actionType](latent)
@@ -160,15 +175,17 @@ class ComprehensiveControlVectorTraining():
 
 				loss, BCE, KLD = loss_function(recon_batch, data, mu, logvar)
 				loss.backward()
-				train_loss_BCE += BCE.item() / 3200 / 4 / 25
-				train_loss_KLD += KLD.item() / 3200 / 4 / 25
-
-				action_train_loss_BCE += train_loss_BCE
-				action_train_loss_KLD += train_loss_KLD
+				train_loss_BCE += BCE.item() / 4096
+				train_loss_KLD += KLD.item() / 4096
 
 
 				# self.optimizers[0].step()
 				self.optimizers[actionType].step()
+
+
+			action_train_loss_BCE += train_loss_BCE / 4
+			action_train_loss_KLD += train_loss_KLD / 4
+
 				# if i % 10 == 0:
 				# 	print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
 		  #               epoch, i * len(data), 3200,
@@ -290,7 +307,7 @@ def trainControlVector(path, actionType):
 # test("basket_0")
 
 ccvt = ComprehensiveControlVectorTraining("basket_0", 5)
-for i in range(500):
+for i in range(400):
 	ccvt.trainTargetCV(0, i)
 	ccvt.trainTargetCV(1, i)
 	ccvt.trainTargetCV(2, i)

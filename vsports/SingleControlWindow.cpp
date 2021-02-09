@@ -119,7 +119,7 @@ SingleControlWindow(const char* nn_path,
 :SingleControlWindow()
 {
 	int numActionTypes = 5;
-	latentSize = 6;
+	latentSize = 4;
 
 	mEnv = new Environment(30, 180, 1, "../data/motions/basketData/motion/s_004_1_1.bvh", nn_path);
 	reducedDim = false;
@@ -192,7 +192,7 @@ SingleControlWindow(const char* nn_path,
 
 	for(int i=0;i<numActionTypes;i++)
 	{
-		load_decoders[i]("../pyvs/vae_nn_sep_4/vae_action_decoder_"+to_string(i)+".pt");
+		load_decoders[i]("../pyvs/vae_nn_sep_10/vae_action_decoder_"+to_string(i)+".pt");
 	}
 	// load_decoders[0]("../pyvs/vae_nn_sep/vae_action_decoder_"+to_string(0)+".pt");
 	// load_decoders[1]("../pyvs/vae_nn_sep/vae_action_decoder_"+to_string(3)+".pt");

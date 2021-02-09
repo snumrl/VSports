@@ -96,8 +96,8 @@ class ActorCriticNN(nn.Module):
 		# self.rnn = nn.LSTM(self.num_policyInput, self.hidden_size, num_layers=self.num_layers)
 		# self.cur_hidden = self.init_hidden(1)
 
-		num_h1 = 128
-		num_h2 = 128
+		num_h1 = 256
+		num_h2 = 256
 		num_h3 = 64
 		# num_h3 = 256
 		# self.policy = None
@@ -237,7 +237,6 @@ class ActorCriticNN(nn.Module):
 		p, _v= self.forward(ts.unsqueeze(0))
 
 		# self.cur_hidden = new_hidden
-		# print(p.loc.cpu().detach().numpy())
 		# return p.sample().cpu().detach().numpy()
 		# return p.sample().cpu().detach().numpy().astype(np.float32)
 		return p.loc.cpu().detach().numpy().astype(np.float32)
