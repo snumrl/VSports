@@ -43,7 +43,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 45
+nnCount = 46
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -1064,6 +1064,7 @@ class RL(object):
 
 		summary.add_scalars('rewards and num_correct_throwings',{'rewards' : self.sum_return/self.num_episode, 'num_ct' : self.num_correct_throwing/self.num_episode}, self.num_evaluation)
 		summary.add_scalar('numSteps',self.num_tuple[1][0]/self.num_episode, self.num_evaluation)
+		summary.add_scalar('ratio of resets',(self.num_td_reset[0] + self.num_td_reset[1])/self.num_episode, self.num_evaluation)
 
 		for name, param in self.target_model[0][0].named_parameters():
 			summary.add_histogram(name+"_actionType", param.clone().cpu().data.numpy(), self.num_evaluation)

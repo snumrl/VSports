@@ -36,10 +36,10 @@ using namespace dart::constraint;
 Environment::
 Environment(int control_Hz, int simulation_Hz, int numChars, std::string bvh_path, std::string nn_path)
 :mControlHz(control_Hz), mSimulationHz(simulation_Hz), mNumChars(numChars), mWorld(std::make_shared<dart::simulation::World>()),
-mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0), endTime(15),
+mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0), endTime(5),
 criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), violatedFrames(0),curTrajectoryFrame(0),
 randomPointTrajectoryStart(false), resetDuration(30), typeFreq(3), savedFrame(0), foulResetCount(0), curReward(0),
-numGobackStack(2), grabDistance(0.5)
+numGobackStack(2), grabDistance(0.3)
 {
 	std::cout<<"Envionment Generation --- ";
 	srand((unsigned int)time(0));
@@ -55,7 +55,7 @@ numGobackStack(2), grabDistance(0.5)
 		prevBallPositions[i].setZero();
 	}
 	mTargetBallPosition.setZero();
-	this->endTime = 4;
+	// this->endTime = 4;
 	this->initCharacters(bvh_path);
 
 	this->nnPath = nn_path;
@@ -2772,7 +2772,8 @@ judgeBallPossession()
 		if(mCurActionTypes[0] == 2 && (mCurCriticalActionTimes[0]>=-5 && mCurCriticalActionTimes[0]<15)
 			&& (rootT.inverse()*curBallPosition)[0]>0.0)
 		{	
-			if((targetReceivePosition - curBallPosition).norm() < grabDistance)
+			if((targetReceivePosition - leftHandBallPosition).norm() < grabDistance ||
+				(targetReceivePosition - rightHandPosition).norm() < grabDistance)
 				mCurBallPossessions[0] = true;
 			// std::cout<<"@@@@@@@@"<<std::endl;
 		}
