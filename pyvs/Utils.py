@@ -15,6 +15,9 @@ class RunningMeanStd(object):
     def update(self, x):
         # embed()
         # exit(0)
+        if np.any(np.isnan(x)):
+            return
+
         x_ = x.reshape(-1, len(self.mean))
         batch_mean = np.mean(x_, axis=0)
         batch_var = np.var(x_, axis=0)

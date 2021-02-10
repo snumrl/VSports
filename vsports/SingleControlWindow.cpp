@@ -488,13 +488,6 @@ step()
 		getActionFromNN(0);
 
 
-	std::cout<<"action : "<<std::endl;
-	std::cout<<mEnv->mActions[0].segment(0,5).transpose()<<std::endl;
-	std::cout<<mEnv->mActions[0].segment(5,4).transpose()<<std::endl;
-	std::cout<<mEnv->mActions[0].segment(9,6).transpose()<<std::endl;
-	std::cout<<mEnv->mActions[0].segment(15,7).transpose()<<std::endl;
-	std::cout<<std::endl;
-
 
 
 
@@ -565,6 +558,16 @@ step()
 
 		}
 	}
+
+	std::cout<<"action : "<<std::endl;
+	std::cout<<mEnv->mActions[0].segment(0,5).transpose()<<std::endl;
+	std::cout<<mEnv->mActions[0].segment(ROOT_OFFSET,2).transpose()<<std::endl;
+	std::cout<<mEnv->mActions[0].segment(HAND_OFFSET,6).transpose()<<std::endl;
+	std::cout<<mEnv->mActions[0].segment(BALLP_OFFSET,9).transpose()<<std::endl;
+	std::cout<<std::endl;
+
+
+
 
 	std::vector<std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool>>
 	nextPoseAndContactsWithBatch = mMotionGeneratorBatch->generateNextPoseAndContactsWithBatch(concatControlVector);
@@ -1069,6 +1072,7 @@ getActionFromNN(int index)
 	Eigen::VectorXd encodedAction(latentSize);
 	encodedAction = mAction.segment(0,encodedAction.size());
 	Eigen::VectorXd decodedAction(16);
+	// std::cout<<"encoded action : "<<encodedAction.transpose()<<std::endl;
 
 	p::object decode;
 
@@ -1093,6 +1097,7 @@ getActionFromNN(int index)
 	}
 
 	std::cout<<"Cur Action Type : "<<actionType<<std::endl;
+	std::cout<<"normalized action in actionnn : "<<decodedAction.transpose()<<std::endl;
 
 	mActions[index] = mEnv->mNormalizer->denormalizeAction(decodedAction);
 }

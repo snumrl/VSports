@@ -288,6 +288,18 @@ stepsAtOnce()
 
 	for(int id=0;id<mNumSlaves;++id)
 		mSlaves[id]->saveEnvironment();
+	// std::cout<<"concatControlVector.transpose() : "<<std::endl;
+	// for(int i=0;i<concatControlVector.size();i++)
+	// {
+	// 	for(int j=0;j<concatControlVector[i].size();j++)
+	// 	{
+	// 		std::cout<<concatControlVector[i][j]<<" ";
+	// 	}
+	// 	std::cout<<std::endl;
+	// 	std::cout<<"-----"<<std::endl;
+		
+	// }
+	// std::cout<<std::endl;
 	std::vector<std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool>>
 	nextPoseAndContactsWithBatch = mMotionGeneratorBatch->generateNextPoseAndContactsWithBatch(concatControlVector);
 

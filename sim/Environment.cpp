@@ -36,7 +36,7 @@ using namespace dart::constraint;
 Environment::
 Environment(int control_Hz, int simulation_Hz, int numChars, std::string bvh_path, std::string nn_path)
 :mControlHz(control_Hz), mSimulationHz(simulation_Hz), mNumChars(numChars), mWorld(std::make_shared<dart::simulation::World>()),
-mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0), endTime(5),
+mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0), endTime(15),
 criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), violatedFrames(0),curTrajectoryFrame(0),
 randomPointTrajectoryStart(false), resetDuration(30), typeFreq(3), savedFrame(0), foulResetCount(0), curReward(0),
 numGobackStack(2), grabDistance(0.3)
@@ -1006,7 +1006,10 @@ getState(int index)
 		curIndex++;
 	}
 
+	assert(curIndex == states.size());
 	mStates[index] = state;
+	// std::cout<<"State : "<<mStates[index].segment(rootTransform.rows() + skelPosition.rows() + skelVelocity.rows(),
+	// 						mStates[index].size() - (rootTransform.rows() + skelPosition.rows() + skelVelocity.rows())).transpose()<<std::endl;
 	return state;
 }
 
@@ -1032,8 +1035,8 @@ getReward(int index, bool verbose)
 	double reward = 0;
 	double g= -9.81;
 
-	bool isDribbleAndShoot = false;
-	bool isPassReceive = true;
+	bool isDribbleAndShoot = true;
+	bool isPassReceive = false;
 
 	if(isPassReceive)
 	{
@@ -1073,17 +1076,24 @@ getReward(int index, bool verbose)
 
 		Eigen::Vector3d curRootVelocity = mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM() - mPrevCOMs[index];
 
-
-		if(!mCharacters[index]->blocked)
+		if(mCurActionTypes[index] == 2 && mCurCriticalActionTimes[index] <= -10 && !mCurBallPossessions[index])
 		{
+			mIsTerminalState = true;
+			return 0.0;
+		}
+
+
+		// if(!mCharacters[index]->blocked)
+		// {
 
 
 			if(gotReward)
 				return 0;
 
-			if(!mCurBallPossessions[index])
+			if(mPrevBallPossessions[index] && !mCurBallPossessions[index])
 			{
-				reward += 1.0;
+				if(mCurActionTypes[index] == 3)
+					reward += 1.0;
 				if(fastViewTermination)
 				{
 					mIsTerminalState = true;
@@ -1119,22 +1129,22 @@ getReward(int index, bool verbose)
 				return reward;
 			}
 
-		}
-		else
-		{
-			curReward = 0;
-			if(mCurActionTypes[index] == 3)
-			{
+		// }
+		// else
+		// {
+		// 	curReward = 0;
+		// 	if(mCurActionTypes[index] == 3)
+		// 	{
 
-				if(!mCurBallPossessions[index])
-				{
+		// 		if(!mCurBallPossessions[index])
+		// 		{
 				
-					mIsTerminalState = true;
-					curReward = 0;
-					return 0;
-				}
-			}
-		}
+		// 			mIsTerminalState = true;
+		// 			curReward = 0;
+		// 			return 0;
+		// 		}
+		// 	}
+		// }
 		return reward;
 
 	}
@@ -1235,17 +1245,25 @@ void
 Environment::
 setAction(int index, const Eigen::VectorXd& a)
 {
-	// std::cout<<a.transpose()<<std::endl;
+	// std::cout<<"SetAction : "<<a.transpose()<<std::endl;
 	bool isNanOccured = false;
 
 	for(int i=0;i<a.size();i++)
 	{
 		if(std::isnan(a[i]))
 		{
-			std::cout<<"NAN occured"<<std::endl;
+			// std::cout<<"NAN occured"<<std::endl;
+			// std::cout<<"Cur frame : "<<curFrame<<std::endl;
+			// std::cout<<"Cur action type : "<<mCurActionTypes[index]<<std::endl;
+			// std::cout<<"States : "<<mStates[index].transpose()<<std::endl;
+			// std::cout<<"Actions : "<<a.transpose()<<std::endl;
+			// std::cout<<"ms->mPoses.size() : "<<mMgb->motionGenerators[0]->mMotionSegments[mBatchIndex]->mPoses.size()<<std::endl;
 			isNanOccured = true;
 			mIsTerminalState = true;
-			return;
+			// exit(0);
+			break;
+			// exit(0);
+			// return;
 			// exit(0);
 		}
 	}
@@ -1278,7 +1296,7 @@ setAction(int index, const Eigen::VectorXd& a)
     }
     if(mActions[index].segment(BALLP_OFFSET,2).norm() > 80.0)
     {
-    	mActions[index].segment(BALLP_OFFSET,2) *= 80.0/mActions[index].segment(2,2).norm();
+    	mActions[index].segment(BALLP_OFFSET,2) *= 80.0/mActions[index].segment(BALLP_OFFSET,2).norm();
     }
 
     // mActions[index].segment(2,2) = 0.5*(mActions[index].segment(2,2) + mPrevActions[index].segment(2,2));
@@ -1288,7 +1306,7 @@ setAction(int index, const Eigen::VectorXd& a)
 
 	    if(mActions[index].segment(ROOT_OFFSET,2).norm() > 150.0)
 	    {
-	    	mActions[index].segment(ROOT_OFFSET,2) *= 150.0/mActions[index].segment(0,2).norm();
+	    	mActions[index].segment(ROOT_OFFSET,2) *= 150.0/mActions[index].segment(ROOT_OFFSET,2).norm();
 	    }
 
 	    if(mActions[index].segment(BALLTV_OFFSET,3).norm()>800.0)
@@ -1328,6 +1346,13 @@ Environment::
 setActionType(int index, int actionType, bool isNew)
 {
 	// actionType *= 3;
+	if(std::isnan(actionType) )
+	{
+		std::cout<<"nan action type"<<std::endl;
+		actionType = 4;
+		mIsTerminalState = true;
+		return actionType;
+	}
 
 	int curActionType = actionType;
 
@@ -1368,6 +1393,14 @@ setActionType(int index, int actionType, bool isNew)
     			mCurActionTypes[index] = curActionType;
 			    // return curActionType/3;
 			    return curActionType;
+    		}
+    		if(mPrevActionTypes[index] == 2 && mCurCriticalActionTimes[index]<-20 && mCurBallPossessions[index])
+    		{
+    			if(curActionType == 2)
+    			{
+    				mCurActionTypes[index] = 0;
+    				curActionType=0;
+    			}
     		}
     		bsm[index]->transition(mPrevActionTypes[index], true);
 	    	if(bsm[index]->isAvailable(curActionType))
@@ -1530,9 +1563,9 @@ slaveReset()
 	gotReward = false;
 	throwingTime = resetDuration+typeFreq + rand()%30;
 	if(slaveResetBallPosition[1] > 1.5)
-		throwingVelocity = Eigen::Vector3d(5.0 + (double)rand()/RAND_MAX * 2.0,1.0 + (double)rand()/RAND_MAX * 3.0,(double)rand()/RAND_MAX * 4.0-2.0);	
+		throwingVelocity = Eigen::Vector3d(5.0 + (double)rand()/RAND_MAX * 2.0,1.0 + (double)rand()/RAND_MAX * 3.0,(double)rand()/RAND_MAX * 2.0-1.0);	
 	else
-		throwingVelocity = Eigen::Vector3d(5.0 + (double)rand()/RAND_MAX * 2.0, -4.0 - (double)rand()/RAND_MAX * 2.0,(double)rand()/RAND_MAX * 4.0-2.0);	
+		throwingVelocity = Eigen::Vector3d(5.0 + (double)rand()/RAND_MAX * 2.0, -4.0 - (double)rand()/RAND_MAX * 2.0,(double)rand()/RAND_MAX * 2.0-1.0);	
 }
 
 void
@@ -2761,38 +2794,22 @@ judgeBallPossession()
 	Eigen::Vector3d leftHandBallPosition = skel->getBodyNode("LeftHand")->getWorldTransform() * relBallPosition;
 	Eigen::Vector3d rightHandPosition = skel->getBodyNode("RightHand")->getWorldTransform() * relBallPosition;
 
-	// if(mCurBallPossessions[0] == false)
-	// {
-
 	Eigen::Vector3d targetReceivePosition = mActionGlobalBallPosition[0];
 
-	// std::cout<<"(targetReceivePosition - curBallPosition).norm() : "<<(targetReceivePosition - curBallPosition).norm()<<std::endl;
-
-	// std::cout<<"rootT.inverse()*curBallPosition[0] : "<<(rootT.inverse()*curBallPosition)[0]<<std::endl;
 		if(mCurActionTypes[0] == 2 && (mCurCriticalActionTimes[0]>=-5 && mCurCriticalActionTimes[0]<15)
 			&& (rootT.inverse()*curBallPosition)[0]>0.0)
 		{	
-			if((curBallPosition - leftHandBallPosition).norm() < grabDistance ||
-				(curBallPosition - rightHandPosition).norm() < grabDistance)
+			if((curBallPosition - targetReceivePosition).norm() < grabDistance)
 				mCurBallPossessions[0] = true;
-			// std::cout<<"@@@@@@@@"<<std::endl;
 		}
-	// }
-
-	// if(mCurBallPossessions[0])
-	// 	std::cout<<"$$$$$$$$$$$$$$$$$"<<std::endl;
 
 
+		// if(mCurActionTypes[0] == 2 && (mCurCriticalActionTimes[0]>=-5 && mCurCriticalActionTimes[0]<15)
+		// 	&& (rootT.inverse()*curBallPosition)[0]>0.0)
+		// {	
+		// 	if((curBallPosition - leftHandBallPosition).norm() < grabDistance ||
+		// 		(curBallPosition - rightHandPosition).norm() < grabDistance)
+		// 		mCurBallPossessions[0] = true;
+		// }
 
-	// if(mCurBallPossessions[0] == false)
-	// {
-	// 	if(mCurActionTypes[0] == 2 && (mCurCriticalActionTimes[0]>=-10 && mCurCriticalActionTimes[0]<20))
-	// 	{
-	// 		if(relBallPosition.norm()<grabDistance)
-	// 			mCurBallPossessions[0] = true;
-	// 		else
-	// 			mCurBallPossessions[0] = false;
-	// 	}
-	// }
-	// if(rootT.translation() - curBallPosition)
 }
