@@ -62,6 +62,7 @@
 #define BALLTP_OFFSET 15
 #define BALLTV_OFFSET 18
 #define CRITICAL_OFFSET 21
+#define NUM_ACTION_TYPE 5
 
 enum BasketballState{
 	POSITIONING, DRIBBLING

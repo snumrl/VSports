@@ -584,6 +584,46 @@ step()
     	prevRewards[i] = mEnv->curReward;
     }
 
+	for(int i=0;i<2;i++)
+	{
+		Eigen::VectorXd state = mEnv->mStates[0];
+		p::object get_value_0;
+		if(i==0) 
+			get_value_0 = nn_module_0[0].attr("get_value");
+		else
+			get_value_0 = nn_module_1[0].attr("get_value");
+
+		if(i == 1)
+		{
+			Eigen::VectorXd oneHotAction(NUM_ACTION_TYPE);
+			oneHotAction.setZero();
+			oneHotAction[mEnv->mCurActionTypes[0]] = 1;
+
+			state.resize(state.size()+NUM_ACTION_TYPE);
+			state.segment(0, mEnv->mStates[0].size()) = mEnv->mStates[0];
+			state.segment(mEnv->mStates[0].size(), NUM_ACTION_TYPE) =oneHotAction;
+		}
+
+		p::tuple shape = p::make_tuple(state.size());
+		np::dtype dtype = np::dtype::get_builtin<float>();
+		np::ndarray state_np = np::empty(shape, dtype);
+
+		float* dest = reinterpret_cast<float*>(state_np.get_data());
+		for(int j=0;j<state.size();j++)
+		{
+			dest[j] = state[j];
+		}
+
+		p::object temp = get_value_0(state_np);
+		np::ndarray value = np::from_object(temp);
+		float* srcs = reinterpret_cast<float*>(value.get_data());
+
+		curValues[i] = srcs[0];
+
+	}
+
+
+
 	mEnv->getRewards();
 	windowFrame++;
 	mFrame++;

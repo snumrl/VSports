@@ -31,7 +31,6 @@ using namespace dart::constraint;
 #define RESET_ADAPTING_FRAME 15
 #define ACTION_SIZE 22
 #define CONTROL_VECTOR_SIZE 22
-#define NUM_ACTION_TYPE 5
 
 Environment::
 Environment(int control_Hz, int simulation_Hz, int numChars, std::string bvh_path, std::string nn_path)
