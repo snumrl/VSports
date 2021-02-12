@@ -282,7 +282,7 @@ initCharacters(std::string bvhPath)
 	
 	dribbleDefaultVec.resize(CONTROL_VECTOR_SIZE);
 	dribbleDefaultVec.setZero();
-	dribbleDefaultVec.segment(NUM_ACTION_TYPE+2+6,2) = Eigen::Vector2d(50.0, -50.0);
+	dribbleDefaultVec.segment(BALLP_OFFSET,2) = Eigen::Vector2d(50.0, -50.0);
 	dribbleDefaultVec[4] = 1.0;
 }
 
@@ -518,7 +518,8 @@ stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContact
             else
                 ballDirection = Eigen::Vector3d(0.0, 1.35, 0.0);
 
-	        this->criticalPoint_targetBallVelocity = getRootT(index).linear()* (mActions[index].segment(4+NUM_ACTION_TYPE,3)/100.0);
+	        this->criticalPoint_targetBallVelocity = getRootT(index).linear()* (mActions[index].segment(BALLTV_OFFSET,3)/100.0);
+	        // std::cout<<"####### this->criticalPoint_targetBallVelocity : "<<this->criticalPoint_targetBallVelocity.transpose()<<std::endl;
 	    }
 
 
@@ -1834,7 +1835,7 @@ Environment::
 computeBallPosition()
 {
     double g = 9.81;
-    // std::cout<<"criticalPoint_targetBallVelocity : "<<criticalPoint_targetBallVelocity.transpose()<<std::endl;
+    // std::cout<<"#######compute ball Position : criticalPoint_targetBallVelocity : "<<criticalPoint_targetBallVelocity.transpose()<<std::endl;
     Eigen::Vector3d cur_targetBallPosition = criticalPoint_targetBallPosition;
     // std::cout<<"cur_targetBallPosition : "<<cur_targetBallPosition.transpose()<<std::endl;
     double t = (curFrame - criticalPointFrame)/30.0;
