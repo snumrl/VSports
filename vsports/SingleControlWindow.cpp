@@ -79,7 +79,7 @@ SingleControlWindow()
 	p::exec("import torchvision.transforms as T",mns);
 	p::exec("import numpy as np",mns);
 	p::exec("from Model import *",mns);
-	p::exec("from VAE import VAEDecoder",mns);
+	p::exec("from CAAE import CAAEDecoder",mns);
 
 	controlOn = false;
 
@@ -181,22 +181,23 @@ SingleControlWindow(const char* nn_path,
 	std::cout<<"Loaded control nn : "<<control_nn_path<<std::endl;
 
 
-	nn_module_decoders = new boost::python::object[numActionTypes];
-	p::object* load_decoders = new p::object[numActionTypes];
+	// nn_module_decoders = new ;
+	// p::object load_decoder = new ;
 
-	for(int i=0;i<numActionTypes;i++)
-	{
-		nn_module_decoders[i] = p::eval("VAEDecoder().cuda()", mns);
-		load_decoders[i] = nn_module_decoders[i].attr("load");
-	}
+	// for(int i=0;i<numActionTypes;i++)
+	// {
+		nn_module_decoder = p::eval("CAAEDecoder().cuda()", mns);
+		// exit(0);
+		p::object load_decoder = nn_module_decoder.attr("load");
+	// }
 
-	for(int i=0;i<numActionTypes;i++)
-	{
-		load_decoders[i]("../pyvs/vae_nn_sep_10/vae_action_decoder_"+to_string(i)+".pt");
-	}
+	// for(int i=0;i<numActionTypes;i++)
+	// {
+		load_decoder("../pyvs/caae_nn2/vae_action_decoder.pt");
+	// }
 	// load_decoders[0]("../pyvs/vae_nn_sep/vae_action_decoder_"+to_string(0)+".pt");
 	// load_decoders[1]("../pyvs/vae_nn_sep/vae_action_decoder_"+to_string(3)+".pt");
-	std::cout<<"Loaded VAE decoder"<<std::endl;
+	std::cout<<"Loaded CAAE decoder"<<std::endl;
 
 
 
@@ -484,8 +485,23 @@ step()
 
 	mEnv->getState(0);
 	mEnv->saveEnvironment();
-	if(mEnv->resetCount<=0)
-		getActionFromNN(0);
+
+
+	bool useXData = false;
+
+	if(!useXData)
+	{
+		if(mEnv->resetCount<=0)
+			getActionFromNN(0);
+	}
+	else
+	{
+		mActions[0] =  stdVecToEigen(xData[0][110+mEnv->curFrame]).segment(NUM_ACTION_TYPE,ACTION_SIZE-NUM_ACTION_TYPE-1);
+		int actionType = getActionTypeFromVec(stdVecToEigen(xData[0][110+mEnv->curFrame]).segment(0,NUM_ACTION_TYPE));
+		mEnv->setActionType(0, actionType);
+		// std::cout<<"Action type : "<<actionType<<std::endl;
+		// std::cout<<"1mActions[0].transpose() : "<<mActions[0].transpose()<<std::endl;
+	}
 
 
 
@@ -518,6 +534,7 @@ step()
 		if(mEnv->resetCount<=0)
 		{
 			concatControlVector.push_back(eigenToStdVec(mEnv->getMGAction(0)));
+			// std::cout<<"2mActions[0].transpose() : "<<mActions[0].transpose()<<std::endl;
 			mEnv->setAction(0, mActions[0]);
 		}
 		else
@@ -1109,14 +1126,15 @@ getActionFromNN(int index)
 		mAction[j] = srcs_1[j];
 	}
 
-	Eigen::VectorXd encodedAction(latentSize);
-	encodedAction = mAction.segment(0,encodedAction.size());
+	Eigen::VectorXd encodedAction(latentSize+numActions);
+	encodedAction.segment(0,numActions) = mActionType;
+	encodedAction.segment(numActions,latentSize) = mAction.segment(0,latentSize);
 	Eigen::VectorXd decodedAction(16);
-	// std::cout<<"encoded action : "<<encodedAction.transpose()<<std::endl;
+	std::cout<<"encoded action : "<<encodedAction.transpose()<<std::endl;
 
 	p::object decode;
 
-	decode = nn_module_decoders[actionType].attr("decodeAction");
+	decode = nn_module_decoder.attr("decodeAction");
 
 	p::tuple shape_d = p::make_tuple(encodedAction.size());
 	np::ndarray state_np_d = np::empty(shape_d, dtype);
@@ -1137,7 +1155,7 @@ getActionFromNN(int index)
 	}
 
 	std::cout<<"Cur Action Type : "<<actionType<<std::endl;
-	std::cout<<"normalized action in actionnn : "<<decodedAction.transpose()<<std::endl;
+	// std::cout<<"normalized action in actionnn : "<<decodedAction.transpose()<<std::endl;
 
 	mActions[index] = mEnv->mNormalizer->denormalizeAction(decodedAction);
 }

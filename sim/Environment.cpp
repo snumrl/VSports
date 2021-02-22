@@ -28,14 +28,11 @@ using namespace dart::dynamics;
 using namespace dart::collision;
 using namespace dart::constraint;
 
-#define RESET_ADAPTING_FRAME 15
-#define ACTION_SIZE 22
-#define CONTROL_VECTOR_SIZE 22
 
 Environment::
 Environment(int control_Hz, int simulation_Hz, int numChars, std::string bvh_path, std::string nn_path)
 :mControlHz(control_Hz), mSimulationHz(simulation_Hz), mNumChars(numChars), mWorld(std::make_shared<dart::simulation::World>()),
-mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0), endTime(15),
+mIsTerminalState(false), mTimeElapsed(0), mNumIterations(0), mSlowDuration(180), mNumBallTouch(0), endTime(25),
 criticalPointFrame(0), curFrame(0), mIsFoulState(false), gotReward(false), violatedFrames(0),curTrajectoryFrame(0),
 randomPointTrajectoryStart(false), resetDuration(30), typeFreq(3), savedFrame(0), foulResetCount(0), curReward(0),
 numGobackStack(2), grabDistance(0.3)
@@ -429,10 +426,12 @@ stepAtOnce(std::tuple<Eigen::VectorXd, Eigen::VectorXd, bool> nextPoseAndContact
 		}
 		if(mCurActionTypes[index] == 1 || mCurActionTypes[index] == 3)
 		{
-			if(mCurCriticalActionTimes[index] >=15)
+			if(mCurCriticalActionTimes[index] >=5)
 			{
 				mCurBallPossessions[index] = true;
 			}
+			if(!mCurBallPossessions[index])
+				mCurBallPossessions[index] = false;
 
 			if(mCurCriticalActionTimes[index] < 0)
 			{
@@ -1035,8 +1034,8 @@ getReward(int index, bool verbose)
 	double reward = 0;
 	double g= -9.81;
 
-	bool isDribbleAndShoot = true;
-	bool isPassReceive = false;
+	bool isDribbleAndShoot = false;
+	bool isPassReceive = true;
 
 	if(isPassReceive)
 	{
@@ -1079,6 +1078,7 @@ getReward(int index, bool verbose)
 		if(mCurActionTypes[index] == 2 && mCurCriticalActionTimes[index] <= -10 && !mCurBallPossessions[index])
 		{
 			mIsTerminalState = true;
+			// mIsFoulState = true;
 			return 0.0;
 		}
 
@@ -1097,6 +1097,7 @@ getReward(int index, bool verbose)
 				if(fastViewTermination)
 				{
 					mIsTerminalState = true;
+					// mIsFoulState = true;
 				}
 				gotReward = true;
 
@@ -1285,6 +1286,7 @@ setAction(int index, const Eigen::VectorXd& a)
 	}
 
     mActions[index][mCurActionTypes[index]] = 1.0;
+	// std::cout<<"setAction : "<<mActions[index].transpose()<<std::endl;
 
     if(mCurActionTypes[index] == 4 || mCurActionTypes[index] == 5)
     {
@@ -1383,7 +1385,7 @@ setActionType(int index, int actionType, bool isNew)
 
     if(isCriticalAction(mPrevActionTypes[index]))
     {
-    	if(mCurCriticalActionTimes[index] > -10)
+    	if(mCurCriticalActionTimes[index] >= -10)
     		curActionType = mPrevActionTypes[index];
     	else
     	{
@@ -1562,10 +1564,15 @@ slaveReset()
 	}
 	gotReward = false;
 	throwingTime = resetDuration+typeFreq + rand()%30;
+	// throwingTime = resetDuration-6;
 	if(slaveResetBallPosition[1] > 1.5)
 		throwingVelocity = Eigen::Vector3d(5.0 + (double)rand()/RAND_MAX * 2.0,1.0 + (double)rand()/RAND_MAX * 3.0,(double)rand()/RAND_MAX * 2.0-1.0);	
 	else
 		throwingVelocity = Eigen::Vector3d(5.0 + (double)rand()/RAND_MAX * 2.0, -4.0 - (double)rand()/RAND_MAX * 2.0,(double)rand()/RAND_MAX * 2.0-1.0);	
+
+	// slaveResetBallPosition[1] = 1.8;
+	curBallPosition = slaveResetBallPosition;
+	// throwingVelocity = Eigen::Vector3d(7.0, 3.4,-0.15);	
 }
 
 void
@@ -1700,7 +1707,7 @@ slaveResetCharacterPositions()
 		updatePrevBallPositions(curBallPosition);
 	}
 
-	if(rand()%2 == 0)
+	if(rand()%2 == 0 || true)
 		slaveResetBallPosition = Eigen::Vector3d(xRange*0.7-5.0, 1.8, 0.0);
 	else
 		slaveResetBallPosition = Eigen::Vector3d(xRange*0.7-5.0, 1.0, 0.0);
@@ -2314,6 +2321,9 @@ saveEnvironment(Environment* env, bool init)
 	this->mPrevActionTypes = env->mPrevActionTypes;
 	this->prevFreeBallPositions = env->prevFreeBallPositions;
 	this->gotReward = env->gotReward;
+	this->mActionGlobalBallPosition = env->mActionGlobalBallPosition;
+	this->mActionGlobalBallVelocity = env->mActionGlobalBallVelocity;
+
 
 
 	this->ballSkelPosition = env->ballSkel->getPositions();
@@ -2367,6 +2377,10 @@ restoreEnvironment(Environment* env)
 	env->prevFreeBallPositions = this->prevFreeBallPositions;
 	env->gotReward = this->gotReward;
 
+	env->mActionGlobalBallPosition = this->mActionGlobalBallPosition;
+	env->mActionGlobalBallVelocity = this->mActionGlobalBallVelocity;
+
+
 	env->ballSkel->setPositions(this->ballSkelPosition);
 	for(int i=0;i<numChars;i++)
 	{
@@ -2417,6 +2431,9 @@ copyEnvironmentPackage(EnvironmentPackage* envPack)
 	this->prevFreeBallPositions = envPack->prevFreeBallPositions;
 	this->gotReward = envPack->gotReward;
 
+
+	this->mActionGlobalBallPosition = envPack->mActionGlobalBallPosition;
+	this->mActionGlobalBallVelocity = envPack->mActionGlobalBallVelocity;
 
 	this->ballSkelPosition = envPack->ballSkelPosition;
 
@@ -2530,15 +2547,15 @@ saveEnvironment()
 	}
 	else if(curFrame>resetDuration+1 && curFrame%(typeFreq*15) == 1)
 	{
-		if(!isCriticalAction(mCurActionTypes[0]))
-		{
+		// if(!isCriticalAction(mCurActionTypes[0]))
+		// {
 			for(int i=numGobackStack-1;i>0;i--)
 			{
 				mPrevEnvSituations[i]->copyEnvironmentPackage(mPrevEnvSituations[i-1]);
 			}
 			mPrevEnvSituations[0]->saveEnvironment(this);
 			savedFrame = mPrevEnvSituations[numGobackStack-1]->curFrame;
-		}
+		// }
 
 	}
 }

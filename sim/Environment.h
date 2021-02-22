@@ -64,6 +64,9 @@
 #define CRITICAL_OFFSET 21
 #define NUM_ACTION_TYPE 5
 
+#define RESET_ADAPTING_FRAME 15
+#define ACTION_SIZE 22
+#define CONTROL_VECTOR_SIZE 22
 enum BasketballState{
 	POSITIONING, DRIBBLING
 };
@@ -155,6 +158,9 @@ public:
 	std::vector<Character3D*> mCharacters;
 	std::vector<BStateMachine*> bsm;
 	int numChars;
+
+	std::vector<Eigen::Vector3d> mActionGlobalBallPosition;
+	std::vector<Eigen::Vector3d> mActionGlobalBallVelocity;
 };
 
 

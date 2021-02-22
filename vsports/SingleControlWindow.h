@@ -90,7 +90,7 @@ public:
 
 	boost::python::object *nn_module_critic;
 
-	boost::python::object *nn_module_decoders;
+	boost::python::object nn_module_decoder;
 
 	boost::python::object target_rnd_nn_module;
 	boost::python::object predictor_rnd_nn_module;

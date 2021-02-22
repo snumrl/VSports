@@ -20,7 +20,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import torchvision.transforms as T
 from Utils import RunningMeanStd
-from VAE import VAEDecoder, VAEEncoder
+from CAAE import CAAEDecoder, CAAEEncoder
 
 import numpy as np
 
@@ -43,7 +43,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 48
+nnCount = 51
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -154,13 +154,12 @@ class RL(object):
 
 
 
-		self.actionDecoders = [ VAEDecoder().to(device) for _ in range(self.num_action_types)]
-		self.actionEncoder = VAEEncoder().to(device)
+		self.actionDecoder = CAAEDecoder().to(device)
+		self.actionEncoder = CAAEEncoder().to(device)
 
-		for i in range(self.num_action_types):
-			self.actionDecoders[i].load("vae_nn_sep_10/vae_action_decoder_"+str(i)+".pt")
+		self.actionDecoder.load("caae_nn2/vae_action_decoder.pt")
 
-		self.actionEncoder.load("vae_nn_sep_10/vae_action_encoder.pt")
+		self.actionEncoder.load("caae_nn2/vae_action_encoder.pt")
 
 		self.rms = RunningMeanStd(self.num_state-5)
 
@@ -489,16 +488,21 @@ class RL(object):
 							logprobs_h[h][i][j] = temp_a_dist.log_prob(Tensor(actions_h[h][i][j])).cpu().detach().numpy().reshape(-1)[0]
 
 
-			actionsDecodePart = np.array(list(actions_h[h]))
+			actionsLatent = np.array(list(actions_h[1]))
+			# embed()
+			# exit(0)
+			actionsLatent = np.concatenate((actions_0_oneHot, actionsLatent), axis =2)
 
-			decodeShape = list(np.shape(actionsDecodePart))
+			decodeShape = list(np.shape(actionsLatent))
 			decodeShape[2] = 16
 			actionsDecoded =np.empty(decodeShape,dtype=np.float32)
 
-			for i in range(len(actionsDecodePart)):
-				for j in range(len(actionsDecodePart[i])):
-					curActionType = int(actions_0_scalar[i][j][0])
-					actionsDecoded[i][j] = self.actionDecoders[curActionType].decode(Tensor(actionsDecodePart[i][j])).cpu().detach().numpy()
+			actionsDecoded = self.actionDecoder.decode(Tensor(actionsLatent)).cpu().detach().numpy()
+
+			# for i in range(len(actionsLatent)):
+			# 	for j in range(len(actionsLatent[i])):
+			# 		curActionType = int(actions_0_scalar[i][j][0])
+			# 		actionsDecoded[i][j] = self.actionDecoders[curActionType].decode(Tensor(actionsLatent[i][j])).cpu().detach().numpy()
 
 			envActions = actionsDecoded
 
