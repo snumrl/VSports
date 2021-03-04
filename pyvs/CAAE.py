@@ -56,6 +56,14 @@ class CAAEEncoder(nn.Module):
         h1b = F.relu(self.fc1b(h1a))
         return self.fc21(h1b), self.fc22(h1b)
 
+    def encodeAction(self, x):
+        # embed()
+        # exit()
+        x = torch.tensor(x)
+        x = x.cuda()
+        mu, _ = self.encode(x)
+        return mu.cpu().detach().numpy().astype(np.float32)
+
 
     def reparameterize(self, mu, logvar):
         std = torch.exp(0.5*logvar)

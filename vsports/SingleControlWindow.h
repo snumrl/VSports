@@ -91,6 +91,7 @@ public:
 	boost::python::object *nn_module_critic;
 
 	boost::python::object nn_module_decoder;
+	boost::python::object nn_module_encoder;
 
 	boost::python::object target_rnd_nn_module;
 	boost::python::object predictor_rnd_nn_module;
@@ -150,6 +151,8 @@ public:
 	void getControlMeanStdByActionType(int actionType);
 
 	int getActionTypeFromVec(Eigen::VectorXd action);
+
+	Eigen::VectorXd getEncodedAction(Eigen::VectorXd decodedAction, Eigen::VectorXd actionType);
 
 	double fingerAngle;
 	double fingerBallAngle;

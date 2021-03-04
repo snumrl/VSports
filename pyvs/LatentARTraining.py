@@ -43,7 +43,7 @@ LOW_FREQUENCY = 3
 HIGH_FREQUENCY = 30
 device = torch.device("cuda" if use_cuda else "cpu")
 
-nnCount = 51
+nnCount = 52
 baseDir = "../nn_lar_h"
 nndir = baseDir + "/nn"+str(nnCount)
 
@@ -382,6 +382,19 @@ class RL(object):
 			print(vec)
 			return 0
 
+		def getLatentReward(nparr):
+			weight = 1.0;
+			tempShape = list(np.shape(nparr))
+			tempShape[2] = 1
+			# embed()
+			# exit(0)
+			result = np.zeros(tempShape)
+			for i in range(len(result)):
+				for j in range(len(result[i])):
+					result[i][j]  = weight * 1.0/np.sqrt(1558.5)*np.exp(-0.5*np.dot(nparr[i][j], nparr[i][j]))
+
+			return result
+
 		h_slave = [None]*self.num_agents
 
 		while True:
@@ -489,6 +502,7 @@ class RL(object):
 
 
 			actionsLatent = np.array(list(actions_h[1]))
+			actionsLatentReward = getLatentReward(actionsLatent)
 			# embed()
 			# exit(0)
 			actionsLatent = np.concatenate((actions_0_oneHot, actionsLatent), axis =2)
@@ -519,7 +533,9 @@ class RL(object):
 				if not self.env.isOnResetProcess(j):
 					for i in range(self.num_agents):
 						if teamDic[i] == learningTeam:
-							rewards[i][j] = self.env.getReward(j, i, True)
+							# embed()
+							# exit(0)
+							rewards[i][j] = self.env.getReward(j, i, True) + actionsLatentReward[i][j][0]
 							if counter%self.typeFreq == 1:
 								accRewards[i][j] = rewards[i][j]
 							else:
@@ -536,9 +552,9 @@ class RL(object):
 
 							if followTutorial[j] is False:
 								if not onFoulResetProcess[j]:
-									self.sum_return += rewards[i][j]
+									self.sum_return += rewards[i][j] - actionsLatentReward[i][j][0]
 
-							if accRewards[i][j] > 0.0 and not self.env.isTerminalState(j):
+							if accRewards[i][j] >= 1.0 and not self.env.isTerminalState(j):
 								embed()
 								exit(0)
 
@@ -730,7 +746,7 @@ class RL(object):
 													self.episodes[h][j][i].push(states_h[h][i][j], actions_h[h][i][j],\
 													accRewards[i][j], values_h[h][i][j], logprobs_h[h][i][j])
 													self.num_tuple[h][self.indexToNetDic[i]] += 1
-												if accRewards[i][j] > 0.0:
+												if accRewards[i][j] >= 1.0:
 													self.num_correct_throwing += 1
 
 										else :

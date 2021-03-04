@@ -79,7 +79,7 @@ SingleControlWindow()
 	p::exec("import torchvision.transforms as T",mns);
 	p::exec("import numpy as np",mns);
 	p::exec("from Model import *",mns);
-	p::exec("from CAAE import CAAEDecoder",mns);
+	p::exec("from CAAE import CAAEDecoder, CAAEEncoder",mns);
 
 	controlOn = false;
 
@@ -189,11 +189,16 @@ SingleControlWindow(const char* nn_path,
 		nn_module_decoder = p::eval("CAAEDecoder().cuda()", mns);
 		// exit(0);
 		p::object load_decoder = nn_module_decoder.attr("load");
+
+
+		nn_module_encoder = p::eval("CAAEEncoder().cuda()", mns);
+		p::object load_encoder = nn_module_encoder.attr("load");
 	// }
 
 	// for(int i=0;i<numActionTypes;i++)
 	// {
 		load_decoder("../pyvs/caae_nn2/vae_action_decoder.pt");
+		load_encoder("../pyvs/caae_nn2/vae_action_encoder.pt");
 	// }
 	// load_decoders[0]("../pyvs/vae_nn_sep/vae_action_decoder_"+to_string(0)+".pt");
 	// load_decoders[1]("../pyvs/vae_nn_sep/vae_action_decoder_"+to_string(3)+".pt");
@@ -499,6 +504,15 @@ step()
 		mActions[0] =  stdVecToEigen(xData[0][110+mEnv->curFrame]).segment(NUM_ACTION_TYPE,ACTION_SIZE-NUM_ACTION_TYPE-1);
 		int actionType = getActionTypeFromVec(stdVecToEigen(xData[0][110+mEnv->curFrame]).segment(0,NUM_ACTION_TYPE));
 		mEnv->setActionType(0, actionType);
+
+		Eigen::VectorXd actionTypeVector = stdVecToEigen(xData[0][110+mEnv->curFrame]).segment(0,NUM_ACTION_TYPE);
+
+		Eigen::VectorXd normalizedAction = mEnv->mNormalizer->normalizeAction(mActions[0]);
+
+		Eigen::VectorXd encodedAction = getEncodedAction(normalizedAction, actionTypeVector);
+
+
+		std::cout<<"Encoded aciton : "<<encodedAction.transpose()<<std::endl;
 		// std::cout<<"Action type : "<<actionType<<std::endl;
 		// std::cout<<"1mActions[0].transpose() : "<<mActions[0].transpose()<<std::endl;
 	}
@@ -1174,4 +1188,40 @@ showAvailableActions()
 			GUI::drawStringOnScreen_Big(-0.01 + 0.2+0.6*(((double) i)/numActionTypes), 0.2, mEnv->actionNameMap[i], Eigen::Vector3d(0.5, 0.5, 0.5));
 
 	}
+}
+
+Eigen::VectorXd
+SingleControlWindow::
+getEncodedAction(Eigen::VectorXd decodedAction, Eigen::VectorXd actionType)
+{
+	np::dtype dtype = np::dtype::get_builtin<float>();
+	Eigen::VectorXd decodedActionWithType(decodedAction.size()+actionType.size());
+
+	decodedActionWithType.segment(0, actionType.size()) = actionType;
+	decodedActionWithType.segment(actionType.size(), decodedAction.size()) = decodedAction;
+
+	p::object encode;
+
+	encode = nn_module_encoder.attr("encodeAction");
+
+	p::tuple shape_d = p::make_tuple(decodedActionWithType.size());
+	np::ndarray state_np_d = np::empty(shape_d, dtype);
+
+	float* dest_d = reinterpret_cast<float*>(state_np_d.get_data());
+	for(int j=0;j<decodedActionWithType.size();j++)
+	{
+		dest_d[j] = decodedActionWithType[j];
+	}
+
+	p::object temp = encode(state_np_d);
+	np::ndarray action_np_d = np::from_object(temp);
+	float* src_d = reinterpret_cast<float*>(action_np_d.get_data());
+
+	Eigen::VectorXd encodedAction(latentSize);
+
+	for(int j=0;j<encodedAction.size();j++)
+	{
+		encodedAction[j] = src_d[j];
+	}
+	return encodedAction;
 }

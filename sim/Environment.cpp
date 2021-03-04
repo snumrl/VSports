@@ -1042,7 +1042,7 @@ getReward(int index, bool verbose)
 		Eigen::Vector3d curCOM = mCharacters[index]->getSkeleton()->getRootBodyNode()->getCOM();
 		if(mCurActionTypes[index] == 2 && mCurCriticalActionTimes[index] <= -10)
 		{
-			mIsTerminalState = true;
+			// mIsTerminalState = true;
 			return 0.0;
 		}
 
@@ -1050,7 +1050,7 @@ getReward(int index, bool verbose)
 		{
 			// if(mCurActionTypes[index]!=2)
 			// 	std::cout<<"###############"<<std::endl;
-			mIsTerminalState = true;
+			// mIsTerminalState = true;
 			// mIsFoulState = true;
 			return 1.0;
 		}
@@ -1058,7 +1058,7 @@ getReward(int index, bool verbose)
 		if(curBallPosition[0] > curCOM[0]+0.8)
 		{
 			// mIsFoulState = true;
-			mIsTerminalState = true;
+			// mIsTerminalState = true;
 			return 0.0;
 		}
 		return 0;
