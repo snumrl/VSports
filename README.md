@@ -67,6 +67,11 @@ make -j4
 sudo make install
 ```
 
+or you can install from here
+
+https://github.com/umsukgod/dart-ltspd
+
+This is the linear time version of dart simulator
 
 
 ## How to install
